@@ -19,6 +19,8 @@
     <WarningLevel>4</WarningLevel>
     <ApplicationIcon>icon.ico</ApplicationIcon>
     <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
+    <ProductVersion>10.0.0</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Platform)' == 'AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -108,14 +110,9 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Gui" />
-    <Folder Include="Gui\TableWidget" />
-    <Folder Include="Gui\Screens" />
-    <Folder Include="Gui\Widgets" />
-    <Folder Include="Updater" />
-    <Folder Include="Utils" />
-    <Folder Include="Patcher" />
-    <Folder Include="WebService" />
+    <Folder Include="Gui\" />
+    <Folder Include="Gui\" />
+    <Folder Include="Gui\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

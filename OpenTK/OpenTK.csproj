@@ -17,6 +17,8 @@
     <TreatWarningsAsErrors>False</TreatWarningsAsErrors>
     <IntermediateOutputPath>obj\$(Configuration)\</IntermediateOutputPath>
     <WarningLevel>4</WarningLevel>
+    <ProductVersion>10.0.0</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Platform)' == 'AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -129,18 +131,11 @@
     <Compile Include="WindowState.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Graphics" />
-    <Folder Include="Graphics\OpenGL" />
-    <Folder Include="Input" />
-    <Folder Include="Math" />
-    <Folder Include="Platform" />
-    <Folder Include="Platform\MacOS" />
-    <Folder Include="Platform\MacOS\CarbonBindings" />
-    <Folder Include="Platform\Windows" />
-    <Folder Include="Platform\X11" />
-    <Folder Include="Properties" />
-    <Folder Include="SharpDX" />
-    <Folder Include="SharpDX.Direct3D" />
+    <Folder Include="Graphics\" />
+    <Folder Include="Platform\" />
+    <Folder Include="Platform\MacOS\" />
+    <Folder Include="Platform\" />
+    <Folder Include="Platform\" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\InteropPatcher\InteropPatcher.csproj">

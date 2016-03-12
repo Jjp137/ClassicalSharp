@@ -134,8 +134,6 @@
     <Folder Include="Graphics\" />
     <Folder Include="Platform\" />
     <Folder Include="Platform\MacOS\" />
-    <Folder Include="Platform\" />
-    <Folder Include="Platform\" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\InteropPatcher\InteropPatcher.csproj">

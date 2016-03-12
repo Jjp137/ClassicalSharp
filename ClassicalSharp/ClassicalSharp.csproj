@@ -274,6 +274,7 @@
     <Compile Include="Utils\Utils.cs" />
     <Compile Include="Utils\Vector3I.cs" />
     <Compile Include="Utils\WrappableStringBuffer.cs" />
+    <Compile Include="Platform\SDL2Window.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\credits.txt">
@@ -290,14 +291,8 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="2D\" />
-    <Folder Include="2D\" />
-    <Folder Include="2D\" />
     <Folder Include="2D\Screens\" />
-    <Folder Include="2D\" />
     <Folder Include="2D\Widgets\" />
-    <Folder Include="2D\Widgets\" />
-    <Folder Include="2D\Widgets\" />
-    <Folder Include="Entities\" />
     <Folder Include="Entities\" />
     <Folder Include="Map\" />
     <Folder Include="Network\" />
@@ -306,6 +301,10 @@
     <ProjectReference Include="..\OpenTK\OpenTK.csproj">
       <Project>{35FEE071-2DE6-48A1-9343-B5C1F202A12B}</Project>
       <Name>OpenTK</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\SDL2-CS\SDL2-CS.csproj">
+      <Project>{85480198-8711-4355-830E-72FD794AD3F6}</Project>
+      <Name>SDL2-CS</Name>
     </ProjectReference>
   </ItemGroup>
 </Project>

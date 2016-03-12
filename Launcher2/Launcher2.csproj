@@ -111,8 +111,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Gui\" />
-    <Folder Include="Gui\" />
-    <Folder Include="Gui\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

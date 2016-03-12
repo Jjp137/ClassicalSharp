@@ -500,7 +500,8 @@ namespace ClassicalSharp {
 		
 		public Game( string username, string mppass, string skinServer,
 		            bool nullContext, int width, int height ) {
-			window = new DesktopWindow( this, username, nullContext, width, height );
+			//window = new DesktopWindow( this, username, nullContext, width, height );
+			window = new SDL2Window( this, username, nullContext, width, height );
 			Username = username;
 			Mppass = mppass;
 			this.skinServer = skinServer;

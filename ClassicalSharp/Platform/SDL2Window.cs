@@ -45,7 +45,7 @@ namespace ClassicalSharp
 
 		public WindowState WindowState { get; set; }
 
-		public IWindowInfo WindowInfo { get; }
+		public IWindowInfo WindowInfo { get { return windowInfo; } }
 
 		public event EventHandler<KeyPressEventArgs> KeyPress;
 
@@ -56,6 +56,8 @@ namespace ClassicalSharp
 
 		private IntPtr window;
 		private IntPtr context;
+		
+		private SDL2WindowInfo windowInfo;
 
 		public SDL2Window( Game game, string username, bool nullContext, int width, int height ) {
 			int success = SDL.SDL_Init( SDL.SDL_INIT_TIMER | SDL.SDL_INIT_VIDEO );
@@ -75,6 +77,8 @@ namespace ClassicalSharp
 			if( this.window == IntPtr.Zero ) {
 				throw new Exception( SDL.SDL_GetError() );
 			}
+			
+			this.windowInfo = new SDL2WindowInfo( this.window );
 
 			this.context = SDL.SDL_GL_CreateContext( window );
 			
@@ -83,11 +87,19 @@ namespace ClassicalSharp
 			}
 
 			this.game = game;
+			
+			// Temporary crap
+			this.Keyboard = new KeyboardDevice();
+			this.Mouse = new MouseDevice();
 		}
 
 		public void Run() {
 			game.OnLoad();
 
+			uint curTime = 0;
+			uint prevTime = 0;
+			double delta = 0;
+			
 			while( running ) {
 				SDL.SDL_Event curEvent;
 
@@ -97,6 +109,12 @@ namespace ClassicalSharp
 						break;
 					}
 				}
+				
+				curTime = SDL.SDL_GetTicks();  // returns ms
+				delta = (curTime - prevTime) / 1000.0;  // convert to seconds
+				prevTime = curTime;
+				
+				game.RenderFrame( delta );
 			}
 
 			SDL.SDL_GL_DeleteContext( window );
@@ -123,6 +141,22 @@ namespace ClassicalSharp
 			if( disposed ) {
 				return;
 			}
+		}
+	}
+	
+	public class SDL2WindowInfo : IWindowInfo {
+		IntPtr window;
+		
+		public IntPtr WinHandle {
+			get { return window; }
+		}
+		
+		public SDL2WindowInfo( IntPtr window ) {
+			this.window = window;
+		}
+		
+		public void Dispose() {
+			// Doesn't do anything.
 		}
 	}
 }

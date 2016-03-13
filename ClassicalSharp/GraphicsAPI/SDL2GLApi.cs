@@ -50,7 +50,7 @@ namespace ClassicalSharp
 			}
 
 			public static void BufferData<T>( BufferTarget target, IntPtr size, T[] data, BufferUsage usage ) where T : struct {
-				throw new NotSupportedException("BufferData<T>");
+				throw new NotImplementedException();
 			}
 
 			private delegate void GLBufferSubData( int bufferTarget, IntPtr offset, IntPtr size, IntPtr data );
@@ -60,7 +60,7 @@ namespace ClassicalSharp
 			}
 
 			public static void BufferSubData<T>( BufferTarget target, IntPtr offset, IntPtr size, T[] data ) where T : struct {
-				throw new NotSupportedException("BufferSubData<T>");
+				throw new NotImplementedException();
 			}
 
 			private delegate void GLClear( int mask );
@@ -539,11 +539,18 @@ namespace ClassicalSharp
 			return id;
 		}
 
-		public override int CreateVb<T>( T[] vertices, VertexFormat format, int count ) {
-			int id = GenAndBind( BufferTarget.ArrayBuffer );
-			int sizeInBytes = count * strideSizes[(int)format];
-			GLFuncs.BufferData( BufferTarget.ArrayBuffer, new IntPtr( sizeInBytes ), vertices, BufferUsage.StaticDraw );
-			return id;
+		public override int CreateVb( VertexPos3fCol4b[] vertices, VertexFormat format, int count ) {
+			fixed ( VertexPos3fCol4b* p = vertices ) {
+				IntPtr ptr = (IntPtr)p;
+				return CreateVb( ptr, format, count );
+			}
+		}
+		
+		public override int CreateVb( VertexPos3fTex2fCol4b[] vertices, VertexFormat format, int count ) {
+			fixed ( VertexPos3fTex2fCol4b* p = vertices ) {
+				IntPtr ptr = (IntPtr)p;
+				return CreateVb( ptr, format, count );
+			}
 		}
 
 		public override int CreateVb( IntPtr vertices, VertexFormat format, int count ) {
@@ -574,8 +581,50 @@ namespace ClassicalSharp
 			return id;
 		}
 
+		public override void UpdateDynamicVb( DrawMode mode, int vb, VertexPos3fCol4b[] vertices, int count ) {
+			fixed ( VertexPos3fCol4b* p = vertices ) {
+				IntPtr ptr = (IntPtr)p;
+				UpdateDynamicVb( mode, vb, ptr, count );
+			}
+		}
+		
+		public override void UpdateDynamicVb( DrawMode mode, int vb, VertexPos3fTex2fCol4b[] vertices, int count ) {
+			fixed ( VertexPos3fTex2fCol4b* p = vertices ) {
+				IntPtr ptr = (IntPtr)p;
+				UpdateDynamicVb( mode, vb, ptr, count );
+			}
+		}
+		
+		public override void UpdateDynamicIndexedVb( DrawMode mode, int vb, VertexPos3fCol4b[] vertices, int vCount, int indicesCount ) {
+			fixed ( VertexPos3fCol4b* p = vertices ) {
+				IntPtr ptr = (IntPtr)p;
+				UpdateDynamicIndexedVb( mode, vb, ptr, vCount, indicesCount );
+			}
+		}
+		
+		public override void UpdateDynamicIndexedVb( DrawMode mode, int vb, VertexPos3fTex2fCol4b[] vertices, int vCount, int indicesCount ) {
+			fixed ( VertexPos3fTex2fCol4b* p = vertices ) {
+				IntPtr ptr = (IntPtr)p;
+				UpdateDynamicIndexedVb( mode, vb, ptr, vCount, indicesCount );
+			}
+		}
+		
+		public override void SetDynamicVbData( DrawMode mode, int vb, VertexPos3fCol4b[] vertices, int count ) {
+			fixed ( VertexPos3fCol4b* p = vertices ) {
+				IntPtr ptr = (IntPtr)p;
+				SetDynamicVbData( mode, vb, ptr, count ); 
+			}
+		}
+		
+		public override void SetDynamicVbData( DrawMode mode, int vb, VertexPos3fTex2fCol4b[] vertices, int count ) {
+			fixed ( VertexPos3fTex2fCol4b* p = vertices ) {
+				IntPtr ptr = (IntPtr)p;
+				SetDynamicVbData( mode, vb, ptr, count ); 
+			}
+		}
+		
 		int batchStride;
-		public override void UpdateDynamicVb<T>( DrawMode mode, int id, T[] vertices, int count ) {
+		public void UpdateDynamicVb( DrawMode mode, int id, IntPtr vertices, int count ) {
 			GLFuncs.BindBuffer( BufferTarget.ArrayBuffer, id );
 			GLFuncs.BufferSubData( BufferTarget.ArrayBuffer, IntPtr.Zero, new IntPtr( count * batchStride ), vertices );
 
@@ -583,7 +632,7 @@ namespace ClassicalSharp
 			GLFuncs.DrawArrays( modeMappings[(int)mode], 0, count );
 		}
 
-		public override void UpdateDynamicIndexedVb<T>( DrawMode mode, int id, T[] vertices, int vCount, int indicesCount ) {
+		public void UpdateDynamicIndexedVb( DrawMode mode, int id, IntPtr vertices, int vCount, int indicesCount ) {
 			GLFuncs.BindBuffer( BufferTarget.ArrayBuffer, id );
 			GLFuncs.BufferSubData( BufferTarget.ArrayBuffer, IntPtr.Zero, new IntPtr( vCount * batchStride ), vertices );
 
@@ -591,7 +640,7 @@ namespace ClassicalSharp
 			GLFuncs.DrawElements( modeMappings[(int)mode], indicesCount, indexType, zero );
 		}
 
-		public override void SetDynamicVbData<T>( DrawMode mode, int id, T[] vertices, int count ) {
+		public void SetDynamicVbData( DrawMode mode, int id, IntPtr vertices, int count ) {
 			GLFuncs.BindBuffer( BufferTarget.ArrayBuffer, id );
 			GLFuncs.BufferSubData( BufferTarget.ArrayBuffer, IntPtr.Zero, new IntPtr( count * batchStride ), vertices );
 		}

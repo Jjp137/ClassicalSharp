@@ -14,14 +14,14 @@ namespace OpenTK.Input {
 		private bool repeat;
 		private KeyboardKeyEventArgs args = new KeyboardKeyEventArgs();
 
-		internal KeyboardDevice() { }
+		public KeyboardDevice() { }  // was internal
 
 		/// <summary> Gets a value indicating the status of the specified Key. </summary>
 		/// <param name="key">The Key to check.</param>
 		/// <returns>True if the Key is pressed, false otherwise.</returns>
 		public bool this[Key key] {
 			get { return keys[(int)key]; }
-			internal set {
+			set {  // was internal
 				if (keys[(int)key] != value || KeyRepeat) {
 					keys[(int)key] = value;
 
@@ -55,7 +55,7 @@ namespace OpenTK.Input {
 		/// <summary> Occurs when a key is released. </summary>
 		public event EventHandler<KeyboardKeyEventArgs> KeyUp;
 
-		internal void ClearKeys() {
+		public void ClearKeys() {
 			for (int i = 0; i < keys.Length; i++)
 				if (this[(Key)i])       // Make sure KeyUp events are *not* raised for keys that are up, even if key repeat is on.
 					this[(Key)i] = false;

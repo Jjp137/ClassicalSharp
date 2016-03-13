@@ -44,7 +44,8 @@ namespace ClassicalSharp {
 			Mouse = window.Mouse;
 			Keyboard = window.Keyboard;
 			#if !USE_DX
-			Graphics = new OpenGLApi();
+			//Graphics = new OpenGLApi();
+			Graphics = new SDL2GLApi();
 			#else
 			Graphics = new Direct3D9Api( this );
 			#endif

@@ -94,6 +94,7 @@ namespace ClassicalSharp
 				while( SDL.SDL_PollEvent( out curEvent ) != 0 ) {
 					if( curEvent.type == SDL.SDL_EventType.SDL_QUIT ) {
 						running = false;
+						break;
 					}
 				}
 			}
@@ -104,7 +105,7 @@ namespace ClassicalSharp
 		}
 
 		public void SwapBuffers() {
-			SDL.SDL_GL_SwapWindow(window);
+			SDL.SDL_GL_SwapWindow( window );
 		}
 
 		public void Exit() {

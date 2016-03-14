@@ -117,7 +117,7 @@ namespace ClassicalSharp
 				game.RenderFrame( delta );
 			}
 
-			SDL.SDL_GL_DeleteContext( window );
+			SDL.SDL_GL_DeleteContext( context );
 			SDL.SDL_DestroyWindow( window );
 			SDL.SDL_Quit();
 		}

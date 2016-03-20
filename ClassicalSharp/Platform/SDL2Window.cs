@@ -19,6 +19,7 @@ namespace ClassicalSharp
 			{ SDL.SDL_Keycode.SDLK_b, Key.B },
 			{ SDL.SDL_Keycode.SDLK_s, Key.S },
 			{ SDL.SDL_Keycode.SDLK_d, Key.D },
+			{ SDL.SDL_Keycode.SDLK_t, Key.T },
 			{ SDL.SDL_Keycode.SDLK_w, Key.W },
 			{ SDL.SDL_Keycode.SDLK_SPACE, Key.Space },
 			{ SDL.SDL_Keycode.SDLK_ESCAPE, Key.Escape },
@@ -55,7 +56,16 @@ namespace ClassicalSharp
 			}
 		}
 
-		public bool VSync { get; set; }
+		public bool VSync {
+			get {
+				int result = SDL.SDL_GL_GetSwapInterval();
+				return result == 1;  // If it's -1, assume that we aren't using vsync
+			}
+			set {
+				int arg = value ? 1 : 0;
+				SDL.SDL_GL_SetSwapInterval( arg );
+			}
+		}
 
 		private bool exists;
 		public bool Exists {
@@ -104,7 +114,20 @@ namespace ClassicalSharp
 
 		public KeyboardDevice Keyboard { get; }
 
-		public Icon Icon { get; set; }
+		Icon currentIcon = null;
+		public Icon Icon {
+			get {
+				return currentIcon;
+			}
+			set {
+				currentIcon = value;
+
+				// TODO: actually implement it; currently it's a no-op
+				//Bitmap bitmap = currentIcon.ToBitmap();
+
+				//SDL.SDL_SetWindowIcon( this.window, IntPtr.Zero );
+			}
+		}
 
 		public Point PointToScreen( Point coords ) {
 			// FIXME: SDL 2.0.4 makes this easier, but Debian only has 2.0.2
@@ -163,7 +186,8 @@ namespace ClassicalSharp
 				throw new Exception( SDL.SDL_GetError() );
 			}
 
-			// TODO: enable vsync
+			// Try to enable VSync, but don't worry if it fails
+			SDL.SDL_GL_SetSwapInterval( 1 );  // 1 = enable VSync
 
 			this.game = game;
 

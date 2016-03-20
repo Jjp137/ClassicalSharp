@@ -9,7 +9,6 @@ using OpenTK;
 using OpenTK.Input;
 using OpenTK.Platform;
 
-
 namespace ClassicalSharp
 {
 	public class SDL2Window : IPlatformWindow, IDisposable
@@ -17,12 +16,18 @@ namespace ClassicalSharp
 		// Temporary until we can rip out OpenTK stuff and just use SDL2 stuff
 		private static Dictionary<SDL.SDL_Keycode, Key> keyDict = new Dictionary<SDL.SDL_Keycode, Key>() {
 			{ SDL.SDL_Keycode.SDLK_a, Key.A },
+			{ SDL.SDL_Keycode.SDLK_b, Key.B },
+			{ SDL.SDL_Keycode.SDLK_s, Key.S },
+			{ SDL.SDL_Keycode.SDLK_d, Key.D },
+			{ SDL.SDL_Keycode.SDLK_w, Key.W },
+			{ SDL.SDL_Keycode.SDLK_SPACE, Key.Space },
+			{ SDL.SDL_Keycode.SDLK_ESCAPE, Key.Escape },
 		};
 
 		public int Width {
 			get {
 				int w, h;
-				SDL.SDL_GetWindowSize(window, out w, out h);
+				SDL.SDL_GetWindowSize( this.window, out w, out h );
 				return w;
 			}
 		}
@@ -30,7 +35,7 @@ namespace ClassicalSharp
 		public int Height { 
 			get {
 				int w, h;
-				SDL.SDL_GetWindowSize(window, out w, out h);
+				SDL.SDL_GetWindowSize( this.window, out w, out h );
 				return h;
 			}
 		}
@@ -38,7 +43,7 @@ namespace ClassicalSharp
 		public Size ClientSize { 
 			get {
 				int w, h;
-				SDL.SDL_GetWindowSize(window, out w, out h);
+				SDL.SDL_GetWindowSize( this.window, out w, out h );
 				return new Size( w, h );
 			}
 		}
@@ -68,7 +73,25 @@ namespace ClassicalSharp
 			}
 		}
 
-		public Point DesktopCursorPos { get; set; }
+		public Point DesktopCursorPos {
+			get {
+				int win_x, win_y, mouse_x, mouse_y;
+				SDL.SDL_GetWindowPosition( this.window, out win_x, out win_y );
+				SDL.SDL_GetMouseState( out mouse_x, out mouse_y );
+
+				return new Point( win_x + mouse_x, win_y + mouse_y );
+			}
+			set {
+				int win_x, win_y;
+
+				SDL.SDL_GetWindowPosition( this.window, out win_x, out win_y );
+				SDL.SDL_WarpMouseInWindow( this.window, value.X - win_x, value.Y - win_y );
+				// Force the mouse pointer to move since otherwise it won't update its position until the next
+				// call to SDL.SDL_PollEvent(); this is needed because the Camera uses its own mouse grabbing
+				// mechanism that depends on the change to mouse position immediately being applied
+				SDL.SDL_PumpEvents();
+			}
+		}
 
 		public MouseDevice Mouse { get; }
 
@@ -77,7 +100,10 @@ namespace ClassicalSharp
 		public Icon Icon { get; set; }
 
 		public Point PointToScreen( Point coords ) {
-			return new Point( 0, 0 );
+			// FIXME: SDL 2.0.4 makes this easier, but Debian only has 2.0.2
+			int win_x, win_y;
+			SDL.SDL_GetWindowPosition( this.window, out win_x, out win_y );
+			return new Point( coords.X + win_x, coords.Y + win_y );
 		}
 
 		public WindowState WindowState {
@@ -167,7 +193,7 @@ namespace ClassicalSharp
 						HandleKeyUp( curEvent );
 					}
 					else if( curEvent.type == SDL.SDL_EventType.SDL_MOUSEMOTION ) {
-						;
+						HandleMouseMove( curEvent );
 					}
 					else if( curEvent.type == SDL.SDL_EventType.SDL_MOUSEBUTTONDOWN ) {
 						;
@@ -244,7 +270,19 @@ namespace ClassicalSharp
 		}
 
 		private void HandleMouseMove(SDL.SDL_Event moveEvent) {
+			SDL.SDL_MouseMotionEvent motion = moveEvent.motion;
+			int x = motion.x;
+			int y = motion.y;
+
+			this.Mouse.Position = new Point( x, y );
+		}
+
+		private void HandleMouseDown(SDL.SDL_Event mouseEvent) {
 			
+		}
+
+		private void HandleMouseUp(SDL.SDL_Event mouseEvent) {
+
 		}
 
 		public void SwapBuffers() {

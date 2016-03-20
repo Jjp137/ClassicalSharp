@@ -44,13 +44,13 @@ namespace OpenTK.Input {
 		/// To support high-precision mice, it is recommended to use <see cref="WheelPrecise"/> instead. </summary>
 		public int Wheel {
 			get { return (int)Math.Round(wheel, MidpointRounding.AwayFromZero); }
-			internal set { WheelPrecise = value; }
+			set { WheelPrecise = value; }
 		}
 
 		/// <summary> Gets the absolute wheel position in floating-point units. </summary>
 		public float WheelPrecise {
 			get { return wheel; }
-			internal set {
+			set {
 				wheel = value;
 
 				wheel_args.X = pos.X;
@@ -79,7 +79,7 @@ namespace OpenTK.Input {
 		/// <returns>True if the MouseButton is pressed, false otherwise.</returns>
 		public bool this[MouseButton button] {
 			get { return button_state[(int)button]; }
-			internal set {
+			set {
 				bool previous_state = button_state[(int)button];
 				button_state[(int)button] = value;
 
@@ -95,7 +95,7 @@ namespace OpenTK.Input {
 		}
 
 		/// <summary> Sets a System.Drawing.Point representing the absolute position of the pointer, in window pixel coordinates. </summary>
-		internal Point Position {
+		public Point Position {
 			set {
 				pos = value;
 				move_args.X = pos.X;

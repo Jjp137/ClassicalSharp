@@ -23,6 +23,13 @@ namespace ClassicalSharp
 			{ SDL.SDL_Keycode.SDLK_SPACE, Key.Space },
 			{ SDL.SDL_Keycode.SDLK_ESCAPE, Key.Escape },
 		};
+		private static Dictionary<uint, MouseButton> mouseDict = new Dictionary<uint, MouseButton>() {
+			{ SDL.SDL_BUTTON_LEFT, MouseButton.Left },
+			{ SDL.SDL_BUTTON_MIDDLE, MouseButton.Middle },
+			{ SDL.SDL_BUTTON_RIGHT, MouseButton.Right },
+			{ SDL.SDL_BUTTON_X1, MouseButton.Button1 },
+			{ SDL.SDL_BUTTON_X2, MouseButton.Button2 },
+		};
 
 		public int Width {
 			get {
@@ -108,10 +115,10 @@ namespace ClassicalSharp
 
 		public WindowState WindowState {
 			get {
-				throw new NotImplementedException("WindowState.get");
+				throw new NotImplementedException( "WindowState.get" );
 			}
 			set {
-				throw new NotImplementedException("WindowState.set");
+				throw new NotImplementedException( "WindowState.set" );
 			}
 		}
 
@@ -179,32 +186,36 @@ namespace ClassicalSharp
 				SDL.SDL_Event curEvent;
 
 				while( SDL.SDL_PollEvent( out curEvent ) != 0 ) {
-					if( curEvent.type == SDL.SDL_EventType.SDL_QUIT ) {
-						running = false;
-						break;
-					}
-					else if( curEvent.type == SDL.SDL_EventType.SDL_WINDOWEVENT ) {
-						HandleWindowEvent( curEvent );
-					}
-					else if( curEvent.type == SDL.SDL_EventType.SDL_KEYDOWN ) {
-						HandleKeyDown( curEvent );
-					}
-					else if( curEvent.type == SDL.SDL_EventType.SDL_KEYUP ) {
-						HandleKeyUp( curEvent );
-					}
-					else if( curEvent.type == SDL.SDL_EventType.SDL_MOUSEMOTION ) {
-						HandleMouseMove( curEvent );
-					}
-					else if( curEvent.type == SDL.SDL_EventType.SDL_MOUSEBUTTONDOWN ) {
-						;
-					}
-					else if( curEvent.type == SDL.SDL_EventType.SDL_MOUSEBUTTONUP ) {
-						;
+					switch( curEvent.type ) {
+						case SDL.SDL_EventType.SDL_QUIT:
+							running = false;
+							break;
+						case SDL.SDL_EventType.SDL_WINDOWEVENT:
+							HandleWindowEvent( curEvent );
+							break;
+						case SDL.SDL_EventType.SDL_KEYDOWN:
+							HandleKeyDown( curEvent );
+							break;
+						case SDL.SDL_EventType.SDL_KEYUP:
+							HandleKeyUp( curEvent );
+							break;
+						case SDL.SDL_EventType.SDL_MOUSEMOTION:
+							HandleMouseMove( curEvent );
+							break;
+						case SDL.SDL_EventType.SDL_MOUSEBUTTONDOWN:
+							HandleMouseDown( curEvent );
+							break;
+						case SDL.SDL_EventType.SDL_MOUSEBUTTONUP:
+							HandleMouseUp( curEvent );
+							break;
+						case SDL.SDL_EventType.SDL_MOUSEWHEEL:
+							HandleMouseWheel( curEvent );
+							break;
 					}
 				}
 
 				curTime = SDL.SDL_GetTicks();  // returns ms
-				delta = (curTime - prevTime) / 1000.0;  // convert to seconds
+				delta = ( curTime - prevTime ) / 1000.0;  // convert to seconds
 				prevTime = curTime;
 
 				game.RenderFrame( delta );
@@ -219,7 +230,7 @@ namespace ClassicalSharp
 			SDL.SDL_Quit();
 		}
 
-		private void HandleWindowEvent(SDL.SDL_Event winEvent) {
+		private void HandleWindowEvent( SDL.SDL_Event winEvent ) {
 			switch ( winEvent.window.windowEvent ) {
 				case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_SIZE_CHANGED:
 				case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_RESIZED:
@@ -236,7 +247,7 @@ namespace ClassicalSharp
 			}
 		}
 
-		private void HandleKeyDown(SDL.SDL_Event keyEvent) {
+		private void HandleKeyDown( SDL.SDL_Event keyEvent ) {
 			SDL.SDL_Keycode sdlKey = keyEvent.key.keysym.sym;
 
 			if( keyDict.ContainsKey(sdlKey) ) {
@@ -257,7 +268,7 @@ namespace ClassicalSharp
 			}
 		}
 
-		private void HandleKeyUp(SDL.SDL_Event keyEvent) {
+		private void HandleKeyUp( SDL.SDL_Event keyEvent ) {
 			SDL.SDL_Keycode sdlKey = keyEvent.key.keysym.sym;
 
 			if ( keyDict.ContainsKey(sdlKey) ) {
@@ -269,7 +280,7 @@ namespace ClassicalSharp
 			}
 		}
 
-		private void HandleMouseMove(SDL.SDL_Event moveEvent) {
+		private void HandleMouseMove( SDL.SDL_Event moveEvent ) {
 			SDL.SDL_MouseMotionEvent motion = moveEvent.motion;
 			int x = motion.x;
 			int y = motion.y;
@@ -277,12 +288,28 @@ namespace ClassicalSharp
 			this.Mouse.Position = new Point( x, y );
 		}
 
-		private void HandleMouseDown(SDL.SDL_Event mouseEvent) {
+		private void HandleMouseDown( SDL.SDL_Event mouseEvent ) {
+			SDL.SDL_MouseButtonEvent down = mouseEvent.button;
+			uint button = down.button;
 			
+			MouseButton tkButton = mouseDict[button];
+			this.Mouse[tkButton] = true;
 		}
 
-		private void HandleMouseUp(SDL.SDL_Event mouseEvent) {
+		private void HandleMouseUp( SDL.SDL_Event mouseEvent ) {
+			SDL.SDL_MouseButtonEvent up = mouseEvent.button;
+			uint button = up.button;
 
+			MouseButton tkButton = mouseDict[button];
+			this.Mouse[tkButton] = false;
+		}
+
+		private void HandleMouseWheel( SDL.SDL_Event wheelEvent ) {
+			SDL.SDL_MouseWheelEvent scroll = wheelEvent.wheel;
+			// FIXME: doesn't take into account horizontal mouse wheels (hold Shift while scrolling on OS X, Linux)
+			int y = scroll.y;
+			
+			this.Mouse.WheelPrecise += y; 
 		}
 
 		public void SwapBuffers() {

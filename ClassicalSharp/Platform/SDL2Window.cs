@@ -17,12 +17,50 @@ namespace ClassicalSharp
 		private static Dictionary<SDL.SDL_Keycode, Key> keyDict = new Dictionary<SDL.SDL_Keycode, Key>() {
 			{ SDL.SDL_Keycode.SDLK_a, Key.A },
 			{ SDL.SDL_Keycode.SDLK_b, Key.B },
-			{ SDL.SDL_Keycode.SDLK_s, Key.S },
+			{ SDL.SDL_Keycode.SDLK_c, Key.C },
 			{ SDL.SDL_Keycode.SDLK_d, Key.D },
+			{ SDL.SDL_Keycode.SDLK_e, Key.E },
+			{ SDL.SDL_Keycode.SDLK_f, Key.F },
+			{ SDL.SDL_Keycode.SDLK_g, Key.G },
+			{ SDL.SDL_Keycode.SDLK_h, Key.H },
+			{ SDL.SDL_Keycode.SDLK_i, Key.I },
+			{ SDL.SDL_Keycode.SDLK_j, Key.J },
+			{ SDL.SDL_Keycode.SDLK_k, Key.K },
+			{ SDL.SDL_Keycode.SDLK_l, Key.L },
+			{ SDL.SDL_Keycode.SDLK_m, Key.M },
+			{ SDL.SDL_Keycode.SDLK_n, Key.N },
+			{ SDL.SDL_Keycode.SDLK_o, Key.O },
+			{ SDL.SDL_Keycode.SDLK_p, Key.P },
+			{ SDL.SDL_Keycode.SDLK_q, Key.Q },
+			{ SDL.SDL_Keycode.SDLK_r, Key.R },
+			{ SDL.SDL_Keycode.SDLK_s, Key.S },
 			{ SDL.SDL_Keycode.SDLK_t, Key.T },
+			{ SDL.SDL_Keycode.SDLK_u, Key.U },
+			{ SDL.SDL_Keycode.SDLK_v, Key.V },
 			{ SDL.SDL_Keycode.SDLK_w, Key.W },
+			{ SDL.SDL_Keycode.SDLK_x, Key.X },
+			{ SDL.SDL_Keycode.SDLK_y, Key.Y },
+			{ SDL.SDL_Keycode.SDLK_z, Key.Z },
+			{ SDL.SDL_Keycode.SDLK_0, Key.Number0 },
+			{ SDL.SDL_Keycode.SDLK_1, Key.Number1 },
+			{ SDL.SDL_Keycode.SDLK_2, Key.Number2 },
+			{ SDL.SDL_Keycode.SDLK_3, Key.Number3 },
+			{ SDL.SDL_Keycode.SDLK_4, Key.Number4 },
+			{ SDL.SDL_Keycode.SDLK_5, Key.Number5 },
+			{ SDL.SDL_Keycode.SDLK_6, Key.Number6 },
+			{ SDL.SDL_Keycode.SDLK_7, Key.Number7 },
+			{ SDL.SDL_Keycode.SDLK_8, Key.Number8 },
+			{ SDL.SDL_Keycode.SDLK_9, Key.Number9 },
 			{ SDL.SDL_Keycode.SDLK_SPACE, Key.Space },
+			{ SDL.SDL_Keycode.SDLK_BACKSPACE, Key.BackSpace },
+			{ SDL.SDL_Keycode.SDLK_RETURN, Key.Enter },
 			{ SDL.SDL_Keycode.SDLK_ESCAPE, Key.Escape },
+			{ SDL.SDL_Keycode.SDLK_LSHIFT, Key.ShiftLeft },
+			{ SDL.SDL_Keycode.SDLK_RSHIFT, Key.ShiftRight },
+			{ SDL.SDL_Keycode.SDLK_LCTRL, Key.ControlLeft },
+			{ SDL.SDL_Keycode.SDLK_RCTRL, Key.ControlRight },
+			{ SDL.SDL_Keycode.SDLK_LALT, Key.AltLeft },
+			{ SDL.SDL_Keycode.SDLK_RALT, Key.AltRight },
 		};
 		private static Dictionary<uint, MouseButton> mouseDict = new Dictionary<uint, MouseButton>() {
 			{ SDL.SDL_BUTTON_LEFT, MouseButton.Left },
@@ -81,7 +119,7 @@ namespace ClassicalSharp
 
 		public bool CursorVisible {
 			get {
-				int visible = SDL.SDL_ShowCursor( -1 );
+				int visible = SDL.SDL_ShowCursor( -1 );  // -1 = query
 				return visible == SDL.SDL_ENABLE;
 			}
 			set {
@@ -168,7 +206,7 @@ namespace ClassicalSharp
 			}
 
 			this.window = SDL.SDL_CreateWindow(
-				Program.AppName + " - SDL2Window - (" + username + ")",
+				Program.AppName + " - SDL2 - (" + username + ")",
 				SDL.SDL_WINDOWPOS_UNDEFINED, SDL.SDL_WINDOWPOS_UNDEFINED,
 				width, height,
 				SDL.SDL_WindowFlags.SDL_WINDOW_OPENGL | SDL.SDL_WindowFlags.SDL_WINDOW_RESIZABLE
@@ -194,6 +232,9 @@ namespace ClassicalSharp
 			// Temporary crap
 			this.Keyboard = new KeyboardDevice();
 			this.Mouse = new MouseDevice();
+
+			// For text entry
+			SDL.SDL_StartTextInput();
 
 			this.exists = true;
 			this.focused = true;
@@ -223,6 +264,9 @@ namespace ClassicalSharp
 						case SDL.SDL_EventType.SDL_KEYUP:
 							HandleKeyUp( curEvent );
 							break;
+						case SDL.SDL_EventType.SDL_TEXTINPUT:
+							HandleTextInput( curEvent );
+							break;
 						case SDL.SDL_EventType.SDL_MOUSEMOTION:
 							HandleMouseMove( curEvent );
 							break;
@@ -248,7 +292,9 @@ namespace ClassicalSharp
 			}
 
 			this.exists = false;
-			
+
+			SDL.SDL_StopTextInput();
+
 			SDL.SDL_GL_DeleteContext( context );
 			SDL.SDL_DestroyWindow( window );
 			SDL.SDL_Quit();
@@ -277,15 +323,6 @@ namespace ClassicalSharp
 			if( keyDict.ContainsKey(sdlKey) ) {
 				Key tkKey = keyDict[sdlKey];
 				this.Keyboard[tkKey] = true;
-
-				EventHandler<KeyPressEventArgs> temp = this.KeyPress;
-				if( temp != null ) {
-					KeyPressEventArgs args = new KeyPressEventArgs();
-					// TODO: not robust, support the high bit as well as more of Unicode
-					args.KeyChar = (char)sdlKey;
-
-					temp( this, args );
-				}
 			}
 			else {
 				Utils.LogDebug( "No dict entry for: " + SDL.SDL_GetKeyName( sdlKey ) );
@@ -301,6 +338,24 @@ namespace ClassicalSharp
 			}
 			else {
 				Utils.LogDebug( "No dict entry for: " + SDL.SDL_GetKeyName( sdlKey ) );
+			}
+		}
+
+		private void HandleTextInput( SDL.SDL_Event textEvent ) {
+			EventHandler<KeyPressEventArgs> temp = this.KeyPress;
+			KeyPressEventArgs args = new KeyPressEventArgs();
+
+			for( int i = 0; i < SDL.SDL_TEXTINPUTEVENT_TEXT_SIZE; i++ ) {
+				char c;
+				unsafe {
+					c = (char)textEvent.text.text[i];
+				}
+				if ( c == (char)0 ) {  // Reached a null
+					break;
+				}
+
+				args.KeyChar = c;
+				temp( this, args );
 			}
 		}
 

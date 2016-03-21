@@ -61,6 +61,10 @@ namespace ClassicalSharp
 			{ SDL.SDL_Keycode.SDLK_RCTRL, Key.ControlRight },
 			{ SDL.SDL_Keycode.SDLK_LALT, Key.AltLeft },
 			{ SDL.SDL_Keycode.SDLK_RALT, Key.AltRight },
+			{ SDL.SDL_Keycode.SDLK_LEFT, Key.Left },
+			{ SDL.SDL_Keycode.SDLK_RIGHT, Key.Right },
+			{ SDL.SDL_Keycode.SDLK_UP, Key.Up },
+			{ SDL.SDL_Keycode.SDLK_DOWN, Key.Down }
 		};
 		private static Dictionary<uint, MouseButton> mouseDict = new Dictionary<uint, MouseButton>() {
 			{ SDL.SDL_BUTTON_LEFT, MouseButton.Left },

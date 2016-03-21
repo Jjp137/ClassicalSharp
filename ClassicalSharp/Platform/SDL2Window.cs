@@ -148,9 +148,19 @@ namespace ClassicalSharp
 			}
 		}
 
-		public MouseDevice Mouse { get; }
+		private MouseDevice mouse;
+		public MouseDevice Mouse {
+			get {
+				return mouse;
+			}
+		}
 
-		public KeyboardDevice Keyboard { get; }
+		private KeyboardDevice keyboard;
+		public KeyboardDevice Keyboard {
+			get {
+				return keyboard;
+			}
+		}
 
 		Icon currentIcon = null;
 		public Icon Icon {
@@ -230,8 +240,8 @@ namespace ClassicalSharp
 			this.game = game;
 
 			// Temporary crap
-			this.Keyboard = new KeyboardDevice();
-			this.Mouse = new MouseDevice();
+			this.keyboard = new KeyboardDevice();
+			this.mouse = new MouseDevice();
 
 			// For text entry
 			SDL.SDL_StartTextInput();
@@ -322,7 +332,7 @@ namespace ClassicalSharp
 
 			if( keyDict.ContainsKey(sdlKey) ) {
 				Key tkKey = keyDict[sdlKey];
-				this.Keyboard[tkKey] = true;
+				this.keyboard[tkKey] = true;
 			}
 			else {
 				Utils.LogDebug( "No dict entry for: " + SDL.SDL_GetKeyName( sdlKey ) );
@@ -334,7 +344,7 @@ namespace ClassicalSharp
 
 			if ( keyDict.ContainsKey(sdlKey) ) {
 				Key tkKey = keyDict[sdlKey];
-				this.Keyboard[tkKey] = false;
+				this.keyboard[tkKey] = false;
 			}
 			else {
 				Utils.LogDebug( "No dict entry for: " + SDL.SDL_GetKeyName( sdlKey ) );
@@ -364,7 +374,7 @@ namespace ClassicalSharp
 			int x = motion.x;
 			int y = motion.y;
 
-			this.Mouse.Position = new Point( x, y );
+			this.mouse.Position = new Point( x, y );
 		}
 
 		private void HandleMouseDown( SDL.SDL_Event mouseEvent ) {
@@ -372,7 +382,7 @@ namespace ClassicalSharp
 			uint button = down.button;
 			
 			MouseButton tkButton = mouseDict[button];
-			this.Mouse[tkButton] = true;
+			this.mouse[tkButton] = true;
 		}
 
 		private void HandleMouseUp( SDL.SDL_Event mouseEvent ) {
@@ -380,7 +390,7 @@ namespace ClassicalSharp
 			uint button = up.button;
 
 			MouseButton tkButton = mouseDict[button];
-			this.Mouse[tkButton] = false;
+			this.mouse[tkButton] = false;
 		}
 
 		private void HandleMouseWheel( SDL.SDL_Event wheelEvent ) {
@@ -388,7 +398,7 @@ namespace ClassicalSharp
 			// FIXME: doesn't take into account horizontal mouse wheels (hold Shift while scrolling on OS X, Linux)
 			int y = scroll.y;
 			
-			this.Mouse.WheelPrecise += y; 
+			this.mouse.WheelPrecise += y;
 		}
 
 		public void SwapBuffers() {

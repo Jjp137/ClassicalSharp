@@ -1,4 +1,5 @@
-﻿using System;
+﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+using System;
 using ClassicalSharp.GraphicsAPI;
 using OpenTK;
 
@@ -6,21 +7,28 @@ namespace ClassicalSharp.Model {
 
 	public class CreeperModel : IModel {
 		
-		public CreeperModel( Game window ) : base( window ) {
+		public CreeperModel( Game window ) : base( window ) { }
+		
+		internal override void CreateParts() {
 			vertices = new ModelVertex[boxVertices * 6];
 			Head =  BuildBox( MakeBoxBounds( -4, 18, -4, 4, 26, 4 )
-			                 .SetTexOrigin( 0, 0 ) );
+			                 .TexOrigin( 0, 0 )
+			                 .RotOrigin( 0, 18, 0 ) );
 			Torso = BuildBox( MakeBoxBounds( -4, 6, -2, 4, 18, 2 )
-			                 .SetTexOrigin( 16, 16 ) );
+			                 .TexOrigin( 16, 16 ) );
 			
 			LeftLegFront = BuildBox( MakeBoxBounds( -4, 0, -6, 0, 6, -2 )
-			         .SetTexOrigin( 0, 16 ) );
+			                        .TexOrigin( 0, 16 )
+			                        .RotOrigin( 0, 6, -2 ) );
 			RightLegFront = BuildBox( MakeBoxBounds( 0, 0, -6, 4, 6, -2 )
-			         .SetTexOrigin( 0, 16 ) );
+			                         .TexOrigin( 0, 16 )
+			                         .RotOrigin( 0, 6, -2 ) );
 			LeftLegBack = BuildBox( MakeBoxBounds( -4, 0, 2, 0, 6, 6 )
-			         .SetTexOrigin( 0, 16 ) );
+			                       .TexOrigin( 0, 16 )
+			                       .RotOrigin( 0, 6, 2 ) );
 			RightLegBack = BuildBox( MakeBoxBounds( 0, 0, 2, 4, 6, 6 )
-			         .SetTexOrigin( 0, 16 ) );
+			                        .TexOrigin( 0, 16 )
+			                        .RotOrigin( 0, 6, 2 ) );
 		}
 		
 		public override bool Bobbing { get { return true; } }
@@ -40,13 +48,13 @@ namespace ClassicalSharp.Model {
 		protected override void DrawModel( Player p ) {
 			int texId = p.MobTextureId <= 0 ? cache.CreeperTexId : p.MobTextureId;
 			graphics.BindTexture( texId );
-			DrawHeadRotate( 0, 18/16f, 0, -p.PitchRadians, 0, 0, Head );
+			DrawHeadRotate( -p.PitchRadians, 0, 0, Head );
 
 			DrawPart( Torso );
-			DrawRotate( 0, 6/16f, -2/16f, p.anim.legXRot, 0, 0, LeftLegFront );
-			DrawRotate( 0, 6/16f, -2/16f, -p.anim.legXRot, 0, 0, RightLegFront );
-			DrawRotate( 0, 6/16f, 2/16f, -p.anim.legXRot, 0, 0, LeftLegBack );
-			DrawRotate( 0, 6/16f, 2/16f, p.anim.legXRot, 0, 0, RightLegBack );
+			DrawRotate( p.anim.legXRot, 0, 0, LeftLegFront );
+			DrawRotate( -p.anim.legXRot, 0, 0, RightLegFront );
+			DrawRotate( -p.anim.legXRot, 0, 0, LeftLegBack );
+			DrawRotate( p.anim.legXRot, 0, 0, RightLegBack );
 			graphics.UpdateDynamicIndexedVb( DrawMode.Triangles, cache.vb, cache.vertices, index, index * 6 / 4 );
 		}
 		

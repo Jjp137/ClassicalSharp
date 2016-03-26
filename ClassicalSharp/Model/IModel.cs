@@ -1,4 +1,5 @@
-﻿using System;
+﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+using System;
 using System.Runtime.InteropServices;
 using ClassicalSharp.GraphicsAPI;
 using ClassicalSharp.Renderers;
@@ -16,12 +17,15 @@ namespace ClassicalSharp.Model {
 		protected const int quadVertices = 4;
 		protected const int boxVertices = 6 * quadVertices;
 		protected RotateOrder Rotate = RotateOrder.ZYX;
+		protected bool flipBottomY; // for modern 1.8 skins
 
 		public IModel( Game game ) {
 			this.game = game;
 			graphics = game.Graphics;
 			cache = game.ModelCache;
 		}
+		
+		internal abstract void CreateParts();
 		
 		/// <summary> Whether the entity should be slightly bobbed up and down when rendering. </summary>
 		/// <remarks> e.g. for players when their legs are at the peak of their swing,
@@ -72,41 +76,59 @@ namespace ClassicalSharp.Model {
 		protected ModelVertex[] vertices;
 		protected int index;
 		
-		public struct BoxDescription {
+		public struct BoxDesc {
 			public int TexX, TexY, SidesW, BodyW, BodyH;
 			public float X1, X2, Y1, Y2, Z1, Z2;
+			public float RotX, RotY, RotZ;
 			
-			public BoxDescription SetTexOrigin( int x, int y ) {
+			/// <summary> Sets the texture origin for this part within the texture atlas. </summary>
+			public BoxDesc TexOrigin( int x, int y ) {
 				TexX = x; TexY = y; return this;
 			}
 			
-			public BoxDescription SetModelBounds( float x1, float y1, float z1, float x2, float y2, float z2 ) {
+			/// <summary> Sets the the two corners of this box, in pixel coordinates. </summary>
+			public BoxDesc SetModelBounds( float x1, float y1, float z1, float x2, float y2, float z2 ) {
 				X1 = x1 / 16f; X2 = x2 / 16f;
 				Y1 = y1 / 16f; Y2 = y2 / 16f;
 				Z1 = z1 / 16f; Z2 = z2 / 16f;
 				return this;
 			}
 			
-			public BoxDescription ExpandBounds( float amount ) {
+			/// <summary> Expands the corners of this box outwards by the given amount in pixel unis. </summary>
+			public BoxDesc Expand( float amount ) {
 				X1 -= amount / 16f; X2 += amount / 16f;
 				Y1 -= amount / 16f; Y2 += amount / 16f;
 				Z1 -= amount / 16f; Z2 += amount / 16f;
 				return this;
 			}
+			
+			/// <summary> Sets the point that this box is rotated around, in pixel coordinates. </summary>
+			public BoxDesc RotOrigin( sbyte x, sbyte y, sbyte z ) {
+				RotX = x / 16f; RotY = y / 16f; RotZ = z / 16f;
+				return this;
+			}
+			
+			/// <summary> Swaps the min and max X around, resulting in the part being drawn mirrored. </summary>
+			public BoxDesc MirrorX() {
+				float temp = X1; X1 = X2; X2 = temp;
+				return this;
+			}
+			
+			public BoxDesc SetX1( float value ) { X1 = value / 16f; return this; }
+			
+			public BoxDesc SetX2( float value ) { X1 = value / 16f; return this; }
 		}
 		
-		protected BoxDescription MakeBoxBounds( int x1, int y1, int z1, int x2, int y2, int z2 ) {
-			BoxDescription desc = default( BoxDescription )
-				.SetModelBounds( x1, y1, z1, x2, y2, z2 );
+		protected BoxDesc MakeBoxBounds( int x1, int y1, int z1, int x2, int y2, int z2 ) {
+			BoxDesc desc = default(BoxDesc).SetModelBounds( x1, y1, z1, x2, y2, z2 );
 			desc.SidesW = Math.Abs( z2 - z1 );
 			desc.BodyW = Math.Abs( x2 - x1 );
 			desc.BodyH = Math.Abs( y2 - y1 );
 			return desc;
 		}
 		
-		protected BoxDescription MakeRotatedBoxBounds( int x1, int y1, int z1, int x2, int y2, int z2 ) {
-			BoxDescription desc = default( BoxDescription )
-				.SetModelBounds( x1, y1, z1, x2, y2, z2 );
+		protected BoxDesc MakeRotatedBoxBounds( int x1, int y1, int z1, int x2, int y2, int z2 ) {
+			BoxDesc desc = default(BoxDesc).SetModelBounds( x1, y1, z1, x2, y2, z2 );
 			desc.SidesW = Math.Abs( y2 - y1 );
 			desc.BodyW = Math.Abs( x2 - x1 );
 			desc.BodyH = Math.Abs( z2 - z1 );
@@ -126,19 +148,20 @@ namespace ClassicalSharp.Model {
 		/// ┃H┈┈┈tex┈┈┈┈┈H┃H┈┈tex┈┈┈┈┈H┃H┈┈┈tex┈┈┈┈┈H┃H┈┈┈┈tex┈┈┈H┃ <br/>
 		/// ┃┈┈┈┈┈SW┈┈┈┈┈┃┈┈┈┈┈BW┈┈┈┈┈┃┈┈┈┈┈BW┈┈┈┈┈┈┃┈┈┈┈┈SW┈┈┈┈┃ <br/>
 		/// ┗━━━━━━━━━━━━━┻━━━━━━━━━━━━━┻━━━━━━━━━━━━━┻━━━━━━━━━━━━━┛ </summary>
-		protected ModelPart BuildBox( BoxDescription desc ) {
+		protected ModelPart BuildBox( BoxDesc desc ) {
 			int sidesW = desc.SidesW, bodyW = desc.BodyW, bodyH = desc.BodyH;
 			float x1 = desc.X1, y1 = desc.Y1, z1 = desc.Z1;
 			float x2 = desc.X2, y2 = desc.Y2, z2 = desc.Z2;
 			int x = desc.TexX, y = desc.TexY;
 			
 			YQuad( x + sidesW, y, bodyW, sidesW, x2, x1, z2, z1, y2 ); // top
-			YQuad( x + sidesW + bodyW, y, bodyW, sidesW, x2, x1, z1, z2, y1 ); // bottom
+			if( flipBottomY ) YQuad( x + sidesW + bodyW, y, bodyW, sidesW, x2, x1, z2, z1, y1 );
+			else YQuad( x + sidesW + bodyW, y, bodyW, sidesW, x2, x1, z1, z2, y1 ); // bottom				
 			ZQuad( x + sidesW, y + sidesW, bodyW, bodyH, x2, x1, y1, y2, z1 ); // front
 			ZQuad( x + sidesW + bodyW + sidesW, y + sidesW, bodyW, bodyH, x1, x2, y1, y2, z2 ); // back
 			XQuad( x, y + sidesW, sidesW, bodyH, z2, z1, y1, y2, x2 ); // left
 			XQuad( x + sidesW + bodyW, y + sidesW, sidesW, bodyH, z1, z2, y1, y2, x1 ); // right
-			return new ModelPart( index - 6 * 4, 6 * 4 );
+			return new ModelPart( index - 6 * 4, 6 * 4, desc.RotX, desc.RotY, desc.RotZ );
 		}
 		
 		/// <summary>Builds a box model assuming the follow texture layout:<br/>
@@ -154,7 +177,7 @@ namespace ClassicalSharp.Model {
 		/// ┃H┈┈┈tex┈┈┈┈┈H┃H┈┈tex┈┈┈┈┈H┃H┈┈┈tex┈┈┈┈┈H┃H┈┈┈┈tex┈┈┈H┃ <br/>
 		/// ┃┈┈┈┈┈SW┈┈┈┈┈┃┈┈┈┈┈BW┈┈┈┈┈┃┈┈┈┈┈SW┈┈┈┈┈┈┃┈┈┈┈┈SW┈┈┈┈┃ <br/>
 		/// ┗━━━━━━━━━━━━━┻━━━━━━━━━━━━━┻━━━━━━━━━━━━━┻━━━━━━━━━━━━━┛ </summary>
-		protected ModelPart BuildRotatedBox( BoxDescription desc ) {
+		protected ModelPart BuildRotatedBox( BoxDesc desc ) {
 			int sidesW = desc.SidesW, bodyW = desc.BodyW, bodyH = desc.BodyH;
 			float x1 = desc.X1, y1 = desc.Y1, z1 = desc.Z1;
 			float x2 = desc.X2, y2 = desc.Y2, z2 = desc.Z2;
@@ -173,7 +196,7 @@ namespace ClassicalSharp.Model {
 				float z = vertex.Z; vertex.Z = vertex.Y; vertex.Y = z;
 				vertices[i] = vertex;
 			}
-			return new ModelPart( index - 6 * 4, 6 * 4 );
+			return new ModelPart( index - 6 * 4, 6 * 4, desc.RotX, desc.RotY, desc.RotZ );
 		}
 		
 		protected void XQuad( int texX, int texY, int texWidth, int texHeight,
@@ -216,12 +239,12 @@ namespace ClassicalSharp.Model {
 			}
 		}
 		
-		protected void DrawRotate( float x, float y, float z, float angleX, float angleY, float angleZ, ModelPart part ) {
-			DrawRotated( x, y, z, angleX, angleY, angleZ, part, false );
+		protected void DrawRotate( float angleX, float angleY, float angleZ, ModelPart part ) {
+			DrawRotated( part.RotX, part.RotY, part.RotZ, angleX, angleY, angleZ, part, false );
 		}
 		
-		protected void DrawHeadRotate( float x, float y, float z, float angleX, float angleY, float angleZ, ModelPart part ) {
-			DrawRotated( x, y, z, angleX, angleY, angleZ, part, true );
+		protected void DrawHeadRotate( float angleX, float angleY, float angleZ, ModelPart part ) {
+			DrawRotated( part.RotX, part.RotY, part.RotZ, angleX, angleY, angleZ, part, true );
 		}
 		
 		protected void DrawRotated( float x, float y, float z, float angleX, float angleY, float angleZ, ModelPart part, bool head ) {

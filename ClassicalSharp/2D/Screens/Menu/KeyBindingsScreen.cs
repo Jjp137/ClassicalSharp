@@ -1,4 +1,5 @@
-﻿using System;
+﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+using System;
 using System.Drawing;
 using OpenTK.Input;
 
@@ -115,7 +116,7 @@ namespace ClassicalSharp {
 			MakeKeys( KeyBinding.Respawn, 5, 5, 150 );
 			
 			widgets[index++] = MakeBack( false, titleFont,
-			                            (g, w) => g.SetNewScreen( new OptionsGroupScreen( g ) ) );
+			                            (g, w) => g.SetNewScreen( new ClassicOptionsScreen( g ) ) );
 		}
 	}
 	

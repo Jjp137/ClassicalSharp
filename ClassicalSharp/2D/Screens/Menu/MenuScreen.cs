@@ -1,4 +1,5 @@
-﻿using System;
+﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+using System;
 using System.Drawing;
 using OpenTK.Input;
 
@@ -53,6 +54,8 @@ namespace ClassicalSharp {
 		public override bool HandlesMouseMove( int mouseX, int mouseY ) {
 			return HandleMouseMove( widgets, mouseX, mouseY );
 		}
+		
+		public override bool HandlesMouseScroll( int delta ) { return true; }
 		
 		public override bool HandlesKeyPress( char key ) { return true; }
 		

@@ -1,4 +1,5 @@
-﻿using System;
+﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+using System;
 using OpenTK;
 #if __MonoCS__
 using Ionic.Zlib;
@@ -280,7 +281,12 @@ namespace ClassicalSharp {
 				game.Players[entityId] = new NetPlayer( displayName, skinName, game, entityId );
 				game.EntityEvents.RaiseEntityAdded( entityId );
 			} else {
+				// Server is only allowed to change our own name colours.
+				if( Utils.StripColours( displayName ) != game.Username )
+					displayName = game.Username;
+				game.LocalPlayer.DisplayName = displayName;
 				game.LocalPlayer.SkinName = skinName;
+				game.LocalPlayer.UpdateName();
 			}
 			
 			string identifier = game.Players[entityId].SkinIdentifier;

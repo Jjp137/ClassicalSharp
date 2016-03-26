@@ -1,4 +1,5 @@
-﻿using System;
+﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+using System;
 using ClassicalSharp.GraphicsAPI;
 using ClassicalSharp.Renderers;
 using OpenTK;
@@ -14,8 +15,9 @@ namespace ClassicalSharp.Model {
 		bool bright;
 		Vector3 minBB, maxBB;
 		
-		public BlockModel( Game game ) : base( game ) {
-		}
+		public BlockModel( Game game ) : base( game ) { }
+		
+		internal override void CreateParts() { }
 		
 		public override bool Bobbing { get { return false; } }
 		

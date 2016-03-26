@@ -1,4 +1,5 @@
-﻿using System;
+﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+using System;
 using System.Collections.Generic;
 using System.Windows.Forms;
 using OpenTK.Input;
@@ -81,7 +82,7 @@ namespace ClassicalSharp {
 				buffer.Append( ref index, " matching names: " );
 				
 				foreach( string match in matches ) {
-					if( (match.Length + 1 + buffer.Length) > 64 ) break;
+					if( (match.Length + 1 + buffer.Length) > LineLength ) break;
 					buffer.Append( ref index, match );
 					buffer.Append( ref index, ' ' );
 				}
@@ -163,9 +164,9 @@ namespace ClassicalSharp {
 		void UpKey( bool controlDown ) {
 			if( controlDown ) {
 				int pos = caretPos == -1 ? chatInputText.Length : caretPos;
-				if( pos < 64 ) return;
+				if( pos < LineLength ) return;
 				
-				caretPos = pos - 64;
+				caretPos = pos - LineLength;
 				CalculateCaretData();
 				return;
 			}
@@ -185,8 +186,8 @@ namespace ClassicalSharp {
 		
 		void DownKey( bool controlDown ) {
 			if( controlDown ) {
-				if( caretPos == -1 || caretPos >= (lines - 1) * 64 ) return;
-				caretPos += 64;
+				if( caretPos == -1 || caretPos >= (lines - 1) * LineLength ) return;
+				caretPos += LineLength;
 				CalculateCaretData();
 				return;
 			}
@@ -290,7 +291,7 @@ namespace ClassicalSharp {
 						CalculateCaretData(); return;
 					}
 				}
-				offset += partLens[y];
+				offset += line.Length;
 			}
 			caretPos = -1;
 			CalculateCaretData();

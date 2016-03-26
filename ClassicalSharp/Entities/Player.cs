@@ -1,4 +1,5 @@
-﻿using System;
+﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+using System;
 using System.Drawing;
 using ClassicalSharp.GraphicsAPI;
 using ClassicalSharp.Model;
@@ -49,7 +50,7 @@ namespace ClassicalSharp {
 			}
 		}
 		
-		public void UpdateNameFont() {
+		public void UpdateName() {
 			game.Graphics.DeleteTexture( ref nameTex );
 			InitRenderingData();
 		}

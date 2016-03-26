@@ -1,4 +1,5 @@
-﻿using System;
+﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+using System;
 using System.Collections.Generic;
 using System.IO;
 using ClassicalSharp.GraphicsAPI;
@@ -13,11 +14,14 @@ namespace ClassicalSharp.Model {
 			this.game = window;
 			api = game.Graphics;		
 		}
+		public CustomModel[] CustomModels = new CustomModel[256];
 		
 		public void InitCache() {
 			vertices = new VertexPos3fTex2fCol4b[24 * 12];
 			vb = api.CreateDynamicVb( VertexFormat.Pos3fTex2fCol4b, vertices.Length );
-			cache["humanoid"] = new HumanoidModel( game );
+			IModel model = new HumanoidModel( game );
+			model.CreateParts();
+			cache["humanoid"] = model;
 			cache["human"] = cache["humanoid"];
 		}
 		
@@ -36,7 +40,8 @@ namespace ClassicalSharp.Model {
 			
 			if( !cache.TryGetValue( modelName, out model ) ) {
 				model = InitModel( modelName );
-				if( model == null ) model = cache["humanoid"]; // fallback to default
+				if( model != null ) model.CreateParts();
+				else model = cache["humanoid"]; // fallback to default
 				cache[modelName] = model;
 			}
 			return model;

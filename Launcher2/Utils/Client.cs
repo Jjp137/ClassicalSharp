@@ -1,4 +1,5 @@
-﻿using System;
+﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -58,7 +59,7 @@ namespace Launcher {
 			// Make sure if the client has changed some settings in the meantime, we keep the changes
 			if( !Options.Load() )
 				return;
-			shouldExit = Options.GetBool( OptionsKey.AutoCloseLauncher, false );
+			shouldExit = Options.GetBool( OptionsKey.AutoCloseLauncher, true );
 			if( data == null ) return;
 			
 			Options.Set( "launcher-username", data.RealUsername );

@@ -1,4 +1,5 @@
-﻿using System;
+﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+using System;
 using System.Drawing;
 using ClassicalSharp.Renderers;
 using OpenTK;
@@ -36,10 +37,10 @@ namespace ClassicalSharp {
 			Hacks = new HacksComponent( game, this );
 			
 			Hacks.SpeedMultiplier = Options.GetFloat( OptionsKey.Speed, 0.1f, 50, 10 );
-			Hacks.PushbackPlacing = Options.GetBool( OptionsKey.PushbackPlacing, false );
+			Hacks.PushbackPlacing = !game.PureClassicMode && Options.GetBool( OptionsKey.PushbackPlacing, false );
 			Hacks.NoclipSlide = Options.GetBool( OptionsKey.NoclipSlide, false );
-			Hacks.DoubleJump = Options.GetBool( OptionsKey.DoubleJump, false );
-			Hacks.Enabled = Options.GetBool( OptionsKey.HacksEnabled, true );
+			Hacks.DoubleJump = !game.PureClassicMode && Options.GetBool( OptionsKey.DoubleJump, false );
+			Hacks.Enabled = !game.PureClassicMode && Options.GetBool( OptionsKey.HacksEnabled, true );
 			InitRenderingData();
 		}
 		

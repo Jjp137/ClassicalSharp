@@ -1,4 +1,5 @@
-﻿using System;
+﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+using System;
 using OpenTK;
 using ClassicalSharp.GraphicsAPI;
 
@@ -27,7 +28,9 @@ namespace ClassicalSharp {
 			this.game = game;
 			game.Events.ChatFontChanged += ChatFontChanged;
 			NamesMode = Options.GetEnum( OptionsKey.NamesMode, NameMode.AllNamesAndHovered );
+			if( game.PureClassicMode ) NamesMode = NameMode.HoveredOnly;
 			ShadowMode = Options.GetEnum( OptionsKey.EntityShadow, EntityShadow.None );
+			if( game.PureClassicMode ) ShadowMode = EntityShadow.None;
 		}
 		
 		/// <summary> Performs a tick call for all player entities contained in this list. </summary>
@@ -98,7 +101,7 @@ namespace ClassicalSharp {
 		void ChatFontChanged( object sender, EventArgs e ) {
 			for( int i = 0; i < Players.Length; i++ ) {
 				if( Players[i] != null )
-					Players[i].UpdateNameFont();
+					Players[i].UpdateName();
 			}
 		}
 		

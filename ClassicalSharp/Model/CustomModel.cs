@@ -1,4 +1,5 @@
-﻿using System;
+﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+using System;
 using ClassicalSharp.GraphicsAPI;
 using OpenTK;
 
@@ -6,8 +7,9 @@ namespace ClassicalSharp.Model {
 
 	public class CustomModel : IModel {
 		
-		public CustomModel( Game window ) : base( window ) {
-		}
+		public CustomModel( Game window ) : base( window ) { }
+		
+		internal override void CreateParts() { }
 		
 		internal bool bobbing;
 		public override bool Bobbing { get { return bobbing; } }
@@ -28,10 +30,14 @@ namespace ClassicalSharp.Model {
 			int texId = p.PlayerTextureId <= 0 ? cache.HumanoidTexId : p.PlayerTextureId;
 		}
 		
+		internal void ReadSetupPacket( NetReader reader ) {
+			
+		}
+		
 		internal void ReadMetadataPacket( NetReader reader ) {
-			collisonSize = ReadVector( reader );
-			pickingBounds.Min = ReadVector( reader );
-			pickingBounds.Max = ReadVector( reader );
+			collisonSize = ReadS16Vec3( reader );
+			pickingBounds.Min = ReadS16Vec3( reader );
+			pickingBounds.Max = ReadS16Vec3( reader );
 			nameYOffset = reader.ReadInt16() / 256f;
 			eyeY = reader.ReadInt16() / 256f;
 			bobbing = reader.ReadUInt8() != 0;
@@ -40,8 +46,8 @@ namespace ClassicalSharp.Model {
 		internal void ReadDefinePartPacket( NetReader reader ) {
 			ushort partId = reader.ReadUInt16();
 			byte type = reader.ReadUInt8();
-			Vector3 min = ReadVector( reader );
-			Vector3 max = ReadVector( reader );			
+			Vector3 min = ReadS16Vec3( reader );
+			Vector3 max = ReadS16Vec3( reader );
 		}
 		
 		internal void ReadRotationPacket( NetReader reader ) {
@@ -53,7 +59,7 @@ namespace ClassicalSharp.Model {
 		}
 		
 		CustomModelPart[] parts;
-		Vector3 ReadVector( NetReader reader ) {
+		Vector3 ReadS16Vec3( NetReader reader ) {
 			return new Vector3( reader.ReadInt16() / 256f, reader.ReadInt16() / 256f,
 			                   reader.ReadInt16() / 256f );
 		}

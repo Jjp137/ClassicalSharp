@@ -1,4 +1,5 @@
-﻿using System;
+﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+using System;
 
 namespace ClassicalSharp {
 	
@@ -68,9 +69,8 @@ namespace ClassicalSharp {
 					value[i] = '&';
 			}
 			
-			for( int i = 0; i < Math.Max( 1, linesCount ); i++ ) {
+			for( int i = 0; i < Math.Max( 1, linesCount ); i++ )
 				lines[i] = new String( value, i * lineSize, lineLens[i] );
-			}
 		}
 		
 		int WrapLine( int index, int lineSize ) {

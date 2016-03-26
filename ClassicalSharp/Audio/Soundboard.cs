@@ -1,4 +1,5 @@
-﻿using System;
+﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+using System;
 using System.Collections.Generic;
 using System.IO;
 
@@ -29,7 +30,7 @@ namespace ClassicalSharp.Audio {
 			GetGroups();
 		}
 		
-		public Sound PlayRandomSound( SoundType type ) {
+		public Sound PickRandomSound( SoundType type ) {
 			if( type == SoundType.None ) 
 				return null;
 			string name = soundNames[(int)type];

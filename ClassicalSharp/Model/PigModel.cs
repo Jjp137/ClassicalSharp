@@ -1,4 +1,5 @@
-﻿using System;
+﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+using System;
 using ClassicalSharp.GraphicsAPI;
 using OpenTK;
 
@@ -6,20 +7,27 @@ namespace ClassicalSharp.Model {
 
 	public class PigModel : IModel {
 		
-		public PigModel( Game window ) : base( window ) {
+		public PigModel( Game window ) : base( window ) { }
+		
+		internal override void CreateParts() {
 			vertices = new ModelVertex[boxVertices * 6];
 			Head = BuildBox( MakeBoxBounds( -4, 8, -14, 4, 16, -6 )
-			               .SetTexOrigin( 0, 0 ) );
+			               .TexOrigin( 0, 0 )
+			               .RotOrigin( 0, 12, -6 ) );
 			Torso = BuildRotatedBox( MakeRotatedBoxBounds( -5, 6, -8, 5, 14, 8 )
-			                        .SetTexOrigin( 28, 8 ) );
+			                        .TexOrigin( 28, 8 ) );
 			LeftLegFront = BuildBox( MakeBoxBounds( -5, 0, -7, -1, 6, -3 )
-			                        .SetTexOrigin( 0, 16 ) );
+			                        .TexOrigin( 0, 16 )
+			                        .RotOrigin( 0, 6, -5 ) );
 			RightLegFront = BuildBox( MakeBoxBounds( 1, 0, -7, 5, 6, -3 )
-			                         .SetTexOrigin( 0, 16 ) );
+			                         .TexOrigin( 0, 16 )
+			                         .RotOrigin( 0, 6, -5 ) );
 			LeftLegBack = BuildBox( MakeBoxBounds( -5, 0, 5, -1, 6, 9 )
-			                       .SetTexOrigin( 0, 16 ) );
+			                       .TexOrigin( 0, 16 )
+			                       .RotOrigin( 0, 6, 7 ) );
 			RightLegBack = BuildBox( MakeBoxBounds( 1, 0, 5, 5, 6, 9 )
-			                        .SetTexOrigin( 0, 16 ) );
+			                        .TexOrigin( 0, 16 )
+			                        .RotOrigin( 0, 6, 7 ) );
 		}
 		
 		public override bool Bobbing { get { return true; } }
@@ -39,13 +47,13 @@ namespace ClassicalSharp.Model {
 		protected override void DrawModel( Player p ) {
 			int texId = p.MobTextureId <= 0 ? cache.PigTexId : p.MobTextureId;
 			graphics.BindTexture( texId );
-			DrawHeadRotate( 0, 12/16f, -6/16f, -p.PitchRadians, 0, 0, Head );
+			DrawHeadRotate( -p.PitchRadians, 0, 0, Head );
 
 			DrawPart( Torso );
-			DrawRotate( 0, 6/16f, -5/16f, p.anim.legXRot, 0, 0, LeftLegFront );
-			DrawRotate( 0, 6/16f, -5/16f, -p.anim.legXRot, 0, 0, RightLegFront );
-			DrawRotate( 0, 6/16f, 7/16f, -p.anim.legXRot, 0, 0, LeftLegBack );
-			DrawRotate( 0, 6/16f, 7/16f, p.anim.legXRot, 0, 0, RightLegBack );
+			DrawRotate( p.anim.legXRot, 0, 0, LeftLegFront );
+			DrawRotate( -p.anim.legXRot, 0, 0, RightLegFront );
+			DrawRotate( -p.anim.legXRot, 0, 0, LeftLegBack );
+			DrawRotate( p.anim.legXRot, 0, 0, RightLegBack );
 			graphics.UpdateDynamicIndexedVb( DrawMode.Triangles, cache.vb, cache.vertices, index, index * 6 / 4 );
 		}
 		

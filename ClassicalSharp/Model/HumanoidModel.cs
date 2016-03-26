@@ -1,46 +1,77 @@
-﻿using System;
+﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+using System;
 using System.Drawing;
 using ClassicalSharp.GraphicsAPI;
 using OpenTK;
 
 namespace ClassicalSharp.Model {
-
+	
 	public class HumanoidModel : IModel {
 		
-		ModelSet Set, SetSlim;
-		public HumanoidModel( Game window ) : base( window ) {
-			vertices = new ModelVertex[boxVertices * ( 7 + 2 )];
+		ModelSet Set, SetSlim, Set64;
+		public HumanoidModel( Game window ) : base( window ) { }
+		
+		protected BoxDesc head, torso, lLeg, rLeg, lArm, rArm;
+		protected float offset = 0.5f;
+		internal override void CreateParts() {
+			vertices = new ModelVertex[boxVertices * (7 + 12 + 4)];
 			Set = new ModelSet();
+			MakeDescriptions();
 			
-			Set.Head = BuildBox( MakeBoxBounds( -4, 24, -4, 4, 32, 4 )
-			                    .SetTexOrigin( 0, 0 ) );
-			Set.Torso = BuildBox( MakeBoxBounds( -4, 12, -2, 4, 24, 2 )
-			                     .SetTexOrigin( 16, 16 ) );
-			Set.LeftLeg = BuildBox( MakeBoxBounds( 0, 0, -2, -4, 12, 2 )
-			                       .SetTexOrigin( 0, 16 ) );
-			Set.RightLeg = BuildBox( MakeBoxBounds( 0, 0, -2, 4, 12, 2 ).
-			                        SetTexOrigin( 0, 16 ) );
-			Set.Hat = BuildBox( MakeBoxBounds( -4, 24, -4, 4, 32, 4 )
-			                   .SetTexOrigin( 32, 0 ).ExpandBounds( 0.5f ) );
-			Set.LeftArm = BuildBox( MakeBoxBounds( -4, 12, -2, -8, 24, 2 )
-			                       .SetTexOrigin( 40, 16 ) );
-			Set.RightArm = BuildBox( MakeBoxBounds( 4, 12, -2, 8, 24, 2 )
-			                        .SetTexOrigin( 40, 16 ) );
+			Set.Head = BuildBox( head.TexOrigin( 0, 0 ) );
+			Set.Torso = BuildBox( torso.TexOrigin( 16, 16 ) );
+			Set.LeftLeg = BuildBox( lLeg.MirrorX().TexOrigin( 0, 16 ) );
+			Set.RightLeg = BuildBox( rLeg.TexOrigin( 0, 16 ) );
+			Set.Hat = BuildBox( head.TexOrigin( 32, 0 ).Expand( offset ) );
+			Set.LeftArm = BuildBox( lArm.MirrorX().TexOrigin( 40, 16 ) );
+			Set.RightArm = BuildBox( rArm.TexOrigin( 40, 16 ) );
+			lArm = lArm.MirrorX(); lLeg = lLeg.MirrorX();			
+			flipBottomY = true;
+			
+			Set64 = new ModelSet();
+			Set64.Head = BuildBox( head.TexOrigin( 0, 0 ) );
+			Set64.Torso = BuildBox( torso.TexOrigin( 16, 16 ) );
+			Set64.LeftLeg = BuildBox( lLeg.TexOrigin( 16, 48 ) );
+			Set64.RightLeg = BuildBox( rLeg.TexOrigin( 0, 16 ) );
+			Set64.Hat = BuildBox( head.TexOrigin( 32, 0 ).Expand( offset ) );
+			Set64.LeftArm = BuildBox( lArm.TexOrigin( 32, 48 ) );
+			Set64.RightArm = BuildBox( rArm.TexOrigin( 40, 16 ) );
+			
+			Set64.TorsoLayer = BuildBox( torso.TexOrigin( 16, 32 ).Expand( offset ) );
+			Set64.LeftLegLayer = BuildBox( lLeg.TexOrigin( 0, 48 ).Expand( offset ) );
+			Set64.RightLegLayer = BuildBox( rLeg.TexOrigin( 0, 32 ).Expand( offset ) );
+			Set64.LeftArmLayer = BuildBox( lArm.TexOrigin( 48, 48 ).Expand( offset ) );
+			Set64.RightArmLayer = BuildBox( rArm.TexOrigin( 40, 32 ).Expand( offset ) );
 			
 			SetSlim = new ModelSet();
-			SetSlim.Head = Set.Head;
-			SetSlim.Torso = Set.Torso;
-			SetSlim.LeftLeg = Set.LeftLeg;
-			SetSlim.RightLeg = Set.RightLeg;
-			SetSlim.LeftArm = BuildBox( MakeBoxBounds( -7, 12, -2, -4, 24, 2 )
-			                           .SetTexOrigin( 32, 48 ) );
-			SetSlim.RightArm = BuildBox( MakeBoxBounds( 4, 12, -2, 7, 24, 2 )
-			                            .SetTexOrigin( 40, 16 ) );
-			SetSlim.Hat = Set.Hat;
+			SetSlim.Head = Set64.Head;
+			SetSlim.Torso = Set64.Torso;
+			SetSlim.LeftLeg = Set64.LeftLeg;
+			SetSlim.RightLeg = Set64.RightLeg;
+			SetSlim.Hat = Set64.Hat;
+			lArm.BodyW -= 1; lArm.X1 += 1/16f;
+			SetSlim.LeftArm = BuildBox( lArm.TexOrigin( 32, 48 ) );
+			rArm.BodyW -= 1; rArm.X2 -= 1/16f;
+			SetSlim.RightArm = BuildBox( rArm.TexOrigin( 40, 16 ) );
+			
+			SetSlim.TorsoLayer = Set64.TorsoLayer;
+			SetSlim.LeftLegLayer = Set64.LeftLegLayer;
+			SetSlim.RightLegLayer = Set64.RightLegLayer;
+			SetSlim.LeftArmLayer = BuildBox( lArm.TexOrigin( 48, 48 ).Expand( offset ) );
+			SetSlim.RightArmLayer = BuildBox( rArm.TexOrigin( 40, 32 ).Expand( offset ) );
+		}
+		
+		protected virtual void MakeDescriptions() {
+			head = MakeBoxBounds( -4, 24, -4, 4, 32, 4 ).RotOrigin( 0, 24, 0 );
+			torso = MakeBoxBounds( -4, 12, -2, 4, 24, 2 );
+			lLeg = MakeBoxBounds( -4, 0, -2, 0, 12, 2 ).RotOrigin( 0, 12, 0 );
+			rLeg = MakeBoxBounds( 0, 0, -2, 4, 12, 2 ).RotOrigin( 0, 12, 0 );
+			lArm = MakeBoxBounds( -8, 12, -2, -4, 24, 2 ).RotOrigin( -5, 22, 0 );
+			rArm = MakeBoxBounds( 4, 12, -2, 8, 24, 2 ).RotOrigin( 5, 22, 0 );
 		}
 		
 		public override bool Bobbing { get { return true; } }
-
+		
 		public override float NameYOffset { get { return 2.1375f; } }
 		
 		public override float GetEyeY( Entity entity ) { return 26/16f; }
@@ -60,26 +91,37 @@ namespace ClassicalSharp.Model {
 			
 			SkinType skinType = p.SkinType;
 			_64x64 = skinType != SkinType.Type64x32;
-			ModelSet model = skinType == SkinType.Type64x64Slim ? SetSlim : Set;
-			DrawHeadRotate( 0, 24/16f, 0, -p.PitchRadians, 0, 0, model.Head );
-			
+			ModelSet model = skinType == SkinType.Type64x64Slim ? SetSlim :
+				(skinType == SkinType.Type64x64 ? Set64 : Set);
+			DrawHeadRotate( -p.PitchRadians, 0, 0, model.Head );
 			DrawPart( model.Torso );
-			DrawRotate( 0, 12/16f, 0, p.anim.legXRot, 0, 0, model.LeftLeg );
-			DrawRotate( 0, 12/16f, 0, -p.anim.legXRot, 0, 0, model.RightLeg );
+			
+			DrawRotate( p.anim.legXRot, 0, 0, model.LeftLeg );
+			DrawRotate( -p.anim.legXRot, 0, 0, model.RightLeg );
 			Rotate = RotateOrder.XZY;
-			DrawRotate( -5/16f, 22/16f, 0, p.anim.leftXRot, 0, p.anim.leftZRot, model.LeftArm );
-			DrawRotate( 5/16f, 22/16f, 0, p.anim.rightXRot, 0, p.anim.rightZRot, model.RightArm );
+			DrawRotate( p.anim.leftXRot, 0, p.anim.leftZRot, model.LeftArm );
+			DrawRotate( p.anim.rightXRot, 0, p.anim.rightZRot, model.RightArm );
 			Rotate = RotateOrder.ZYX;
 			graphics.UpdateDynamicIndexedVb( DrawMode.Triangles, cache.vb, cache.vertices, index, index * 6 / 4 );
 			
 			graphics.AlphaTest = true;
 			index = 0;
-			DrawHeadRotate( 0, 24f/16f, 0, -p.PitchRadians, 0, 0, model.Hat );
+			if( _64x64 ) {
+				DrawPart( model.TorsoLayer );
+				DrawRotate( p.anim.legXRot, 0, 0, model.LeftLegLayer );
+				DrawRotate( -p.anim.legXRot, 0, 0, model.RightLegLayer );
+				Rotate = RotateOrder.XZY;
+				DrawRotate( p.anim.leftXRot, 0, p.anim.leftZRot, model.LeftArmLayer );
+				DrawRotate( p.anim.rightXRot, 0, p.anim.rightZRot, model.RightArmLayer );
+				Rotate = RotateOrder.ZYX;
+			}
+			DrawHeadRotate( -p.PitchRadians, 0, 0, model.Hat );
 			graphics.UpdateDynamicIndexedVb( DrawMode.Triangles, cache.vb, cache.vertices, index, index * 6 / 4 );
 		}
 		
 		class ModelSet {
-			public ModelPart Head, Torso, LeftLeg, RightLeg, LeftArm, RightArm, Hat;
+			public ModelPart Head, Torso, LeftLeg, RightLeg, LeftArm, RightArm, Hat,
+			TorsoLayer, LeftLegLayer, RightLegLayer, LeftArmLayer, RightArmLayer;
 		}
 	}
 }

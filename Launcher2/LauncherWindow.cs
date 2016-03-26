@@ -15,7 +15,7 @@ namespace Launcher {
 	public sealed partial class LauncherWindow {
 		
 		/// <summary> Underlying native window instance. </summary>
-		public NativeWindow Window;
+		public SDL2Window Window;
 		
 		/// <summary> Platform specific class used to draw 2D elements,
 		/// such as text, rounded rectangles and lines. </summary>
@@ -139,8 +139,9 @@ namespace Launcher {
 		}
 		
 		public void Run() {			
-			Window = new NativeWindow( 640, 400, Program.AppName, 0,
-			                          GraphicsMode.Default, DisplayDevice.Default );
+			//Window = new NativeWindow( 640, 400, Program.AppName, 0,
+			//                          GraphicsMode.Default, DisplayDevice.Default );
+			Window = new SDL2Window( 640, 400, Program.AppName );
 			Window.Visible = true;
 			Drawer = new GdiPlusDrawer2D( null );
 			Init();

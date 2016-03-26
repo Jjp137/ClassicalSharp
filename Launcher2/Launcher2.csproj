@@ -99,6 +99,7 @@
     <Compile Include="WebService\IWebTask.cs" />
     <Compile Include="WebService\ServerListEntry.cs" />
     <Compile Include="WebService\UpdateCheckTask.cs" />
+    <Compile Include="SDL2Window.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ClassicalSharp\ClassicalSharp.csproj">
@@ -108,6 +109,10 @@
     <ProjectReference Include="..\OpenTK\OpenTK.csproj">
       <Project>{35FEE071-2DE6-48A1-9343-B5C1F202A12B}</Project>
       <Name>OpenTK</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\SDL2-CS\SDL2-CS.csproj">
+      <Project>{85480198-8711-4355-830E-72FD794AD3F6}</Project>
+      <Name>SDL2-CS</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

@@ -275,8 +275,8 @@
     <Compile Include="Utils\Utils.cs" />
     <Compile Include="Utils\Vector3I.cs" />
     <Compile Include="Utils\WrappableStringBuffer.cs" />
-    <Compile Include="Platform\SDL2Window.cs" />
     <Compile Include="GraphicsAPI\SDL2GLApi.cs" />
+    <Compile Include="Platform\SDL2GLWindow.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\credits.txt">

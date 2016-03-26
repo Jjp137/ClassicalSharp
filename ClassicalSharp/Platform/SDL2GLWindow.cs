@@ -11,7 +11,7 @@ using OpenTK.Platform;
 
 namespace ClassicalSharp
 {
-	public class SDL2Window : IPlatformWindow, IDisposable
+	public class SDL2GLWindow : IPlatformWindow, IDisposable
 	{
 		// Temporary until we can rip out OpenTK stuff and just use SDL2 stuff
 		private static Dictionary<SDL.SDL_Keycode, Key> keyDict = new Dictionary<SDL.SDL_Keycode, Key>() {
@@ -211,7 +211,7 @@ namespace ClassicalSharp
 
 		private SDL2WindowInfo windowInfo;
 
-		public SDL2Window( Game game, string username, bool nullContext, int width, int height ) {
+		public SDL2GLWindow( Game game, string username, bool nullContext, int width, int height ) {
 			int success = SDL.SDL_Init( SDL.SDL_INIT_TIMER | SDL.SDL_INIT_VIDEO );
 
 			if( success != 0 ) {

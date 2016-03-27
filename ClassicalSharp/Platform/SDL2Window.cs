@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 
 using SDL2;
-using System.Runtime.InteropServices;
 
 using ClassicalSharp;
 
@@ -14,7 +14,6 @@ using System.Drawing;
 
 namespace ClassicalSharp
 {
-	// FIXME: launcher window always disappears after launching a game, regardless of settings
 	public class SDL2Window : IDisposable
 	{
 		// Temporary until we can rip out OpenTK stuff and just use SDL2 stuff

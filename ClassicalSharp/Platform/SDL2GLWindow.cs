@@ -1,13 +1,7 @@
 using System;
-using System.Collections.Generic;
+using System.Drawing;
 
 using SDL2;
-
-// TODO: remove these 'using' statements
-using System.Drawing;
-using OpenTK;
-using OpenTK.Input;
-using OpenTK.Platform;
 
 namespace ClassicalSharp
 {
@@ -24,7 +18,7 @@ namespace ClassicalSharp
 		public bool VSync {
 			get {
 				int result = SDL.SDL_GL_GetSwapInterval();
-				return result == 1;  // If it's -1, assume that we aren't using vsync
+				return result == 1;  // If the return value is -1 (query not supported), assume that vsync is off
 			}
 			set {
 				int arg = value ? 1 : 0;
@@ -45,15 +39,15 @@ namespace ClassicalSharp
 
 		private Game game;
 
-		private IntPtr context;
+		private IntPtr glContext;
 
 		public SDL2GLWindow( Game game, string username, bool nullContext, int width, int height ) :
 			base( width, height, Program.AppName + " - (" + username + ")", 
 			      SDL.SDL_WindowFlags.SDL_WINDOW_OPENGL | SDL.SDL_WindowFlags.SDL_WINDOW_RESIZABLE ) {
 
-			this.context = SDL.SDL_GL_CreateContext( window );
+			this.glContext = SDL.SDL_GL_CreateContext( window );
 
-			if( this.context == IntPtr.Zero ) {
+			if( this.glContext == IntPtr.Zero ) {
 				throw new InvalidOperationException( "SDL_GL_CreateContext: " + SDL.SDL_GetError() );
 			}
 
@@ -96,7 +90,7 @@ namespace ClassicalSharp
 		}
 
 		public override void Close() {
-			SDL.SDL_GL_DeleteContext( context );
+			SDL.SDL_GL_DeleteContext( glContext );
 			
 			base.Close();
 		}

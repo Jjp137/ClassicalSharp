@@ -9,7 +9,7 @@ using OpenTK;
 using Android.Graphics;
 #endif
 
-namespace ClassicalSharp {
+namespace ClassicalSharp.Entities {
 
 	public abstract partial class Player : Entity {
 		
@@ -84,7 +84,7 @@ namespace ClassicalSharp {
 				
 				try {
 					SkinType = Utils.GetSkinType( bmp );
-					if( Model is HumanoidModel || Model is ChibiModel )
+					if( Model is HumanoidModel )
 						ClearHat( bmp, SkinType );
 					PlayerTextureId = game.Graphics.CreateTexture( bmp );
 					MobTextureId = -1;

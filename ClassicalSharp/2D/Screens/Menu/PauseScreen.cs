@@ -3,7 +3,7 @@ using System;
 using System.Drawing;
 using OpenTK.Input;
 
-namespace ClassicalSharp {
+namespace ClassicalSharp.Gui {
 	
 	public class PauseScreen : MenuScreen {
 		
@@ -65,7 +65,7 @@ namespace ClassicalSharp {
 				            (g, w) => g.SetNewScreen( new SaveLevelScreen( g ) ) ),				
 				MakeBack( true, titleFont, (g, w) => g.SetNewScreen( null ) ),
 				
-				game.PureClassicMode ? null :
+				game.ClassicMode ? null :
 					MakeClassic( 0, 150, "Nostalgia options",
 					            (g, w) => g.SetNewScreen( new NostalgiaScreen( g ) ) ),
 			};

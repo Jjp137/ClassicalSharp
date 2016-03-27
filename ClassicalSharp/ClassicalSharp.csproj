@@ -104,6 +104,7 @@
     <Compile Include="2D\Screens\Menu\GuiOptionsScreen.cs" />
     <Compile Include="2D\Screens\Menu\HacksSettingsScreen.cs" />
     <Compile Include="2D\Screens\Menu\KeyBindingsScreen.cs" />
+    <Compile Include="2D\Screens\Menu\KeyBindingsScreens.cs" />
     <Compile Include="2D\Screens\Menu\LoadLevelScreen.cs" />
     <Compile Include="2D\Screens\Menu\MenuOptionsScreen.cs" />
     <Compile Include="2D\Screens\Menu\MenuScreen.cs" />
@@ -162,7 +163,7 @@
     <Compile Include="Entities\NetPlayer.cs" />
     <Compile Include="Events\EntityEvents.cs" />
     <Compile Include="Events\Events.cs" />
-    <Compile Include="Events\MapEvents.cs" />
+    <Compile Include="Events\WorldEvents.cs" />
     <Compile Include="Game\Game.Properties.cs" />
     <Compile Include="Generator\FlatGrassGenerator.cs" />
     <Compile Include="Generator\IMapGenerator.cs" />
@@ -171,8 +172,8 @@
     <Compile Include="Generator\NotchyGenerator.Utils.cs" />
     <Compile Include="GraphicsAPI\OpenGLESApi.cs" />
     <Compile Include="Map\Formats\MapCw.Nbt.cs" />
-    <Compile Include="Model\ChibiModel.cs" />
     <Compile Include="Model\CustomModel.cs" />
+    <Compile Include="Model\HumanModels.cs" />
     <Compile Include="Network\NetworkProcessor.CPECustom.cs" />
     <Compile Include="Particles\CollidableParticle.cs" />
     <Compile Include="Particles\Particle.cs" />
@@ -206,8 +207,8 @@
     <Compile Include="Map\Formats\MapCw.Importer.cs" />
     <Compile Include="Map\Formats\MapDat.Importer.cs" />
     <Compile Include="Map\Formats\MapFcm3.Importer.cs" />
-    <Compile Include="Map\Map.cs" />
-    <Compile Include="Map\Map.HeightmapCalc.cs" />
+    <Compile Include="Map\World.cs" />
+    <Compile Include="Map\World.HeightmapCalc.cs" />
     <Compile Include="Model\BlockModel.cs" />
     <Compile Include="Model\ChickenModel.cs" />
     <Compile Include="Model\CreeperModel.cs" />

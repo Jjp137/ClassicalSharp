@@ -70,7 +70,7 @@ namespace Launcher {
 			             Anchor.Centre, Anchor.Centre, 0, 110,
 			             (x, y) => Client.Start( widgets[0].Text, ref game.ShouldExit ) );
 			
-			if( !game.ClassicMode ) {
+			if( !game.ClassicBackground ) {
 				MakeButtonAt( "Colours", 110, buttonHeight, buttonFont,
 				             Anchor.LeftOrTop, Anchor.BottomOrRight, 10, -10,
 				             (x, y) => game.SetScreen( new ColoursScreen( game ) ) );
@@ -81,9 +81,9 @@ namespace Launcher {
 			MakeButtonAt( "Updates", 110, buttonHeight, buttonFont,
 			             Anchor.BottomOrRight, Anchor.BottomOrRight, -10, -10,
 			             (x, y) => game.SetScreen( new UpdatesScreen( game ) ) );
-			string mode = game.ClassicMode ? "Normal mode" : "Pure classic mode";
-			MakeButtonAt( mode, 200, buttonHeight, buttonFont,
-			             Anchor.Centre, Anchor.BottomOrRight, 0, -10, ModeClick );
+			MakeButtonAt( "Choose mode", 200, buttonHeight, buttonFont,
+			             Anchor.Centre, Anchor.BottomOrRight, 0, -10,
+			             (x, y) => game.SetScreen( new ChooseModeNormalScreen( game ) ) );
 			
 			MakeLabelAt( updateText, updateFont, Anchor.BottomOrRight, 
 			            Anchor.BottomOrRight, -10, -50 );
@@ -119,23 +119,6 @@ namespace Launcher {
 			if( !resumeValid ) return;
 			ClientStartData data = new ClientStartData( resumeUser, resumeMppass, resumeIp, resumePort );
 			Client.Start( data, resumeCCSkins, ref game.ShouldExit );
-		}
-		
-		void ModeClick( int mouseX, int mouseY ) {
-			game.ClassicMode = !game.ClassicMode;
-			Options.Load();
-			Options.Set( "mode-classic", game.ClassicMode );
-			
-			Options.Set( "nostalgia-customblocks", !game.ClassicMode );
-			Options.Set( "nostalgia-usecpe", !game.ClassicMode );
-			Options.Set( "nostalgia-servertextures", !game.ClassicMode );
-			Options.Set( "nostalgia-classictablist", game.ClassicMode );
-			Options.Set( "nostalgia-classicoptions", game.ClassicMode );
-			Options.Set( "nostalgia-classicgui", true );
-			Options.Save();
-			
-			game.MakeBackground();
-			Resize();
 		}
 		
 		protected override void SelectWidget( LauncherWidget widget ) {

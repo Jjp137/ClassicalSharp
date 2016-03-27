@@ -7,7 +7,10 @@ using System.Net;
 using System.Threading;
 using ClassicalSharp.Audio;
 using ClassicalSharp.Commands;
+using ClassicalSharp.Entities;
 using ClassicalSharp.GraphicsAPI;
+using ClassicalSharp.Gui;
+using ClassicalSharp.Map;
 using ClassicalSharp.Model;
 using ClassicalSharp.Network;
 using ClassicalSharp.Particles;
@@ -53,7 +56,8 @@ namespace ClassicalSharp {
 			Graphics.MakeGraphicsInfo();			
 			
 			Options.Load();
-			PureClassicMode = Options.GetBool( "mode-classic", false );
+			ClassicMode = Options.GetBool( "mode-classic", false );
+			ClassicHacks = Options.GetBool( OptionsKey.AllowClassicHacks, false );
 			Players = new EntityList( this );
 			AcceptedUrls.Load(); DeniedUrls.Load();
 			ViewDistance = Options.GetInt( OptionsKey.ViewDist, 16, 4096, 512 );
@@ -80,7 +84,7 @@ namespace ClassicalSharp {
 			ModelCache.InitCache();
 			AsyncDownloader = new AsyncDownloader( skinServer );
 			Drawer2D = new GdiPlusDrawer2D( Graphics );
-			Drawer2D.UseBitmappedChat = PureClassicMode || !Options.GetBool( OptionsKey.ArialChatFont, false );
+			Drawer2D.UseBitmappedChat = ClassicMode || !Options.GetBool( OptionsKey.ArialChatFont, false );
 			ViewBobbing = Options.GetBool( OptionsKey.ViewBobbing, false );
 			ShowBlockInHand = Options.GetBool( OptionsKey.ShowBlockInHand, true );
 			InvertMouse = Options.GetBool( OptionsKey.InvertMouse, false );
@@ -98,7 +102,7 @@ namespace ClassicalSharp {
 			Inventory = new Inventory( this );
 			
 			BlockInfo.SetDefaultBlockPermissions( Inventory.CanPlace, Inventory.CanDelete );
-			Map = new Map( this );
+			World = new World( this );
 			LocalPlayer = new LocalPlayer( this );
 			Players[255] = LocalPlayer;
 			width = Width;
@@ -109,7 +113,7 @@ namespace ClassicalSharp {
 			if( IPAddress == null ) {
 				Network = new Singleplayer.SinglePlayerServer( this );
 			} else {
-				Network = new NetworkProcessor( this );
+				Network = new Net.NetworkProcessor( this );
 			}
 			Graphics.LostContextFunction = Network.Tick;
 			
@@ -144,7 +148,7 @@ namespace ClassicalSharp {
 			MapBordersRenderer.Init();
 			Picking = new PickedPosRenderer( this );
 			AudioPlayer = new AudioPlayer( this );
-			ModifiableLiquids = !PureClassicMode && Options.GetBool( OptionsKey.ModifiableLiquids, false );
+			ModifiableLiquids = !ClassicMode && Options.GetBool( OptionsKey.ModifiableLiquids, false );
 			AxisLinesRenderer = new AxisLinesRenderer( this );
 			
 			LoadIcon();
@@ -163,7 +167,7 @@ namespace ClassicalSharp {
 			
 			TabAutocomplete = Options.GetBool( OptionsKey.TabAutocomplete, false );
 			FontName = Options.Get( OptionsKey.FontName ) ?? "Arial";
-			if( PureClassicMode ) FontName = "Arial";
+			if( ClassicMode ) FontName = "Arial";
 			
 			try {
 				using( Font f = new Font( FontName, 16 ) ) { }
@@ -232,7 +236,7 @@ namespace ClassicalSharp {
 			Culling.CalcFrustumEquations( ref Projection, ref modelView );
 			
 			bool visible = activeScreen == null || !activeScreen.BlocksWorld;
-			if( Map.IsNotLoaded ) visible = false;
+			if( World.IsNotLoaded ) visible = false;
 			if( visible ) {
 				AxisLinesRenderer.Render( delta );
 				Players.RenderModels( Graphics, delta, t );
@@ -345,8 +349,8 @@ namespace ClassicalSharp {
 		
 		public void Disconnect( string title, string reason ) {
 			SetNewScreen( new ErrorScreen( this, title, reason ) );
-			Map.Reset();
-			Map.mapData = null;
+			World.Reset();
+			World.mapData = null;
 			Drawer2D.InitColours();
 			
 			for( int tile = BlockInfo.CpeBlocksCount; tile < BlockInfo.BlocksCount; tile++ )
@@ -405,6 +409,7 @@ namespace ClassicalSharp {
 		}
 		
 		public void CycleCamera() {
+			if( ClassicMode ) return;
 			PerspectiveCamera oldCam = (PerspectiveCamera)Camera;
 			if( Camera == firstPersonCam ) Camera = thirdPersonCam;
 			else if( Camera == thirdPersonCam ) Camera = forwardThirdPersonCam;
@@ -419,9 +424,9 @@ namespace ClassicalSharp {
 		}
 		
 		public void UpdateBlock( int x, int y, int z, byte block ) {
-			int oldHeight = Map.GetLightHeight( x, z ) + 1;
-			Map.SetBlock( x, y, z, block );
-			int newHeight = Map.GetLightHeight( x, z ) + 1;
+			int oldHeight = World.GetLightHeight( x, z ) + 1;
+			World.SetBlock( x, y, z, block );
+			int newHeight = World.GetLightHeight( x, z ) + 1;
 			MapRenderer.RedrawBlock( x, y, z, block, oldHeight, newHeight );
 		}
 		

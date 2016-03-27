@@ -3,10 +3,11 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using ClassicalSharp.Events;
 using ClassicalSharp.Network;
 using OpenTK.Input;
 
-namespace ClassicalSharp {
+namespace ClassicalSharp.Gui {
 	
 	public class ChatScreen : Screen {
 		
@@ -98,7 +99,7 @@ namespace ClassicalSharp {
 		}
 		
 		public override void Render( double delta ) {
-			if( !game.PureClassicMode ) {
+			if( !game.ClassicMode ) {
 				status.Render( delta );
 				bottomRight.Render( delta );
 			}
@@ -112,7 +113,7 @@ namespace ClassicalSharp {
 			else
 				RenderRecentChat( now, delta );
 			
-			if( !game.PureClassicMode )
+			if( !game.ClassicMode )
 				announcement.Render( delta );
 			if( HandlesAllInput )
 				textInput.Render( delta );
@@ -139,12 +140,12 @@ namespace ClassicalSharp {
 			}
 			
 			int progress = game.AsyncDownloader.CurrentItemProgress;
-			if( progress == lastDownloadStatus ) return;			
+			if( progress == lastDownloadStatus ) return;
 			lastDownloadStatus = progress;
-			SetTexturePackMessage( progress );
+			SetFetchStatus( progress );
 		}
 		
-		void SetTexturePackMessage( int progress ) {
+		void SetFetchStatus( int progress ) {
 			lastDownload.Clear();
 			int index = 0;
 			if( progress == -2 ) 

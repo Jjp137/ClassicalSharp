@@ -4,7 +4,7 @@ using System.Drawing;
 using ClassicalSharp.GraphicsAPI;
 using OpenTK.Input;
 
-namespace ClassicalSharp {
+namespace ClassicalSharp.Gui {
 	
 	public partial class BlockSelectScreen : Screen {
 		
@@ -217,7 +217,7 @@ namespace ClassicalSharp {
 		}
 		
 		bool ShowTile( int tile ) {
-			if( game.PureClassicMode && (tile >= (byte)Block.Water && tile <= (byte)Block.StillLava) )
+			if( game.ClassicMode && (tile >= (byte)Block.Water && tile <= (byte)Block.StillLava) )
 				return false;
 			return tile < BlockInfo.CpeBlocksCount || game.BlockInfo.Name[tile] != "Invalid";
 		}

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 
 using SDL2;
+using System.Runtime.InteropServices;
 
 using ClassicalSharp;
 
@@ -14,6 +15,7 @@ using System.Drawing;
 namespace Launcher
 {
 	// TODO: perhaps use inheritance once it's clear what's actually shared between the two
+	// FIXME: launcher window always disappears after launching a game, regardless of settings
 	public class SDL2Window
 	{
 		// Temporary until we can rip out OpenTK stuff and just use SDL2 stuff
@@ -226,7 +228,8 @@ namespace Launcher
 			while( SDL.SDL_PollEvent( out curEvent ) != 0 ) {
 				switch( curEvent.type ) {
 					case SDL.SDL_EventType.SDL_QUIT:
-						// TODO: figure out what to do here
+						this.exists = false;
+						Close();  // TODO: temporary
 						break;
 					case SDL.SDL_EventType.SDL_WINDOWEVENT:
 						HandleWindowEvent( curEvent );
@@ -256,6 +259,21 @@ namespace Launcher
 			}
 		}
 		
+		public void Draw( Bitmap framebuffer ) {
+			// TODO: optimize this perhaps, and should this code be here?
+			IntPtr winSurf = SDL.SDL_GetWindowSurface( window );
+
+			using( FastBitmap fastBmp = new FastBitmap( framebuffer, true ) ) {
+				IntPtr image = SDL.SDL_CreateRGBSurfaceFrom( fastBmp.Scan0, fastBmp.Width, fastBmp.Height, 32,
+				                                             fastBmp.Stride, 0x00FF0000, 0x0000FF00, 0x000000FF,
+				                                             0xFF000000 );
+				SDL.SDL_BlitSurface( image, IntPtr.Zero, winSurf, IntPtr.Zero );
+				SDL.SDL_FreeSurface( image );
+			}
+
+			SDL.SDL_UpdateWindowSurface( window );
+		}
+
 		private void HandleWindowEvent( SDL.SDL_Event winEvent ) {
 			switch ( winEvent.window.windowEvent ) {
 				case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_SIZE_CHANGED:
@@ -347,8 +365,10 @@ namespace Launcher
 		}
 		
 		public void Close() {
+			SDL.SDL_StopTextInput();
+
 			this.exists = false;
-			
+
 			SDL.SDL_DestroyWindow( window );
 			SDL.SDL_Quit();
 		}

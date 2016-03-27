@@ -61,7 +61,7 @@ namespace Launcher {
 		internal UpdateCheckTask checkTask;
 		
 		Font logoFont;
-		PlatformDrawer platformDrawer;
+		//PlatformDrawer platformDrawer;
 		public void Init() {
 			Window.Resize += Resize;
 			Window.FocusedChanged += FocusedChanged;
@@ -72,12 +72,12 @@ namespace Launcher {
 			Window.Icon = Icon.ExtractAssociatedIcon( path );
 			//Minimised = Window.WindowState == WindowState.Minimized;
 			                                         
-			if( Configuration.RunningOnWindows )
+			/*if( Configuration.RunningOnWindows )
 				platformDrawer = new WinPlatformDrawer();
 			else if( Configuration.RunningOnX11 )
 				platformDrawer = new X11PlatformDrawer();
 			else if( Configuration.RunningOnMacOS )
-				platformDrawer = new OSXPlatformDrawer();
+				platformDrawer = new OSXPlatformDrawer();*/
 		}
 		
 		void LoadFont() {
@@ -98,7 +98,7 @@ namespace Launcher {
 		}
 
 		void Resize( object sender, EventArgs e ) {
-			platformDrawer.Resize( Window.WindowInfo );
+			//platformDrawer.Resize( Window.WindowInfo );
 			MakeBackground();
 			Screen.Resize();
 		}
@@ -146,7 +146,7 @@ namespace Launcher {
 			Drawer = new GdiPlusDrawer2D( null );
 			Init();
 			TryLoadTexturePack();
-			platformDrawer.Init( Window.WindowInfo );
+			//platformDrawer.Init( Window.WindowInfo );
 			
 			fetcher = new ResourceFetcher();
 			fetcher.CheckResourceExistence();
@@ -184,7 +184,8 @@ namespace Launcher {
 		void Display() {
 			Dirty = false;
 			Screen.Dirty = false;
-			platformDrawer.Draw( Window.WindowInfo, Framebuffer );
+			Window.Draw( Framebuffer );
+			//platformDrawer.Draw( Window.WindowInfo, Framebuffer );
 		}
 		
 		public void Dispose() {

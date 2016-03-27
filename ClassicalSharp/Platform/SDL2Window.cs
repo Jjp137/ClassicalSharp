@@ -12,14 +12,13 @@ using OpenTK.Input;
 using OpenTK.Platform;
 using System.Drawing;
 
-namespace Launcher
+namespace ClassicalSharp
 {
-	// TODO: perhaps use inheritance once it's clear what's actually shared between the two
 	// FIXME: launcher window always disappears after launching a game, regardless of settings
-	public class SDL2Window
+	public class SDL2Window : IDisposable
 	{
 		// Temporary until we can rip out OpenTK stuff and just use SDL2 stuff
-		private static Dictionary<SDL.SDL_Keycode, Key> keyDict = new Dictionary<SDL.SDL_Keycode, Key>() {
+		protected static Dictionary<SDL.SDL_Keycode, Key> keyDict = new Dictionary<SDL.SDL_Keycode, Key>() {
 			{ SDL.SDL_Keycode.SDLK_a, Key.A },
 			{ SDL.SDL_Keycode.SDLK_b, Key.B },
 			{ SDL.SDL_Keycode.SDLK_c, Key.C },
@@ -71,7 +70,7 @@ namespace Launcher
 			{ SDL.SDL_Keycode.SDLK_UP, Key.Up },
 			{ SDL.SDL_Keycode.SDLK_DOWN, Key.Down }
 		};
-		private static Dictionary<uint, MouseButton> mouseDict = new Dictionary<uint, MouseButton>() {
+		protected static Dictionary<uint, MouseButton> mouseDict = new Dictionary<uint, MouseButton>() {
 			{ SDL.SDL_BUTTON_LEFT, MouseButton.Left },
 			{ SDL.SDL_BUTTON_MIDDLE, MouseButton.Middle },
 			{ SDL.SDL_BUTTON_RIGHT, MouseButton.Right },
@@ -95,25 +94,11 @@ namespace Launcher
 			}
 		}
 		
-		private MouseDevice mouse;
-		public MouseDevice Mouse {
-			get {
-				return mouse;
-			}
-		}
-		
-		private bool exists;
-		public bool Exists {
-			get { return exists; }
+		protected bool focused;
+		public bool Focused {
+			get { return focused; }
 		}
 
-		private bool focused;
-		public bool Focused {
-			get {
-				return focused;
-			}
-		}
-		
 		public bool Visible {
 			get { return true; }
 			set { }
@@ -139,11 +124,19 @@ namespace Launcher
 			}
 		}
 		
-		private KeyboardDevice keyboard;
+		protected bool exists;
+		public bool Exists {
+			get { return exists; }
+		}
+		
+		protected MouseDevice mouse;
+		public MouseDevice Mouse {
+			get { return mouse; }
+		}
+
+		protected KeyboardDevice keyboard;
 		public KeyboardDevice Keyboard {
-			get {
-				return keyboard;
-			}
+			get { return keyboard; }
 		}
 		
 		public Point PointToScreen( Point coords ) {
@@ -153,13 +146,13 @@ namespace Launcher
 			return new Point( coords.X + win_x, coords.Y + win_y );
 		}
 		
+		// TODO: implement
 		public WindowState WindowState {
 			get {
 				return WindowState.Normal;
-				//throw new NotImplementedException( "WindowState.get" );
 			}
 			set {
-				//throw new NotImplementedException( "WindowState.set" );
+
 			}
 		}
 		
@@ -183,30 +176,30 @@ namespace Launcher
 		public event EventHandler<EventArgs> Resize;
 		public event EventHandler<EventArgs> WindowStateChanged;
 		public event EventHandler<EventArgs> FocusedChanged;
-		
 		public event EventHandler<KeyPressEventArgs> KeyPress;
 		
-		private IntPtr window;
-		private SDL2WindowInfo windowInfo;
+		protected IntPtr window;
+		protected SDL2WindowInfo windowInfo;
 		
-		public SDL2Window ( int width, int height, string title )
+		protected bool disposed;
+		
+		public SDL2Window( int width, int height, string title, SDL.SDL_WindowFlags flags )
 		{
 			int success = SDL.SDL_Init( SDL.SDL_INIT_TIMER | SDL.SDL_INIT_VIDEO );
 
 			if( success != 0 ) {
-				// TODO: inherit from Exception
-				throw new Exception( SDL.SDL_GetError() );
+				throw new InvalidOperationException( "SDL_Init failed: " + SDL.SDL_GetError() );
 			}
 
 			this.window = SDL.SDL_CreateWindow(
 				title + " - SDL2 ",
+				// Let the operating system's window manager decide
 				SDL.SDL_WINDOWPOS_UNDEFINED, SDL.SDL_WINDOWPOS_UNDEFINED,
-				width, height,
-				SDL.SDL_WindowFlags.SDL_WINDOW_OPENGL | SDL.SDL_WindowFlags.SDL_WINDOW_RESIZABLE
+				width, height, flags
 				);
 
 			if( this.window == IntPtr.Zero ) {
-				throw new Exception( SDL.SDL_GetError() );
+				throw new InvalidOperationException( "SDL_CreateWindow failed: " + SDL.SDL_GetError() );
 			}
 
 			this.windowInfo = new SDL2WindowInfo( this.window );
@@ -228,7 +221,6 @@ namespace Launcher
 			while( SDL.SDL_PollEvent( out curEvent ) != 0 ) {
 				switch( curEvent.type ) {
 					case SDL.SDL_EventType.SDL_QUIT:
-						this.exists = false;
 						Close();  // TODO: temporary
 						break;
 					case SDL.SDL_EventType.SDL_WINDOWEVENT:
@@ -259,11 +251,11 @@ namespace Launcher
 			}
 		}
 		
-		public void Draw( Bitmap framebuffer ) {
+		public virtual void Draw( Bitmap framebuffer ) {
 			// TODO: optimize this perhaps, and should this code be here?
 			IntPtr winSurf = SDL.SDL_GetWindowSurface( window );
 
-			using( FastBitmap fastBmp = new FastBitmap( framebuffer, true ) ) {
+			using( FastBitmap fastBmp = new FastBitmap( framebuffer, true, true ) ) {
 				IntPtr image = SDL.SDL_CreateRGBSurfaceFrom( fastBmp.Scan0, fastBmp.Width, fastBmp.Height, 32,
 				                                             fastBmp.Stride, 0x00FF0000, 0x0000FF00, 0x000000FF,
 				                                             0xFF000000 );
@@ -315,7 +307,6 @@ namespace Launcher
 		}
 
 		private void HandleTextInput( SDL.SDL_Event textEvent ) {
-			EventHandler<KeyPressEventArgs> temp = this.KeyPress;
 			KeyPressEventArgs args = new KeyPressEventArgs();
 
 			for( int i = 0; i < SDL.SDL_TEXTINPUTEVENT_TEXT_SIZE; i++ ) {
@@ -328,7 +319,9 @@ namespace Launcher
 				}
 
 				args.KeyChar = c;
-				temp( this, args );
+				if (KeyPress != null) {
+					KeyPress( this, args );
+				}
 			}
 		}
 
@@ -364,13 +357,23 @@ namespace Launcher
 			this.mouse.WheelPrecise += y;
 		}
 		
-		public void Close() {
+		public virtual void Close() {
 			SDL.SDL_StopTextInput();
 
 			this.exists = false;
 
 			SDL.SDL_DestroyWindow( window );
 			SDL.SDL_Quit();
+		}
+		
+		public void Dispose() {
+			Dispose( true );
+		}
+
+		protected void Dispose( bool disposing ) {
+			if( disposed ) {
+				return;
+			}
 		}
 	}
 	

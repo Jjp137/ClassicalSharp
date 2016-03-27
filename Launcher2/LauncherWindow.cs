@@ -9,6 +9,7 @@ using ClassicalSharp;
 using ClassicalSharp.Network;
 using OpenTK;
 using OpenTK.Graphics;
+using SDL2;
 
 namespace Launcher {
 
@@ -141,7 +142,7 @@ namespace Launcher {
 		public void Run() {			
 			//Window = new NativeWindow( 640, 400, Program.AppName, 0,
 			//                          GraphicsMode.Default, DisplayDevice.Default );
-			Window = new SDL2Window( 640, 400, Program.AppName );
+			Window = new SDL2Window( 640, 400, Program.AppName, SDL.SDL_WindowFlags.SDL_WINDOW_RESIZABLE );
 			Window.Visible = true;
 			Drawer = new GdiPlusDrawer2D( null );
 			Init();

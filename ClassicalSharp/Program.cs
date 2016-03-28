@@ -4,6 +4,7 @@ using System.IO;
 using System.Net;
 using ClassicalSharp.TexturePack;
 using OpenTK;
+using SDL2;
 
 namespace ClassicalSharp {
 	
@@ -32,7 +33,11 @@ namespace ClassicalSharp {
 			nullContext = false;
 			#endif
 			int width, height;
+			#if !USE_DX
+			SelectResolutionSDL( out width, out height );
+			#else
 			SelectResolution( out width, out height );
+			#endif
 				
 			if( args.Length == 0 || args.Length == 1 ) {
 				const string skinServer = "http://static.classicube.net/skins/";
@@ -57,6 +62,37 @@ namespace ClassicalSharp {
 			if( device.Width >= 1920 && device.Height >= 1080 ) {
 				width = 1600; height = 900;
 			}
+		}
+		
+		static void SelectResolutionSDL( out int width, out int height ) {
+			// This is rather hacky, but since DisplayDevice isn't used for much within ClassicalSharp's
+			// code itself, I don't see this equivalent method being used more than once for the time being.
+			int success = SDL.SDL_Init( SDL.SDL_INIT_VIDEO );
+
+			if( success != 0 ) {
+				throw new InvalidOperationException( "SDL_Init failed: " + SDL.SDL_GetError() );
+			}
+			
+			int displays = SDL.SDL_GetNumVideoDisplays();
+			if( displays < 0 ) {
+				throw new InvalidOperationException( "SDL_GetNumVideoDisplays failed: " + SDL.SDL_GetError() );
+			}
+			
+			// Assume that we want the first display for now.
+			SDL.SDL_DisplayMode mode;
+			SDL.SDL_GetDesktopDisplayMode( 0, out mode );
+			
+			width = 640; height = 480;
+
+			if( mode.w >= 1024 && mode.h >= 768 ) {
+				width = 800; height = 600;
+			}
+			if( mode.w >= 1920 && mode.h >= 1080 ) {
+				width = 1600; height = 900;
+			}
+			
+			// Quit SDL because the SDLWindow will initialize it again a moment later.
+			SDL.SDL_Quit();
 		}
 		
 		static void RunMultiplayer( string[] args, bool nullContext, int width, int height ) {

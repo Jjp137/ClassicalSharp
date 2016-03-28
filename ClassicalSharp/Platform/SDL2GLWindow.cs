@@ -7,14 +7,6 @@ namespace ClassicalSharp
 {
 	public class SDL2GLWindow : SDL2Window, IPlatformWindow, IDisposable
 	{
-		public Size ClientSize { 
-			get {
-				int w, h;
-				SDL.SDL_GetWindowSize( this.window, out w, out h );
-				return new Size( w, h );
-			}
-		}
-
 		public bool VSync {
 			get {
 				int result = SDL.SDL_GL_GetSwapInterval();
@@ -69,7 +61,7 @@ namespace ClassicalSharp
 			while( true ) {
 				ProcessEvents();
 
-				if ( !this.exists ) {
+				if( !this.exists ) {
 					break;
 				}
 

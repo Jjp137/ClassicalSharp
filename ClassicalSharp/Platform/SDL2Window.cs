@@ -107,6 +107,14 @@ namespace ClassicalSharp
 			}
 		}
 
+		public Size ClientSize {
+			get {
+				int w, h;
+				SDL.SDL_GetWindowSize( this.window, out w, out h );
+				return new Size( w, h );
+			}
+		}
+
 		public bool Focused {
 			get {
 				uint flags = SDL.SDL_GetWindowFlags( this.window );
@@ -167,13 +175,13 @@ namespace ClassicalSharp
 			get {
 				uint flags = SDL.SDL_GetWindowFlags( this.window );
 
-				if ( ( flags & (uint)SDL.SDL_WindowFlags.SDL_WINDOW_MINIMIZED ) != 0 ) {
+				if( ( flags & (uint)SDL.SDL_WindowFlags.SDL_WINDOW_MINIMIZED ) != 0 ) {
 					return WindowState.Minimized;
 				}
-				else if ( ( flags & (uint)SDL.SDL_WindowFlags.SDL_WINDOW_MAXIMIZED ) != 0 ) {
+				else if( ( flags & (uint)SDL.SDL_WindowFlags.SDL_WINDOW_MAXIMIZED ) != 0 ) {
 					return WindowState.Maximized;
 				}
-				else if ( ( flags & (uint)SDL.SDL_WindowFlags.SDL_WINDOW_FULLSCREEN ) != 0 ) {
+				else if( ( flags & (uint)SDL.SDL_WindowFlags.SDL_WINDOW_FULLSCREEN ) != 0 ) {
 					return WindowState.Fullscreen;
 				}
 				else {
@@ -183,13 +191,13 @@ namespace ClassicalSharp
 			set {
 				WindowState current = this.WindowState;
 
-				if ( value == WindowState.Minimized && current != WindowState.Minimized ) {
+				if( value == WindowState.Minimized && current != WindowState.Minimized ) {
 					SDL.SDL_MinimizeWindow( this.window );
 				}
-				else if ( value == WindowState.Maximized && current != WindowState.Maximized ) {
+				else if( value == WindowState.Maximized && current != WindowState.Maximized ) {
 					SDL.SDL_MaximizeWindow( this.window );
 				}
-				else if ( value == WindowState.Fullscreen && current != WindowState.Fullscreen ) {
+				else if( value == WindowState.Fullscreen && current != WindowState.Fullscreen ) {
 					// I guess desktop fullscreen is desired since that's what it does with OpenTK on Linux
 					SDL.SDL_SetWindowFullscreen( this.window, (uint)SDL.SDL_WindowFlags.SDL_WINDOW_FULLSCREEN_DESKTOP );
 
@@ -199,14 +207,14 @@ namespace ClassicalSharp
 					}
 				}
 				else {  // WindowState.Normal
-					if ( current == WindowState.Minimized || current == WindowState.Maximized ) {
+					if( current == WindowState.Minimized || current == WindowState.Maximized ) {
 						SDL.SDL_RestoreWindow( this.window );
 					}
-					else if ( current == WindowState.Fullscreen ) {
+					else if( current == WindowState.Fullscreen ) {
 						SDL.SDL_SetWindowFullscreen( this.window, 0 );
 
 						// Same reasoning here
-						if ( WindowStateChanged != null ) {
+						if( WindowStateChanged != null ) {
 							WindowStateChanged ( this, new EventArgs() );
 						}
 					}
@@ -228,19 +236,19 @@ namespace ClassicalSharp
 				//SDL.SDL_SetWindowIcon( this.window, IntPtr.Zero );
 			}
 		}
-		
+
 		public IWindowInfo WindowInfo { get { return windowInfo; } }
-		
+
 		public event EventHandler<EventArgs> Resize;
 		public event EventHandler<EventArgs> WindowStateChanged;
 		public event EventHandler<EventArgs> FocusedChanged;
 		public event EventHandler<KeyPressEventArgs> KeyPress;
-		
+
 		protected IntPtr window;
 		protected SDL2WindowInfo windowInfo;
-		
+
 		protected bool disposed;
-		
+
 		public SDL2Window( int width, int height, string title, SDL.SDL_WindowFlags flags )
 		{
 			int success = SDL.SDL_Init( SDL.SDL_INIT_TIMER | SDL.SDL_INIT_VIDEO );
@@ -261,7 +269,7 @@ namespace ClassicalSharp
 			}
 
 			this.exists = true;
-			
+
 			this.windowInfo = new SDL2WindowInfo( this.window );
 
 			this.keyboard = new KeyboardDevice();
@@ -305,7 +313,7 @@ namespace ClassicalSharp
 						HandleMouseWheel( curEvent );
 						break;
 				}
-				
+
 				// Don't process any more events if the window has been destroyed
 				if ( !this.exists ) {
 					break;
@@ -442,12 +450,12 @@ namespace ClassicalSharp
 			SDL.SDL_DestroyWindow( window );
 			this.exists = false;
 		}
-		
+
 		public virtual void Close() {
-			if ( this.exists ) {
+			if( this.exists ) {
 				DestroyWindow();
 			}
-			
+
 			SDL.SDL_Quit();
 		}
 		

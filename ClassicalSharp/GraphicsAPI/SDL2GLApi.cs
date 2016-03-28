@@ -15,6 +15,8 @@ using GlPixelFormat = OpenTK.Graphics.OpenGL.PixelFormat;
 
 namespace ClassicalSharp.GraphicsAPI
 {
+	/// <summary> Alternate implementation of OpenGLApi that uses SDL2. </summary>
+	/// <remarks> Any usage of this class assumes that SDL's video subsystem was initialized. </remarks>
 	public unsafe class SDL2GLApi : IGraphicsApi
 	{
 		private unsafe static class GLFuncs {
@@ -354,8 +356,7 @@ namespace ClassicalSharp.GraphicsAPI
 					glViewport = (GLViewport) GetFunc( "glViewport", typeof(GLViewport) );
 				}
 				catch {
-					throw;
-					//throw new InvalidOperationException( "Can't load GL entry points!" );
+					throw new InvalidOperationException( "Can't load GL entry points!" );
 				}
 			}
 

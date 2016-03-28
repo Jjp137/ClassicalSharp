@@ -48,7 +48,6 @@ namespace ClassicalSharp {
 			Mouse = window.Mouse;
 			Keyboard = window.Keyboard;
 			#if !USE_DX
-			//Graphics = new OpenGLApi();
 			Graphics = new SDL2GLApi();
 			#else
 			Graphics = new Direct3D9Api( this );
@@ -509,8 +508,12 @@ namespace ClassicalSharp {
 		
 		public Game( string username, string mppass, string skinServer,
 		            bool nullContext, int width, int height ) {
-			//window = new DesktopWindow( this, username, nullContext, width, height );
+			#if USE_DX
+			// TODO: implement SDL2 + DirectX and replace this
+			window = new DesktopWindow( this, username, nullContext, width, height );
+			#else
 			window = new SDL2GLWindow( this, username, nullContext, width, height );
+			#endif
 			Username = username;
 			Mppass = mppass;
 			this.skinServer = skinServer;

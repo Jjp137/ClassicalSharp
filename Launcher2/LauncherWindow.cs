@@ -8,7 +8,6 @@ using System.Threading;
 using ClassicalSharp;
 using ClassicalSharp.Network;
 using OpenTK;
-using OpenTK.Graphics;
 using SDL2;
 
 namespace Launcher {
@@ -62,7 +61,6 @@ namespace Launcher {
 		internal UpdateCheckTask checkTask;
 		
 		Font logoFont;
-		//PlatformDrawer platformDrawer;
 		public void Init() {
 			Window.Resize += Resize;
 			Window.FocusedChanged += FocusedChanged;
@@ -72,13 +70,6 @@ namespace Launcher {
 			string path = Assembly.GetExecutingAssembly().Location;
 			Window.Icon = Icon.ExtractAssociatedIcon( path );
 			//Minimised = Window.WindowState == WindowState.Minimized;
-			                                         
-			/*if( Configuration.RunningOnWindows )
-				platformDrawer = new WinPlatformDrawer();
-			else if( Configuration.RunningOnX11 )
-				platformDrawer = new X11PlatformDrawer();
-			else if( Configuration.RunningOnMacOS )
-				platformDrawer = new OSXPlatformDrawer();*/
 		}
 		
 		void LoadFont() {
@@ -99,7 +90,6 @@ namespace Launcher {
 		}
 
 		void Resize( object sender, EventArgs e ) {
-			//platformDrawer.Resize( Window.WindowInfo );
 			MakeBackground();
 			Screen.Resize();
 		}
@@ -140,14 +130,11 @@ namespace Launcher {
 		}
 		
 		public void Run() {			
-			//Window = new NativeWindow( 640, 400, Program.AppName, 0,
-			//                          GraphicsMode.Default, DisplayDevice.Default );
 			Window = new SDL2Window( 640, 400, Program.AppName, SDL.SDL_WindowFlags.SDL_WINDOW_RESIZABLE );
 			Window.Visible = true;
 			Drawer = new GdiPlusDrawer2D( null );
 			Init();
 			TryLoadTexturePack();
-			//platformDrawer.Init( Window.WindowInfo );
 			
 			fetcher = new ResourceFetcher();
 			fetcher.CheckResourceExistence();
@@ -186,7 +173,6 @@ namespace Launcher {
 			Dirty = false;
 			Screen.Dirty = false;
 			Window.Draw( Framebuffer );
-			//platformDrawer.Draw( Window.WindowInfo, Framebuffer );
 		}
 		
 		public void Dispose() {

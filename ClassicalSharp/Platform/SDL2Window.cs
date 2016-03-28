@@ -337,8 +337,6 @@ namespace ClassicalSharp
 		}
 
 		private void HandleWindowEvent( SDL.SDL_Event winEvent ) {
-			Console.WriteLine( winEvent.window.windowEvent );
-
 			switch ( winEvent.window.windowEvent ) {
 				case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_SIZE_CHANGED:
 				case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_RESIZED:

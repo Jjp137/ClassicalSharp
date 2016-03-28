@@ -56,7 +56,7 @@ namespace ClassicalSharp
 
 			this.game = game;
 
-			// TODO: Attach resized event and other events
+			this.Resize += this.OnResize;
 		}
 
 		public void Run() {
@@ -81,6 +81,10 @@ namespace ClassicalSharp
 			}
 		}
 
+		private void OnResize( object sender, EventArgs e ) {
+			game.OnResize();
+		}
+
 		public void SwapBuffers() {
 			SDL.SDL_GL_SwapWindow( window );
 		}
@@ -91,14 +95,14 @@ namespace ClassicalSharp
 
 		public override void Close() {
 			SDL.SDL_GL_DeleteContext( glContext );
-			
+
 			base.Close();
 		}
-		
+
 		public void Exit() {
 			SDL.SDL_Event newEvent = new SDL.SDL_Event();
 			newEvent.type = SDL.SDL_EventType.SDL_QUIT;
-			
+
 			SDL.SDL_PushEvent( ref newEvent );
 		}
 	}

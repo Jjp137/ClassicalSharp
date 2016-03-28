@@ -67,8 +67,22 @@ namespace ClassicalSharp
 			{ SDL.SDL_Keycode.SDLK_LEFT, Key.Left },
 			{ SDL.SDL_Keycode.SDLK_RIGHT, Key.Right },
 			{ SDL.SDL_Keycode.SDLK_UP, Key.Up },
-			{ SDL.SDL_Keycode.SDLK_DOWN, Key.Down }
+			{ SDL.SDL_Keycode.SDLK_DOWN, Key.Down },
+			{ SDL.SDL_Keycode.SDLK_TAB, Key.Tab },
+			{ SDL.SDL_Keycode.SDLK_F1, Key.F1 },
+			{ SDL.SDL_Keycode.SDLK_F2, Key.F2 },
+			{ SDL.SDL_Keycode.SDLK_F3, Key.F3 },
+			{ SDL.SDL_Keycode.SDLK_F4, Key.F4 },
+			{ SDL.SDL_Keycode.SDLK_F5, Key.F5 },
+			{ SDL.SDL_Keycode.SDLK_F6, Key.F6 },
+			{ SDL.SDL_Keycode.SDLK_F7, Key.F7 },
+			{ SDL.SDL_Keycode.SDLK_F8, Key.F8 },
+			{ SDL.SDL_Keycode.SDLK_F9, Key.F9 },
+			{ SDL.SDL_Keycode.SDLK_F10, Key.F10 },
+			{ SDL.SDL_Keycode.SDLK_F11, Key.F11 },
+			{ SDL.SDL_Keycode.SDLK_F12, Key.F12 },
 		};
+
 		protected static Dictionary<uint, MouseButton> mouseDict = new Dictionary<uint, MouseButton>() {
 			{ SDL.SDL_BUTTON_LEFT, MouseButton.Left },
 			{ SDL.SDL_BUTTON_MIDDLE, MouseButton.Middle },
@@ -76,7 +90,7 @@ namespace ClassicalSharp
 			{ SDL.SDL_BUTTON_X1, MouseButton.Button1 },
 			{ SDL.SDL_BUTTON_X2, MouseButton.Button2 },
 		};
-		
+
 		public int Width {
 			get {
 				int w, h;
@@ -92,18 +106,22 @@ namespace ClassicalSharp
 				return h;
 			}
 		}
-		
-		protected bool focused;
+
 		public bool Focused {
-			get { return focused; }
+			get {
+				uint flags = SDL.SDL_GetWindowFlags( this.window );
+				return ( flags & (uint)SDL.SDL_WindowFlags.SDL_WINDOW_INPUT_FOCUS ) != 0;
+			}
 		}
 
+		// TODO: implement
 		public bool Visible {
 			get { return true; }
 			set { }
 		}
 
 		public Point DesktopCursorPos {
+			// FIXME: SDL 2.0.4 makes this easier, but Debian only has 2.0.2
 			get {
 				int win_x, win_y, mouse_x, mouse_y;
 				SDL.SDL_GetWindowPosition( this.window, out win_x, out win_y );
@@ -122,12 +140,12 @@ namespace ClassicalSharp
 				SDL.SDL_PumpEvents();
 			}
 		}
-		
+
 		protected bool exists;
 		public bool Exists {
 			get { return exists; }
 		}
-		
+
 		protected MouseDevice mouse;
 		public MouseDevice Mouse {
 			get { return mouse; }
@@ -145,13 +163,54 @@ namespace ClassicalSharp
 			return new Point( coords.X + win_x, coords.Y + win_y );
 		}
 		
-		// TODO: implement
 		public WindowState WindowState {
 			get {
-				return WindowState.Normal;
+				uint flags = SDL.SDL_GetWindowFlags( this.window );
+
+				if ( ( flags & (uint)SDL.SDL_WindowFlags.SDL_WINDOW_MINIMIZED ) != 0 ) {
+					return WindowState.Minimized;
+				}
+				else if ( ( flags & (uint)SDL.SDL_WindowFlags.SDL_WINDOW_MAXIMIZED ) != 0 ) {
+					return WindowState.Maximized;
+				}
+				else if ( ( flags & (uint)SDL.SDL_WindowFlags.SDL_WINDOW_FULLSCREEN ) != 0 ) {
+					return WindowState.Fullscreen;
+				}
+				else {
+					return WindowState.Normal;
+				}
 			}
 			set {
+				WindowState current = this.WindowState;
 
+				if ( value == WindowState.Minimized && current != WindowState.Minimized ) {
+					SDL.SDL_MinimizeWindow( this.window );
+				}
+				else if ( value == WindowState.Maximized && current != WindowState.Maximized ) {
+					SDL.SDL_MaximizeWindow( this.window );
+				}
+				else if ( value == WindowState.Fullscreen && current != WindowState.Fullscreen ) {
+					// I guess desktop fullscreen is desired since that's what it does with OpenTK on Linux
+					SDL.SDL_SetWindowFullscreen( this.window, (uint)SDL.SDL_WindowFlags.SDL_WINDOW_FULLSCREEN_DESKTOP );
+
+					// There is no "changed from/to fullscreen" specific SDL event, so handle it here
+					if ( WindowStateChanged != null ) {
+						WindowStateChanged ( this, new EventArgs() );
+					}
+				}
+				else {  // WindowState.Normal
+					if ( current == WindowState.Minimized || current == WindowState.Maximized ) {
+						SDL.SDL_RestoreWindow( this.window );
+					}
+					else if ( current == WindowState.Fullscreen ) {
+						SDL.SDL_SetWindowFullscreen( this.window, 0 );
+
+						// Same reasoning here
+						if ( WindowStateChanged != null ) {
+							WindowStateChanged ( this, new EventArgs() );
+						}
+					}
+				}
 			}
 		}
 		
@@ -211,7 +270,6 @@ namespace ClassicalSharp
 			SDL.SDL_StartTextInput();
 
 			this.exists = true;
-			this.focused = true;
 		}
 		
 		public void ProcessEvents() {
@@ -251,7 +309,7 @@ namespace ClassicalSharp
 		}
 		
 		public virtual void Draw( Bitmap framebuffer ) {
-			// TODO: optimize this perhaps, and should this code be here?
+			// TODO: store a pointer to the window surface and update it when resizing happens
 			IntPtr winSurf = SDL.SDL_GetWindowSurface( window );
 
 			using( FastBitmap fastBmp = new FastBitmap( framebuffer, true, true ) ) {
@@ -266,15 +324,31 @@ namespace ClassicalSharp
 		}
 
 		private void HandleWindowEvent( SDL.SDL_Event winEvent ) {
+			Console.WriteLine( winEvent.window.windowEvent );
+
 			switch ( winEvent.window.windowEvent ) {
 				case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_SIZE_CHANGED:
 				case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_RESIZED:
+					if ( Resize != null ) {
+						Resize( this, new EventArgs() );
+					}
 					break;
 				case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_FOCUS_GAINED:
-					this.focused = true;
+					if ( FocusedChanged != null ) {
+						FocusedChanged( this, new EventArgs() );
+					}
 					break;
 				case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_FOCUS_LOST:
-					this.focused = false;
+					if ( FocusedChanged != null ) {
+						FocusedChanged( this, new EventArgs() );
+					}
+					break;
+				case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_MINIMIZED:
+				case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_MAXIMIZED:
+				case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_RESTORED:
+					if ( WindowStateChanged != null ) {
+						WindowStateChanged ( this, new EventArgs() );
+					}
 					break;
 				default:
 					break;
@@ -388,7 +462,7 @@ namespace ClassicalSharp
 		}
 
 		public void Dispose() {
-			// Doesn't do anything.
+			// Doesn't do anything; is just here to implement IDisposable, heh :(
 		}
 	}
 }

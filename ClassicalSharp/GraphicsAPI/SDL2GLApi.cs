@@ -2,7 +2,6 @@
 using System;
 using System.Runtime.InteropServices;
 
-using ClassicalSharp.GraphicsAPI;
 using SDL2;
 
 // TODO: get rid of these
@@ -14,7 +13,7 @@ using System.Drawing.Imaging;
 using BmpPixelFormat = System.Drawing.Imaging.PixelFormat;
 using GlPixelFormat = OpenTK.Graphics.OpenGL.PixelFormat;
 
-namespace ClassicalSharp
+namespace ClassicalSharp.GraphicsAPI
 {
 	public unsafe class SDL2GLApi : IGraphicsApi
 	{

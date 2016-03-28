@@ -122,10 +122,19 @@ namespace ClassicalSharp
 			}
 		}
 
-		// TODO: implement
 		public bool Visible {
-			get { return true; }
-			set { }
+			get {
+				uint flags = SDL.SDL_GetWindowFlags( this.window );
+				return ( flags & (uint)SDL.SDL_WindowFlags.SDL_WINDOW_SHOWN ) != 0;
+			}
+			set {
+				if ( value ) {
+					SDL.SDL_ShowWindow( this.window );
+				}
+				else {
+					SDL.SDL_HideWindow( this.window );
+				}
+			}
 		}
 
 		public Point DesktopCursorPos {
@@ -181,7 +190,7 @@ namespace ClassicalSharp
 				else if( ( flags & (uint)SDL.SDL_WindowFlags.SDL_WINDOW_MAXIMIZED ) != 0 ) {
 					return WindowState.Maximized;
 				}
-				else if( ( flags & (uint)SDL.SDL_WindowFlags.SDL_WINDOW_FULLSCREEN ) != 0 ) {
+				else if( ( flags & (uint)SDL.SDL_WindowFlags.SDL_WINDOW_FULLSCREEN_DESKTOP ) != 0 ) {
 					return WindowState.Fullscreen;
 				}
 				else {
@@ -205,6 +214,7 @@ namespace ClassicalSharp
 					if ( WindowStateChanged != null ) {
 						WindowStateChanged ( this, new EventArgs() );
 					}
+					UpdateSurfacePointer();
 				}
 				else {  // WindowState.Normal
 					if( current == WindowState.Minimized || current == WindowState.Maximized ) {
@@ -217,6 +227,7 @@ namespace ClassicalSharp
 						if( WindowStateChanged != null ) {
 							WindowStateChanged ( this, new EventArgs() );
 						}
+						UpdateSurfacePointer();
 					}
 				}
 			}
@@ -245,6 +256,7 @@ namespace ClassicalSharp
 		public event EventHandler<KeyPressEventArgs> KeyPress;
 
 		protected IntPtr window;
+		private IntPtr winSurf;
 		protected SDL2WindowInfo windowInfo;
 
 		protected bool disposed;
@@ -268,6 +280,8 @@ namespace ClassicalSharp
 				throw new InvalidOperationException( "SDL_CreateWindow failed: " + SDL.SDL_GetError() );
 			}
 
+			this.UpdateSurfacePointer();
+			
 			this.exists = true;
 
 			this.windowInfo = new SDL2WindowInfo( this.window );
@@ -321,15 +335,24 @@ namespace ClassicalSharp
 			}
 		}
 		
+		/// <summary> Updates the pointer to the window's surface. </summary>
+		/// <remarks> This method must be called when the window is resized or the window state changes. Otherwise,
+		/// it will be pointing to an invalid SDL_Surface. Do not free this pointer, as it will be automatically
+		/// freed when the window is destroyed. Override this method with a no-op if using OpenGL or DirectX, as
+		/// SDL_GetWindowSurface is not intended to be used with those APIs. </remarks>
+		protected virtual void UpdateSurfacePointer() {
+			this.winSurf = SDL.SDL_GetWindowSurface( window );
+			if( this.window == IntPtr.Zero ) {
+				throw new InvalidOperationException( "SDL_GetWindowSurface failed: " + SDL.SDL_GetError() );
+			}
+		}
+		
 		public virtual void Draw( Bitmap framebuffer ) {
-			// TODO: store a pointer to the window surface and update it when resizing happens
-			IntPtr winSurf = SDL.SDL_GetWindowSurface( window );
-
 			using( FastBitmap fastBmp = new FastBitmap( framebuffer, true, true ) ) {
 				IntPtr image = SDL.SDL_CreateRGBSurfaceFrom( fastBmp.Scan0, fastBmp.Width, fastBmp.Height, 32,
 				                                             fastBmp.Stride, 0x00FF0000, 0x0000FF00, 0x000000FF,
 				                                             0xFF000000 );
-				SDL.SDL_BlitSurface( image, IntPtr.Zero, winSurf, IntPtr.Zero );
+				SDL.SDL_BlitSurface( image, IntPtr.Zero, this.winSurf, IntPtr.Zero );
 				SDL.SDL_FreeSurface( image );
 			}
 
@@ -343,6 +366,7 @@ namespace ClassicalSharp
 					if ( Resize != null ) {
 						Resize( this, new EventArgs() );
 					}
+					UpdateSurfacePointer();
 					break;
 				case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_FOCUS_GAINED:
 					if ( FocusedChanged != null ) {
@@ -360,6 +384,7 @@ namespace ClassicalSharp
 					if ( WindowStateChanged != null ) {
 						WindowStateChanged ( this, new EventArgs() );
 					}
+					UpdateSurfacePointer();
 					break;
 				default:
 					break;

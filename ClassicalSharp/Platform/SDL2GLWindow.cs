@@ -81,6 +81,10 @@ namespace ClassicalSharp
 			SDL.SDL_GL_SwapWindow( window );
 		}
 
+		protected override void UpdateSurfacePointer() {
+			// Do nothing; it's best not to combine SDL_GetWindowSurface with OpenGL.
+		}
+		
 		public override void Draw( Bitmap framebuffer ) {
 			throw new InvalidOperationException( "You can't use SDL drawing functions when OpenGL is being used." );
 		}

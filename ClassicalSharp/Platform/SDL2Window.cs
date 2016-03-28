@@ -115,19 +115,25 @@ namespace ClassicalSharp
 			}
 		}
 
+		protected bool exists;
+		public bool Exists {
+			get { return this.exists; }
+		}
+
+		private bool focused;
 		public bool Focused {
 			get {
-				uint flags = SDL.SDL_GetWindowFlags( this.window );
-				return ( flags & (uint)SDL.SDL_WindowFlags.SDL_WINDOW_INPUT_FOCUS ) != 0;
+				return this.focused;
 			}
 		}
 
+		private bool visible;
 		public bool Visible {
 			get {
-				uint flags = SDL.SDL_GetWindowFlags( this.window );
-				return ( flags & (uint)SDL.SDL_WindowFlags.SDL_WINDOW_SHOWN ) != 0;
+				return visible;
 			}
 			set {
+				this.visible = value;
 				if ( value ) {
 					SDL.SDL_ShowWindow( this.window );
 				}
@@ -156,11 +162,6 @@ namespace ClassicalSharp
 				// mechanism that depends on the change to mouse position immediately being applied
 				SDL.SDL_PumpEvents();
 			}
-		}
-
-		protected bool exists;
-		public bool Exists {
-			get { return exists; }
 		}
 
 		protected MouseDevice mouse;
@@ -211,10 +212,10 @@ namespace ClassicalSharp
 					SDL.SDL_SetWindowFullscreen( this.window, (uint)SDL.SDL_WindowFlags.SDL_WINDOW_FULLSCREEN_DESKTOP );
 
 					// There is no "changed from/to fullscreen" specific SDL event, so handle it here
-					if ( WindowStateChanged != null ) {
+					UpdateSurfacePointer();
+					if( WindowStateChanged != null ) {
 						WindowStateChanged ( this, new EventArgs() );
 					}
-					UpdateSurfacePointer();
 				}
 				else {  // WindowState.Normal
 					if( current == WindowState.Minimized || current == WindowState.Maximized ) {
@@ -224,10 +225,10 @@ namespace ClassicalSharp
 						SDL.SDL_SetWindowFullscreen( this.window, 0 );
 
 						// Same reasoning here
+						UpdateSurfacePointer();
 						if( WindowStateChanged != null ) {
 							WindowStateChanged ( this, new EventArgs() );
 						}
-						UpdateSurfacePointer();
 					}
 				}
 			}
@@ -256,7 +257,7 @@ namespace ClassicalSharp
 		public event EventHandler<KeyPressEventArgs> KeyPress;
 
 		protected IntPtr window;
-		private IntPtr winSurf;
+		private IntPtr surface;
 		protected SDL2WindowInfo windowInfo;
 
 		protected bool disposed;
@@ -283,6 +284,8 @@ namespace ClassicalSharp
 			this.UpdateSurfacePointer();
 			
 			this.exists = true;
+			this.visible = true;
+			this.focused = true;
 
 			this.windowInfo = new SDL2WindowInfo( this.window );
 
@@ -336,12 +339,12 @@ namespace ClassicalSharp
 		}
 		
 		/// <summary> Updates the pointer to the window's surface. </summary>
-		/// <remarks> This method must be called when the window is resized or the window state changes. Otherwise,
-		/// it will be pointing to an invalid SDL_Surface. Do not free this pointer, as it will be automatically
-		/// freed when the window is destroyed. Override this method with a no-op if using OpenGL or DirectX, as
+		/// <remarks> This method must be called when the window is resized. Otherwise, it will be pointing to an
+		/// invalid SDL_Surface. Do not free this pointer, as it will be automatically freed when the window is
+		/// destroyed. Override this method with one that does nothing if using OpenGL or DirectX, as 
 		/// SDL_GetWindowSurface is not intended to be used with those APIs. </remarks>
 		protected virtual void UpdateSurfacePointer() {
-			this.winSurf = SDL.SDL_GetWindowSurface( window );
+			this.surface = SDL.SDL_GetWindowSurface( window );
 			if( this.window == IntPtr.Zero ) {
 				throw new InvalidOperationException( "SDL_GetWindowSurface failed: " + SDL.SDL_GetError() );
 			}
@@ -352,7 +355,7 @@ namespace ClassicalSharp
 				IntPtr image = SDL.SDL_CreateRGBSurfaceFrom( fastBmp.Scan0, fastBmp.Width, fastBmp.Height, 32,
 				                                             fastBmp.Stride, 0x00FF0000, 0x0000FF00, 0x000000FF,
 				                                             0xFF000000 );
-				SDL.SDL_BlitSurface( image, IntPtr.Zero, this.winSurf, IntPtr.Zero );
+				SDL.SDL_BlitSurface( image, IntPtr.Zero, this.surface, IntPtr.Zero );
 				SDL.SDL_FreeSurface( image );
 			}
 
@@ -363,17 +366,19 @@ namespace ClassicalSharp
 			switch ( winEvent.window.windowEvent ) {
 				case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_SIZE_CHANGED:
 				case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_RESIZED:
+					UpdateSurfacePointer();
 					if ( Resize != null ) {
 						Resize( this, new EventArgs() );
 					}
-					UpdateSurfacePointer();
 					break;
 				case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_FOCUS_GAINED:
+					this.focused = true;
 					if ( FocusedChanged != null ) {
 						FocusedChanged( this, new EventArgs() );
 					}
 					break;
 				case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_FOCUS_LOST:
+					this.focused = false;
 					if ( FocusedChanged != null ) {
 						FocusedChanged( this, new EventArgs() );
 					}
@@ -384,7 +389,12 @@ namespace ClassicalSharp
 					if ( WindowStateChanged != null ) {
 						WindowStateChanged ( this, new EventArgs() );
 					}
-					UpdateSurfacePointer();
+					break;
+				case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_SHOWN:
+					this.visible = true;
+					break;
+				case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_HIDDEN:
+					this.visible = false;
 					break;
 				default:
 					break;
@@ -505,7 +515,7 @@ namespace ClassicalSharp
 		}
 
 		public void Dispose() {
-			// Doesn't do anything; is just here to implement IDisposable, heh :(
+			// Doesn't do anything; is just here to implement IDisposable
 		}
 	}
 }

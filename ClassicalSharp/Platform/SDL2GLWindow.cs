@@ -93,10 +93,10 @@ namespace ClassicalSharp
 			throw new InvalidOperationException( "You can't use SDL drawing functions when OpenGL is being used." );
 		}
 
-		public override void Close() {
+		protected override void DestroyWindow() {
 			SDL.SDL_GL_DeleteContext( glContext );
 
-			base.Close();
+			base.DestroyWindow();
 		}
 
 		public void Exit() {

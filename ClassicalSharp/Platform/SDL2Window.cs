@@ -251,7 +251,7 @@ namespace ClassicalSharp
 
 			this.window = SDL.SDL_CreateWindow(
 				title + " - SDL2 ",
-				// Let the operating system's window manager decide
+				// Let the operating system's window manager decide where to put the window
 				SDL.SDL_WINDOWPOS_UNDEFINED, SDL.SDL_WINDOWPOS_UNDEFINED,
 				width, height, flags
 				);
@@ -260,16 +260,16 @@ namespace ClassicalSharp
 				throw new InvalidOperationException( "SDL_CreateWindow failed: " + SDL.SDL_GetError() );
 			}
 
+			this.exists = true;
+			
 			this.windowInfo = new SDL2WindowInfo( this.window );
 
-			// Temporary crap
 			this.keyboard = new KeyboardDevice();
 			this.mouse = new MouseDevice();
 
-			// For text entry
+			// TODO: Having text input enabled adds overhead, so it should be enabled when necessary (such as
+			// when entering text in a chat box) and disabled otherwise
 			SDL.SDL_StartTextInput();
-
-			this.exists = true;
 		}
 		
 		public void ProcessEvents() {
@@ -278,7 +278,7 @@ namespace ClassicalSharp
 			while( SDL.SDL_PollEvent( out curEvent ) != 0 ) {
 				switch( curEvent.type ) {
 					case SDL.SDL_EventType.SDL_QUIT:
-						Close();  // TODO: temporary
+						DestroyWindow();
 						break;
 					case SDL.SDL_EventType.SDL_WINDOWEVENT:
 						HandleWindowEvent( curEvent );
@@ -304,6 +304,11 @@ namespace ClassicalSharp
 					case SDL.SDL_EventType.SDL_MOUSEWHEEL:
 						HandleMouseWheel( curEvent );
 						break;
+				}
+				
+				// Don't process any more events if the window has been destroyed
+				if ( !this.exists ) {
+					break;
 				}
 			}
 		}
@@ -430,12 +435,19 @@ namespace ClassicalSharp
 			this.mouse.WheelPrecise += y;
 		}
 		
-		public virtual void Close() {
+		protected virtual void DestroyWindow() {
+			// TODO: like its counterpart, turn text input into a toggle
 			SDL.SDL_StopTextInput();
 
-			this.exists = false;
-
 			SDL.SDL_DestroyWindow( window );
+			this.exists = false;
+		}
+		
+		public virtual void Close() {
+			if ( this.exists ) {
+				DestroyWindow();
+			}
+			
 			SDL.SDL_Quit();
 		}
 		

@@ -129,8 +129,8 @@ namespace ClassicalSharp.GraphicsAPI {
 		
 		/// <summary> Creates a static vertex buffer that has its data set at creation,
 		/// but the vertex buffer's data cannot be updated after creation. </summary>
-		public abstract int CreateVb( VertexPos3fCol4b[] vertices, VertexFormat format, int count );
-		public abstract int CreateVb( VertexPos3fTex2fCol4b[] vertices, VertexFormat format, int count );
+		public abstract int CreateVb( VertexP3fC4b[] vertices, VertexFormat format, int count );
+		public abstract int CreateVb( VertexP3fT2fC4b[] vertices, VertexFormat format, int count );
 		
 		/// <summary> Creates a static vertex buffer that has its data set at creation,
 		/// but the vertex buffer's data cannot be updated after creation. </summary>
@@ -165,20 +165,20 @@ namespace ClassicalSharp.GraphicsAPI {
 		
 		/// <summary> Binds and draws the specified subset of the vertices in the current dynamic vertex buffer<br/>
 		/// This method also replaces the dynamic vertex buffer's data first with the given vertices before drawing. </summary>
-		public abstract void UpdateDynamicVb( DrawMode mode, int vb, VertexPos3fCol4b[] vertices, int count );
-		public abstract void UpdateDynamicVb( DrawMode mode, int vb, VertexPos3fTex2fCol4b[] vertices, int count );
+		public abstract void UpdateDynamicVb( DrawMode mode, int vb, VertexP3fC4b[] vertices, int count );
+		public abstract void UpdateDynamicVb( DrawMode mode, int vb, VertexP3fT2fC4b[] vertices, int count );
 		
 		/// <summary> Binds and draws the specified subset of the vertices in the current dynamic vertex buffer<br/>
 		/// This method also replaces the dynamic vertex buffer's data first with the given vertices before drawing. </summary>
-		public abstract void UpdateDynamicIndexedVb( DrawMode mode, int vb, VertexPos3fCol4b[] vertices,
+		public abstract void UpdateDynamicIndexedVb( DrawMode mode, int vb, VertexP3fC4b[] vertices,
 		                                             int vCount, int indicesCount );
-		public abstract void UpdateDynamicIndexedVb( DrawMode mode, int vb, VertexPos3fTex2fCol4b[] vertices,
+		public abstract void UpdateDynamicIndexedVb( DrawMode mode, int vb, VertexP3fT2fC4b[] vertices,
 		                                             int vCount, int indicesCount );
 		
 		/// <summary> Binds and updates the data of the current dynamic vertex buffer's data.<br/>
 		/// This method also replaces the dynamic vertex buffer's data first with the given vertices before drawing. </summary>
-		public abstract void SetDynamicVbData( DrawMode mode, int vb, VertexPos3fCol4b[] vertices, int count );
-		public abstract void SetDynamicVbData( DrawMode mode, int vb, VertexPos3fTex2fCol4b[]vertices, int count );
+		public abstract void SetDynamicVbData( DrawMode mode, int vb, VertexP3fC4b[] vertices, int count );
+		public abstract void SetDynamicVbData( DrawMode mode, int vb, VertexP3fT2fC4b[]vertices, int count );
 		
 		/// <summary> Draws the specified subset of the vertices in the current vertex buffer. </summary>
 		public abstract void DrawVb( DrawMode mode, int startVertex, int verticesCount );

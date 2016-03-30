@@ -539,15 +539,15 @@ namespace ClassicalSharp.GraphicsAPI
 			return id;
 		}
 
-		public override int CreateVb( VertexPos3fCol4b[] vertices, VertexFormat format, int count ) {
-			fixed ( VertexPos3fCol4b* p = vertices ) {
+		public override int CreateVb( VertexP3fC4b[] vertices, VertexFormat format, int count ) {
+			fixed ( VertexP3fC4b* p = vertices ) {
 				IntPtr ptr = (IntPtr)p;
 				return CreateVb( ptr, format, count );
 			}
 		}
 		
-		public override int CreateVb( VertexPos3fTex2fCol4b[] vertices, VertexFormat format, int count ) {
-			fixed ( VertexPos3fTex2fCol4b* p = vertices ) {
+		public override int CreateVb( VertexP3fT2fC4b[] vertices, VertexFormat format, int count ) {
+			fixed ( VertexP3fT2fC4b* p = vertices ) {
 				IntPtr ptr = (IntPtr)p;
 				return CreateVb( ptr, format, count );
 			}
@@ -581,43 +581,43 @@ namespace ClassicalSharp.GraphicsAPI
 			return id;
 		}
 
-		public override void UpdateDynamicVb( DrawMode mode, int vb, VertexPos3fCol4b[] vertices, int count ) {
-			fixed ( VertexPos3fCol4b* p = vertices ) {
+		public override void UpdateDynamicVb( DrawMode mode, int vb, VertexP3fC4b[] vertices, int count ) {
+			fixed ( VertexP3fC4b* p = vertices ) {
 				IntPtr ptr = (IntPtr)p;
 				UpdateDynamicVb( mode, vb, ptr, count );
 			}
 		}
 		
-		public override void UpdateDynamicVb( DrawMode mode, int vb, VertexPos3fTex2fCol4b[] vertices, int count ) {
-			fixed ( VertexPos3fTex2fCol4b* p = vertices ) {
+		public override void UpdateDynamicVb( DrawMode mode, int vb, VertexP3fT2fC4b[] vertices, int count ) {
+			fixed ( VertexP3fT2fC4b* p = vertices ) {
 				IntPtr ptr = (IntPtr)p;
 				UpdateDynamicVb( mode, vb, ptr, count );
 			}
 		}
 		
-		public override void UpdateDynamicIndexedVb( DrawMode mode, int vb, VertexPos3fCol4b[] vertices, int vCount, int indicesCount ) {
-			fixed ( VertexPos3fCol4b* p = vertices ) {
+		public override void UpdateDynamicIndexedVb( DrawMode mode, int vb, VertexP3fC4b[] vertices, int vCount, int indicesCount ) {
+			fixed ( VertexP3fC4b* p = vertices ) {
 				IntPtr ptr = (IntPtr)p;
 				UpdateDynamicIndexedVb( mode, vb, ptr, vCount, indicesCount );
 			}
 		}
 		
-		public override void UpdateDynamicIndexedVb( DrawMode mode, int vb, VertexPos3fTex2fCol4b[] vertices, int vCount, int indicesCount ) {
-			fixed ( VertexPos3fTex2fCol4b* p = vertices ) {
+		public override void UpdateDynamicIndexedVb( DrawMode mode, int vb, VertexP3fT2fC4b[] vertices, int vCount, int indicesCount ) {
+			fixed ( VertexP3fT2fC4b* p = vertices ) {
 				IntPtr ptr = (IntPtr)p;
 				UpdateDynamicIndexedVb( mode, vb, ptr, vCount, indicesCount );
 			}
 		}
 		
-		public override void SetDynamicVbData( DrawMode mode, int vb, VertexPos3fCol4b[] vertices, int count ) {
-			fixed ( VertexPos3fCol4b* p = vertices ) {
+		public override void SetDynamicVbData( DrawMode mode, int vb, VertexP3fC4b[] vertices, int count ) {
+			fixed ( VertexP3fC4b* p = vertices ) {
 				IntPtr ptr = (IntPtr)p;
 				SetDynamicVbData( mode, vb, ptr, count ); 
 			}
 		}
 		
-		public override void SetDynamicVbData( DrawMode mode, int vb, VertexPos3fTex2fCol4b[] vertices, int count ) {
-			fixed ( VertexPos3fTex2fCol4b* p = vertices ) {
+		public override void SetDynamicVbData( DrawMode mode, int vb, VertexP3fT2fC4b[] vertices, int count ) {
+			fixed ( VertexP3fT2fC4b* p = vertices ) {
 				IntPtr ptr = (IntPtr)p;
 				SetDynamicVbData( mode, vb, ptr, count ); 
 			}
@@ -672,10 +672,10 @@ namespace ClassicalSharp.GraphicsAPI
 			if( format == VertexFormat.Pos3fTex2fCol4b ) {
 				GLFuncs.EnableClientState( ArrayCap.TextureCoordArray );
 				setupBatchFunc = setupBatchFuncTex2fCol4b;
-				batchStride = VertexPos3fTex2fCol4b.Size;
+				batchStride = VertexP3fT2fC4b.Size;
 			} else {
 				setupBatchFunc = setupBatchFuncCol4b;
-				batchStride = VertexPos3fCol4b.Size;
+				batchStride = VertexP3fC4b.Size;
 			}
 		}
 
@@ -706,7 +706,7 @@ namespace ClassicalSharp.GraphicsAPI
 		}
 
 		internal override void DrawIndexedVb_TrisT2fC4b( int indicesCount, int startVertex, int startIndex ) {
-			int offset = startVertex * VertexPos3fTex2fCol4b.Size;
+			int offset = startVertex * VertexP3fT2fC4b.Size;
 			GLFuncs.VertexPointer( 3, PointerType.Float, 24, new IntPtr( offset ) );
 			GLFuncs.ColorPointer( 4, PointerType.UnsignedByte, 24, new IntPtr( offset + 12 ) );
 			GLFuncs.TexCoordPointer( 2, PointerType.Float, 24, new IntPtr( offset + 16 ) );
@@ -716,14 +716,14 @@ namespace ClassicalSharp.GraphicsAPI
 		IntPtr zero = new IntPtr( 0 ), twelve = new IntPtr( 12 ), sixteen = new IntPtr( 16 );
 
 		void SetupVbPos3fCol4b() {
-			GLFuncs.VertexPointer( 3, PointerType.Float, VertexPos3fCol4b.Size, zero );
-			GLFuncs.ColorPointer( 4, PointerType.UnsignedByte, VertexPos3fCol4b.Size, twelve );
+			GLFuncs.VertexPointer( 3, PointerType.Float, VertexP3fC4b.Size, zero );
+			GLFuncs.ColorPointer( 4, PointerType.UnsignedByte, VertexP3fC4b.Size, twelve );
 		}
 
 		void SetupVbPos3fTex2fCol4b() {
-			GLFuncs.VertexPointer( 3, PointerType.Float, VertexPos3fTex2fCol4b.Size, zero );
-			GLFuncs.ColorPointer( 4, PointerType.UnsignedByte, VertexPos3fTex2fCol4b.Size, twelve );
-			GLFuncs.TexCoordPointer( 2, PointerType.Float, VertexPos3fTex2fCol4b.Size, sixteen );
+			GLFuncs.VertexPointer( 3, PointerType.Float, VertexP3fT2fC4b.Size, zero );
+			GLFuncs.ColorPointer( 4, PointerType.UnsignedByte, VertexP3fT2fC4b.Size, twelve );
+			GLFuncs.TexCoordPointer( 2, PointerType.Float, VertexP3fT2fC4b.Size, sixteen );
 		}
 		#endregion
 

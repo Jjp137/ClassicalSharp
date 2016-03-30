@@ -182,12 +182,12 @@ namespace ClassicalSharp.GraphicsAPI {
 			return id;
 		}
 		
-		public override int CreateVb( VertexPos3fCol4b[] vertices, VertexFormat format, int count ) {
-			return CreateVb<VertexPos3fCol4b>(vertices, format, count);
+		public override int CreateVb( VertexP3fC4b[] vertices, VertexFormat format, int count ) {
+			return CreateVb<VertexP3fC4b>(vertices, format, count);
 		}
 		
-		public override int CreateVb( VertexPos3fTex2fCol4b[] vertices, VertexFormat format, int count ) {
-			return CreateVb<VertexPos3fTex2fCol4b>(vertices, format, count);
+		public override int CreateVb( VertexP3fT2fC4b[] vertices, VertexFormat format, int count ) {
+			return CreateVb<VertexP3fT2fC4b>(vertices, format, count);
 		}
 		
 		public int CreateVb<T>( T[] vertices, VertexFormat format, int count ) where T : struct {
@@ -229,12 +229,12 @@ namespace ClassicalSharp.GraphicsAPI {
 		
 		int batchStride;
 		
-		public override void UpdateDynamicVb( DrawMode mode, int vb, VertexPos3fCol4b[] vertices, int count ) {
-			UpdateDynamicVb<VertexPos3fCol4b>( mode, vb, vertices, count );
+		public override void UpdateDynamicVb( DrawMode mode, int vb, VertexP3fC4b[] vertices, int count ) {
+			UpdateDynamicVb<VertexP3fC4b>( mode, vb, vertices, count );
 		}
 		
-		public override void UpdateDynamicVb( DrawMode mode, int vb, VertexPos3fTex2fCol4b[] vertices, int count ) {
-			UpdateDynamicVb<VertexPos3fTex2fCol4b>( mode, vb, vertices, count );
+		public override void UpdateDynamicVb( DrawMode mode, int vb, VertexP3fT2fC4b[] vertices, int count ) {
+			UpdateDynamicVb<VertexP3fT2fC4b>( mode, vb, vertices, count );
 		}
 		
 		public void UpdateDynamicVb<T>( DrawMode mode, int id, T[] vertices, int count ) where T : struct {
@@ -245,14 +245,14 @@ namespace ClassicalSharp.GraphicsAPI {
 			GL.DrawArrays( modeMappings[(int)mode], 0, count );
 		}
 		
-		public override void UpdateDynamicIndexedVb( DrawMode mode, int vb, VertexPos3fCol4b[] vertices, int vCount, 
+		public override void UpdateDynamicIndexedVb( DrawMode mode, int vb, VertexP3fC4b[] vertices, int vCount, 
 		                                             int indicesCount ) {
-			UpdateDynamicIndexedVb<VertexPos3fCol4b>( mode, vb, vertices, vCount, indicesCount );
+			UpdateDynamicIndexedVb<VertexP3fC4b>( mode, vb, vertices, vCount, indicesCount );
 		}
 		
-		public override void UpdateDynamicIndexedVb( DrawMode mode, int vb, VertexPos3fTex2fCol4b[] vertices, int vCount, 
+		public override void UpdateDynamicIndexedVb( DrawMode mode, int vb, VertexP3fT2fC4b[] vertices, int vCount, 
 		                                             int indicesCount ) {
-			UpdateDynamicIndexedVb<VertexPos3fTex2fCol4b>( mode, vb, vertices, vCount, indicesCount );
+			UpdateDynamicIndexedVb<VertexP3fT2fC4b>( mode, vb, vertices, vCount, indicesCount );
 		}
 		
 		public void UpdateDynamicIndexedVb<T>( DrawMode mode, int id, T[] vertices, int vCount, int indicesCount ) where T : struct {
@@ -263,12 +263,12 @@ namespace ClassicalSharp.GraphicsAPI {
 			GL.DrawElements( modeMappings[(int)mode], indicesCount, indexType, zero );
 		}
 		
-		public override void SetDynamicVbData( DrawMode mode, int vb, VertexPos3fCol4b[] vertices, int count ) {
-			SetDynamicVbData<VertexPos3fCol4b>( mode, vb, vertices, count );
+		public override void SetDynamicVbData( DrawMode mode, int vb, VertexP3fC4b[] vertices, int count ) {
+			SetDynamicVbData<VertexP3fC4b>( mode, vb, vertices, count );
 		}
 		
-		public override void SetDynamicVbData( DrawMode mode, int vb, VertexPos3fTex2fCol4b[] vertices, int count ) {
-			SetDynamicVbData<VertexPos3fTex2fCol4b>( mode, vb, vertices, count );
+		public override void SetDynamicVbData( DrawMode mode, int vb, VertexP3fT2fC4b[] vertices, int count ) {
+			SetDynamicVbData<VertexP3fT2fC4b>( mode, vb, vertices, count );
 		}
 
 		public void SetDynamicVbData<T>( DrawMode mode, int id, T[] vertices, int count ) where T : struct {

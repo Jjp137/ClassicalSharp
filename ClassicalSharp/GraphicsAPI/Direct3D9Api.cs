@@ -232,12 +232,12 @@ namespace ClassicalSharp.GraphicsAPI {
 			return GetOrExpand( ref dynamicvBuffers, buffer, iBufferSize );
 		}
 		
-		public override void UpdateDynamicVb( DrawMode mode, int vb, VertexPos3fCol4b[] vertices, int count ) {
-			UpdateDynamicVb<VertexPos3fCol4b>( mode, vb, vertices, count );
+		public override void UpdateDynamicVb( DrawMode mode, int vb, VertexP3fC4b[] vertices, int count ) {
+			UpdateDynamicVb<VertexP3fC4b>( mode, vb, vertices, count );
 		}
 
-		public override void UpdateDynamicVb( DrawMode mode, int vb, VertexPos3fTex2fCol4b[] vertices, int count ) {
-			UpdateDynamicVb<VertexPos3fTex2fCol4b>( mode, vb, vertices, count );
+		public override void UpdateDynamicVb( DrawMode mode, int vb, VertexP3fT2fC4b[] vertices, int count ) {
+			UpdateDynamicVb<VertexP3fT2fC4b>( mode, vb, vertices, count );
 		}
 		
 		public void UpdateDynamicVb<T>( DrawMode mode, int vb, T[] vertices, int count ) where T : struct {
@@ -249,14 +249,14 @@ namespace ClassicalSharp.GraphicsAPI {
 			device.DrawPrimitives( modeMappings[(int)mode], 0, NumPrimitives( count, mode ) );
 		}
 		
-		public override void UpdateDynamicIndexedVb( DrawMode mode, int vb, VertexPos3fCol4b[] vertices, 
+		public override void UpdateDynamicIndexedVb( DrawMode mode, int vb, VertexP3fC4b[] vertices, 
 		                                             int vCount, int indicesCount ) {
-			UpdateDynamicIndexedVb<VertexPos3fCol4b>( mode, vb, vertices, vCount, indicesCount );
+			UpdateDynamicIndexedVb<VertexP3fC4b>( mode, vb, vertices, vCount, indicesCount );
 		}
 
-		public override void UpdateDynamicIndexedVb( DrawMode mode, int vb, VertexPos3fTex2fCol4b[] vertices, 
+		public override void UpdateDynamicIndexedVb( DrawMode mode, int vb, VertexP3fT2fC4b[] vertices, 
 		                                             int vCount, int indicesCount) {
-			UpdateDynamicIndexedVb<VertexPos3fTex2fCol4b>( mode, vb, vertices, vCount, indicesCount );
+			UpdateDynamicIndexedVb<VertexP3fT2fC4b>( mode, vb, vertices, vCount, indicesCount );
 		}
 		
 		public void UpdateDynamicIndexedVb<T>( DrawMode mode, int vb, T[] vertices, int vCount, int indicesCount ) where T : struct {
@@ -268,12 +268,12 @@ namespace ClassicalSharp.GraphicsAPI {
 			device.DrawIndexedPrimitives( modeMappings[(int)mode], 0, 0, indicesCount / 6 * 4, 0, NumPrimitives( indicesCount, mode ) );
 		}
 		
-		public override void SetDynamicVbData( DrawMode mode, int vb, VertexPos3fCol4b[] vertices, int count ) {
-			SetDynamicVbData<VertexPos3fCol4b>( mode, vb, vertices, count );
+		public override void SetDynamicVbData( DrawMode mode, int vb, VertexP3fC4b[] vertices, int count ) {
+			SetDynamicVbData<VertexP3fC4b>( mode, vb, vertices, count );
 		}
 
-		public override void SetDynamicVbData( DrawMode mode, int vb, VertexPos3fTex2fCol4b[] vertices, int count ) {
-			SetDynamicVbData<VertexPos3fTex2fCol4b>( mode, vb, vertices, count );
+		public override void SetDynamicVbData( DrawMode mode, int vb, VertexP3fT2fC4b[] vertices, int count ) {
+			SetDynamicVbData<VertexP3fT2fC4b>( mode, vb, vertices, count );
 		}
 		
 		public void SetDynamicVbData<T>( DrawMode mode, int vb, T[] vertices, int count ) where T: struct {
@@ -287,12 +287,12 @@ namespace ClassicalSharp.GraphicsAPI {
 			Delete( dynamicvBuffers, id );
 		}
 
-		public override int CreateVb( VertexPos3fCol4b[] vertices, VertexFormat format, int count ) {
-			return CreateVb<VertexPos3fCol4b>( vertices, format, count );
+		public override int CreateVb( VertexP3fC4b[] vertices, VertexFormat format, int count ) {
+			return CreateVb<VertexP3fC4b>( vertices, format, count );
 		}
 
-		public override int CreateVb( VertexPos3fTex2fCol4b[] vertices, VertexFormat format, int count ) {
-			return CreateVb<VertexPos3fTex2fCol4b>( vertices, format, count );
+		public override int CreateVb( VertexP3fT2fC4b[] vertices, VertexFormat format, int count ) {
+			return CreateVb<VertexP3fT2fC4b>( vertices, format, count );
 		}
 		
 		D3D.VertexFormat[] formatMapping;

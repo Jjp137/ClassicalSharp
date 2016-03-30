@@ -17,7 +17,7 @@ namespace ClassicalSharp.Gui {
 			widgets = new Widget[] {
 				// Column 1
 				!network.IsSinglePlayer ? null :
-					Make( -1, -100, "Click distance", OnWidgetClick,
+					Make2( -1, -100, "Click distance", OnWidgetClick,
 					     g => g.LocalPlayer.ReachDistance.ToString(),
 					     (g, v) => g.LocalPlayer.ReachDistance = Single.Parse( v ) ),
 				
@@ -39,13 +39,13 @@ namespace ClassicalSharp.Gui {
 					         (g, v) => ((SinglePlayerServer)network).physics.Enabled = v ),
 				
 				MakeBool( 1, -50, "Auto close launcher", OptionsKey.AutoCloseLauncher, OnWidgetClick,
-				         g => Options.GetBool( OptionsKey.AutoCloseLauncher, true ),
+				         g => Options.GetBool( OptionsKey.AutoCloseLauncher, false ),
 				         (g, v) => Options.Set( OptionsKey.AutoCloseLauncher, v ) ),
 				
 				MakeBool( 1, 0, "Invert mouse", OptionsKey.InvertMouse,
 				         OnWidgetClick, g => g.InvertMouse, (g, v) => g.InvertMouse = v ),
 				
-				Make( 1, 50, "Mouse sensitivity", OnWidgetClick,
+				Make2( 1, 50, "Mouse sensitivity", OnWidgetClick,
 				     g => g.MouseSensitivity.ToString(),
 				     (g, v) => { g.MouseSensitivity = Int32.Parse( v );
 				     	Options.Set( OptionsKey.Sensitivity, v ); } ),

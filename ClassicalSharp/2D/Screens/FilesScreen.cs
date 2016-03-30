@@ -21,10 +21,8 @@ namespace ClassicalSharp.Gui {
 		public override void Init() {
 			textFont = new Font( game.FontName, 14, FontStyle.Bold );
 			arrowFont = new Font( game.FontName, 18, FontStyle.Bold );
-			int size = game.Drawer2D.UseBitmappedChat ? 13 : 16;
-			titleFont = new Font( game.FontName, size, FontStyle.Bold );
+			titleFont = new Font( game.FontName, 16, FontStyle.Bold );
 			title = TextWidget.Create( game, 0, -130, titleText, Anchor.Centre, Anchor.Centre, titleFont );
-			title.Init();
 			
 			buttons = new ButtonWidget[] {
 				MakeText( 0, -80, Get( 0 ) ),
@@ -106,12 +104,12 @@ namespace ClassicalSharp.Gui {
 		}
 		
 		public override void Render( double delta ) {
-			graphicsApi.Draw2DQuad( 0, 0, game.Width, game.Height, new FastColour( 60, 60, 60, 160 ) );
-			graphicsApi.Texturing = true;
+			api.Draw2DQuad( 0, 0, game.Width, game.Height, new FastColour( 60, 60, 60, 160 ) );
+			api.Texturing = true;
 			title.Render( delta );
 			for( int i = 0; i < buttons.Length; i++ )
 				buttons[i].Render( delta );
-			graphicsApi.Texturing = false;
+			api.Texturing = false;
 		}
 	}
 }

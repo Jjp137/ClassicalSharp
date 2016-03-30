@@ -24,6 +24,7 @@ namespace Launcher {
 			if( !game.Window.Mouse[MouseButton.Left] ) {
 				table.DraggingColumn = -1;
 				table.DraggingScrollbar = false;
+				table.mouseOffset = 0;
 			}
 		}
 		
@@ -39,6 +40,7 @@ namespace Launcher {
 			LauncherTableWidget table = (LauncherTableWidget)widgets[tableIndex];
 			table.DraggingColumn = -1;
 			table.DraggingScrollbar = false;
+			table.mouseOffset = 0;
 		}
 		
 		protected override void OnAddedChar() { FilterList(); }
@@ -140,9 +142,10 @@ namespace Launcher {
 				widget.SetEntries( game.Session.Servers );
 				
 				widget.SetDrawData( drawer, tableFont, inputFont, inputFont,
-				                   Anchor.LeftOrTop, Anchor.LeftOrTop, tableX, tableY );
+				                   Anchor.LeftOrTop, Anchor.LeftOrTop, tableX, tableY );			
 				widget.NeedRedraw = Resize;
 				widget.SelectedChanged = SelectedChanged;
+				widget.SortDefault();
 				widgets[widgetIndex] = widget;
 			}
 			

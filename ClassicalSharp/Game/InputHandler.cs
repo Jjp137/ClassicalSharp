@@ -123,7 +123,7 @@ namespace ClassicalSharp {
 			                                      pos + game.BlockInfo.MaxBB[newBlock] );
 			BoundingBox localBB = game.LocalPlayer.CollisionBounds;
 			
-			if( game.LocalPlayer.noClip || !localBB.Intersects( blockBB ) ) return true;
+			if( game.LocalPlayer.Hacks.Noclip || !localBB.Intersects( blockBB ) ) return true;
 			HacksComponent hacks = game.LocalPlayer.Hacks;			
 			if( hacks.CanPushbackBlocks && hacks.PushbackPlacing && hacks.Enabled )
 				return PushbackPlace( selected, blockBB );
@@ -163,7 +163,8 @@ namespace ClassicalSharp {
 			if( !validPos ) return false;
 			
 			game.LocalPlayer.Position = newP;
-			if( !game.LocalPlayer.noClip && game.LocalPlayer.TouchesAny( CannotPassThrough ) ) {
+			if( !game.LocalPlayer.Hacks.Noclip 
+			   && game.LocalPlayer.TouchesAny( CannotPassThrough ) ) {
 				game.LocalPlayer.Position = oldP;
 				return false;
 			}
@@ -349,7 +350,7 @@ namespace ClassicalSharp {
 			} else if( key == Keys[KeyBinding.PauseOrExit] && !game.World.IsNotLoaded ) {
 				game.SetNewScreen( new PauseScreen( game ) );
 			} else if( key == Keys[KeyBinding.OpenInventory] ) {
-				game.SetNewScreen( new BlockSelectScreen( game ) );
+				game.SetNewScreen( new InventoryScreen( game ) );
 			} else if( key == Key.F9 ) {
 				game.ShowClock = !game.ShowClock;
 			} else {

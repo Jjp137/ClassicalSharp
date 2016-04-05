@@ -74,19 +74,35 @@ namespace ClassicalSharp.Renderers {
 		}
 		
 		public void Refresh() {
-			if( chunks != null && !game.World.IsNotLoaded ) {
-				ClearChunkCache();
-				CreateChunkCache();
+			chunkPos = new Vector3I( int.MaxValue );
+			if( chunks == null || game.World.IsNotLoaded ) return;
+			ClearChunkCache();
+			CreateChunkCache();
+		}
+		
+		void RefreshBorders( int clipLevel ) {
+			chunkPos = new Vector3I( int.MaxValue );
+			if( chunks == null || game.World.IsNotLoaded ) return;
+			
+			int index = 0;
+			for( int z = 0; z < chunksZ; z++ )
+				for( int y = 0; y < chunksY; y++ )
+					for( int x = 0; x < chunksX; x++ )
+			{
+				bool isBorder = x == 0 || z == 0 || x == (chunksX - 1) || z == (chunksZ - 1);
+				if( isBorder && (y * 16) < clipLevel )
+					DeleteChunk( unsortedChunks[index] );
+				index++;
 			}
-			chunkPos = new Vector3I( int.MaxValue, int.MaxValue, int.MaxValue );
 		}
 		
 		void EnvVariableChanged( object sender, EnvVarEventArgs e ) {
 			if( e.Var == EnvVar.SunlightColour || e.Var == EnvVar.ShadowlightColour ) {
 				Refresh();
 			} else if( e.Var == EnvVar.EdgeLevel ) {
+				int oldClip = builder.clipLevel;
 				builder.clipLevel = Math.Max( 0, game.World.SidesHeight );
-				Refresh();
+				RefreshBorders( Math.Max( oldClip, builder.clipLevel ) );
 			}
 		}
 

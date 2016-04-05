@@ -170,7 +170,8 @@ namespace Launcher {
 		}
 		
 		void Display() {
-			Dirty = false;
+			Screen.OnDisplay();
+			Dirty = false;			
 			Screen.Dirty = false;
 			Window.Draw( Framebuffer );
 		}

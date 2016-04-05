@@ -50,11 +50,13 @@ namespace Launcher {
 		protected override void KeyDown( object sender, KeyboardKeyEventArgs e ) {
 			LauncherTableWidget table = (LauncherTableWidget)widgets[tableIndex];
 			if( e.Key == Key.Enter ) {
-				if( table.Count == 1 && String.IsNullOrEmpty( Get( hashIndex ) ) ) {
+				string curServer = Get( hashIndex ) ?? "";
+				if( table.Count >= 1 && curServer == "" ) {
 					widgets[hashIndex].Text = table.usedEntries[0].Hash;
 					ConnectToServer( 0, 0 );
-				} else {
-					base.KeyDown( sender, e );
+				} else if( curServer != "" &&
+				          (selectedWidget == null || selectedWidget == widgets[tableIndex]) ) {
+					ConnectToServer( 0, 0 );
 				}
 			} else if( e.Key == Key.Up ) {
 				table.SetSelected( table.SelectedIndex - 1 );
@@ -73,7 +75,7 @@ namespace Launcher {
 				return;
 			LauncherTableWidget table = (LauncherTableWidget)widgets[tableIndex];
 			table.SetSelected( widgets[hashIndex].Text );
-			Resize();
+			MarkPendingRedraw();
 		}
 
 		public override void Init() {
@@ -91,7 +93,7 @@ namespace Launcher {
 			LauncherTableWidget table = (LauncherTableWidget)widgets[tableIndex];
 			if( table != null )
 				table.ClampIndex();
-			MakeWidgets();	
+			MakeWidgets();
 			RedrawAllButtonBackgrounds();
 			
 			using( drawer ) {
@@ -119,15 +121,19 @@ namespace Launcher {
 		void DrawBackground() {
 			using( FastBitmap dst = new FastBitmap( game.Framebuffer, true ) ) {
 				game.ClearArea( 0, 0, game.Width, tableY, dst );
-				int tableHeight = Math.Max( game.Height - tableY - 50, 1 );
-				Rectangle rec = new Rectangle( tableX, tableY, game.Width - tableX, tableHeight );
-				
-				if( !game.ClassicBackground ) {
-					FastColour col = LauncherTableWidget.backGridCol;
-					Drawer2DExt.FastClear( dst, rec, col );
-				} else {
-					game.ClearArea( rec.X, rec.Y, rec.Width, rec.Height, dst );
-				}
+				DrawTableBackground( dst );
+			}
+		}
+		
+		void DrawTableBackground( FastBitmap dst ) {
+			int tableHeight = Math.Max( game.Height - tableY - 50, 1 );
+			Rectangle rec = new Rectangle( tableX, tableY, game.Width - tableX, tableHeight );
+			
+			if( !game.ClassicBackground ) {
+				FastColour col = LauncherTableWidget.backGridCol;
+				Drawer2DExt.FastClear( dst, rec, col );
+			} else {
+				game.ClearArea( rec.X, rec.Y, rec.Width, rec.Height, dst );
 			}
 		}
 		
@@ -141,9 +147,9 @@ namespace Launcher {
 				widget.CurrentIndex = 0;
 				widget.SetEntries( game.Session.Servers );
 				
-				widget.SetDrawData( drawer, tableFont, inputFont, inputFont,
-				                   Anchor.LeftOrTop, Anchor.LeftOrTop, tableX, tableY );			
-				widget.NeedRedraw = Resize;
+				widget.SetDrawData( drawer, tableFont, inputFont,
+				                   Anchor.LeftOrTop, Anchor.LeftOrTop, tableX, tableY );
+				widget.NeedRedraw = MarkPendingRedraw;
 				widget.SelectedChanged = SelectedChanged;
 				widget.SortDefault();
 				widgets[widgetIndex] = widget;
@@ -158,8 +164,7 @@ namespace Launcher {
 				return;
 			LauncherTableWidget table = (LauncherTableWidget)widgets[tableIndex];
 			table.FilterEntries( lastInput.Text );
-			table.ClampIndex();
-			Resize();
+			MarkPendingRedraw();
 		}
 
 		void SelectedChanged( string hash ) {
@@ -178,8 +183,7 @@ namespace Launcher {
 		protected override void MouseWheelChanged( object sender, MouseWheelEventArgs e ) {
 			LauncherTableWidget table = (LauncherTableWidget)widgets[tableIndex];
 			table.CurrentIndex -= e.Delta;
-			table.ClampIndex();
-			Resize();
+			MarkPendingRedraw();
 		}
 		
 		string HashFilter( string input ) {
@@ -205,6 +209,35 @@ namespace Launcher {
 				table.DraggingColumn = -1;
 				table.DraggingScrollbar = false;
 			}
+		}
+		
+		bool pendingRedraw;
+		public override void OnDisplay() {
+			if( pendingRedraw ) RedrawTable();
+			pendingRedraw = false;
+		}
+		
+		void MarkPendingRedraw() {
+			LauncherTableWidget table = (LauncherTableWidget)widgets[tableIndex];
+			table.ClampIndex();
+			table.RecalculateDrawData();
+			pendingRedraw = true;
+			Dirty = true;
+		}
+		
+		void RedrawTable() {
+			using( FastBitmap dst = new FastBitmap( game.Framebuffer, true ) )
+				DrawTableBackground( dst );
+			LauncherTableWidget table = (LauncherTableWidget)widgets[tableIndex];
+			table.ClampIndex();
+			
+			int tableHeight = Math.Max( game.Height - tableY - 50, 1 );
+			table.Height = tableHeight;
+			using( drawer ) {
+				drawer.SetBitmap( game.Framebuffer );
+				table.RedrawData( drawer );
+			}
+			Dirty = true;
 		}
 	}
 }

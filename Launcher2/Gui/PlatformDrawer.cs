@@ -2,6 +2,7 @@
 using System;
 using System.Drawing;
 using System.Runtime.InteropServices;
+using System.Security;
 using ClassicalSharp;
 using OpenTK.Platform;
 using OpenTK.Platform.X11;
@@ -17,24 +18,51 @@ namespace Launcher {
 		
 		public abstract void Resize( IWindowInfo info );
 		
-		public abstract void Draw( IWindowInfo info , Bitmap framebuffer );
+		public abstract void Display( IWindowInfo info, Bitmap framebuffer );
 	}
 	
 	public sealed class WinPlatformDrawer : PlatformDrawer {
 		
-		Graphics g;
+		const uint SRCCOPY = 0xCC0020;
+		[DllImport("gdi32.dll"), SuppressUnmanagedCodeSecurity]
+		static extern int BitBlt( IntPtr dcDst, int dstX, int dstY, int width, int height,
+		                         IntPtr dcSrc, int srcX, int srcY, uint drawOp );
+		
+		[DllImport("user32.dll"), SuppressUnmanagedCodeSecurity]
+		static extern IntPtr GetDC( IntPtr hwnd );
+		
+		[DllImport("gdi32.dll"), SuppressUnmanagedCodeSecurity]
+		static extern IntPtr CreateCompatibleDC(IntPtr dc);
+		
+		[DllImport("gdi32.dll"), SuppressUnmanagedCodeSecurity]
+		static extern IntPtr SelectObject( IntPtr dc, IntPtr handle );
+		
+		[DllImport("gdi32.dll"), SuppressUnmanagedCodeSecurity]
+		static extern int DeleteObject( IntPtr handle );
+		
+		[DllImport("user32.dll"), SuppressUnmanagedCodeSecurity]
+		static extern int ReleaseDC( IntPtr dc, IntPtr hwnd );
+		
+		IntPtr dc;
 		public override void Init( IWindowInfo info ) {
-			g = Graphics.FromHwnd( info.WinHandle );
+			dc = GetDC( info.WinHandle );
 		}
 		
 		public override void Resize( IWindowInfo info ) {
-			if( g != null )
-				g.Dispose();
-			g = Graphics.FromHwnd( info.WinHandle );
+			if( dc != IntPtr.Zero )
+				ReleaseDC( info.WinHandle, dc );
+			dc = GetDC( info.WinHandle );
 		}
 		
-		public override void Draw( IWindowInfo info, Bitmap framebuffer ) {
-			g.DrawImage( framebuffer, 0, 0, framebuffer.Width, framebuffer.Height );
+		public override void Display( IWindowInfo info, Bitmap framebuffer ) {
+			IntPtr srcDC = CreateCompatibleDC( dc );
+			IntPtr srcHB = framebuffer.GetHbitmap();
+			IntPtr oldSrc = SelectObject( srcDC, srcHB );
+			int success = BitBlt( dc, 0, 0, framebuffer.Width, framebuffer.Height, srcDC, 0, 0, SRCCOPY );
+
+			SelectObject( srcDC, oldSrc );
+			DeleteObject( srcDC );
+			DeleteObject( srcHB );
 		}
 	}
 	
@@ -49,7 +77,7 @@ namespace Launcher {
 			windowPort = OSX.API.GetWindowPort( info.WinHandle );
 		}
 		
-		public override void Draw( IWindowInfo info, Bitmap framebuffer ) {
+		public override void Display( IWindowInfo info, Bitmap framebuffer ) {
 			
 			using( FastBitmap bmp = new FastBitmap( framebuffer, true ) ) {
 				IntPtr scan0 = bmp.Scan0;
@@ -83,21 +111,19 @@ namespace Launcher {
 	public unsafe sealed class X11PlatformDrawer : PlatformDrawer {
 		
 		IntPtr gc;
-		int depth;
 		public override void Init( IWindowInfo info ) {
 			gc = API.XCreateGC( API.DefaultDisplay, info.WinHandle, IntPtr.Zero, null );
-			depth = ((X11WindowInfo)info).VisualInfo.Depth;
 		}
 		
 		public override void Resize( IWindowInfo info ) {
 			if( gc != IntPtr.Zero ) API.XFreeGC( API.DefaultDisplay, gc );
 			gc = API.XCreateGC( API.DefaultDisplay, info.WinHandle, IntPtr.Zero, null );
-			depth = ((X11WindowInfo)info).VisualInfo.Depth;
 		}
 		
-		public override void Draw( IWindowInfo info, Bitmap framebuffer ) {
+		public override void Display( IWindowInfo info, Bitmap framebuffer ) {
 			X11WindowInfo x11Info = (X11WindowInfo)info;
 			using( FastBitmap fastBmp = new FastBitmap( framebuffer, true ) ) {
+				int depth = x11Info.VisualInfo.Depth;
 				switch( depth ) {
 					case 32: DrawDirect( fastBmp, 32, x11Info ); break;
 					case 24: DrawDirect( fastBmp, 24, x11Info ); break;

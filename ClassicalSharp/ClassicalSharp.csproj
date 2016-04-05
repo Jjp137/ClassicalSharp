@@ -88,14 +88,15 @@
     <Compile Include="2D\Drawing\DrawTextArgs.cs" />
     <Compile Include="2D\Drawing\GdiPlusDrawer2D.cs" />
     <Compile Include="2D\Drawing\IDrawer2D.cs" />
-    <Compile Include="2D\Screens\BlockSelectScreen.cs" />
-    <Compile Include="2D\Screens\BlockSelectScreen.Scrolling.cs" />
     <Compile Include="2D\Screens\ChatScreen.cs" />
     <Compile Include="2D\Screens\ClickableScreen.cs" />
     <Compile Include="2D\Screens\ErrorScreen.cs" />
     <Compile Include="2D\Screens\FilesScreen.cs" />
     <Compile Include="2D\Screens\FpsScreen.cs" />
     <Compile Include="2D\Screens\HotkeyScreen.cs" />
+    <Compile Include="2D\Screens\Inventory\InventoryScreen.cs" />
+    <Compile Include="2D\Screens\Inventory\InventoryScreen.Input.cs" />
+    <Compile Include="2D\Screens\Inventory\InventoryScreen.Scrolling.cs" />
     <Compile Include="2D\Screens\LoadingMapScreen.cs" />
     <Compile Include="2D\Screens\Menu\ClassicOptionsScreen.cs" />
     <Compile Include="2D\Screens\Menu\EnvSettingsScreen.cs" />
@@ -152,13 +153,13 @@
     <Compile Include="Entities\Components\AnimatedComponent.cs" />
     <Compile Include="Entities\Components\HacksComponent.cs" />
     <Compile Include="Entities\Components\InterpolatedComponent.cs" />
+    <Compile Include="Entities\Components\CollisionsComponent.cs" />
     <Compile Include="Entities\Components\PhysicsComponent.cs" />
     <Compile Include="Entities\Components\ShadowComponent.cs" />
     <Compile Include="Entities\Entity.Bounds.cs" />
     <Compile Include="Entities\Entity.cs" />
     <Compile Include="Entities\EntityList.cs" />
     <Compile Include="Entities\LocalPlayer.cs" />
-    <Compile Include="Entities\LocalPlayer.Physics.cs" />
     <Compile Include="Entities\LocationUpdate.cs" />
     <Compile Include="Entities\NetPlayer.cs" />
     <Compile Include="Events\EntityEvents.cs" />
@@ -172,6 +173,7 @@
     <Compile Include="Generator\NotchyGenerator.Utils.cs" />
     <Compile Include="GraphicsAPI\OpenGLESApi.cs" />
     <Compile Include="Map\Formats\MapCw.Nbt.cs" />
+    <Compile Include="Math\RayTracer.cs" />
     <Compile Include="Model\CustomModel.cs" />
     <Compile Include="Model\HumanModels.cs" />
     <Compile Include="Network\NetworkProcessor.CPECustom.cs" />
@@ -295,11 +297,37 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="2D\" />
-    <Folder Include="2D\Screens\" />
-    <Folder Include="2D\Widgets\" />
-    <Folder Include="Entities\" />
-    <Folder Include="Map\" />
     <Folder Include="Network\" />
+    <Folder Include="2D\Drawing" />
+    <Folder Include="2D\Screens\Inventory" />
+    <Folder Include="2D\Utils" />
+    <Folder Include="2D\Screens" />
+    <Folder Include="2D\Screens\Menu" />
+    <Folder Include="2D\Widgets" />
+    <Folder Include="2D\Widgets\Menu" />
+    <Folder Include="2D\Widgets\Chat" />
+    <Folder Include="2D\Widgets\PlayerList" />
+    <Folder Include="Blocks" />
+    <Folder Include="Entities\AI" />
+    <Folder Include="Entities\Components" />
+    <Folder Include="Events" />
+    <Folder Include="Generator" />
+    <Folder Include="Platform" />
+    <Folder Include="Particles" />
+    <Folder Include="GraphicsAPI" />
+    <Folder Include="Entities" />
+    <Folder Include="Ionic.Zlib" />
+    <Folder Include="Map" />
+    <Folder Include="Game" />
+    <Folder Include="Map\Formats" />
+    <Folder Include="Model" />
+    <Folder Include="Network\Utils" />
+    <Folder Include="Hotkeys" />
+    <Folder Include="Audio" />
+    <Folder Include="TexturePack" />
+    <Folder Include="Singleplayer" />
+    <Folder Include="Utils" />
+    <Folder Include="Math" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\OpenTK\OpenTK.csproj">

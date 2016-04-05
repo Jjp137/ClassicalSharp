@@ -6,9 +6,9 @@ using OpenTK.Input;
 
 namespace ClassicalSharp.Gui {
 	
-	public partial class BlockSelectScreen : Screen {
+	public partial class InventoryScreen : Screen {
 		
-		public BlockSelectScreen( Game game ) : base( game ) {
+		public InventoryScreen( Game game ) : base( game ) {
 			font = new Font( game.FontName, 13 );
 		}
 		
@@ -26,8 +26,10 @@ namespace ClassicalSharp.Gui {
 		int TableWidth { get { return blocksPerRow * blockSize + 10 + 10; } }
 		int TableHeight { get { return Math.Min( rows, maxRows ) * blockSize + 10 + 30; } }
 		
-		static FastColour backCol = new FastColour( 30, 30, 30, 200 );
+		static FastColour normBackCol = new FastColour( 30, 30, 30, 200 );
+		static FastColour classicBackCol = new FastColour( 48, 48, 96, 192 );
 		public override void Render( double delta ) {
+			FastColour backCol = game.ClassicMode ? classicBackCol : normBackCol;
 			api.Draw2DQuad( TableX, TableY, TableWidth, TableHeight, backCol );
 			if( rows > maxRows )
 				DrawScrollbar();
@@ -69,6 +71,16 @@ namespace ClassicalSharp.Gui {
 			return row >= 0 && row < maxRows;
 		}
 		
+		Point GetMouseCoords( int i ) {
+			int x, y;
+			GetCoords( i, out x, out y );
+			x += blockSize / 2; y += blockSize / 2;
+			
+			Point topLeft = game.PointToScreen( Point.Empty );
+			x += topLeft.X; y += topLeft.Y;
+			return new Point( x, y );
+		}
+		
 		public override void Dispose() {
 			font.Dispose();
 			api.DeleteTexture( ref blockInfoTexture );
@@ -107,13 +119,7 @@ namespace ClassicalSharp.Gui {
 		
 		void MoveCursorToSelected() {
 			if( selIndex == -1 ) return;
-			int x, y;
-			GetCoords( selIndex, out x, out y );
-			x += blockSize / 2; y += blockSize / 2;
-			
-			Point topLeft = game.PointToScreen( Point.Empty );
-			x += topLeft.X; y += topLeft.Y;
-			game.DesktopCursorPos = new Point( x, y );
+			game.DesktopCursorPos = GetMouseCoords( selIndex );
 		}
 
 		void BlockPermissionsChanged( object sender, EventArgs e ) {
@@ -216,87 +222,11 @@ namespace ClassicalSharp.Gui {
 		}
 		
 		bool ShowTile( int tile ) {
-			if( game.ClassicMode && (tile >= (byte)Block.Water && tile <= (byte)Block.StillLava) )
+			bool hackBlocks = !game.ClassicMode || game.ClassicHacks;
+			if( !hackBlocks && (tile == (byte)Block.Bedrock || 
+			                    tile >= (byte)Block.Water && tile <= (byte)Block.StillLava) )
 				return false;
 			return tile < BlockInfo.CpeBlocksCount || game.BlockInfo.Name[tile] != "Invalid";
-		}
-		
-		public override bool HandlesAllInput { get { return true; } }
-		
-		public override bool HandlesMouseMove( int mouseX, int mouseY ) {
-			if( draggingMouse ) {
-				mouseY -= TableY;
-				scrollY = (int)((mouseY - mouseOffset) / ScrollbarScale);
-				ClampScrollY();
-				return true;
-			}
-			
-			selIndex = -1;
-			if( Contains( startX, startY, blocksPerRow * blockSize,
-			             maxRows * blockSize, mouseX, mouseY ) ) {
-				for( int i = 0; i < blocksTable.Length; i++ ) {
-					int x, y;
-					GetCoords( i, out x, out y );
-					
-					if( Contains( x, y, blockSize, blockSize, mouseX, mouseY ) ) {
-						selIndex = i;
-						break;
-					}
-				}
-			}
-			RecreateBlockInfoTexture();
-			return true;
-		}
-		
-		public override bool HandlesMouseClick( int mouseX, int mouseY, MouseButton button ) {
-			if( draggingMouse || game.hudScreen.hotbar.HandlesMouseClick( mouseX, mouseY, button ) )
-				return true;
-			if( button == MouseButton.Left && mouseX >= TableX && mouseX < TableX + scrollbarWidth ) {
-				ScrollbarClick( mouseY );
-			} else if( button == MouseButton.Left ) {
-				if( selIndex != -1 )
-					game.Inventory.HeldBlock = blocksTable[selIndex];
-				else if( Contains( TableX, TableY, TableWidth, TableHeight, mouseX, mouseY ) )
-					return true;
-				game.SetNewScreen( null );
-			}
-			return true;
-		}
-		
-		public override bool HandlesKeyDown( Key key ) {
-			if( key == game.Mapping( KeyBinding.PauseOrExit ) ||
-			   key == game.Mapping( KeyBinding.OpenInventory ) ) {
-				game.SetNewScreen( null );
-			} else if( key == Key.Enter && selIndex != -1 ) {
-				game.Inventory.HeldBlock = blocksTable[selIndex];
-				game.SetNewScreen( null );
-			} else if( (key == Key.Left || key == Key.Keypad4) && selIndex != -1 ) {
-				ArrowKeyMove( -1 );
-			} else if( (key == Key.Right || key == Key.Keypad6) && selIndex != -1 ) {
-				ArrowKeyMove( 1 );
-			} else if( (key == Key.Up || key == Key.Keypad8) && selIndex != -1 ) {
-				ArrowKeyMove( -blocksPerRow );
-			} else if( (key == Key.Down || key == Key.Keypad2) && selIndex != -1 ) {
-				ArrowKeyMove( blocksPerRow );
-			} else if( key >= Key.Number1 && key <= Key.Number9 ) {
-				game.Inventory.HeldBlockIndex = (int)key - (int)Key.Number1;
-			}
-			return true;
-		}
-		
-		void ArrowKeyMove( int delta ) {
-			int startIndex = selIndex;
-			selIndex += delta;
-			if( selIndex < 0 )
-				selIndex -= delta;
-			if( selIndex >= blocksTable.Length )
-				selIndex -= delta;
-			
-			int scrollDelta = (selIndex / blocksPerRow) - (startIndex / blocksPerRow);
-			scrollY += scrollDelta;
-			ClampScrollY();
-			RecreateBlockInfoTexture();
-			MoveCursorToSelected();
 		}
 	}
 }

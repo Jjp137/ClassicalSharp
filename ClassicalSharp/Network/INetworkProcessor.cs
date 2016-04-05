@@ -53,7 +53,7 @@ namespace ClassicalSharp {
 		public bool ServerSupportsFullCP437;
 		
 		
-		#region Texture pack / terrain.png 
+		#region Texture pack / terrain.png
 
 		protected Game game;
 		
@@ -76,7 +76,7 @@ namespace ClassicalSharp {
 			if( !game.AcceptedUrls.HasUrl( url ) && !game.DeniedUrls.HasUrl( url ) ) {
 				game.AsyncDownloader.RetrieveContentLength( url, true, "CL_" + url );
 				game.ShowWarning( new WarningScreen(
-					game, "CL_" + url, true, "Do you want to download the server's texture pack?",
+					game, "CL_" + url, true, true, "Do you want to download the server's texture pack?",
 					DownloadTexturePack, null, WarningScreenTick,
 					"Texture pack url:", url,
 					"Download size: Determining..." ) );
@@ -91,7 +91,6 @@ namespace ClassicalSharp {
 		
 		void DownloadTexturePack( string url ) {
 			if( game.DeniedUrls.HasUrl( url ) ) return;
-			game.Animations.Dispose();
 			DateTime lastModified = TextureCache.GetLastModifiedFromCache( url );
 
 			if( url.Contains( ".zip" ) )
@@ -103,6 +102,7 @@ namespace ClassicalSharp {
 		protected void ExtractDefault() {
 			TexturePackExtractor extractor = new TexturePackExtractor();
 			extractor.Extract( game.DefaultTexturePack, game );
+			game.World.TextureUrl = null;
 		}
 		
 		static bool Is304Status( WebException ex ) {
@@ -116,45 +116,52 @@ namespace ClassicalSharp {
 			DownloadedItem item;
 			if( game.AsyncDownloader.TryGetItem( "terrain", out item ) ) {
 				if( item.Data != null ) {
-					Bitmap bmp = (Bitmap)item.Data;
+					Bitmap bmp = (Bitmap)item.Data;					
+					game.World.TextureUrl = item.Url;					
+					game.Animations.Dispose();
+					
 					if( !FastBitmap.CheckFormat( bmp.PixelFormat ) ) {
 						Utils.LogDebug( "Converting terrain atlas to 32bpp image" );
 						game.Drawer2D.ConvertTo32Bpp( ref bmp );
 					}
 					game.ChangeTerrainAtlas( bmp );
-					TextureCache.AddToCache( item.Url, bmp );
-					game.World.TextureUrl = item.Url;
+					TextureCache.AddToCache( item.Url, bmp );					
 				} else if( Is304Status( item.WebEx ) ) {
 					Bitmap bmp = TextureCache.GetBitmapFromCache( item.Url );
-					if( bmp == null ) // Should never happen, but handle anyways.
+					if( bmp == null ) {// Should never happen, but handle anyways.
 						ExtractDefault();
-					else
+					} else if( item.Url != game.World.TextureUrl ) {
+						game.Animations.Dispose();
 						game.ChangeTerrainAtlas( bmp );
-					game.World.TextureUrl = item.Url;
+					}
+					
+					if( bmp != null ) game.World.TextureUrl = item.Url;
 				} else {
 					ExtractDefault();
-					game.World.TextureUrl = null;
 				}
 			}
 			
 			if( game.AsyncDownloader.TryGetItem( "texturePack", out item ) ) {
 				if( item.Data != null ) {
+					game.World.TextureUrl = item.Url;
+					game.Animations.Dispose();					
+					
 					TexturePackExtractor extractor = new TexturePackExtractor();
 					extractor.Extract( (byte[])item.Data, game );
-					TextureCache.AddToCache( item.Url, (byte[])item.Data );
-					game.World.TextureUrl = item.Url;
+					TextureCache.AddToCache( item.Url, (byte[])item.Data );				
 				} else if( Is304Status( item.WebEx ) ) {
 					byte[] data = TextureCache.GetDataFromCache( item.Url );
 					if( data == null ) { // Should never happen, but handle anyways.
 						ExtractDefault();
-					} else {
+					} else if( item.Url != game.World.TextureUrl ) {
+						game.Animations.Dispose();
 						TexturePackExtractor extractor = new TexturePackExtractor();
 						extractor.Extract( data, game );
 					}
-					game.World.TextureUrl = item.Url;
+					
+					if( data != null ) game.World.TextureUrl = item.Url;
 				} else {
 					ExtractDefault();
-					game.World.TextureUrl = null;
 				}
 			}
 		}

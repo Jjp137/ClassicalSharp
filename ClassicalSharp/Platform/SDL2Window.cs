@@ -251,10 +251,20 @@ namespace ClassicalSharp
 
 		public IWindowInfo WindowInfo { get { return windowInfo; } }
 		
-		// TODO: implement
 		public string ClipboardText { 
-			get { return String.Empty; }
-			set { }
+			get {
+				string text = String.Empty;
+				if( SDL.SDL_HasClipboardText() == SDL.SDL_bool.SDL_TRUE ) {
+					// FIXME: How do we call SDL_free() from this? What happens if it returns NULL?
+					text = SDL.SDL_GetClipboardText();
+				}
+				return text;
+			}
+			set {
+				if( SDL.SDL_SetClipboardText( value ) < 0 ) {
+					// TODO: how to handle errors?
+				}
+			}
 		}
 
 		public event EventHandler<EventArgs> Resize;

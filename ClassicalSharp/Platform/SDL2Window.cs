@@ -250,6 +250,12 @@ namespace ClassicalSharp
 		}
 
 		public IWindowInfo WindowInfo { get { return windowInfo; } }
+		
+		// TODO: implement
+		public string ClipboardText { 
+			get { return String.Empty; }
+			set { }
+		}
 
 		public event EventHandler<EventArgs> Resize;
 		public event EventHandler<EventArgs> WindowStateChanged;

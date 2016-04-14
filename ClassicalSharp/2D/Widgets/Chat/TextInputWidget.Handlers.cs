@@ -221,8 +221,8 @@ namespace ClassicalSharp.Gui {
 		}
 		
 		bool OtherKey( Key key ) {
-			if( key == Key.V && chatInputText.Length < len ) {
-				string text = Clipboard.GetText();
+			if( key == Key.V && chatInputText.Length < TotalChars ) {
+				string text = game.window.ClipboardText;
 				if( String.IsNullOrEmpty( text ) ) return true;
 				game.Chat.Add( null, MessageType.ClientStatus4 );
 				
@@ -237,9 +237,8 @@ namespace ClassicalSharp.Gui {
 				AppendText( text );
 				return true;
 			} else if( key == Key.C ) {
-				if( !chatInputText.Empty ) {
-					Clipboard.SetText( chatInputText.ToString() );
-				}
+				if( !chatInputText.Empty )
+					game.window.ClipboardText = chatInputText.ToString();
 				return true;
 			}
 			return false;

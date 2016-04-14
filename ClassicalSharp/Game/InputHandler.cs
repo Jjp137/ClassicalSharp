@@ -12,12 +12,15 @@ namespace ClassicalSharp {
 		
 		public HotkeyList Hotkeys;
 		Game game;
+		bool[] buttonsDown = new bool[3];
+		PickingHandler picking;
 		public InputHandler( Game game ) {
 			this.game = game;
 			RegisterInputHandlers();
 			Keys = new KeyMap();
 			Hotkeys = new HotkeyList();
 			Hotkeys.LoadSavedHotkeys();
+			picking = new PickingHandler( game, this );
 		}
 		
 		void RegisterInputHandlers() {
@@ -51,149 +54,12 @@ namespace ClassicalSharp {
 			if( button == MouseButton.Right && IsKeyDown( KeyBinding.MouseRight ) ) return true;
 			return false;
 		}
-
-		bool[] buttonsDown = new bool[3];
-		DateTime lastClick = DateTime.MinValue;
+		
 		public void PickBlocks( bool cooldown, bool left, bool middle, bool right ) {
-			DateTime now = DateTime.UtcNow;
-			double delta = (now - lastClick).TotalMilliseconds;
-			if( cooldown && delta < 250 ) return; // 4 times per second
-			
-			lastClick = now;
-			Inventory inv = game.Inventory;
-			
-			if( game.Network.UsingPlayerClick && !game.ScreenLockedInput ) {
-				byte targetId = game.Players.GetClosetPlayer( game.LocalPlayer );
-				ButtonStateChanged( MouseButton.Left, left, targetId );
-				ButtonStateChanged( MouseButton.Right, right, targetId );
-				ButtonStateChanged( MouseButton.Middle, middle, targetId );
-			}
-			
-			int buttonsDown = (left ? 1 : 0) + (right ? 1 : 0) + (middle ? 1 : 0);
-			if( buttonsDown > 1 || game.ScreenLockedInput || inv.HeldBlock == Block.Air ) return;
-			
-			// always play delete animations, even if we aren't picking a block.
-			if( left ) game.BlockHandRenderer.SetAnimationClick( true );
-			if( !game.SelectedPos.Valid ) return;
-			
-			if( middle ) {
-				Vector3I pos = game.SelectedPos.BlockPos;
-				byte block = 0;
-				if( game.World.IsValidPos( pos ) && (block = game.World.GetBlock( pos )) != 0
-				   && (inv.CanPlace[block] || inv.CanDelete[block]) ) {
-					
-					for( int i = 0; i < inv.Hotbar.Length; i++ ) {
-						if( inv.Hotbar[i] == (Block)block ) {
-							inv.HeldBlockIndex = i; return;
-						}
-					}
-					inv.HeldBlock = (Block)block;
-				}
-			} else if( left ) {
-				Vector3I pos = game.SelectedPos.BlockPos;
-				byte block = 0;
-				if( game.World.IsValidPos( pos ) && (block = game.World.GetBlock( pos )) != 0
-				   && inv.CanDelete[block] ) {
-					game.ParticleManager.BreakBlockEffect( pos, block );
-					game.AudioPlayer.PlayDigSound( game.BlockInfo.DigSounds[block] );
-					game.UpdateBlock( pos.X, pos.Y, pos.Z, 0 );
-					game.Network.SendSetBlock( pos.X, pos.Y, pos.Z, false, (byte)inv.HeldBlock );
-				}
-			} else if( right ) {
-				Vector3I pos = game.SelectedPos.TranslatedPos;
-				if( !game.World.IsValidPos( pos ) ) return;
-				
-				byte block = (byte)inv.HeldBlock;
-				if( !game.CanPick( game.World.GetBlock( pos ) ) && inv.CanPlace[block]
-				   && CheckIsFree( game.SelectedPos, block ) ) {
-					game.UpdateBlock( pos.X, pos.Y, pos.Z, block );
-					game.AudioPlayer.PlayDigSound( game.BlockInfo.StepSounds[block] );
-					game.Network.SendSetBlock( pos.X, pos.Y, pos.Z, true, block );
-					game.BlockHandRenderer.SetAnimationClick( false );
-				}
-			}
+			picking.PickBlocks( cooldown, left, middle, right );
 		}
 		
-		bool CheckIsFree( PickedPos selected, byte newBlock ) {
-			Vector3 pos = (Vector3)selected.TranslatedPos;
-			if( !CannotPassThrough( newBlock ) ) return true;
-			if( IntersectsOtherPlayers( pos, newBlock ) ) return false;
-			
-			BoundingBox blockBB = new BoundingBox( pos + game.BlockInfo.MinBB[newBlock],
-			                                      pos + game.BlockInfo.MaxBB[newBlock] );
-			BoundingBox localBB = game.LocalPlayer.CollisionBounds;
-			
-			if( game.LocalPlayer.Hacks.Noclip || !localBB.Intersects( blockBB ) ) return true;
-			HacksComponent hacks = game.LocalPlayer.Hacks;			
-			if( hacks.CanPushbackBlocks && hacks.PushbackPlacing && hacks.Enabled )
-				return PushbackPlace( selected, blockBB );
-			
-			localBB.Min.Y += 0.25f + Entity.Adjustment;
-			if( localBB.Intersects( blockBB ) ) return false;
-			
-			// Push player up if they are jumping and trying to place a block underneath them.
-			Vector3 p = game.LocalPlayer.Position;
-			p.Y = pos.Y + game.BlockInfo.MaxBB[newBlock].Y + Entity.Adjustment;
-			LocationUpdate update = LocationUpdate.MakePos( p, false );
-			game.LocalPlayer.SetLocation( update, false );
-			return true;
-		}
-		
-		bool PushbackPlace( PickedPos selected, BoundingBox blockBB ) {
-			Vector3 newP = game.LocalPlayer.Position;
-			Vector3 oldP = game.LocalPlayer.Position;
-			
-			// Offset position by the closest face
-			if( selected.BlockFace == CpeBlockFace.XMax )
-				newP.X = blockBB.Max.X + 0.5f;
-			else if( selected.BlockFace == CpeBlockFace.ZMax )
-				newP.Z = blockBB.Max.Z + 0.5f;
-			else if( selected.BlockFace == CpeBlockFace.XMin )
-				newP.X = blockBB.Min.X - 0.5f;
-			else if( selected.BlockFace == CpeBlockFace.ZMin )
-				newP.Z = blockBB.Min.Z - 0.5f;
-			else if( selected.BlockFace == CpeBlockFace.YMax )
-				newP.Y = blockBB.Min.Y + 1 + Entity.Adjustment;
-			else if( selected.BlockFace == CpeBlockFace.YMin )
-				newP.Y = blockBB.Min.Y - game.LocalPlayer.CollisionSize.Y - Entity.Adjustment;
-			
-			Vector3I newLoc = Vector3I.Floor( newP );
-			bool validPos = newLoc.X >= 0 && newLoc.Y >= 0 && newLoc.Z >= 0 &&
-				newLoc.X < game.World.Width && newP.Z < game.World.Length;
-			if( !validPos ) return false;
-			
-			game.LocalPlayer.Position = newP;
-			if( !game.LocalPlayer.Hacks.Noclip 
-			   && game.LocalPlayer.TouchesAny( CannotPassThrough ) ) {
-				game.LocalPlayer.Position = oldP;
-				return false;
-			}
-			
-			game.LocalPlayer.Position = oldP;
-			LocationUpdate update = LocationUpdate.MakePos( newP, false );
-			game.LocalPlayer.SetLocation( update, false );
-			return true;
-		}
-		
-		bool CannotPassThrough( byte block ) {
-			return game.BlockInfo.Collide[block] == CollideType.Solid;
-		}
-		
-		bool IntersectsOtherPlayers( Vector3 pos, byte newType ) {
-			BoundingBox blockBB = new BoundingBox( pos + game.BlockInfo.MinBB[newType],
-			                                      pos + game.BlockInfo.MaxBB[newType] );
-			
-			for( int id = 0; id < 255; id++ ) {
-				Player player = game.Players[id];
-				if( player == null ) continue;
-				BoundingBox bounds = player.CollisionBounds;
-				bounds.Min.Y += 1/32f; // when player is exactly standing on top of ground
-				if( bounds.Intersects( blockBB ) ) return true;
-			}
-			return false;
-		}
-		
-		void ButtonStateChanged( MouseButton button, bool pressed, byte targetId ) {
+		internal void ButtonStateChanged( MouseButton button, bool pressed, byte targetId ) {
 			if( buttonsDown[(int)button] ) {
 				game.Network.SendPlayerClick( button, false, targetId, game.SelectedPos );
 				buttonsDown[(int)button] = false;
@@ -206,7 +72,7 @@ namespace ClassicalSharp {
 		
 		internal void ScreenChanged( Screen oldScreen, Screen newScreen ) {
 			if( oldScreen != null && oldScreen.HandlesAllInput )
-				lastClick = DateTime.UtcNow;
+				picking.lastClick = DateTime.UtcNow;
 			
 			if( game.Network.UsingPlayerClick ) {
 				byte targetId = game.Players.GetClosetPlayer( game.LocalPlayer );
@@ -235,7 +101,7 @@ namespace ClassicalSharp {
 				bool right = e.Button == MouseButton.Right;
 				PickBlocks( false, left, middle, right );
 			} else {
-				lastClick = DateTime.UtcNow;
+				picking.lastClick = DateTime.UtcNow;
 			}
 		}
 
@@ -246,23 +112,29 @@ namespace ClassicalSharp {
 
 		float deltaAcc = 0;
 		void MouseWheelChanged( object sender, MouseWheelEventArgs e ) {
-			if( !game.GetActiveScreen.HandlesMouseScroll( e.Delta ) ) {
-				Inventory inv = game.Inventory;
-				bool doZoom = !(IsKeyDown( Key.AltLeft ) || IsKeyDown( Key.AltRight ));
-				if( (doZoom && game.Camera.MouseZoom( e )) || CycleZoom( e ) || !inv.CanChangeHeldBlock ) return;
-				
-				// Some mice may use deltas of say (0.2, 0.2, 0.2, 0.2, 0.2)
-				// We must use rounding at final step, not at every intermediate step.
-				deltaAcc += e.DeltaPrecise;
-				int delta = (int)deltaAcc;
-				deltaAcc -= delta;
-				
-				int diff = -delta % inv.Hotbar.Length;
-				int newIndex = inv.HeldBlockIndex + diff;
-				if( newIndex < 0 ) newIndex += inv.Hotbar.Length;
-				if( newIndex >= inv.Hotbar.Length ) newIndex -= inv.Hotbar.Length;
-				inv.HeldBlockIndex = newIndex;
-			}
+			if( game.GetActiveScreen.HandlesMouseScroll( e.Delta ) ) return;
+			
+			Inventory inv = game.Inventory;
+			bool hotbar = IsKeyDown( Key.AltLeft ) || IsKeyDown( Key.AltRight );
+			if( (!hotbar && game.Camera.DoZoom( e.DeltaPrecise )) || DoFovZoom( e.DeltaPrecise ) 
+			   || !inv.CanChangeHeldBlock )
+				return;
+			ScrollHotbar( e.DeltaPrecise );
+		}
+		
+		void ScrollHotbar( float deltaPrecise ) {
+			// Some mice may use deltas of say (0.2, 0.2, 0.2, 0.2, 0.2)
+			// We must use rounding at final step, not at every intermediate step.
+			Inventory inv = game.Inventory;
+			deltaAcc += deltaPrecise;
+			int delta = (int)deltaAcc;
+			deltaAcc -= delta;
+			
+			int diff = -delta % inv.Hotbar.Length;
+			int newIndex = inv.HeldBlockIndex + diff;
+			if( newIndex < 0 ) newIndex += inv.Hotbar.Length;
+			if( newIndex >= inv.Hotbar.Length ) newIndex -= inv.Hotbar.Length;
+			inv.HeldBlockIndex = newIndex;
 		}
 
 		void KeyPressHandler( object sender, KeyPressEventArgs e ) {
@@ -276,15 +148,18 @@ namespace ClassicalSharp {
 			if( SimulateMouse( key, false ) ) return;
 			
 			if( !game.GetActiveScreen.HandlesKeyUp( key ) ) {
+				if( key == Keys[KeyBinding.ZoomScrolling] )
+					SetFOV( game.DefaultFov, false );
 			}
 		}
 
 		static int[] viewDistances = { 16, 32, 64, 128, 256, 512, 1024, 2048, 4096 };
+		Key lastKey;
 		void KeyDownHandler( object sender, KeyboardKeyEventArgs e ) {
 			Key key = e.Key;
 			if( SimulateMouse( key, true ) ) return;
 			
-			if( key == Key.F4 && (game.IsKeyDown( Key.AltLeft ) || game.IsKeyDown( Key.AltRight )) ) {
+			if( IsShutdown( key ) ) {
 				game.Exit();
 			} else if( key == Keys[KeyBinding.Screenshot] ) {
 				game.screenshotRequested = true;
@@ -292,18 +167,26 @@ namespace ClassicalSharp {
 				if( !HandleBuiltinKey( key ) && !game.LocalPlayer.HandleKeyDown( key ) )
 					HandleHotkey( key );
 			}
+			lastKey = key;
+		}
+		
+		bool IsShutdown( Key key ) {
+			if( key == Key.F4 && (lastKey == Key.AltLeft || lastKey == Key.AltRight) )
+				return true;
+			// On OSX, Cmd+Q should also terminate the process.
+			if( !OpenTK.Configuration.RunningOnMacOS ) return false;
+			return key == Key.Q && (lastKey == Key.WinLeft || lastKey == Key.WinRight);
 		}
 		
 		void HandleHotkey( Key key ) {
 			string text;
 			bool more;
+			if( !Hotkeys.IsHotkey( key, game.Keyboard, out text, out more ) ) return;
 			
-			if( Hotkeys.IsHotkey( key, game.Keyboard, out text, out more ) ) {
-				if( !more )
-					game.Network.SendChat( text, false );
-				else if( game.activeScreen == null )
-					game.hudScreen.OpenTextInputBar( text );
-			}
+			if( !more )
+				game.Network.SendChat( text, false );
+			else if( game.activeScreen == null )
+				game.hudScreen.OpenTextInputBar( text );
 		}
 		
 		MouseButtonEventArgs simArgs = new MouseButtonEventArgs();
@@ -319,10 +202,8 @@ namespace ClassicalSharp {
 			simArgs.Y = game.Mouse.Y;
 			simArgs.IsPressed = pressed;
 			
-			if( pressed )
-				MouseButtonDown( null, simArgs );
-			else
-				MouseButtonUp( null, simArgs );
+			if( pressed ) MouseButtonDown( null, simArgs );
+			else MouseButtonUp( null, simArgs );
 			return true;
 		}
 		
@@ -380,20 +261,27 @@ namespace ClassicalSharp {
 		}
 		
 		float fovIndex = -1;
-		bool CycleZoom( MouseWheelEventArgs e ) {
-			if( !game.IsKeyDown( KeyBinding.ZoomScrolling ) )
-				return false;
+		bool DoFovZoom( float deltaPrecise ) {
+			if( !game.IsKeyDown( KeyBinding.ZoomScrolling ) ) return false;
 			LocalPlayer p = game.LocalPlayer;
 			if( !p.Hacks.Enabled || !p.Hacks.CanAnyHacks || !p.Hacks.CanUseThirdPersonCamera )
 				return false;
 			
-			if( fovIndex == -1 ) fovIndex = game.ZoomFieldOfView;
-			fovIndex -= e.DeltaPrecise * 5;
-			int max = Options.GetInt( OptionsKey.FieldOfView, 1, 150, 70 );
-			Utils.Clamp( ref fovIndex, 1, max );
+			if( fovIndex == -1 ) fovIndex = game.ZoomFov;
+			fovIndex -= deltaPrecise * 5;
 			
-			game.FieldOfView = (int)fovIndex;
-			game.ZoomFieldOfView = (int)fovIndex;
+			Utils.Clamp( ref fovIndex, 1, game.DefaultFov );
+			return SetFOV( (int)fovIndex, true );
+		}
+		
+		public bool SetFOV( int fov, bool setZoom ) {
+			LocalPlayer p = game.LocalPlayer;
+			if( game.Fov == fov ) return true;
+			if( !p.Hacks.Enabled || !p.Hacks.CanAnyHacks || !p.Hacks.CanUseThirdPersonCamera )
+				return false;
+			
+			game.Fov = fov;
+			if( setZoom ) game.ZoomFov = fov;
 			game.UpdateProjection();
 			return true;
 		}

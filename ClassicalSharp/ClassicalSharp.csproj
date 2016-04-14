@@ -152,6 +152,7 @@
     <Compile Include="Entities\AI\HostileAI.cs" />
     <Compile Include="Entities\Components\AnimatedComponent.cs" />
     <Compile Include="Entities\Components\HacksComponent.cs" />
+    <Compile Include="Entities\Components\InputComponent.cs" />
     <Compile Include="Entities\Components\InterpolatedComponent.cs" />
     <Compile Include="Entities\Components\CollisionsComponent.cs" />
     <Compile Include="Entities\Components\PhysicsComponent.cs" />
@@ -166,6 +167,7 @@
     <Compile Include="Events\Events.cs" />
     <Compile Include="Events\WorldEvents.cs" />
     <Compile Include="Game\Game.Properties.cs" />
+    <Compile Include="Game\PickingHandler.cs" />
     <Compile Include="Generator\FlatGrassGenerator.cs" />
     <Compile Include="Generator\IMapGenerator.cs" />
     <Compile Include="Generator\Noise.cs" />
@@ -173,9 +175,11 @@
     <Compile Include="Generator\NotchyGenerator.Utils.cs" />
     <Compile Include="GraphicsAPI\OpenGLESApi.cs" />
     <Compile Include="Map\Formats\MapCw.Nbt.cs" />
+    <Compile Include="Map\Formats\MapLvl.Importer.cs" />
     <Compile Include="Math\RayTracer.cs" />
     <Compile Include="Model\CustomModel.cs" />
     <Compile Include="Model\HumanModels.cs" />
+    <Compile Include="Model\ModelBuilder.cs" />
     <Compile Include="Network\NetworkProcessor.CPECustom.cs" />
     <Compile Include="Particles\CollidableParticle.cs" />
     <Compile Include="Particles\Particle.cs" />

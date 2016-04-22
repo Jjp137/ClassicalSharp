@@ -669,7 +669,7 @@ namespace ClassicalSharp.GraphicsAPI
 			}
 
 			batchFormat = format;
-			if( batchFormat == VertexFormat.P3fT2fC4b ) {
+			if( format == VertexFormat.P3fT2fC4b ) {
 				GLFuncs.EnableClientState( ArrayCap.TextureCoordArray );
 				setupBatchFunc = setupBatchFuncTex2fCol4b;
 				batchStride = VertexP3fT2fC4b.Size;

@@ -76,7 +76,7 @@ namespace Launcher {
 			if( Framebuffer == null || (Framebuffer.Width != Width || Framebuffer.Height != Height) ) {
 				if( Framebuffer != null )
 					Framebuffer.Dispose();
-				Framebuffer = platformDrawer.CreateFrameBuffer( Width, Height );
+				Framebuffer = new Bitmap( Width, Height );
 			}
 			
 			if( ClassicBackground ) {

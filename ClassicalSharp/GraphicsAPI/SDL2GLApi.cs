@@ -664,12 +664,12 @@ namespace ClassicalSharp.GraphicsAPI
 		public override void SetBatchFormat( VertexFormat format ) {
 			if( format == batchFormat ) return;
 
-			if( batchFormat == VertexFormat.Pos3fTex2fCol4b ) {
+			if( batchFormat == VertexFormat.P3fT2fC4b ) {
 				GLFuncs.DisableClientState( ArrayCap.TextureCoordArray );
 			}
 
 			batchFormat = format;
-			if( format == VertexFormat.Pos3fTex2fCol4b ) {
+			if( batchFormat == VertexFormat.P3fT2fC4b ) {
 				GLFuncs.EnableClientState( ArrayCap.TextureCoordArray );
 				setupBatchFunc = setupBatchFuncTex2fCol4b;
 				batchStride = VertexP3fT2fC4b.Size;
@@ -792,15 +792,13 @@ namespace ClassicalSharp.GraphicsAPI
 			isIntelRenderer = renderer.Contains( "Intel" );
 		}
 
-		public override void WarnIfNecessary( Chat chat ) {
-			if( !isIntelRenderer ) return;
+		public override bool WarnIfNecessary( Chat chat ) {
+			if( !isIntelRenderer ) return false;
 
 			chat.Add( "&cIntel graphics cards are known to have issues with the OpenGL build." );
 			chat.Add( "&cVSync may not work, and you may see disappearing clouds and map edges." );
-			chat.Add( "    " );
-			chat.Add( "&cFor Windows, try downloading the Direct3D 9 build as it doesn't have" );
-			chat.Add( "&cthese problems. Alternatively, the disappearing graphics can be" );
-			chat.Add( "&cpartially fixed by typing \"/client render legacy\" into chat." );
+			chat.Add( "&cFor Windows, try downloading the Direct3D 9 build instead.");
+			return true;
 		}
 
 		// Based on http://www.opentk.com/doc/graphics/save-opengl-rendering-to-disk

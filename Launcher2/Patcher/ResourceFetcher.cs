@@ -11,11 +11,6 @@ namespace Launcher {
 		public bool Done = false;
 		internal AsyncDownloader downloader;
 		SoundPatcher digPatcher, stepPatcher;
-		public ResourceFetcher() {
-			string basePath = Path.Combine( Program.AppDirectory, "audio" );
-			digPath = Path.Combine( basePath, "dig" );
-			stepPath = Path.Combine( basePath, "step" );
-		}
 		
 		const string jarClassicUri = "http://s3.amazonaws.com/Minecraft.Download/versions/c0.30_01c/c0.30_01c.jar";
 		const string jar162Uri = "http://s3.amazonaws.com/Minecraft.Download/versions/1.6.2/1.6.2.jar";
@@ -31,11 +26,9 @@ namespace Launcher {
 		public void DownloadItems( AsyncDownloader downloader, Action<string> setStatus ) {
 			this.downloader = downloader;
 			DownloadMusicFiles();
-			digPatcher = new SoundPatcher( digSounds, "dig_",
-			                              "step_cloth1", digPath );
+			digPatcher = new SoundPatcher( digSounds, "dig_", "step_cloth1" );
 			digPatcher.FetchFiles( digSoundsUri, altDigSoundsUri, this );
-			stepPatcher = new SoundPatcher( stepSounds, "step_",
-			                               "classic jar", stepPath );
+			stepPatcher = new SoundPatcher( stepSounds, "step_", "classic jar" );
 			stepPatcher.FetchFiles( stepSoundsUri, altStepSoundsUri, this );
 			if( !defaultZipExists ) {
 				downloader.DownloadData( jarClassicUri, false, "classic_jar" );
@@ -112,8 +105,7 @@ namespace Launcher {
 			string audioPath = Path.Combine( Program.AppDirectory, "audio" );
 			if( !Directory.Exists( audioPath ) )
 				Directory.CreateDirectory( audioPath );
-			AllResourcesExist = File.Exists( digPath + ".bin" )
-				&& File.Exists( stepPath + ".bin" );
+			AllResourcesExist = CheckSoundsExist();
 			
 			string texDir = Path.Combine( Program.AppDirectory, "texpacks" );
 			string zipPath = Path.Combine( texDir, "default.zip" );
@@ -174,12 +166,10 @@ namespace Launcher {
 		
 		bool CheckMusicFiles( Action<string> setStatus ) {
 			for( int i = 0; i < musicFiles.Length; i++ ) {
-				string next = i < musicFiles.Length - 1 ?
-					musicFiles[i + 1] : "dig_cloth1";
+				string next = i < musicFiles.Length - 1 ? musicFiles[i + 1] : "dig_cloth1";
 				string name = musicFiles[i];
 				byte[] data = null;
-				if( !DownloadItem( name, name, next,
-				                  ref data, setStatus ) )
+				if( !DownloadItem( name, name, next, ref data, setStatus ) )
 					return false;
 				
 				if( data == null ) continue;
@@ -199,7 +189,20 @@ namespace Launcher {
 			}
 		}
 		
-		string digPath, stepPath;
+		bool CheckSoundsExist() {
+			string path = Path.Combine( Program.AppDirectory, "audio" );
+			for( int i = 0; i < digSounds.Length; i++ ) {
+				string file = "dig_" + digSounds[i].Substring( 1 ) + ".wav";
+				if( !File.Exists( Path.Combine( path, file ) ) ) return false;
+			}
+			
+			for( int i = 0; i < stepSounds.Length; i++ ) {
+				string file = "step_" + stepSounds[i].Substring( 1 ) + ".wav";
+				if( !File.Exists( Path.Combine( path, file ) ) ) return false;
+			}
+			return true;
+		}
+		
 		string[] digSounds = new [] { "Acloth1", "Acloth2", "Acloth3", "Acloth4", "Bglass1",
 			"Bglass2", "Bglass3", "Agrass1", "Agrass2", "Agrass3", "Agrass4", "Agravel1", "Agravel2",
 			"Agravel3", "Agravel4", "Asand1", "Asand2", "Asand3", "Asand4", "Asnow1", "Asnow2", "Asnow3",

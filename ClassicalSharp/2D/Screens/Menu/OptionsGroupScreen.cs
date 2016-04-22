@@ -32,22 +32,23 @@ namespace ClassicalSharp.Gui {
 		
 		void MakeNormal() {
 			widgets = new Widget[] {
-				Make( -140, -100, "Misc options",
+				Make( -1, -100, "Misc options",
 				     (g, w) => g.SetNewScreen( new MiscOptionsScreen( g ) ) ),
-				Make( -140, -50, "Gui options",
+				Make( -1, -50, "Gui options",
 				     (g, w) => g.SetNewScreen( new GuiOptionsScreen( g ) ) ),
-				Make( -140, 0, "Graphics options",
+				Make( -1, 0, "Graphics options",
 				     (g, w) => g.SetNewScreen( new GraphicsOptionsScreen( g ) ) ),
-				Make( -140, 50, "Key bindings",
+				Make( -1, 50, "Key bindings",
 				     (g, w) => g.SetNewScreen( new NormalKeyBindingsScreen( g ) ) ),
-				Make( 140, -50, "Hacks settings",
+				Make( 1, -50, "Hacks settings",
 				     (g, w) => g.SetNewScreen( new HacksSettingsScreen( g ) ) ),
-				Make( 140, 0, "Env settings",
+				Make( 1, 0, "Env settings",
 				     (g, w) => g.SetNewScreen( new EnvSettingsScreen( g ) ) ),
-				Make( 140, 50, "Nostalgia options",
+				Make( 1, 50, "Nostalgia options",
 				     (g, w) => g.SetNewScreen( new NostalgiaScreen( g ) ) ),
 				
-				MakeBack( true, titleFont, (g, w) => g.SetNewScreen( null ) ),
+				MakeBack( false, titleFont, 
+				         (g, w) => g.SetNewScreen( new PauseScreen( g ) ) ),
 			};
 		}
 		
@@ -66,16 +67,16 @@ namespace ClassicalSharp.Gui {
 			if( button == null ) return;
 			
 			string text = descriptions[Array.IndexOf<Widget>(widgets, button)];
-			descWidget = TextWidget.Create( game, 0, 100, text, Anchor.Centre, Anchor.Centre, regularFont );
+			descWidget = ChatTextWidget.Create( game, 0, 100, text, Anchor.Centre, Anchor.Centre, regularFont );
 		}
 		
-		ButtonWidget Make( int x, int y, string text, Action<Game, Widget> onClick ) {
-			return ButtonWidget.Create( game, x, y, 240, 35, text,
+		ButtonWidget Make( int dir, int y, string text, Action<Game, Widget> onClick ) {
+			return ButtonWidget.Create( game, dir * 160, y, 301, 40, text,
 			                           Anchor.Centre, Anchor.Centre, titleFont, LeftOnly( onClick ) );
 		}
 		
 		ButtonWidget MakeOther( int x, int y, int width, string text, Anchor hAnchor, Action<Game, Widget> onClick ) {
-			return ButtonWidget.Create( game, x, y, width, 35, text,
+			return ButtonWidget.Create( game, x, y, width, 40, text,
 			                           hAnchor, Anchor.BottomOrRight, titleFont, LeftOnly( onClick ) );
 		}
 		

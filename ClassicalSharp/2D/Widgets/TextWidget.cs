@@ -26,12 +26,21 @@ namespace ClassicalSharp.Gui {
 		protected int defaultHeight;
 		protected internal Font font;
 		
+		public bool ReducePadding;
+		public FastColour Colour = FastColour.White;
 		public bool IsValid { get { return texture.IsValid; } }
 		
 		public override void Init() {
 			DrawTextArgs args = new DrawTextArgs( "I", font, true );
-			defaultHeight = game.Drawer2D.MeasureSize( ref args ).Height;
-			Height = defaultHeight;
+			int height = game.Drawer2D.MeasureSize( ref args ).Height;
+			SetHeight( height );
+		}
+		
+		protected void SetHeight( int height ) {
+			if( ReducePadding )
+				game.Drawer2D.ReducePadding( ref height, Utils.Floor( font.Size ) );
+			defaultHeight = height;
+			Height = height;
 		}
 		
 		public virtual void SetText( string text ) {
@@ -42,6 +51,9 @@ namespace ClassicalSharp.Gui {
 			} else {
 				DrawTextArgs args = new DrawTextArgs( text, font, true );
 				texture = game.Drawer2D.MakeTextTexture( ref args, 0, 0 );
+				if( ReducePadding )
+					game.Drawer2D.ReducePadding( ref texture, Utils.Floor( font.Size ) );
+				
 				X = texture.X1 = CalcOffset( game.Width, texture.Width, XOffset, HorizontalAnchor );
 				Y = texture.Y1 = CalcOffset( game.Height, texture.Height, YOffset, VerticalAnchor );
 				Height = texture.Height;
@@ -51,7 +63,7 @@ namespace ClassicalSharp.Gui {
 		
 		public override void Render( double delta ) {
 			if( texture.IsValid )
-				texture.Render( api );
+				texture.Render( api, Colour );
 		}
 		
 		public override void Dispose() {

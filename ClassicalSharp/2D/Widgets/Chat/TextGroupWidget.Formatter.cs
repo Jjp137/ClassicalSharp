@@ -16,6 +16,8 @@ namespace ClassicalSharp.Gui {
 			if( !String.IsNullOrEmpty( text ) ) {
 				Texture tex = NextToken( text, 0, ref prevFlags ) == -1 ? DrawSimple( ref args ) :
 					DrawAdvanced( ref args, index, text );
+				game.Drawer2D.ReducePadding( ref tex, Utils.Floor( args.Font.Size ) );
+				
 				tex.X1 = CalcOffset( game.Width, tex.Width, XOffset, HorizontalAnchor );
 				tex.Y1 = CalcY( index, tex.Height );
 				Textures[index] = tex;
@@ -104,10 +106,10 @@ namespace ClassicalSharp.Gui {
 			return data;
 		}
 		
-		void UpdatePreviousUrls( int i, string url ) {			
+		void UpdatePreviousUrls( int i, string url ) {
 			while( i >= 0 && linkData[i].urls != null && (linkData[i].flags & LinkFlags.Continue) != 0 ) {
 				linkData[i].LastUrl = url;
-				if( linkData[i].urls.Length > 2 || (linkData[i].flags & LinkFlags.NewLink) != 0 ) 
+				if( linkData[i].urls.Length > 2 || (linkData[i].flags & LinkFlags.NewLink) != 0 )
 					break;
 				i--;
 			}
@@ -137,7 +139,7 @@ namespace ClassicalSharp.Gui {
 				return 2;
 			}
 			
-			prevFlags = 0;		
+			prevFlags = 0;
 			int nextHttp = line.IndexOf( "http://", start );
 			int nextHttps = line.IndexOf( "https://", start );
 			return nextHttp == -1 ? nextHttps : nextHttp;
@@ -172,7 +174,7 @@ namespace ClassicalSharp.Gui {
 				urls[index] = part;
 			}
 			
-			public string LastUrl { 
+			public string LastUrl {
 				get { return urls[parts.Length - 1]; }
 				set { urls[parts.Length - 1] = value; }
 			}

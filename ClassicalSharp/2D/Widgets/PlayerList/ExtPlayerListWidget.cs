@@ -10,7 +10,7 @@ namespace ClassicalSharp.Gui {
 		
 		public ExtPlayerListWidget( Game game, Font font ) : base( game, font ) {
 			textures = new Texture[512];
-			titleFont = new Font( game.FontName, 12, FontStyle.Underline );
+			titleFont = new Font( game.FontName, font.Size, FontStyle.Underline );
 		}
 		
 		PlayerInfo[] info = new PlayerInfo[512];
@@ -119,6 +119,8 @@ namespace ClassicalSharp.Gui {
 		void AddPlayerInfo( CpeListInfo player, int index ) {
 			DrawTextArgs args = new DrawTextArgs( player.ListName, font, true );
 			Texture tex = game.Drawer2D.MakeChatTextTexture( ref args, 0, 0 );
+			game.Drawer2D.ReducePadding( ref tex, Utils.Floor( font.Size ), 3 );
+			
 			if( index < 0 ) {
 				info[namesCount] = new PlayerInfo( player );
 				textures[namesCount] = tex;
@@ -162,6 +164,7 @@ namespace ClassicalSharp.Gui {
 		void AddGroup( string group, ref int index ) {
 			DrawTextArgs args = new DrawTextArgs( group, titleFont, true );
 			Texture tex = game.Drawer2D.MakeChatTextTexture( ref args, 0, 0 );
+			game.Drawer2D.ReducePadding( ref tex, Utils.Floor( titleFont.Size ), 3 );
 			PlayerInfo pInfo = new PlayerInfo( group );
 			
 			PushDown( info, index, pInfo );

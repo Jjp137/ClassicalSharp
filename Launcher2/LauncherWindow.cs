@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Net;
 using System.Reflection;
 using System.Threading;
@@ -68,7 +69,7 @@ namespace Launcher {
 			Window.WindowStateChanged += Resize;
 			Window.Keyboard.KeyDown += KeyDown;
 			LoadFont();
-			logoFont = new Font( FontName, 24, FontStyle.Regular );
+			logoFont = new Font( FontName, 32, FontStyle.Regular );
 			string path = Assembly.GetExecutingAssembly().Location;
 			Window.Icon = Icon.ExtractAssociatedIcon( path );			
 			//Minimised = Window.WindowState == WindowState.Minimized;
@@ -138,6 +139,10 @@ namespace Launcher {
 			Init();
 			TryLoadTexturePack();
 			
+			string audioPath = Path.Combine( Program.AppDirectory, "audio" );
+			BinUnpacker.Unpack( audioPath, "dig" );
+			BinUnpacker.Unpack( audioPath, "step" );
+			
 			fetcher = new ResourceFetcher();
 			fetcher.CheckResourceExistence();
 			checkTask = new UpdateCheckTask();
@@ -166,9 +171,11 @@ namespace Launcher {
 				LauncherSkin.SaveToOptions();
 				Options.Save();
 			}
+			
 			if( ShouldUpdate )
 				Updater.Patcher.LaunchUpdateScript();
-			Window.Close();
+			if( Window.Exists )
+				Window.Close();
 		}
 		
 		void Display() {

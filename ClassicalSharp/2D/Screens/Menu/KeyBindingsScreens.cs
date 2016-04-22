@@ -14,11 +14,13 @@ namespace ClassicalSharp.Gui {
 		
 		public override void Init() {
 			base.Init();
+			btnWidth = 301; btnHeight = 40;
+			btnDistance = 48;
 			descriptions = normDescriptions;
 			originKey = KeyBinding.Forward;
 			widgets = new Widget[descriptions.Length + 2];
-			MakeKeys( KeyBinding.Forward, 0, 5, -150, -180 );
-			MakeKeys( KeyBinding.Respawn, 5, 5, 150, -180 );
+			MakeKeys( KeyBinding.Forward, 0, 5, -160, -180 );
+			MakeKeys( KeyBinding.Respawn, 5, 5, 160, -180 );
 			
 			widgets[index++] = MakeBack( false, titleFont,
 			                            (g, w) => g.SetNewScreen( new ClassicOptionsScreen( g ) ) );
@@ -41,7 +43,7 @@ namespace ClassicalSharp.Gui {
 			MakeKeys( KeyBinding.Forward, 0, 8, -150, -220 );
 			MakeKeys( KeyBinding.OpenInventory, 8, 2, 150, -220 );
 			index += 3; // Skip SendChat, PauseOrExit, PlayerList
-			MakeKeys( KeyBinding.Speed, 13, 5, 150, -220 + 2 * buttonDistance );
+			MakeKeys( KeyBinding.Speed, 13, 5, 150, -220 + 2 * btnDistance );
 			
 			widgets[index++] = MakeBack( false, titleFont,
 			                            (g, w) => g.SetNewScreen( new ClassicOptionsScreen( g ) ) );
@@ -64,7 +66,7 @@ namespace ClassicalSharp.Gui {
 			MakeKeys( KeyBinding.Forward, 0, 7, -150, -180 );
 			MakeKeys( KeyBinding.OpenChat, 7, 6, 150, -180 );
 			
-			widgets[index++] = MakeBack( false, titleFont,
+			widgets[index++] = MakeBack( "Back to menu", 5, titleFont,
 			                            (g, w) => g.SetNewScreen( new OptionsGroupScreen( g ) ) );
 			widgets[index++] = ButtonWidget.Create(
 				game, 0, 170, 300, 35, "Advanced key bindings",
@@ -92,7 +94,7 @@ namespace ClassicalSharp.Gui {
 			widgets = new Widget[descriptions.Length + 2];
 			MakeKeys( KeyBinding.Speed, 0, 7, -150, -180 );
 			MakeKeys( KeyBinding.Screenshot, 7, 7, 150, -180 );
-			widgets[index++] = MakeBack( false, titleFont,
+			widgets[index++] = MakeBack( "Back to menu", 5, titleFont,
 			                            (g, w) => g.SetNewScreen( new OptionsGroupScreen( g ) ) );
 			widgets[index++] = ButtonWidget.Create(
 				game, 0, 170, 300, 35, "Mouse key bindings",
@@ -117,7 +119,7 @@ namespace ClassicalSharp.Gui {
 			originKey = KeyBinding.MouseLeft;
 			widgets = new Widget[descriptions.Length + 3];
 			MakeKeys( KeyBinding.MouseLeft, 0, 3, 0, -180 );
-			widgets[index++] = MakeBack( false, titleFont,
+			widgets[index++] = MakeBack( "Back to menu", 5, titleFont,
 			                            (g, w) => g.SetNewScreen( new PauseScreen( g ) ) );
 			widgets[index++] = ButtonWidget.Create(
 				game, 0, 170, 300, 35, "Normal key bindings",

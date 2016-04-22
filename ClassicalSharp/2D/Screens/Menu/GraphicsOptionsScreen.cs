@@ -14,26 +14,27 @@ namespace ClassicalSharp.Gui {
 		public override void Init() {
 			base.Init();
 			INetworkProcessor network = game.Network;
+			extHelpY = 50;
 			
-			widgets = new Widget[] {				
+			widgets = new Widget[] {	
 				
-				Make2( -1, 0, "FPS mode", OnWidgetClick,
+				Make2( -1, -50, "FPS mode", OnWidgetClick,
 				     g => g.FpsLimit.ToString(),
 				     (g, v) => { object raw = Enum.Parse( typeof(FpsLimitMethod), v );
 				     	g.SetFpsLimitMethod( (FpsLimitMethod)raw );
 				     	Options.Set( OptionsKey.FpsLimit, v ); } ),
 
-				Make2( -1, 50, "View distance", OnWidgetClick,
+				Make2( -1, 0, "View distance", OnWidgetClick,
 				     g => g.ViewDistance.ToString(),
 				     (g, v) => g.SetViewDistance( Int32.Parse( v ), true ) ),
 				
-				Make2( 1, 0, "Names", OnWidgetClick,
+				Make2( 1, -50, "Names", OnWidgetClick,
 				     g => g.Players.NamesMode.ToString(),
 				     (g, v) => { object raw = Enum.Parse( typeof(NameMode), v );
 				     	g.Players.NamesMode = (NameMode)raw;
 				     	Options.Set( OptionsKey.NamesMode, v ); } ),
 				
-				Make2( 1, 50, "Shadows", OnWidgetClick,
+				Make2( 1, 0, "Shadows", OnWidgetClick,
 				     g => g.Players.ShadowMode.ToString(),
 				     (g, v) => { object raw = Enum.Parse( typeof(EntityShadow), v );
 				     	g.Players.ShadowMode = (EntityShadow)raw;
@@ -62,7 +63,7 @@ namespace ClassicalSharp.Gui {
 			descriptions[0] = new[] {
 				"&eVSync: &fNumber of frames rendered is at most the monitor's refresh rate.",
 				"&e30/60/120 FPS: &f30/60/120 frames rendered at most each second.",
-				"&eNoLimit: &Renders as many frames as possible each second.",
+				"&eNoLimit: &fRenders as many frames as possible each second.",
 				"&cUsing NoLimit mode is discouraged for general usage.",
 			};
 			descriptions[2] = new[] {

@@ -84,7 +84,7 @@ namespace ClassicalSharp.Singleplayer {
 			} else {
 				string state = generator.CurrentState;
 				float progress = generator.CurrentProgress;
-				LoadingMapScreen screen = ((LoadingMapScreen)game.GetActiveScreen);
+				LoadingMapScreen screen = ((LoadingMapScreen)game.ActiveScreen);
 				
 				screen.SetProgress( progress );
 				if( state != lastState ) {
@@ -100,8 +100,7 @@ namespace ClassicalSharp.Singleplayer {
 				game.Chat.Add( "&cFailed to generate the map." );
 			} else {
 				IMapGenerator gen = generator;
-				game.World.SetData( generatedMap, generator.Width,
-				                 generator.Height, generator.Length );
+				game.World.SetData( generatedMap, gen.Width, gen.Height, gen.Length );
 				generatedMap = null;
 				
 				game.WorldEvents.RaiseOnNewMapLoaded();

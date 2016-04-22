@@ -35,16 +35,16 @@ namespace ClassicalSharp.Gui {
 		
 		public override void Init() {
 			DrawTextArgs args = new DrawTextArgs( "I", font, true );
-			defaultHeight = game.Drawer2D.MeasureSize( ref args ).Height;
+			defaultHeight = game.Drawer2D.MeasureChatSize( ref args ).Height;
 			Height = defaultHeight;
 		}
 		
-		static Texture shadowTex = new Texture( 0, 0, 0, 0, 0, 
+		static Texture shadowTex = new Texture( 0, 0, 0, 0, 0,
 		                                       new TextureRec( 0, 66/256f, 200/256f, 20/256f ) );
 		static Texture selectedTex = new Texture( 0, 0, 0, 0, 0,
 		                                         new TextureRec( 0, 86/256f, 200/256f, 20/256f ) );
 		static Texture disabledTex = new Texture( 0, 0, 0, 0, 0,
-		                                         new TextureRec( 0, 46/256f, 200/256f, 20/256f ) );		
+		                                         new TextureRec( 0, 46/256f, 200/256f, 20/256f ) );
 		public string Text;
 		public void SetText( string text ) {
 			api.DeleteTexture( ref texture );
@@ -61,9 +61,11 @@ namespace ClassicalSharp.Gui {
 			Width = texture.Width;
 		}
 		
+		static FastColour normCol = new FastColour( 224, 224, 224 ),
+		activeCol = new FastColour( 255, 255, 160 ),
+		disabledCol = new FastColour( 160, 160, 160 );
 		public override void Render( double delta ) {
-			if( !texture.IsValid )
-				return;
+			if( !texture.IsValid ) return;
 			Texture backTex = Active ? selectedTex : shadowTex;
 			if( Disabled ) backTex = disabledTex;
 			
@@ -72,8 +74,7 @@ namespace ClassicalSharp.Gui {
 			backTex.Width = Width; backTex.Height = Height;
 			
 			backTex.Render( api );
-			FastColour col = Active ? FastColour.White : new FastColour( 200, 200, 200 );
-			if( Disabled ) col = new FastColour( 150, 150, 150 );
+			FastColour col = Disabled ? disabledCol : (Active ? activeCol : normCol);
 			texture.Render( api, col );
 		}
 		
@@ -102,7 +103,7 @@ namespace ClassicalSharp.Gui {
 			using( Bitmap bmp = IDrawer2D.CreatePow2Bitmap( size ) )
 				using( IDrawer2D drawer = game.Drawer2D )
 			{
-				drawer.SetBitmap( bmp );			
+				drawer.SetBitmap( bmp );
 				args.SkipPartsCheck = true;
 				drawer.DrawChatText( ref args, xOffset / 2, yOffset / 2 );
 				texture = drawer.Make2DTexture( bmp, size, 0, 0 );

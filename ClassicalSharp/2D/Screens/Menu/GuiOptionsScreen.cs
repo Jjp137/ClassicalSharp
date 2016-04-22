@@ -74,6 +74,7 @@ namespace ClassicalSharp.Gui {
 		}
 		
 		void HandleFontChange() {
+			int selIndex = Array.IndexOf<Widget>( widgets, selectedWidget );
 			game.Events.RaiseChatFontChanged();
 			base.Dispose();
 			base.Init();
@@ -88,6 +89,9 @@ namespace ClassicalSharp.Gui {
 				btn.font = titleFont;
 				btn.SetText( btn.Text );
 			}
+			
+			if( selIndex >= 0 )
+				selectedWidget = (ButtonWidget)widgets[selIndex];
 		}
 		
 		void MakeValidators() {

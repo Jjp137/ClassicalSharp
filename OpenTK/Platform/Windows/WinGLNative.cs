@@ -452,6 +452,10 @@ namespace OpenTK.Platform.Windows
 			ProcessEvents();
 			suppress_resize--;
 		}
+		
+		public string GetClipboardText() { return ""; }
+		
+		public void SetClipboardText( string value ) {	}	
 
 		public Rectangle Bounds {
 			get { return bounds; }

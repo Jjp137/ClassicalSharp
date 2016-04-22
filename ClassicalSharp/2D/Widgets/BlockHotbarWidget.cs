@@ -62,7 +62,7 @@ namespace ClassicalSharp.Gui {
 			
 			selTex.ID = texId;
 			selTex.X1 = (int)(x - selBlockSize / 2);
-			api.Draw2DTexture( ref selTex );
+			api.Draw2DTexture( ref selTex, FastColour.White );
 		}
 		
 		public override void Dispose() { }
@@ -97,7 +97,7 @@ namespace ClassicalSharp.Gui {
 		public override bool HandlesMouseClick( int mouseX, int mouseY, MouseButton button ) {
 			if( button != MouseButton.Left || !Bounds.Contains( mouseX, mouseY ) )
 			   return false;
-			InventoryScreen screen = game.GetActiveScreen as InventoryScreen;
+			InventoryScreen screen = game.ActiveScreen as InventoryScreen;
 			if( screen == null ) return false;
 			
 			for( int i = 0; i < hotbarCount; i++ ) {

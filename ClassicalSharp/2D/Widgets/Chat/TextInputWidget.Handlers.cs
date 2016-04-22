@@ -22,21 +22,23 @@ namespace ClassicalSharp.Gui {
 		public override bool HandlesKeyDown( Key key ) {
 			if( game.HideGui )
 				return key < Key.F1 || key > Key.F35;
-			bool controlDown = game.IsKeyDown( Key.ControlLeft ) || game.IsKeyDown( Key.ControlRight );
+			bool clipboardDown = OpenTK.Configuration.RunningOnMacOS ?
+				(game.IsKeyDown( Key.WinLeft ) || game.IsKeyDown( Key.WinRight ))
+				: (game.IsKeyDown( Key.ControlLeft ) || game.IsKeyDown( Key.ControlRight ));
 			
 			if( key == Key.Tab ) TabKey();
-			else if( key == Key.Down ) DownKey( controlDown );
-			else if( key == Key.Up ) UpKey( controlDown );
-			else if( key == Key.Left ) LeftKey( controlDown );
-			else if( key == Key.Right ) RightKey( controlDown );
-			else if( key == Key.BackSpace ) BackspaceKey( controlDown );
+			else if( key == Key.Down ) DownKey( clipboardDown );
+			else if( key == Key.Up ) UpKey( clipboardDown );
+			else if( key == Key.Left ) LeftKey( clipboardDown );
+			else if( key == Key.Right ) RightKey( clipboardDown );
+			else if( key == Key.BackSpace ) BackspaceKey( clipboardDown );
 			else if( key == Key.Delete ) DeleteKey();
 			else if( key == Key.Home ) HomeKey();
 			else if( key == Key.End ) EndKey();
 			else if( game.Network.ServerSupportsFullCP437 &&
 			        key == game.InputHandler.Keys[KeyBinding.ExtendedInput] )
 				altText.SetActive( !altText.Active );
-			else if( controlDown && !OtherKey( key ) ) return false;
+			else if( clipboardDown && !OtherKey( key ) ) return false;
 			
 			return true;
 		}
@@ -53,7 +55,7 @@ namespace ClassicalSharp.Gui {
 			
 			string part = new String( value, start, pos + 1 - start );
 			List<string> matches = new List<string>();
-			game.Chat.Add( null, MessageType.ClientStatus5 );			
+			game.Chat.Add( null, MessageType.ClientStatus5 );
 			
 			bool extList = game.Network.UsingExtPlayerList;
 			CpeListInfo[] info = game.CpePlayersList;
@@ -222,23 +224,37 @@ namespace ClassicalSharp.Gui {
 		
 		bool OtherKey( Key key ) {
 			if( key == Key.V && chatInputText.Length < TotalChars ) {
-				string text = game.window.ClipboardText;
+				string text = null;
+				try {
+					text = game.window.ClipboardText;
+				} catch( Exception ex ) {
+					ErrorHandler.LogError( "Paste from clipboard", ex );
+					const string warning = "&cError while trying to paste from clipboard.";
+					game.Chat.Add( warning, MessageType.ClientStatus4 );
+					return true;
+				}
+
 				if( String.IsNullOrEmpty( text ) ) return true;
 				game.Chat.Add( null, MessageType.ClientStatus4 );
 				
 				for( int i = 0; i < text.Length; i++ ) {
-					if( !IsValidInputChar( text[i] ) ) {
-						const string warning = "&eClipboard contained some characters that can't be sent.";
-						game.Chat.Add( warning, MessageType.ClientStatus4 );
-						text = RemoveInvalidChars( text );
-						break;
-					}
+					if( IsValidInputChar( text[i] ) ) continue;
+					const string warning = "&eClipboard contained some characters that can't be sent.";
+					game.Chat.Add( warning, MessageType.ClientStatus4 );
+					text = RemoveInvalidChars( text );
+					break;
 				}
 				AppendText( text );
 				return true;
 			} else if( key == Key.C ) {
-				if( !chatInputText.Empty )
+				if( chatInputText.Empty ) return true;
+				try {
 					game.window.ClipboardText = chatInputText.ToString();
+				} catch( Exception ex ) {
+					ErrorHandler.LogError( "Copy to clipboard", ex );
+					const string warning = "&cError while trying to copy to clipboard.";
+					game.Chat.Add( warning, MessageType.ClientStatus4 );
+				}
 				return true;
 			}
 			return false;
@@ -275,11 +291,12 @@ namespace ClassicalSharp.Gui {
 			
 			for( int y = 0; y < lines; y++ ) {
 				string line = parts[y];
+				int xOffset = y == 0 ? defaultWidth : 0;
 				if( line == null ) continue;
 				
 				for( int x = 0; x < line.Length; x++ ) {
 					args.Text = line.Substring( 0, x );
-					int trimmedWidth = drawer.MeasureChatSize( ref args ).Width;
+					int trimmedWidth = drawer.MeasureChatSize( ref args ).Width + xOffset;
 					// avoid allocating an unnecessary string
 					fixed( char* ptr = oneChar )
 						ptr[0] = line[x];

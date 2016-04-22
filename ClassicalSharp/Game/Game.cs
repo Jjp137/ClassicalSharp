@@ -121,8 +121,8 @@ namespace ClassicalSharp {
 			forwardThirdPersonCam = new ForwardThirdPersonCamera( this );
 			Camera = firstPersonCam;
 			DefaultFov = Options.GetInt( OptionsKey.FieldOfView, 1, 150, 70 );
-			Fov = Fov;
-			ZoomFov = Fov;
+			Fov = DefaultFov;
+			ZoomFov = DefaultFov;
 			UpdateProjection();
 			CommandManager = new CommandManager();
 			CommandManager.Init( this );
@@ -153,7 +153,10 @@ namespace ClassicalSharp {
 			
 			LoadIcon();
 			string connectString = "Connecting to " + IPAddress + ":" + Port +  "..";
-			Graphics.WarnIfNecessary( Chat );
+			if( Graphics.WarnIfNecessary( Chat ) ) {
+				MapBordersRenderer.UseLegacyMode( true );
+				((StandardEnvRenderer)EnvRenderer).UseLegacyMode( true );
+			}
 			SetNewScreen( new LoadingMapScreen( this, connectString, "Waiting for handshake" ) );
 			Network.Connect( IPAddress, Port );
 		}
@@ -202,13 +205,12 @@ namespace ClassicalSharp {
 			UpdateProjection();
 		}
 		
-		/// <summary> Gets whether the active screen handles all input. </summary>
-		public bool ScreenLockedInput {
-			get { return activeScreen == null ? hudScreen.HandlesAllInput :
-					activeScreen.HandlesAllInput; } // inlined here.
-		}
+		/// <summary> Gets whether the screen the user is currently interacting with 
+		/// handles all input. </summary>
+		public bool ScreenLockedInput { get { return ActiveScreen.HandlesAllInput; } }
 		
-		public Screen GetActiveScreen {
+		/// <summary> Gets the screen that the user is currently interacting with. </summary>
+		public Screen ActiveScreen {
 			get { return activeScreen == null ? hudScreen : activeScreen; }
 		}
 		

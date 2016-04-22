@@ -126,7 +126,7 @@ namespace ClassicalSharp.Gui {
 				if( File.Exists( path ) )
 					File.Delete( path );
 				using( FileStream fs = new FileStream( path, FileMode.CreateNew, FileAccess.Write ) ) {
-					IMapFormatExporter exporter = new MapCw();
+					IMapFormatExporter exporter = new MapCwExporter();
 					exporter.Save( fs, game );
 				}
 			} catch( Exception ex ) {
@@ -140,7 +140,8 @@ namespace ClassicalSharp.Gui {
 		
 		void MakeDescWidget( string text ) {
 			DisposeDescWidget();
-			descWidget = TextWidget.Create( game, 0, 90, text, Anchor.Centre, Anchor.Centre, regularFont );
+			descWidget = ChatTextWidget.Create( game, 0, 90, text, 
+			                                   Anchor.Centre, Anchor.Centre, regularFont );
 		}
 		
 		void DisposeDescWidget() {

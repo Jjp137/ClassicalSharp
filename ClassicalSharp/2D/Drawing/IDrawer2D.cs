@@ -32,11 +32,6 @@ namespace ClassicalSharp {
 		/// at the specified coordinates in the currently bound bitmap. </summary>
 		public abstract void DrawRectBounds( FastColour colour, float lineWidth, int x, int y, int width, int height );
 		
-		/// <summary> Draws a 2D rectangle with rounded borders of the specified dimensions
-		/// at the specified coordinates in the currently bound bitmap. </summary>
-		[Obsolete("Method is not guaranteed to work on all platforms.")]
-		public abstract void DrawRoundedRect( FastColour colour, float radius, float x, float y, float width, float height );
-		
 		/// <summary> Clears the entire bound bitmap to the specified colour. </summary>
 		public abstract void Clear( FastColour colour );
 		
@@ -231,6 +226,32 @@ namespace ClassicalSharp {
 		
 		public static bool IsWhiteColour( char c ) {
 			return c == '\0' || c == 'f' || c == 'F';
+		}
+		
+		public void ReducePadding( ref Texture tex, int point ) {
+			ReducePadding( ref tex, point, 4 );
+		}
+
+		public void ReducePadding( ref int height, int point ) {
+			ReducePadding( ref height, point, 4 );
+		}
+		
+		public void ReducePadding( ref Texture tex, int point, int scale ) {
+			if( !UseBitmappedChat ) return;
+			point = AdjTextSize( point );
+			
+			int padding = (tex.Height - point) / scale;
+			float vAdj = (float)padding / Utils.NextPowerOf2( tex.Height );
+			tex.V1 += vAdj; tex.V2 -= vAdj;
+			tex.Height -= padding * 2;
+		}
+
+		public void ReducePadding( ref int height, int point, int scale ) {
+			if( !UseBitmappedChat ) return;
+			point = AdjTextSize( point );
+			
+			int padding = (height - point) / scale;
+			height -= padding * 2;
 		}
 	}
 }

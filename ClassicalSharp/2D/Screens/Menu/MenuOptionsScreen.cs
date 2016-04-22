@@ -13,13 +13,15 @@ namespace ClassicalSharp.Gui {
 		protected MenuInputWidget inputWidget;
 		protected MenuInputValidator[] validators;
 		protected string[][] descriptions;
-		protected ChatTextWidget[] extendedHelp;
+		protected TextGroupWidget extendedHelp;
 		Font extendedHelpFont;
 		
 		public override void Render( double delta ) {
 			RenderMenuBounds();
-			int extEndY = extendedHelp == null ? 0 : extendedHelp[extendedHelp.Length - 1].BottomRight.Y;
-			if( extendedHelp != null && extEndY <= widgets[widgets.Length - 3].Y ) {
+			int extClipY = extendedHelp == null ? 0 : widgets[widgets.Length - 3].Y;
+			int extEndY = extendedHelp == null ? 0 : extendedHelp.Y + extendedHelp.Height;
+			
+			if( extendedHelp != null && extEndY <= extClipY ) {
 				int x = game.Width / 2 - tableWidth / 2 - 5;
 				int y = game.Height / 2 + extHelpY - 5;
 				api.Draw2DQuad( x, y, tableWidth + 10, tableHeight + 10, tableCol );
@@ -30,18 +32,15 @@ namespace ClassicalSharp.Gui {
 			if( inputWidget != null )
 				inputWidget.Render( delta );			
 			
-			if( extendedHelp != null && extEndY <= widgets[widgets.Length - 3].Y ) {
-				for( int i = 0; i < extendedHelp.Length; i++ )
-					extendedHelp[i].Render( delta );
-			}
+			if( extendedHelp != null && extEndY <= extClipY )
+				extendedHelp.Render( delta );
 			api.Texturing = false;
 		}
 		
 		public override void Init() {
 			base.Init();
 			regularFont = new Font( game.FontName, 16, FontStyle.Regular );
-			int size = game.Drawer2D.UseBitmappedChat ? 11 : 12;
-			extendedHelpFont = new Font( game.FontName, size, FontStyle.Regular );
+			extendedHelpFont = new Font( game.FontName, 16, FontStyle.Regular );
 			game.Keyboard.KeyRepeat = true;
 		}
 		
@@ -69,22 +68,14 @@ namespace ClassicalSharp.Gui {
 			return inputWidget.HandlesKeyUp( key );
 		}
 		
-		public override void OnResize( int oldWidth, int oldHeight, int width, int height ) {
-			if( inputWidget != null )
-				inputWidget.OnResize( oldWidth, oldHeight, width, height );
-			
+		public override void OnResize( int oldWidth, int oldHeight, int width, int height ) {			
 			base.OnResize( oldWidth, oldHeight, width, height );
 			if( extendedHelp == null ) return;
-			for( int i = 0; i < extendedHelp.Length; i++ )
-				extendedHelp[i].OnResize( oldWidth, oldHeight, width, height );
+			extendedHelp.OnResize( oldWidth, oldHeight, width, height );
 		}
 		
 		public override void Dispose() {
-			if( inputWidget != null ) {
-				inputWidget.Dispose();
-				inputWidget = null;
-			}
-			
+			DisposeWidgets();		
 			game.Keyboard.KeyRepeat = false;
 			extendedHelpFont.Dispose();
 			DisposeExtendedHelp();
@@ -114,44 +105,17 @@ namespace ClassicalSharp.Gui {
 		protected virtual void InputClosed() { }
 		
 		protected ButtonWidget Make( int dir, int y, string text, ClickHandler onClick,
-		                            Func<Game, string> getter, Action<Game, string> setter ) {
-			ButtonWidget widget = ButtonWidget.Create( game, 160 * dir, y, 280, 35, text, Anchor.Centre,
+		                                   Func<Game, string> getter, Action<Game, string> setter ) {
+			ButtonWidget widget = ButtonWidget.Create( game, 160 * dir, y, 301, 41, text, Anchor.Centre,
 			                                          Anchor.Centre, titleFont, onClick );
 			widget.GetValue = getter; widget.SetValue = setter;
 			return widget;
 		}
 		
 		protected ButtonWidget Make2( int dir, int y, string text, ClickHandler onClick,
-		                             Func<Game, string> getter, Action<Game, string> setter ) {
-			return Make2Impl( 160 * dir, y, 280, 35, text, onClick, getter, setter );
-		}
-		
-		protected ButtonWidget MakeBool( int dir, int y, string optName, string optKey,
-		                                ClickHandler onClick, Func<Game, bool> getter, Action<Game, bool> setter ) {
-			return MakeBoolImpl( 160 * dir, y, 280, 35, optName, optKey, onClick, getter, setter );
-		}
-		
-		protected ButtonWidget MakeClassic( int dir, int y, string text, ClickHandler onClick,
-		                                   Func<Game, string> getter, Action<Game, string> setter ) {
-			ButtonWidget widget = ButtonWidget.Create( game, 165 * dir, y, 301, 41, text, Anchor.Centre,
-			                                          Anchor.Centre, titleFont, onClick );
-			widget.GetValue = getter; widget.SetValue = setter;
-			return widget;
-		}
-		
-		protected ButtonWidget MakeClassic2( int dir, int y, string text, ClickHandler onClick,
 		                                    Func<Game, string> getter, Action<Game, string> setter ) {
-			return Make2Impl( 165 * dir, y, 301, 41, text, onClick, getter, setter );
-		}
-		
-		protected ButtonWidget MakeClassicBool( int dir, int y, string text, string optKey,
-		                                       ClickHandler onClick, Func<Game, bool> getter, Action<Game, bool> setter ) {
-			return MakeBoolImpl( 165 * dir, y, 301, 41, text, optKey, onClick, getter, setter );
-		}
-		
-		ButtonWidget Make2Impl( int x, int y, int width, int height, string text,
-		                       ClickHandler onClick, Func<Game, string> getter, Action<Game, string> setter ) {
-			ButtonWidget widget = ButtonWidget.Create( game, x, y, width, height, text + ": " + getter( game ),
+			ButtonWidget widget = ButtonWidget.Create( game, 160 * dir, y, 301, 41, 
+			                                          text + ": " + getter( game ),
 			                                          Anchor.Centre, Anchor.Centre, titleFont, onClick );
 			widget.Metadata = text;
 			widget.GetValue = getter;
@@ -162,11 +126,11 @@ namespace ClassicalSharp.Gui {
 			return widget;
 		}
 		
-		ButtonWidget MakeBoolImpl( int x, int y, int width, int height, string text, string optKey,
-		                          ClickHandler onClick, Func<Game, bool> getter, Action<Game, bool> setter ) {
+		protected ButtonWidget MakeBool( int dir, int y, string text, string optKey,
+		                                       ClickHandler onClick, Func<Game, bool> getter, Action<Game, bool> setter ) {
 			string optName = text;
 			text = text + ": " + (getter( game ) ? "ON" : "OFF");
-			ButtonWidget widget = ButtonWidget.Create( game, x, y, width, height, text, Anchor.Centre,
+			ButtonWidget widget = ButtonWidget.Create( game, 160 * dir, y, 301, 41, text, Anchor.Centre,
 			                                          Anchor.Centre, titleFont, onClick );
 			widget.Metadata = optName;
 			widget.GetValue = g => getter( g ) ? "yes" : "no";
@@ -183,6 +147,7 @@ namespace ClassicalSharp.Gui {
 			if( !canShow ) return;
 			
 			int index = Array.IndexOf<Widget>( widgets, selectedWidget );
+			if( index < 0 || index >= descriptions.Length ) return;
 			string[] desc = descriptions[index];
 			if( desc == null ) return;
 			MakeExtendedHelp( desc );
@@ -190,37 +155,25 @@ namespace ClassicalSharp.Gui {
 		
 		static FastColour tableCol = new FastColour( 20, 20, 20, 200 );
 		int tableWidth, tableHeight;
-		const int extHelpY = 100;
+		protected int extHelpY = 100;
 		void MakeExtendedHelp( string[] desc ) {
-			extendedHelp = new ChatTextWidget[desc.Length];
-			int x = 0, y = extHelpY;
-			tableWidth = 0;
+			extendedHelp = new TextGroupWidget( game, desc.Length, extendedHelpFont, null,
+			                                   Anchor.Centre, Anchor.Centre );
+			extendedHelp.Init();
 			
-			for( int i = 0; i < desc.Length; i++ ) {
-				extendedHelp[i] = ChatTextWidget.Create( game, 0, y,
-				                                        desc[i], Anchor.Centre, Anchor.Centre, extendedHelpFont );
-				tableWidth = Math.Max( extendedHelp[i].Width, tableWidth );
-				y += extendedHelp[i].Height + 5;
-			}
-			tableHeight = y - extHelpY;
+			for( int i = 0; i < desc.Length; i++ )
+				extendedHelp.SetText( i, desc[i] );
+			for( int i = 0; i < desc.Length; i++ )
+				extendedHelp.Textures[i].X1 = extendedHelp.X;
 			
-			int yOffset = 0;
-			for( int i = 0; i < desc.Length; i++ ) {
-				ChatTextWidget widget = extendedHelp[i];
-				widget.XOffset = (widget.Width - tableWidth) / 2;
-				x = CalcOffset( game.Width, widget.Width, widget.XOffset, Anchor.Centre );
-				
-				widget.YOffset = yOffset + extHelpY + extendedHelp[0].Height / 2;
-				y = CalcOffset( game.Height, widget.Height, widget.YOffset, Anchor.Centre );
-				yOffset += extendedHelp[i].Height + 5;
-				widget.MoveTo( x, y );
-			}
+			tableWidth = extendedHelp.Width;
+			tableHeight = extendedHelp.Height;
+			extendedHelp.MoveTo( extendedHelp.X, extHelpY + tableHeight / 2 );
 		}
 		
 		void DisposeExtendedHelp() {
 			if( extendedHelp == null ) return;
-			for( int i = 0; i < extendedHelp.Length; i++ )
-				extendedHelp[i].Dispose();
+			extendedHelp.Dispose();
 			extendedHelp = null;
 		}
 		
@@ -274,18 +227,23 @@ namespace ClassicalSharp.Gui {
 			string text = inputWidget.GetText();
 			if( inputWidget.Validator.IsValidValue( text ) )
 				targetWidget.SetValue( game, text );
+			
+			DisposeWidgets();
+			UpdateDescription( targetWidget );
+			targetWidget = null;
+			InputClosed();
+		}
+		
+		void DisposeWidgets() {
 			if( inputWidget != null )
 				inputWidget.Dispose();
 			widgets[widgets.Length - 2] = null;
 			inputWidget = null;
-			UpdateDescription( targetWidget );
-			targetWidget = null;
 			
 			int okayIndex = widgets.Length - 1;
 			if( widgets[okayIndex] != null )
 				widgets[okayIndex].Dispose();
 			widgets[okayIndex] = null;
-			InputClosed();
 		}
 	}
 }

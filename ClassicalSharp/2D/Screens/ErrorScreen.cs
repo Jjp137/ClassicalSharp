@@ -16,7 +16,7 @@ namespace ClassicalSharp.Gui {
 			this.title = title;
 			this.message = message;
 			titleFont = new Font( game.FontName, 16, FontStyle.Bold );
-			messageFont = new Font( game.FontName, 14, FontStyle.Regular );
+			messageFont = new Font( game.FontName, 16, FontStyle.Regular );
 		}
 		
 		public override void Render( double delta ) {
@@ -46,7 +46,7 @@ namespace ClassicalSharp.Gui {
 			widgets = new Widget[] {
 				ChatTextWidget.Create( game, 0, -30, title, Anchor.Centre, Anchor.Centre, titleFont ),
 				ChatTextWidget.Create( game, 0, 10, message, Anchor.Centre, Anchor.Centre, messageFont ),
-				ButtonWidget.Create( game, 0, 80, 280, 35, "Try to reconnect.. " + delay, 
+				ButtonWidget.Create( game, 0, 80, 301, 40, "Try to reconnect.. " + delay, 
 				                    Anchor.Centre, Anchor.Centre, titleFont, ReconnectClick ),
 			};
 			initTime = DateTime.UtcNow;

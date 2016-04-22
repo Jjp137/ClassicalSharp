@@ -227,8 +227,7 @@ namespace ClassicalSharp.GraphicsAPI {
 		}
 		
 		/// <summary> Adds a warning to chat if this graphics API has problems with the current user's GPU. </summary>
-		public virtual void WarnIfNecessary( Chat chat ) {
-		}
+		public virtual bool WarnIfNecessary( Chat chat ) { return false; }
 		
 		/// <summary> Informs the graphic api to update its state in preparation for a new frame. </summary>
 		public abstract void BeginFrame( Game game );
@@ -248,8 +247,8 @@ namespace ClassicalSharp.GraphicsAPI {
 		public Action<double> LostContextFunction;
 		
 		protected void InitDynamicBuffers() {
-			quadVb = CreateDynamicVb( VertexFormat.Pos3fCol4b, 4 );
-			texVb = CreateDynamicVb( VertexFormat.Pos3fTex2fCol4b, 4 );
+			quadVb = CreateDynamicVb( VertexFormat.P3fC4b, 4 );
+			texVb = CreateDynamicVb( VertexFormat.P3fT2fC4b, 4 );
 		}
 		
 		public virtual void Dispose() {
@@ -264,7 +263,7 @@ namespace ClassicalSharp.GraphicsAPI {
 			quadVerts[1] = new VertexP3fC4b( x + width, y, 0, col );
 			quadVerts[2] = new VertexP3fC4b( x + width, y + height, 0, col );
 			quadVerts[3] = new VertexP3fC4b( x, y + height, 0, col );
-			SetBatchFormat( VertexFormat.Pos3fCol4b );
+			SetBatchFormat( VertexFormat.P3fC4b );
 			UpdateDynamicIndexedVb( DrawMode.Triangles, quadVb, quadVerts, 4, 6 );
 		}
 		
@@ -282,7 +281,7 @@ namespace ClassicalSharp.GraphicsAPI {
 			texVerts[1] = new VertexP3fT2fC4b( x2, y1, 0, tex.U2, tex.V1, col );
 			texVerts[2] = new VertexP3fT2fC4b( x2, y2, 0, tex.U2, tex.V2, col );
 			texVerts[3] = new VertexP3fT2fC4b( x1, y2, 0, tex.U1, tex.V2, col );
-			SetBatchFormat( VertexFormat.Pos3fTex2fCol4b );
+			SetBatchFormat( VertexFormat.P3fT2fC4b );
 			UpdateDynamicIndexedVb( DrawMode.Triangles, texVb, texVerts, 4, 6 );
 		}
 		
@@ -297,10 +296,6 @@ namespace ClassicalSharp.GraphicsAPI {
 			vertices[index++] = new VertexP3fT2fC4b( x2, y1, 0, uv.U2, uv.V1, FastColour.White );
 			vertices[index++] = new VertexP3fT2fC4b( x2, y2, 0, uv.U2, uv.V2, FastColour.White );
 			vertices[index++] = new VertexP3fT2fC4b( x1, y2, 0, uv.U1, uv.V2, FastColour.White );
-		}
-		
-		public void Draw2DTexture( ref Texture tex ) {
-			Draw2DTexture( ref tex, FastColour.White );
 		}
 		
 		/// <summary> Updates the various matrix stacks and properties so that the graphics API state
@@ -357,13 +352,11 @@ namespace ClassicalSharp.GraphicsAPI {
 	}
 
 	public enum VertexFormat {
-		Pos3fCol4b = 0,
-		Pos3fTex2fCol4b = 1,
+		P3fC4b = 0, P3fT2fC4b = 1,
 	}
 	
 	public enum DrawMode {
-		Triangles = 0,
-		Lines = 1,
+		Triangles = 0, Lines = 1,
 	}
 	
 	public enum CompareFunc {
@@ -389,14 +382,10 @@ namespace ClassicalSharp.GraphicsAPI {
 	}
 	
 	public enum Fog {
-		Linear = 0,
-		Exp = 1,
-		Exp2 = 2,
+		Linear = 0, Exp = 1, Exp2 = 2,
 	}
 	
 	public enum MatrixType {
-		Projection = 0,
-		Modelview = 1,
-		Texture = 2,
+		Projection = 0, Modelview = 1, Texture = 2,
 	}
 }

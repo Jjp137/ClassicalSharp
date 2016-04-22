@@ -76,7 +76,7 @@ namespace Launcher {
 			if( Framebuffer == null || (Framebuffer.Width != Width || Framebuffer.Height != Height) ) {
 				if( Framebuffer != null )
 					Framebuffer.Dispose();
-				Framebuffer = new Bitmap( Width, Height );
+				Framebuffer = platformDrawer.CreateFrameBuffer( Width, Height );
 			}
 			
 			if( ClassicBackground ) {
@@ -88,21 +88,25 @@ namespace Launcher {
 				ClearArea( 0, 0, Width, Height );
 			}
 			
+			DrawTitle();
+			Dirty = true;
+		}
+		
+		void DrawTitle() {
 			using( IDrawer2D drawer = Drawer ) {
 				drawer.SetBitmap( Framebuffer );
 
-				drawer.UseBitmappedChat = useBitmappedFont;
+				drawer.UseBitmappedChat = useBitmappedFont || ClassicBackground;
 				DrawTextArgs args = new DrawTextArgs( "&eClassical&fSharp", logoFont, false );
 				Size size = drawer.MeasureChatSize( ref args );
 				int xStart = Width / 2 - size.Width / 2;
 				
 				args.Text = "&0Classical&0Sharp";
-				drawer.DrawChatText( ref args, xStart + 4, 8 + 4 );
+				drawer.DrawChatText( ref args, xStart + 3, 3 );
 				args.Text = "&eClassical&fSharp";
-				drawer.DrawChatText( ref args, xStart, 8 );
+				drawer.DrawChatText( ref args, xStart, 0 );
 				drawer.UseBitmappedChat = false;
 			}
-			Dirty = true;
 		}
 		
 		public void ClearArea( int x, int y, int width, int height ) {

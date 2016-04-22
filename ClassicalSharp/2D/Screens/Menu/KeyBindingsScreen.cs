@@ -22,15 +22,16 @@ namespace ClassicalSharp.Gui {
 		static string[] keyNames;
 		protected string[] descriptions;
 		protected KeyBinding originKey;
-		protected const int buttonDistance = 45;
+		protected int btnDistance = 45, btnWidth = 260, btnHeight = 35;
 		
 		public override void Init() {
 			base.Init();
 			if( keyNames == null )
 				keyNames = Enum.GetNames( typeof( Key ) );
-			keyFont = new Font( game.FontName, 15, FontStyle.Bold );
-			regularFont = new Font( game.FontName, 15, FontStyle.Italic );
-			statusWidget = TextWidget.Create( game, 0, 130, "", Anchor.Centre, Anchor.Centre, regularFont );
+			keyFont = new Font( game.FontName, 16, FontStyle.Bold );
+			regularFont = new Font( game.FontName, 16, FontStyle.Italic );
+			statusWidget = ChatTextWidget.Create( game, 0, 130, "", 
+			                                     Anchor.Centre, Anchor.Centre, regularFont );
 		}
 		
 		protected int index;
@@ -40,9 +41,9 @@ namespace ClassicalSharp.Gui {
 				string text = descriptions[descStart + i] + ": "
 					+ keyNames[(int)game.Mapping( binding )];
 				
-				widgets[index++] = ButtonWidget.Create( game, x, y, 260, 35, text,
+				widgets[index++] = ButtonWidget.Create( game, x, y, btnWidth, btnHeight, text,
 				                                       Anchor.Centre, Anchor.Centre, keyFont, OnBindingClick );
-				y += buttonDistance;
+				y += btnDistance;
 			}
 		}
 		

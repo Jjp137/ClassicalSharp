@@ -214,8 +214,8 @@ namespace ClassicalSharp {
 		}
 		
 		protected int ShadowOffset( float fontSize ) {
-			if( fontSize < 9.9f ) return 1;
-			if( fontSize < 24.9f ) return 2;
+			if( fontSize < 13 ) return 1;
+			if( fontSize < 32 ) return 2;
 			return 3;
 		}
 		

@@ -5,7 +5,7 @@ using System.Text;
 
 namespace ClassicalSharp.Commands {
 	
-	public class CommandManager {
+	public class CommandManager : IGameComponent {
 		
 		public static bool IsCommandPrefix( string input ) {
 			return Utils.CaselessStarts( input, "/client " ) ||
@@ -24,6 +24,8 @@ namespace ClassicalSharp.Commands {
 			if( game.Network.IsSinglePlayer )
 				Register( new ModelCommand() );
 		}
+		
+		public void Reset( Game game ) { }
 		
 		public void Register( Command command ) {
 			command.game = game;
@@ -73,7 +75,7 @@ namespace ClassicalSharp.Commands {
 		public void PrintDefinedCommands( Game game ) {
 			List<string> lines = new List<string>();
 			StringBuilder buffer = new StringBuilder( 64 );
-			foreach( Command cmd in game.CommandManager.RegisteredCommands ) {
+			foreach( Command cmd in RegisteredCommands ) {
 				string name = cmd.Name;
 				if( buffer.Length + name.Length > 64 ) {
 					lines.Add( buffer.ToString() );
@@ -87,6 +89,10 @@ namespace ClassicalSharp.Commands {
 			foreach( string part in lines ) {
 				game.Chat.Add( part );
 			}
+		}
+		
+		public void Dispose() {
+			RegisteredCommands.Clear();
 		}
 	}
 }

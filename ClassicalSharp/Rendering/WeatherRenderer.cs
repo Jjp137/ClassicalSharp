@@ -6,19 +6,24 @@ using OpenTK;
 
 namespace ClassicalSharp.Renderers {
 
-	public class WeatherRenderer {
+	public class WeatherRenderer : IGameComponent {
 		
 		Game game;
 		World map;
 		IGraphicsApi graphics;
 		BlockInfo info;
-		public WeatherRenderer( Game game ) {
+		
+		public void Init( Game game ) {
 			this.game = game;
 			map = game.World;
 			graphics = game.Graphics;
 			info = game.BlockInfo;
 			weatherVb = graphics.CreateDynamicVb( VertexFormat.P3fT2fC4b, vertices.Length );
+			game.WorldEvents.OnNewMap += OnNewMap;
+			game.WorldEvents.OnNewMapLoaded += OnNewMapLoaded;
 		}
+		
+		public void Reset( Game game ) { }
 		
 		int weatherVb;
 		short[] heightmap;
@@ -110,11 +115,6 @@ namespace ClassicalSharp.Renderers {
 			for( int i = 0; i < heightmap.Length; i++ ) {
 				heightmap[i] = short.MaxValue;
 			}
-		}
-		
-		public void Init() {
-			game.WorldEvents.OnNewMap += OnNewMap;
-			game.WorldEvents.OnNewMapLoaded += OnNewMapLoaded;
 		}
 		
 		public void Dispose() {

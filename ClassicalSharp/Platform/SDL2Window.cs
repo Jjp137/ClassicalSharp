@@ -255,14 +255,17 @@ namespace ClassicalSharp
 			get {
 				string text = String.Empty;
 				if( SDL.SDL_HasClipboardText() == SDL.SDL_bool.SDL_TRUE ) {
-					// FIXME: How do we call SDL_free() from this? What happens if it returns NULL?
+					// FIXME: How do we call SDL_free() from this?
 					text = SDL.SDL_GetClipboardText();
+					if( text == null ) {
+						throw new InvalidOperationException( "SDL_GetClipboardText failed: " + SDL.SDL_GetError() );
+					}
 				}
 				return text;
 			}
 			set {
 				if( SDL.SDL_SetClipboardText( value ) < 0 ) {
-					// TODO: how to handle errors?
+					throw new InvalidOperationException( "SDL_SetClipboardText failed: " + SDL.SDL_GetError() );
 				}
 			}
 		}
@@ -383,27 +386,27 @@ namespace ClassicalSharp
 				case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_SIZE_CHANGED:
 				case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_RESIZED:
 					UpdateSurfacePointer();
-					if ( Resize != null ) {
+					if( Resize != null ) {
 						Resize( this, new EventArgs() );
 					}
 					break;
 				case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_FOCUS_GAINED:
 					this.focused = true;
-					if ( FocusedChanged != null ) {
+					if( FocusedChanged != null ) {
 						FocusedChanged( this, new EventArgs() );
 					}
 					break;
 				case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_FOCUS_LOST:
 					this.focused = false;
-					if ( FocusedChanged != null ) {
+					if( FocusedChanged != null ) {
 						FocusedChanged( this, new EventArgs() );
 					}
 					break;
 				case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_MINIMIZED:
 				case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_MAXIMIZED:
 				case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_RESTORED:
-					if ( WindowStateChanged != null ) {
-						WindowStateChanged ( this, new EventArgs() );
+					if( WindowStateChanged != null ) {
+						WindowStateChanged( this, new EventArgs() );
 					}
 					break;
 				case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_SHOWN:
@@ -432,7 +435,7 @@ namespace ClassicalSharp
 		private void HandleKeyUp( SDL.SDL_Event keyEvent ) {
 			SDL.SDL_Keycode sdlKey = keyEvent.key.keysym.sym;
 
-			if ( keyDict.ContainsKey(sdlKey) ) {
+			if( keyDict.ContainsKey(sdlKey) ) {
 				Key tkKey = keyDict[sdlKey];
 				this.keyboard[tkKey] = false;
 			}
@@ -449,12 +452,12 @@ namespace ClassicalSharp
 				unsafe {
 					c = (char)textEvent.text.text[i];
 				}
-				if ( c == (char)0 ) {  // Reached a null
+				if( c == (char)0 ) {  // Reached a null
 					break;
 				}
 
 				args.KeyChar = c;
-				if (KeyPress != null) {
+				if( KeyPress != null ) {
 					KeyPress( this, args );
 				}
 			}

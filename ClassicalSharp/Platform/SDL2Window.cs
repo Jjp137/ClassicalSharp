@@ -69,7 +69,6 @@ namespace ClassicalSharp
 		}
 
 		public Point DesktopCursorPos {
-			// FIXME: SDL 2.0.4 makes this easier, but Debian only has 2.0.2
 			get {
 				int win_x, win_y, mouse_x, mouse_y;
 				SDL.SDL_GetWindowPosition( this.window, out win_x, out win_y );
@@ -100,7 +99,6 @@ namespace ClassicalSharp
 		}
 		
 		public Point PointToScreen( Point coords ) {
-			// FIXME: SDL 2.0.4 makes this easier, but Debian only has 2.0.2
 			int win_x, win_y;
 			SDL.SDL_GetWindowPosition( this.window, out win_x, out win_y );
 			return new Point( coords.X + win_x, coords.Y + win_y );

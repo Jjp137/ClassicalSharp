@@ -3,15 +3,15 @@ using System;
 using ClassicalSharp.Model;
 using OpenTK;
 
-namespace ClassicalSharp.Net {
+namespace ClassicalSharp.Network {
 
 	public partial class NetworkProcessor : INetworkProcessor {
 		
-		void HandleCpeDefineBlock() {
+		internal void HandleDefineBlock() {
 			if( !game.AllowCustomBlocks ) {
 				SkipPacketData( Opcode.CpeDefineBlock ); return;
 			}
-			byte id = HandleCpeDefineBlockCommonStart( false );
+			byte id = HandleDefineBlockCommonStart( false );
 			BlockInfo info = game.BlockInfo;
 			byte shape = reader.ReadUInt8();
 			if( shape == 0 ) {
@@ -22,7 +22,7 @@ namespace ClassicalSharp.Net {
 				info.MaxBB[id].Y = shape / 16f;
 			}
 			
-			HandleCpeDefineBlockCommonEnd( id );
+			HandleDefineBlockCommonEnd( id );
 			// Update sprite BoundingBox if necessary
 			if( info.IsSprite[id] ) {
 				using( FastBitmap dst = new FastBitmap( game.TerrainAtlas.AtlasBitmap, true, true ) )
@@ -31,7 +31,7 @@ namespace ClassicalSharp.Net {
 			info.DefinedCustomBlocks[id >> 5] |= (1u << (id & 0x1F));
 		}
 		
-		void HandleCpeRemoveBlockDefinition() {
+		internal void HandleRemoveBlockDefinition() {
 			if( !game.AllowCustomBlocks ) {
 				SkipPacketData( Opcode.CpeRemoveBlockDefinition ); return;
 			}
@@ -40,11 +40,11 @@ namespace ClassicalSharp.Net {
 			game.Events.RaiseBlockDefinitionChanged();
 		}
 		
-		void HandleCpeDefineBlockExt() {
+		internal void HandleDefineBlockExt() {
 			if( !game.AllowCustomBlocks ) {
 				SkipPacketData( Opcode.CpeDefineBlockExt ); return;
 			}
-			byte id = HandleCpeDefineBlockCommonStart( blockDefinitionsExtVer >= 2 );
+			byte id = HandleDefineBlockCommonStart( cpe.blockDefsExtVer >= 2 );
 			BlockInfo info = game.BlockInfo;
 			Vector3 min, max;
 			
@@ -57,11 +57,11 @@ namespace ClassicalSharp.Net {
 			
 			info.MinBB[id] = min;
 			info.MaxBB[id] = max;
-			HandleCpeDefineBlockCommonEnd( id );
+			HandleDefineBlockCommonEnd( id );
 			info.DefinedCustomBlocks[id >> 5] |= (1u << (id & 0x1F));
 		}
 		
-		byte HandleCpeDefineBlockCommonStart( bool uniqueSideTexs ) {
+		byte HandleDefineBlockCommonStart( bool uniqueSideTexs ) {
 			byte block = reader.ReadUInt8();
 			BlockInfo info = game.BlockInfo;
 			info.ResetBlockInfo( block, false );
@@ -74,16 +74,16 @@ namespace ClassicalSharp.Net {
 			}
 			
 			info.SpeedMultiplier[block] = (float)Math.Pow( 2, (reader.ReadUInt8() - 128) / 64f );
-			info.SetTex( reader.ReadUInt8(), TileSide.Top, (Block)block );
+			info.SetTex( reader.ReadUInt8(), Side.Top, (Block)block );
 			if( uniqueSideTexs ) {
-				info.SetTex( reader.ReadUInt8(), TileSide.Left, (Block)block );
-				info.SetTex( reader.ReadUInt8(), TileSide.Right, (Block)block );
-				info.SetTex( reader.ReadUInt8(), TileSide.Front, (Block)block );
-				info.SetTex( reader.ReadUInt8(), TileSide.Back, (Block)block );
+				info.SetTex( reader.ReadUInt8(), Side.Left, (Block)block );
+				info.SetTex( reader.ReadUInt8(), Side.Right, (Block)block );
+				info.SetTex( reader.ReadUInt8(), Side.Front, (Block)block );
+				info.SetTex( reader.ReadUInt8(), Side.Back, (Block)block );
 			} else {
 				info.SetSide( reader.ReadUInt8(), (Block)block );
 			}
-			info.SetTex( reader.ReadUInt8(), TileSide.Bottom, (Block)block );
+			info.SetTex( reader.ReadUInt8(), Side.Bottom, (Block)block );
 			
 			info.BlocksLight[block] = reader.ReadUInt8() == 0;
 			byte sound = reader.ReadUInt8();
@@ -95,7 +95,7 @@ namespace ClassicalSharp.Net {
 			return block;
 		}
 		
-		void HandleCpeDefineBlockCommonEnd( byte block ) {
+		internal void HandleDefineBlockCommonEnd( byte block ) {
 			BlockInfo info = game.BlockInfo;
 			byte blockDraw = reader.ReadUInt8();
 			SetBlockDraw( info, block, blockDraw );
@@ -109,7 +109,8 @@ namespace ClassicalSharp.Net {
 			game.Events.RaiseBlockDefinitionChanged();
 		}
 		
-		void HandleDefineModel() {
+		#if FALSE
+		internal void HandleDefineModel() {
 			int start = reader.index - 1;
 			byte id = reader.ReadUInt8();
 			CustomModel model = null;
@@ -136,6 +137,7 @@ namespace ClassicalSharp.Net {
 			int total = packetSizes[(byte)Opcode.CpeDefineModel];
 			reader.Skip( total - (reader.index - start) );
 		}
+		#endif
 		
 		internal static SoundType[] stepSnds, breakSnds;
 		static NetworkProcessor() {

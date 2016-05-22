@@ -90,16 +90,16 @@ namespace ClassicalSharp {
 					continue;
 				}
 				
-				DrawRun( dst, x, y, xMul, args.Text, runCount, coordsPtr, point, lastCol );
+				DrawRun( dst, x, y, xMul, runCount, coordsPtr, point, lastCol );
 				lastY = coords >> 4; lastCol = col;
 				for( int j = 0; j < runCount; j++ )
 					x += PtToPx( point, widths[coordsPtr[j]] + 1 );
 				coordsPtr[0] = (byte)coords; runCount = 1;
 			}
-			DrawRun( dst, x, y, xMul, args.Text, runCount, coordsPtr, point, lastCol );
+			DrawRun( dst, x, y, xMul, runCount, coordsPtr, point, lastCol );
 		}
 		
-		void DrawRun( FastBitmap dst, int x, int y, int xMul, string text,
+		void DrawRun( FastBitmap dst, int x, int y, int xMul,
 		             int runCount, byte* coords, int point, FastColour col ) {
 			if( runCount == 0 ) return;
 			int srcY = (coords[0] >> 4) * boxSize;
@@ -145,7 +145,7 @@ namespace ClassicalSharp {
 		void DrawUnderline( FastBitmap dst, int x, int yOffset, ref DrawTextArgs args, bool shadowCol ) {
 			int point = Utils.Floor( args.Font.Size );
 			int padding = CellSize( point ) - AdjTextSize( point );
-			int height = AdjTextSize( point ) + Utils.CeilDiv(padding, 2);
+			int height = AdjTextSize( point ) + Utils.CeilDiv( padding, 2 );
 			int offset = ShadowOffset( args.Font.Size );
 			
 			int col = FastColour.White.ToArgb();

@@ -5,16 +5,18 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using ClassicalSharp.Entities;
+using ClassicalSharp.Events;
 using ClassicalSharp.Gui;
 using ClassicalSharp.Network;
 using ClassicalSharp.TexturePack;
 
-namespace ClassicalSharp.Net {
+namespace ClassicalSharp.Network {
 
 	public partial class NetworkProcessor : INetworkProcessor {
 		
 		public NetworkProcessor( Game window ) {
 			game = window;
+			cpe = game.AddComponent( new CPESupport() );
 			SetupHandlers();
 		}
 		
@@ -24,7 +26,8 @@ namespace ClassicalSharp.Net {
 		bool receivedFirstPosition;
 		DateTime lastPacket;
 		Screen prevScreen;
-		bool prevCursorVisible, supportsCustomBlocks;
+		bool prevCursorVisible;
+		CPESupport cpe;
 		
 		public override void Connect( IPAddress address, int port ) {
 			
@@ -43,14 +46,12 @@ namespace ClassicalSharp.Net {
 			reader = new NetReader( stream );
 			writer = new NetWriter( stream );
 			gzippedMap = new FixedBufferStream( reader.buffer );
-			envMapAppearanceVer = 2;
-			blockDefinitionsExtVer = 2;
-			needD3Fix = false;
 			
 			Disconnected = false;
 			receivedFirstPosition = false;
 			lastPacket = DateTime.UtcNow;
 			game.WorldEvents.OnNewMap += OnNewMap;
+			game.UserEvents.BlockChanged += BlockChanged;
 			
 			MakeLoginPacket( game.Username, game.Mppass );
 			SendPacket();
@@ -59,6 +60,7 @@ namespace ClassicalSharp.Net {
 		
 		public override void Dispose() {
 			game.WorldEvents.OnNewMap -= OnNewMap;
+			game.UserEvents.BlockChanged -= BlockChanged;
 			socket.Close();
 			Disconnected = true;
 		}
@@ -84,7 +86,8 @@ namespace ClassicalSharp.Net {
 			while( (reader.size - reader.index) > 0 ) {
 				byte opcode = reader.buffer[reader.index];
 				// Workaround for older D3 servers which wrote one byte too many for HackControl packets.
-				if( needD3Fix && lastOpcode == Opcode.CpeHackControl && (opcode == 0x00 || opcode == 0xFF) ) {
+				if( cpe.needD3Fix && lastOpcode == Opcode.CpeHackControl
+				   && (opcode == 0x00 || opcode == 0xFF) ) {
 					Utils.LogDebug( "Skipping invalid HackControl byte from D3 server." );
 					reader.Skip( 1 );
 					player.physics.jumpVel = 0.42f; // assume default jump height
@@ -176,32 +179,43 @@ namespace ClassicalSharp.Net {
 			Set( Opcode.Kick, HandleKick, 65 );
 			Set( Opcode.SetPermission, HandleSetPermission, 2 );
 			
-			Set( Opcode.CpeExtInfo, HandleCpeExtInfo, 67 );
-			Set( Opcode.CpeExtEntry, HandleCpeExtEntry, 69 );
-			Set( Opcode.CpeSetClickDistance, HandleCpeSetClickDistance, 3 );
-			Set( Opcode.CpeCustomBlockSupportLevel, HandleCpeCustomBlockSupportLevel, 2 );
-			Set( Opcode.CpeHoldThis, HandleCpeHoldThis, 3 );
-			Set( Opcode.CpeSetTextHotkey, HandleCpeSetTextHotkey, 134 );
+			Set( Opcode.CpeExtInfo, HandleExtInfo, 67 );
+			Set( Opcode.CpeExtEntry, HandleExtEntry, 69 );
+			Set( Opcode.CpeSetClickDistance, HandleSetClickDistance, 3 );
+			Set( Opcode.CpeCustomBlockSupportLevel, HandleCustomBlockSupportLevel, 2 );
+			Set( Opcode.CpeHoldThis, HandleHoldThis, 3 );
+			Set( Opcode.CpeSetTextHotkey, HandleSetTextHotkey, 134 );
 			
-			Set( Opcode.CpeExtAddPlayerName, HandleCpeExtAddPlayerName, 196 );
-			Set( Opcode.CpeExtAddEntity, HandleCpeExtAddEntity, 130 );
-			Set( Opcode.CpeExtRemovePlayerName, HandleCpeExtRemovePlayerName, 3 );
+			Set( Opcode.CpeExtAddPlayerName, HandleExtAddPlayerName, 196 );
+			Set( Opcode.CpeExtAddEntity, HandleExtAddEntity, 130 );
+			Set( Opcode.CpeExtRemovePlayerName, HandleExtRemovePlayerName, 3 );
 			
-			Set( Opcode.CpeEnvColours, HandleCpeEnvColours, 8 );
-			Set( Opcode.CpeMakeSelection, HandleCpeMakeSelection, 86 );
-			Set( Opcode.CpeRemoveSelection, HandleCpeRemoveSelection, 2 );
-			Set( Opcode.CpeSetBlockPermission, HandleCpeSetBlockPermission, 4 );
-			Set( Opcode.CpeChangeModel, HandleCpeChangeModel, 66 );
-			Set( Opcode.CpeEnvSetMapApperance, HandleCpeEnvSetMapApperance, 69 );
-			Set( Opcode.CpeEnvWeatherType, HandleCpeEnvWeatherType, 2 );
-			Set( Opcode.CpeHackControl, HandleCpeHackControl, 8 );
-			Set( Opcode.CpeExtAddEntity2, HandleCpeExtAddEntity2, 138 );
+			Set( Opcode.CpeEnvColours, HandleEnvColours, 8 );
+			Set( Opcode.CpeMakeSelection, HandleMakeSelection, 86 );
+			Set( Opcode.CpeRemoveSelection, HandleRemoveSelection, 2 );
+			Set( Opcode.CpeSetBlockPermission, HandleSetBlockPermission, 4 );
+			Set( Opcode.CpeChangeModel, HandleChangeModel, 66 );
+			Set( Opcode.CpeEnvSetMapApperance, HandleEnvSetMapAppearance, 69 );
+			Set( Opcode.CpeEnvWeatherType, HandleEnvWeatherType, 2 );
+			Set( Opcode.CpeHackControl, HandleHackControl, 8 );
+			Set( Opcode.CpeExtAddEntity2, HandleExtAddEntity2, 138 );
 			
-			Set( Opcode.CpeDefineBlock, HandleCpeDefineBlock, 80 );
-			Set( Opcode.CpeRemoveBlockDefinition, HandleCpeRemoveBlockDefinition, 2 );
-			Set( Opcode.CpeDefineBlockExt, HandleCpeDefineBlockExt, 85 );
+			Set( Opcode.CpeDefineBlock, HandleDefineBlock, 80 );
+			Set( Opcode.CpeRemoveBlockDefinition, HandleRemoveBlockDefinition, 2 );
+			Set( Opcode.CpeDefineBlockExt, HandleDefineBlockExt, 85 );
 			Set( Opcode.CpeBulkBlockUpdate, HandleBulkBlockUpdate, 1282 );
 			Set( Opcode.CpeSetTextColor, HandleSetTextColor, 6 );
+			Set( Opcode.CpeSetMapEnvUrl, HandleSetMapEnvUrl, 65 );
+			Set( Opcode.CpeSetMapEnvProperty, HandleSetMapEnvProperty, 6 );
+		}
+		
+		void BlockChanged( object sender, BlockChangedEventArgs e ) {
+			Vector3I p = e.Coords;
+			byte block = (byte)game.Inventory.HeldBlock;
+			if( e.Block == 0 )
+				SendSetBlock( p.X, p.Y, p.Z, false, block );
+			else
+				SendSetBlock( p.X, p.Y, p.Z, true, e.Block );
 		}
 		
 		void OnNewMap( object sender, EventArgs e ) {

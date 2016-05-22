@@ -141,37 +141,12 @@ namespace ClassicalSharp.Commands {
 		void SetNewRenderType( bool legacy, bool minimal ) {
 			game.MapBordersRenderer.UseLegacyMode( legacy );
 			if( minimal ) {
-				game.EnvRenderer.Dispose();
-				game.EnvRenderer = new MinimalEnvRenderer( game );
-				game.EnvRenderer.Init();
+				game.ReplaceComponent( ref game.EnvRenderer, new MinimalEnvRenderer() );
 			} else {
-				if( !( game.EnvRenderer is StandardEnvRenderer ) ) {
-					game.EnvRenderer.Dispose();
-					game.EnvRenderer = new StandardEnvRenderer( game );
-					game.EnvRenderer.Init();
+				if( !(game.EnvRenderer is StandardEnvRenderer) ) {
+					game.ReplaceComponent( ref game.EnvRenderer, new StandardEnvRenderer() );
 				}
 				((StandardEnvRenderer)game.EnvRenderer).UseLegacyMode( legacy );
-			}
-		}
-	}
-	
-	public sealed class ModelCommand : Command {
-		
-		public ModelCommand() {
-			Name = "Model";
-			Help = new [] {
-				"&a/client model [name]",
-				"&bnames: &echibi, chicken, creeper, human, pig, sheep",
-				"&e       skeleton, spider, zombie, <numerical block id>",
-			};
-		}
-		
-		public override void Execute( CommandReader reader ) {
-			string name = reader.Next();
-			if( String.IsNullOrEmpty( name ) ) {
-				game.Chat.Add( "&e/client model: &cYou didn't specify a model name." );
-			} else {
-				game.LocalPlayer.SetModel( name );
 			}
 		}
 	}

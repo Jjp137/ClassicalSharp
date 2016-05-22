@@ -13,7 +13,6 @@ namespace ClassicalSharp.Entities {
 			SkinName = skinName;
 			SkinIdentifier = "skin_" + id;
 			interp = new InterpolatedComponent( game, this );
-			InitRenderingData();
 		}
 		
 		public override void SetLocation( LocationUpdate update, bool interpolate ) {
@@ -35,7 +34,8 @@ namespace ClassicalSharp.Entities {
 			PitchDegrees = Utils.LerpAngle( interp.oldState.pitch, interp.newState.pitch, t );
 			
 			anim.GetCurrentAnimState( t );
-			Model.Render( this );
+			if( Model.ShouldRender( this, game.Culling ) )
+				Model.Render( this );
 		}
 		
 		public override void RenderName() { DrawName(); }

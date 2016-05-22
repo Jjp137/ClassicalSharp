@@ -14,12 +14,17 @@ namespace ClassicalSharp.Gui {
 		
 		Block[] blocksTable;
 		Texture blockInfoTexture;
-		const int blocksPerRow = 10, maxRows = 8;
+		const int maxRows = 8;
+		int blocksPerRow { 
+			get { return game.ClassicMode && !game.ClassicHacks ? 9 : 10; } 
+		}
+		
 		int selIndex, rows;
 		int startX, startY, blockSize;
 		float selBlockExpand;
 		readonly Font font;
 		StringBuffer buffer = new StringBuffer( 128 );
+		IsometricBlockDrawer drawer = new IsometricBlockDrawer();
 		
 		int TableX { get { return startX - 5 - 10; } }
 		int TableY { get { return startY - 5 - 30; } }
@@ -28,6 +33,9 @@ namespace ClassicalSharp.Gui {
 		
 		static FastColour normBackCol = new FastColour( 30, 30, 30, 200 );
 		static FastColour classicBackCol = new FastColour( 48, 48, 96, 192 );
+		static VertexP3fT2fC4b[] vertices = new VertexP3fT2fC4b[8 * 10 * (4 * 4)];
+		int vb;
+		
 		public override void Render( double delta ) {
 			FastColour backCol = game.ClassicMode ? classicBackCol : normBackCol;
 			api.Draw2DQuad( TableX, TableY, TableWidth, TableHeight, backCol );
@@ -36,24 +44,24 @@ namespace ClassicalSharp.Gui {
 			api.Texturing = true;
 			api.SetBatchFormat( VertexFormat.P3fT2fC4b );
 			
-			IsometricBlockDrawer.lastTexId = -1;
+			drawer.BeginBatch( game, vertices, vb );
 			for( int i = 0; i < blocksTable.Length; i++ ) {
 				int x, y;
 				if( !GetCoords( i, out x, out y ) ) continue;
 				
 				// We want to always draw the selected block on top of others
 				if( i == selIndex ) continue;
-				IsometricBlockDrawer.Draw( game, (byte)blocksTable[i], blockSize * 0.7f / 2f,
-				                          x + blockSize / 2, y + blockSize / 2 );
+				drawer.DrawBatch( (byte)blocksTable[i], blockSize * 0.7f / 2f,
+				                 x + blockSize / 2, y + blockSize / 2 );
 			}
 			
 			if( selIndex != -1 ) {
 				int x, y;
 				GetCoords( selIndex, out x, out y );
-				IsometricBlockDrawer.lastTexId = -1;
-				IsometricBlockDrawer.Draw( game, (byte)blocksTable[selIndex], (blockSize + selBlockExpand) * 0.7f / 2,
-				                          x + blockSize / 2, y + blockSize / 2 );
+				drawer.DrawBatch( (byte)blocksTable[selIndex], (blockSize + selBlockExpand) * 0.7f / 2,
+				                 x + blockSize / 2, y + blockSize / 2 );
 			}
+			drawer.EndBatch();
 			
 			if( blockInfoTexture.IsValid )
 				blockInfoTexture.Render( api );
@@ -84,6 +92,7 @@ namespace ClassicalSharp.Gui {
 		public override void Dispose() {
 			font.Dispose();
 			api.DeleteTexture( ref blockInfoTexture );
+			api.DeleteDynamicVb( vb );
 			game.Events.BlockPermissionsChanged -= BlockPermissionsChanged;
 			game.Keyboard.KeyRepeat = false;
 		}
@@ -103,6 +112,7 @@ namespace ClassicalSharp.Gui {
 			blockSize = (int)(50 * Math.Sqrt(game.GuiInventoryScale));
 			selBlockExpand = (float)(25 * Math.Sqrt(game.GuiInventoryScale));
 			game.Events.BlockPermissionsChanged += BlockPermissionsChanged;
+			vb = game.Graphics.CreateDynamicVb( VertexFormat.P3fT2fC4b, vertices.Length );
 			
 			RecreateBlockTable();
 			SetBlockTo( game.Inventory.HeldBlock );
@@ -132,20 +142,12 @@ namespace ClassicalSharp.Gui {
 			RecreateBlockInfoTexture();
 		}
 		
-		static string[] normalNames = null;
 		void UpdateBlockInfoString( Block block ) {
-			if( normalNames == null )
-				MakeNormalNames();
-			
 			int index = 0;
 			buffer.Clear();
 			buffer.Append( ref index, "&f" );
-			string value = game.BlockInfo.Name[(byte)block];
-			if( (byte)block < BlockInfo.CpeBlocksCount && value == "Invalid" ) {
-				buffer.Append( ref index, normalNames[(byte)block] );
-			} else {
-				buffer.Append( ref index, value );
-			}
+			string value = game.BlockInfo.GetBlockName( (byte)block );
+			buffer.Append( ref index, value );
 			if( game.ClassicMode ) return;
 			
 			buffer.Append( ref index, " (ID: " );
@@ -155,32 +157,6 @@ namespace ClassicalSharp.Gui {
 			buffer.Append( ref index, "&f, delete: " );
 			buffer.Append( ref index, game.Inventory.CanDelete[(int)block] ? "&aYes" : "&cNo" );
 			buffer.Append( ref index, "&f)" );
-		}
-		
-		void MakeNormalNames() {
-			normalNames = new string[BlockInfo.CpeBlocksCount];
-			for( int i = 0; i < normalNames.Length; i++ ) {
-				string origName = Enum.GetName( typeof(Block), (byte)i );
-				buffer.Clear();
-				int index = 0;
-				SplitUppercase( origName, ref index );
-				normalNames[i] = buffer.ToString();
-			}
-		}
-		
-		void SplitUppercase( string value, ref int index ) {
-			for( int i = 0; i < value.Length; i++ ) {
-				char c = value[i];
-				bool upper = Char.IsUpper( c ) && i > 0;
-				bool nextLower = i < value.Length - 1 && !Char.IsUpper( value[i + 1] );
-				
-				if( upper && nextLower ) {
-					buffer.Append( ref index, ' ' );
-					buffer.Append( ref index, Char.ToLower( c ) );
-				} else {
-					buffer.Append( ref index, c );
-				}				
-			}
 		}
 		
 		int lastCreatedIndex = -1000;
@@ -206,9 +182,10 @@ namespace ClassicalSharp.Gui {
 		
 		void RecreateBlockTable() {
 			int blocksCount = 0;
-			int count = game.UseCPE ? BlockInfo.BlocksCount : BlockInfo.OriginalBlocksCount;
-			for( int tile = 1; tile < count; tile++ ) {
-				if( ShowTile( tile ) ) blocksCount++;
+			int count = game.UseCPE ? BlockInfo.BlocksCount : BlockInfo.OriginalCount;
+			for( int i = 1; i < count; i++ ) {
+				Block block = game.Inventory.MapBlock( i );
+				if( Show( block ) ) blocksCount++;
 			}
 			
 			rows = Utils.CeilDiv( blocksCount, blocksPerRow );
@@ -217,18 +194,24 @@ namespace ClassicalSharp.Gui {
 			startY = game.Height / 2 - (rowsUsed * blockSize) / 2;
 			blocksTable = new Block[blocksCount];
 			
-			int tableIndex = 0;
-			for( int tile = 1; tile < count; tile++ ) {
-				if( ShowTile( tile ) ) blocksTable[tableIndex++] = (Block)tile;
+			int index = 0;
+			for( int i = 1; i < count; i++ ) {
+				Block block = game.Inventory.MapBlock( i );
+				if( Show( block ) )  blocksTable[index++] = block;
 			}
 		}
 		
-		bool ShowTile( int tile ) {
+		bool Show( Block block ) {
 			bool hackBlocks = !game.ClassicMode || game.ClassicHacks;
-			if( !hackBlocks && (tile == (byte)Block.Bedrock || 
-			                    tile >= (byte)Block.Water && tile <= (byte)Block.StillLava) )
+			if( !hackBlocks && IsHackBlock( block ) )
 				return false;
-			return tile < BlockInfo.CpeBlocksCount || game.BlockInfo.Name[tile] != "Invalid";
+			int count = game.UseCPEBlocks ? BlockInfo.CpeCount : BlockInfo.OriginalCount;
+			return (byte)block < count || game.BlockInfo.Name[(byte)block] != "Invalid";
+		}
+		
+		bool IsHackBlock( Block block ) {
+			return block == Block.DoubleSlab || block == Block.Bedrock ||
+				block == Block.Grass || (block >= Block.Water && block <= Block.StillLava);
 		}
 	}
 }

@@ -3,7 +3,7 @@ using System;
 using System.IO;
 using System.IO.Compression;
 using ClassicalSharp.Entities;
-using ClassicalSharp.Net;
+using ClassicalSharp.Network;
 using OpenTK;
 using NbtCompound = System.Collections.Generic.Dictionary<string, ClassicalSharp.Map.NbtTag>;
 
@@ -68,25 +68,29 @@ namespace ClassicalSharp.Map {
 				p.ReachDistance = (short)curCpeExt["Distance"].Value / 32f;
 			}
 			if( CheckKey( "EnvColors", 1, metadata ) ) {
-				map.SetSkyColour( GetColour( "Sky", World.DefaultSkyColour ) );
-				map.SetCloudsColour( GetColour( "Cloud", World.DefaultCloudsColour ) );
-				map.SetFogColour( GetColour( "Fog", World.DefaultFogColour ) );
-				map.SetSunlight( GetColour( "Sunlight", World.DefaultSunlight ) );
-				map.SetShadowlight( GetColour( "Ambient", World.DefaultShadowlight ) );
+				map.Env.SetSkyColour( GetColour( "Sky", WorldEnv.DefaultSkyColour ) );
+				map.Env.SetCloudsColour( GetColour( "Cloud", WorldEnv.DefaultCloudsColour ) );
+				map.Env.SetFogColour( GetColour( "Fog", WorldEnv.DefaultFogColour ) );
+				map.Env.SetSunlight( GetColour( "Sunlight", WorldEnv.DefaultSunlight ) );
+				map.Env.SetShadowlight( GetColour( "Ambient", WorldEnv.DefaultShadowlight ) );
 			}
 			if( CheckKey( "EnvMapAppearance", 1, metadata ) ) {
+				string url = null;
 				if( curCpeExt.ContainsKey( "TextureURL" ) )
-					map.TextureUrl = (string)curCpeExt["TextureURL"].Value;
-				if( map.TextureUrl.Length == 0 ) map.TextureUrl = null;
+					url = (string)curCpeExt["TextureURL"].Value;
+				if( url.Length == 0 ) url = null;
+				if( game.AllowServerTextures && url != null )
+					game.Network.RetrieveTexturePack( url );
+				
 				byte sidesBlock = (byte)curCpeExt["SideBlock"].Value;
 				byte edgeBlock = (byte)curCpeExt["EdgeBlock"].Value;
-				map.SetSidesBlock( (Block)sidesBlock );
-				map.SetEdgeBlock( (Block)edgeBlock );
-				map.SetEdgeLevel( (short)curCpeExt["SideLevel"].Value );
+				map.Env.SetSidesBlock( (Block)sidesBlock );
+				map.Env.SetEdgeBlock( (Block)edgeBlock );
+				map.Env.SetEdgeLevel( (short)curCpeExt["SideLevel"].Value );
 			}
 			if( CheckKey( "EnvWeatherType", 1, metadata ) ) {
 				byte weather = (byte)curCpeExt["WeatherType"].Value;
-				map.SetWeather( (Weather)weather );
+				map.Env.SetWeather( (Weather)weather );
 			}
 			
 			if( game.AllowCustomBlocks && CheckKey( "BlockDefinitions", 1, metadata ) ) {
@@ -134,12 +138,12 @@ namespace ClassicalSharp.Map {
 			info.SpeedMultiplier[id] = (float)compound["Speed"].Value;
 			
 			byte[] data = (byte[])compound["Textures"].Value;
-			info.SetTex( data[0], TileSide.Top, (Block)id );
-			info.SetTex( data[1], TileSide.Bottom, (Block)id );
-			info.SetTex( data[2], TileSide.Left, (Block)id );
-			info.SetTex( data[3], TileSide.Right, (Block)id );
-			info.SetTex( data[4], TileSide.Front, (Block)id );
-			info.SetTex( data[5], TileSide.Back, (Block)id );
+			info.SetTex( data[0], Side.Top, (Block)id );
+			info.SetTex( data[1], Side.Bottom, (Block)id );
+			info.SetTex( data[2], Side.Left, (Block)id );
+			info.SetTex( data[3], Side.Right, (Block)id );
+			info.SetTex( data[4], Side.Front, (Block)id );
+			info.SetTex( data[5], Side.Back, (Block)id );
 			
 			info.BlocksLight[id] = (byte)compound["TransmitsLight"].Value == 0;
 			byte soundId = (byte)compound["WalkSound"].Value;

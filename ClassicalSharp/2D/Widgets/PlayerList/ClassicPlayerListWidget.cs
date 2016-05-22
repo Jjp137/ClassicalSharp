@@ -89,8 +89,8 @@ namespace ClassicalSharp.Gui {
 			
 			base.Init();
 			if( !extList ) {
-				game.EntityEvents.EntityAdded += PlayerSpawned;
-				game.EntityEvents.EntityRemoved += PlayerDespawned;
+				game.EntityEvents.Added += PlayerSpawned;
+				game.EntityEvents.Removed += PlayerDespawned;
 			} else {
 				game.EntityEvents.CpeListInfoAdded += PlayerListInfoAdded;
 				game.EntityEvents.CpeListInfoRemoved += PlayerDespawned;
@@ -102,8 +102,8 @@ namespace ClassicalSharp.Gui {
 			base.Dispose();
 			overview.Dispose();
 			if( !extList ) {
-				game.EntityEvents.EntityAdded -= PlayerSpawned;
-				game.EntityEvents.EntityRemoved -= PlayerDespawned;
+				game.EntityEvents.Added -= PlayerSpawned;
+				game.EntityEvents.Removed -= PlayerDespawned;
 			} else {
 				game.EntityEvents.CpeListInfoAdded -= PlayerListInfoAdded;
 				game.EntityEvents.CpeListInfoChanged -= PlayerListInfoChanged;
@@ -145,13 +145,11 @@ namespace ClassicalSharp.Gui {
 		
 		void PlayerSpawned( object sender, IdEventArgs e ) {
 			AddPlayerInfo( new PlayerInfo( game.Players[e.Id] ), -1 );
-			columns = Utils.CeilDiv( namesCount, namesPerColumn );
 			SortPlayerInfo();
 		}
 		
 		void PlayerListInfoAdded( object sender, IdEventArgs e ) {
 			AddPlayerInfo( new PlayerInfo( game.CpePlayersList[e.Id] ), -1 );
-			columns = Utils.CeilDiv( namesCount, namesPerColumn );
 			SortPlayerInfo();
 		}
 		

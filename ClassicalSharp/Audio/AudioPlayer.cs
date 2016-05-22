@@ -24,9 +24,13 @@ namespace ClassicalSharp.Audio {
 			SetMusic( game.UseMusic );
 			game.UseSound = Options.GetBool( OptionsKey.UseSound, false );
 			SetSound( game.UseSound );
+			game.UserEvents.BlockChanged += PlayBlockSound;
 		}
-		
+
+		public void Ready( Game game ) { }		
 		public void Reset( Game game ) { }
+		public void OnNewMap( Game game ) { }
+		public void OnNewMapLoaded( Game game ) { }		
 		
 		public void SetMusic( bool enabled ) {
 			if( enabled )
@@ -93,6 +97,7 @@ namespace ClassicalSharp.Audio {
 			DisposeMusic();
 			DisposeSound();
 			musicHandle.Close();
+			game.UserEvents.BlockChanged -= PlayBlockSound;
 		}
 		
 		void DisposeMusic() {
@@ -103,7 +108,7 @@ namespace ClassicalSharp.Audio {
 		
 		Thread MakeThread( ThreadStart func, ref IAudioOutput output, string name ) {
 			output = GetPlatformOut();
-			output.Create( 5 );
+			output.Create( 10 );
 			
 			Thread thread = new Thread( func );
 			thread.Name = name;

@@ -16,6 +16,7 @@ namespace ClassicalSharp.Entities {
 		
 		public IModel Model;
 		public string ModelName;
+		public float ModelScale = 1;
 		public byte ID;
 		
 		public Vector3 Position;
@@ -24,7 +25,7 @@ namespace ClassicalSharp.Entities {
 		
 		protected Game game;
 		protected BlockInfo info;
-		protected internal bool onGround;		
+		protected internal bool onGround;
 		internal float StepSize;
 		
 		/// <summary> Rotation of the entity's head horizontally (i.e. looking north or east) </summary>
@@ -47,7 +48,7 @@ namespace ClassicalSharp.Entities {
 		
 		/// <summary> Returns the size of the model that is used for collision detection. </summary>
 		public Vector3 CollisionSize {
-			get { UpdateModel(); return Model.CollisionSize; }
+			get { UpdateModel(); return Model.CollisionSize * ModelScale; }
 		}
 		
 		void UpdateModel() {
@@ -71,7 +72,8 @@ namespace ClassicalSharp.Entities {
 		
 		/// <summary> Gets the position of the player's eye in the world. </summary>
 		public Vector3 EyePosition {
-			get { return new Vector3( Position.X, Position.Y + Model.GetEyeY( this ), Position.Z ); }
+			get { return new Vector3( Position.X, 
+			                         Position.Y + Model.GetEyeY( this ) * ModelScale, Position.Z ); }
 		}
 
 		/// <summary> Gets the block just underneath the player's feet position. </summary>

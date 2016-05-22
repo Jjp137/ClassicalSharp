@@ -4,24 +4,30 @@ using System.Drawing;
 using System.IO;
 using ClassicalSharp;
 using ClassicalSharp.Network;
+using Launcher.Gui.Views;
+using Launcher.Patcher;
 
-namespace Launcher {
+namespace Launcher.Gui.Screens {
 	
 	public sealed class ResourcesScreen : LauncherScreen {
 		
-		Font infoFont, statusFont;
+		Font infoFont;
+		ResourcesView view;
 		public ResourcesScreen( LauncherWindow game ) : base( game ) {
 			game.Window.Mouse.Move += MouseMove;
 			game.Window.Mouse.ButtonDown += MouseButtonDown;
 			
 			textFont = new Font( game.FontName, 16, FontStyle.Bold );
 			infoFont = new Font( game.FontName, 14, FontStyle.Regular );
-			statusFont = new Font( game.FontName, 13, FontStyle.Italic );
-			buttonFont = textFont;
-			widgets = new LauncherWidget[4];
+			view = new ResourcesView( game );
+			widgets = view.widgets;
 		}
 
-		public override void Init() { Resize(); }
+		public override void Init() {
+			view.Init();
+			MakeWidgets();
+			Resize();
+		}
 		
 		bool failed;
 		public override void Tick() {
@@ -32,7 +38,7 @@ namespace Launcher {
 				failed = true;
 			
 			if( fetcher.Done ) {
-				if( !fetcher.defaultZipExists ) {
+				if( ResourceList.Files.Count > 0 ) {
 					ResourcePatcher patcher = new ResourcePatcher( fetcher );
 					patcher.Run();
 				}
@@ -45,68 +51,38 @@ namespace Launcher {
 		
 		public override void Resize() {
 			MakeWidgets();
-			using( drawer ) {
-				drawer.SetBitmap( game.Framebuffer );
-				drawer.Clear( clearCol );
-				drawer.Clear( backCol, game.Width / 2 - 190, game.Height / 2 - 70, 190 * 2, 70 * 2 );
-			}
-			
-			RedrawAllButtonBackgrounds();			
-			using( drawer ) {
-				drawer.SetBitmap( game.Framebuffer );
-				RedrawAll();
-			}
+			view.DrawAll();
 			Dirty = true;
 		}
 		
-		int lastProgress = int.MinValue;
 		void CheckCurrentProgress() {
 			Request item = fetcher.downloader.CurrentItem;
 			if( item == null ) {
-				lastProgress = int.MinValue; return;
+				view.lastProgress = int.MinValue; return;
 			}
 			
 			int progress = fetcher.downloader.CurrentItemProgress;
-			if( progress == lastProgress ) return;
-			lastProgress = progress;
+			if( progress == view.lastProgress ) return;
+			view.lastProgress = progress;
 			SetFetchStatus( progress );
 		}
 		
 		void SetFetchStatus( int progress ) {
-			if( progress >= 0 && progress <= 100 )
-				DrawProgressBox( progress );
-		}
-		
-		static FastColour progBack = new FastColour( 220, 220, 220 );
-		static FastColour progFront = new FastColour( 0, 220, 0 );
-		void DrawProgressBox( int progress ) {
-			progress = (200 * progress) / 100;
-			using( drawer ) {
-				drawer.SetBitmap( game.Framebuffer );
-				drawer.DrawRect( progBack, game.Width / 2 - 100, game.Height / 2 + 10, 200, 4 );
-				drawer.DrawRect( progFront, game.Width / 2 - 100, game.Height / 2 + 10, progress, 4 );
+			if( progress >= 0 && progress <= 100 ) {
+				view.DrawProgressBox( progress );
 				Dirty = true;
 			}
 		}
 		
 		ResourceFetcher fetcher;
 		Font textFont;
-		static FastColour backCol = new FastColour( 120, 85, 151 );
+
 		static readonly string mainText = "Some required resources weren't found" +
-			Environment.NewLine + "Okay to download them?";
-		static readonly string format = "&eDownload size: {0} megabytes";
-		static FastColour clearCol = new FastColour( 12, 12, 12 );
-		bool useStatus;
-		
+			Environment.NewLine + "Okay to download them?";		
 		void MakeWidgets() {
 			widgetIndex = 0;
-			if( useStatus ) {
-				MakeLabelAt( widgets[0].Text, statusFont, Anchor.Centre, Anchor.Centre, 0, -10 );
-			} else {
-				float dataSize = game.fetcher.DownloadSize;
-				string text = String.Format( format, dataSize.ToString( "F2" ) );
-				MakeLabelAt( text, statusFont, Anchor.Centre, Anchor.Centre, 0, 10 );
-			}			
+			view.UpdateStatus();
+			widgetIndex = 1;
 
 			// Clear the entire previous widgets state.
 			for( int i = 1; i < widgets.Length; i++ ) {
@@ -127,8 +103,10 @@ namespace Launcher {
 				             0, 45, (x, y) => GotoNextMenu() );
 			}
 			
-			if( lastProgress >= 0 && lastProgress <= 100 )
-				DrawProgressBox( lastProgress );
+			if( view.lastProgress >= 0 && view.lastProgress <= 100 ) {
+				view.DrawProgressBox( view.lastProgress );
+				Dirty = true;
+			}
 		}
 		
 		void DownloadResources( int mouseX, int mouseY ) {
@@ -146,28 +124,21 @@ namespace Launcher {
 			if( File.Exists( "options.txt" ) )
 				game.SetScreen( new MainScreen( game ) );
 			else
-				game.SetScreen( new ChooseModeFirstTimeScreen( game ) );
+				game.SetScreen( new ChooseModeScreen( game, true ) );
 		}
 		
 		void SetStatus( string text ) {
-			useStatus = true;
-			LauncherLabelWidget widget = (LauncherLabelWidget)widgets[0];
-			using( drawer ) {
-				drawer.SetBitmap( game.Framebuffer );
-				drawer.Clear( backCol, widget.X, widget.Y, widget.Width, widget.Height );
-				widget.SetDrawData( drawer, text, statusFont, Anchor.Centre, Anchor.Centre, 0, -10 );
-				widget.Redraw( drawer );
-				Dirty = true;
-			}
+			view.useStatus = true;
+			view.RedrawStatus( text );
+			Dirty = true;
 		}
 		
 		public override void Dispose() {
 			game.Window.Mouse.Move -= MouseMove;
 			game.Window.Mouse.ButtonDown -= MouseButtonDown;
-			
+			view.Dispose();
 			textFont.Dispose();
 			infoFont.Dispose();
-			statusFont.Dispose();
 		}
 	}
 }

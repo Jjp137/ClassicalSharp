@@ -7,7 +7,7 @@ using System.Net;
 using System.Threading;
 using JsonObject = System.Collections.Generic.Dictionary<string, object>;
 
-namespace Launcher {
+namespace Launcher.Web {
 	
 	public class Build {
 		public DateTime TimeBuilt;
@@ -77,7 +77,7 @@ namespace Launcher {
 			return build;
 		}
 		
-		public bool TaskTick( Action<UpdateCheckTask> taskSuccess, LauncherScreen screen ) {
+		public bool TaskTick( Action<UpdateCheckTask> taskSuccess ) {
 			if( Working ) return true;			
 			if( Exception != null )
 				return false;

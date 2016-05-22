@@ -11,9 +11,10 @@ namespace ClassicalSharp.Gui {
 		}
 		
 		protected Font textFont, arrowFont, titleFont;
-		protected string[] files;
+		protected string[] entries;
 		protected int currentIndex;
 		protected ButtonWidget[] buttons;
+		const int items = 5;
 		
 		TextWidget title;
 		protected string titleText;
@@ -22,24 +23,26 @@ namespace ClassicalSharp.Gui {
 			textFont = new Font( game.FontName, 16, FontStyle.Bold );
 			arrowFont = new Font( game.FontName, 18, FontStyle.Bold );
 			titleFont = new Font( game.FontName, 16, FontStyle.Bold );
-			title = ChatTextWidget.Create( game, 0, -130, titleText, 
+			title = ChatTextWidget.Create( game, 0, -155, titleText, 
 			                          Anchor.Centre, Anchor.Centre, titleFont );
 			
 			buttons = new ButtonWidget[] {
-				MakeText( 0, -80, Get( 0 ) ),
-				MakeText( 0, -40, Get( 1 ) ),
+				MakeText( 0, -100, Get( 0 ) ),
+				MakeText( 0, -50, Get( 1 ) ),
 				MakeText( 0, 0, Get( 2 ) ),
-				MakeText( 0, 40, Get( 3 ) ),
-				MakeText( 0, 80, Get( 4 ) ),
+				MakeText( 0, 50, Get( 3 ) ),
+				MakeText( 0, 100, Get( 4 ) ),
 				
-				Make( -160, 0, "<", (g, w) => PageClick( false ) ),
-				Make( 160, 0, ">", (g, w) => PageClick( true ) ),
-				null,
+				Make( -220, 0, "<", (g, w) => PageClick( false ) ),
+				Make( 220, 0, ">", (g, w) => PageClick( true ) ),
+				MakeBack( false, titleFont, 
+				         (g, w) => g.SetNewScreen( new PauseScreen( g ) ) ),
 			};
+			UpdateArrows();
 		}
 		
 		string Get( int index ) {
-			return index < files.Length ? files[index] : "-----";
+			return index < entries.Length ? entries[index] : "-----";
 		}
 		
 		public override void Dispose() {
@@ -52,28 +55,38 @@ namespace ClassicalSharp.Gui {
 		}
 		
 		ButtonWidget MakeText( int x, int y, string text ) {
-			return ButtonWidget.Create( game, x, y, 240, 30, text,
+			return ButtonWidget.Create( game, x, y, 301, 40, text,
 			                           Anchor.Centre, Anchor.Centre, textFont, TextButtonClick );
 		}
 		
 		ButtonWidget Make( int x, int y, string text, Action<Game, Widget> onClick ) {
-			return ButtonWidget.Create( game, x, y, 40, 40, text,
+			return ButtonWidget.Create( game, x, y, 41, 40, text,
 			                           Anchor.Centre, Anchor.Centre, arrowFont, LeftOnly( onClick ) );
 		}
 		
 		protected abstract void TextButtonClick( Game game, Widget widget, MouseButton mouseBtn );
 		
 		protected void PageClick( bool forward ) {
-			SetCurrentIndex( currentIndex + (forward ? 5 : -5) );
+			SetCurrentIndex( currentIndex + (forward ? items : -items) );
 		}
 		
-		protected void SetCurrentIndex( int index ) {
-			if( index >= files.Length ) index -= 5;
+		protected void SetCurrentIndex( int index ) {			
+			if( index >= entries.Length ) index -= items;
 			if( index < 0 ) index = 0;
 			currentIndex = index;
 			
-			for( int i = 0; i < 5; i++ )
+			for( int i = 0; i < items; i++ )
 				buttons[i].SetText( Get( currentIndex + i ) );
+			UpdateArrows();
+		}
+		
+		protected void UpdateArrows() {
+			buttons[5].Disabled = false;
+			buttons[6].Disabled = false;
+			if( currentIndex < items )
+				buttons[5].Disabled = true;
+			if( currentIndex >= entries.Length - items )
+				buttons[6].Disabled = true;
 		}
 		
 		public override bool HandlesKeyDown( Key key ) {

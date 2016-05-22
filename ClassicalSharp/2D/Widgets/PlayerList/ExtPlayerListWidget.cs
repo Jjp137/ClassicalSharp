@@ -10,7 +10,8 @@ namespace ClassicalSharp.Gui {
 		
 		public ExtPlayerListWidget( Game game, Font font ) : base( game, font ) {
 			textures = new Texture[512];
-			titleFont = new Font( game.FontName, font.Size, FontStyle.Underline );
+			titleFont = new Font( game.FontName, font.Size );
+			elementOffset = 10;
 		}
 		
 		PlayerInfo[] info = new PlayerInfo[512];
@@ -50,6 +51,10 @@ namespace ClassicalSharp.Gui {
 				return rankOrder != 0 ? rankOrder :
 					x.ListName.CompareTo( y.ListName );
 			}
+		}
+		
+		protected override bool ShouldOffset( int i ) {
+			return info[i] == null || !info[i].IsGroup;
 		}
 		
 		Font titleFont;
@@ -93,7 +98,6 @@ namespace ClassicalSharp.Gui {
 
 		void PlayerListInfoAdded( object sender, IdEventArgs e ) {
 			AddPlayerInfo( game.CpePlayersList[e.Id], -1 );
-			columns = Utils.CeilDiv( namesCount, namesPerColumn );
 			SortPlayerInfo();
 		}
 

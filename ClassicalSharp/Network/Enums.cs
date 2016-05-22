@@ -1,7 +1,7 @@
 ﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
 using System;
 
-namespace ClassicalSharp.Net {
+namespace ClassicalSharp.Network {
 	
 	public enum Opcode {
 		Handshake = 0,
@@ -45,7 +45,9 @@ namespace ClassicalSharp.Net {
 		CpeDefineBlockExt = 37,
 		CpeBulkBlockUpdate = 38,
 		CpeSetTextColor = 39,
-		CpeDefineModel = 40,
+		CpeSetMapEnvUrl = 40,
+		CpeSetMapEnvProperty = 41,
+		CpeDefineModel = 42,
 	}
 }
 

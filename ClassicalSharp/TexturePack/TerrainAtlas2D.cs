@@ -8,17 +8,6 @@ using Android.Graphics;
 
 namespace ClassicalSharp {
 	
-	/// <summary> Integer constants for the six tile sides of a block. </summary>
-	public static class TileSide {
-		public const int Left = 0;
-		public const int Right = 1;
-		public const int Front = 2;
-		public const int Back = 3;
-		public const int Bottom = 4;
-		public const int Top = 5;
-		public const int Sides = 6;
-	}
-	
 	/// <summary> Represents a 2D packed texture atlas, specifically for terrain.png. </summary>
 	public class TerrainAtlas2D : IDisposable {
 		

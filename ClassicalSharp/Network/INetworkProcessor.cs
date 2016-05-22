@@ -23,9 +23,6 @@ namespace ClassicalSharp {
 		/// <summary> Informs the server of the client's current position and orientation. </summary>
 		public abstract void SendPosition( Vector3 pos, float yaw, float pitch );
 		
-		/// <summary> Informs the server that the client placed or deleted a block at the given coordinates. </summary>
-		public abstract void SendSetBlock( int x, int y, int z, bool place, byte block );
-		
 		/// <summary> Informs the server that using the given mouse button,
 		/// the client clicked on a particular block or entity. </summary>
 		public abstract void SendPlayerClick( MouseButton button, bool buttonDown, byte targetId, PickedPos pos );
@@ -76,7 +73,7 @@ namespace ClassicalSharp {
 		}
 		
 		protected internal void RetrieveTexturePack( string url ) {
-			if( !game.AcceptedUrls.HasUrl( url ) && !game.DeniedUrls.HasUrl( url ) ) {
+			if( !game.AcceptedUrls.HasEntry( url ) && !game.DeniedUrls.HasEntry( url ) ) {
 				game.AsyncDownloader.RetrieveContentLength( url, true, "CL_" + url );
 				string address = url;
 				if( url.StartsWith( "https://" ) ) address = url.Substring( 8 );
@@ -97,13 +94,16 @@ namespace ClassicalSharp {
 		}
 		
 		void DownloadTexturePack( string url ) {
-			if( game.DeniedUrls.HasUrl( url ) ) return;
+			if( game.DeniedUrls.HasEntry( url ) ) return;
 			DateTime lastModified = TextureCache.GetLastModifiedFromCache( url );
+			string etag = TextureCache.GetETagFromCache( url, game.ETags );
 
 			if( url.Contains( ".zip" ) )
-				game.AsyncDownloader.DownloadData( url, true, "texturePack", lastModified );
+				game.AsyncDownloader.DownloadData( url, true, "texturePack", 
+				                                  lastModified, etag );
 			else
-				game.AsyncDownloader.DownloadImage( url, true, "terrain", lastModified );
+				game.AsyncDownloader.DownloadImage( url, true, "terrain", 
+				                                   lastModified, etag );
 		}
 		
 		protected void ExtractDefault() {
@@ -112,34 +112,28 @@ namespace ClassicalSharp {
 			game.World.TextureUrl = null;
 		}
 		
-		static bool Is304Status( WebException ex ) {
-			if( ex == null || ex.Status != WebExceptionStatus.ProtocolError )
-				return false;
-			HttpWebResponse response = (HttpWebResponse)ex.Response;
-			return response.StatusCode == HttpStatusCode.NotModified;
-		}
-		
 		protected void CheckAsyncResources() {
 			DownloadedItem item;
 			if( game.AsyncDownloader.TryGetItem( "terrain", out item ) ) {
 				if( item.Data != null ) {
 					Bitmap bmp = (Bitmap)item.Data;					
 					game.World.TextureUrl = item.Url;					
-					game.Animations.Dispose();
+					game.Events.RaiseTexturePackChanged();
 					
 					if( !FastBitmap.CheckFormat( bmp.PixelFormat ) ) {
 						Utils.LogDebug( "Converting terrain atlas to 32bpp image" );
 						game.Drawer2D.ConvertTo32Bpp( ref bmp );
 					}
-					game.ChangeTerrainAtlas( bmp );
-					TextureCache.AddToCache( item.Url, bmp );					
-				} else if( Is304Status( item.WebEx ) ) {
+					if( !game.ChangeTerrainAtlas( bmp ) ) { bmp.Dispose(); return; }
+					TextureCache.AddToCache( item.Url, bmp );
+					TextureCache.AddETagToCache( item.Url, item.ETag, game.ETags );
+				} else if( item.ResponseCode == HttpStatusCode.NotModified ) {
 					Bitmap bmp = TextureCache.GetBitmapFromCache( item.Url );
 					if( bmp == null ) {// Should never happen, but handle anyways.
 						ExtractDefault();
 					} else if( item.Url != game.World.TextureUrl ) {
-						game.Animations.Dispose();
-						game.ChangeTerrainAtlas( bmp );
+						game.Events.RaiseTexturePackChanged();
+						if( !game.ChangeTerrainAtlas( bmp ) ) { bmp.Dispose(); return; }
 					}
 					
 					if( bmp != null ) game.World.TextureUrl = item.Url;
@@ -151,17 +145,16 @@ namespace ClassicalSharp {
 			if( game.AsyncDownloader.TryGetItem( "texturePack", out item ) ) {
 				if( item.Data != null ) {
 					game.World.TextureUrl = item.Url;
-					game.Animations.Dispose();					
 					
 					TexturePackExtractor extractor = new TexturePackExtractor();
 					extractor.Extract( (byte[])item.Data, game );
-					TextureCache.AddToCache( item.Url, (byte[])item.Data );				
-				} else if( Is304Status( item.WebEx ) ) {
+					TextureCache.AddToCache( item.Url, (byte[])item.Data );
+					TextureCache.AddETagToCache( item.Url, item.ETag, game.ETags );
+				} else if( item.ResponseCode == HttpStatusCode.NotModified ) {
 					byte[] data = TextureCache.GetDataFromCache( item.Url );
 					if( data == null ) { // Should never happen, but handle anyways.
 						ExtractDefault();
 					} else if( item.Url != game.World.TextureUrl ) {
-						game.Animations.Dispose();
 						TexturePackExtractor extractor = new TexturePackExtractor();
 						extractor.Extract( data, game );
 					}

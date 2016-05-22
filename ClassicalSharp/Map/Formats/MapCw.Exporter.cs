@@ -42,8 +42,8 @@ namespace ClassicalSharp.Map {
 				WriteSpawnCompoundTag();
 				
 				nbt.Write( NbtTagType.Int8Array );
-				nbt.Write( "BlockArray" ); nbt.WriteInt32( map.mapData.Length );
-				nbt.WriteBytes( map.mapData );
+				nbt.Write( "BlockArray" ); nbt.WriteInt32( map.blocks.Length );
+				nbt.WriteBytes( map.blocks );
 				
 				WriteMetadata();
 				
@@ -67,11 +67,11 @@ namespace ClassicalSharp.Map {
 			
 			nbt.Write( NbtTagType.Int8 );
 			nbt.Write( "H" );
-			nbt.WriteUInt8( (byte)Utils.DegreesToPacked( p.SpawnYaw, 256 ) );
+			nbt.WriteUInt8( (byte)Utils.DegreesToPacked( p.SpawnYaw ) );
 			
 			nbt.Write( NbtTagType.Int8 );
 			nbt.Write( "P" );
-			nbt.WriteUInt8( (byte)Utils.DegreesToPacked( p.SpawnPitch, 256 ) );
+			nbt.WriteUInt8( (byte)Utils.DegreesToPacked( p.SpawnPitch ) );
 			
 			nbt.Write( NbtTagType.End );
 		}
@@ -88,27 +88,27 @@ namespace ClassicalSharp.Map {
 			
 			nbt.WriteCpeExtCompound( "EnvWeatherType", 1 );
 			nbt.Write( NbtTagType.Int8 );
-			nbt.Write( "WeatherType" ); nbt.WriteUInt8( (byte)map.Weather );
+			nbt.Write( "WeatherType" ); nbt.WriteUInt8( (byte)map.Env.Weather );
 			nbt.Write( NbtTagType.End );
 			
 			nbt.WriteCpeExtCompound( "EnvMapAppearance", 1 );
 			nbt.Write( NbtTagType.Int8 );
-			nbt.Write( "SideBlock" ); nbt.WriteUInt8( (byte)map.SidesBlock );
+			nbt.Write( "SideBlock" ); nbt.WriteUInt8( (byte)map.Env.SidesBlock );
 			nbt.Write( NbtTagType.Int8 );
-			nbt.Write( "EdgeBlock" ); nbt.WriteUInt8( (byte)map.EdgeBlock );
+			nbt.Write( "EdgeBlock" ); nbt.WriteUInt8( (byte)map.Env.EdgeBlock );
 			nbt.Write( NbtTagType.Int16 );
-			nbt.Write( "SideLevel" ); nbt.WriteInt16( (short)map.EdgeHeight );
+			nbt.Write( "SideLevel" ); nbt.WriteInt16( (short)map.Env.EdgeHeight );
 			nbt.Write( NbtTagType.String );
 			string url = game.World.TextureUrl == null ? "" : game.World.TextureUrl;
 			nbt.Write( "TextureURL" ); nbt.Write( url );
 			nbt.Write( NbtTagType.End );
 			
 			nbt.WriteCpeExtCompound( "EnvColors", 1 );
-			WriteColourCompound( "Sky", map.SkyCol );
-			WriteColourCompound( "Cloud", map.CloudsCol );
-			WriteColourCompound( "Fog", map.FogCol );
-			WriteColourCompound( "Ambient", map.Shadowlight );
-			WriteColourCompound( "Sunlight", map.Sunlight );
+			WriteColourCompound( "Sky", map.Env.SkyCol );
+			WriteColourCompound( "Cloud", map.Env.CloudsCol );
+			WriteColourCompound( "Fog", map.Env.FogCol );
+			WriteColourCompound( "Ambient", map.Env.Shadowlight );
+			WriteColourCompound( "Sunlight", map.Env.Sunlight );
 			nbt.Write( NbtTagType.End );
 			
 			nbt.WriteCpeExtCompound( "BlockDefinitions", 1 );
@@ -152,12 +152,12 @@ namespace ClassicalSharp.Map {
 			
 			nbt.Write( NbtTagType.Int8Array );
 			nbt.Write( "Textures" ); nbt.WriteInt32( 6 );
-			nbt.WriteUInt8( info.GetTextureLoc( id, TileSide.Top ) );
-			nbt.WriteUInt8( info.GetTextureLoc( id, TileSide.Bottom ) );
-			nbt.WriteUInt8( info.GetTextureLoc( id, TileSide.Left ) );
-			nbt.WriteUInt8( info.GetTextureLoc( id, TileSide.Right ) );
-			nbt.WriteUInt8( info.GetTextureLoc( id, TileSide.Front ) );
-			nbt.WriteUInt8( info.GetTextureLoc( id, TileSide.Back ) );
+			nbt.WriteUInt8( info.GetTextureLoc( id, Side.Top ) );
+			nbt.WriteUInt8( info.GetTextureLoc( id, Side.Bottom ) );
+			nbt.WriteUInt8( info.GetTextureLoc( id, Side.Left ) );
+			nbt.WriteUInt8( info.GetTextureLoc( id, Side.Right ) );
+			nbt.WriteUInt8( info.GetTextureLoc( id, Side.Front ) );
+			nbt.WriteUInt8( info.GetTextureLoc( id, Side.Back ) );
 			
 			nbt.Write( NbtTagType.Int8 );
 			nbt.Write( "TransmitsLight" ); nbt.WriteUInt8( info.BlocksLight[id] ? 0 : 1 );

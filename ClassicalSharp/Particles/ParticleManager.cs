@@ -4,7 +4,7 @@ using ClassicalSharp.GraphicsAPI;
 
 namespace ClassicalSharp.Particles {
 	
-	public partial class ParticleManager : IDisposable {
+	public partial class ParticleManager : IGameComponent {
 		
 		public int ParticlesTexId;
 		TerrainParticle[] terrainParticles = new TerrainParticle[maxParticles];
@@ -13,16 +13,21 @@ namespace ClassicalSharp.Particles {
 		int[] terrain1DCount, terrain1DIndices;
 		
 		Game game;
-		Random rnd;
+		Random rnd = new Random();
 		int vb;
 		const int maxParticles = 600;
 		
-		public ParticleManager( Game game ) {
+		public void Init( Game game ) {
 			this.game = game;
-			rnd = new Random();
 			vb = game.Graphics.CreateDynamicVb( VertexFormat.P3fT2fC4b, maxParticles * 4 );
 			game.Events.TerrainAtlasChanged += TerrainAtlasChanged;
+			game.UserEvents.BlockChanged += BreakBlockEffect;
 		}
+		
+		public void Ready( Game game ) { }
+		public void Reset( Game game ) { rainCount = 0; terrainCount = 0; }
+		public void OnNewMap( Game game ) { rainCount = 0; terrainCount = 0; }
+		public void OnNewMapLoaded( Game game ) { }
 
 		void TerrainAtlasChanged( object sender, EventArgs e ) {
 			terrain1DCount = new int[game.TerrainAtlas1D.TexIds.Length];
@@ -116,6 +121,7 @@ namespace ClassicalSharp.Particles {
 			game.Graphics.DeleteDynamicVb( vb );
 			game.Graphics.DeleteTexture( ref ParticlesTexId );
 			game.Events.TerrainAtlasChanged -= TerrainAtlasChanged;
+			game.UserEvents.BlockChanged -= BreakBlockEffect;
 		}
 		
 		void RemoveAt<T>( int index, T[] particles, ref int count ) where T : Particle {

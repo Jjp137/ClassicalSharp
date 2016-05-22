@@ -27,7 +27,8 @@ namespace ClassicalSharp.Singleplayer {
 		public override bool IsSinglePlayer { get { return true; } }
 		
 		public override void Connect( IPAddress address, int port ) {
-			int max = game.UseCPE ? BlockInfo.MaxDefinedCpeBlock : BlockInfo.MaxDefinedOriginalBlock;
+			game.UseCPEBlocks = game.UseCPE;
+			int max = game.UseCPEBlocks ? BlockInfo.MaxCpeBlock : BlockInfo.MaxOriginalBlock;
 			for( int i = 1; i <= max; i++ ) {
 				game.Inventory.CanPlace[i] = true;
 				game.Inventory.CanDelete[i] = true;
@@ -58,11 +59,6 @@ namespace ClassicalSharp.Singleplayer {
 		}
 		
 		public override void SendPosition( Vector3 pos, float yaw, float pitch ) {
-		}
-		
-		public override void SendSetBlock( int x, int y, int z, bool place, byte block ) {
-			if( place )
-				physics.OnBlockPlaced( x, y, z, block );
 		}
 		
 		public override void SendPlayerClick( MouseButton button, bool buttonDown, byte targetId, PickedPos pos ) {
@@ -100,11 +96,10 @@ namespace ClassicalSharp.Singleplayer {
 				game.Chat.Add( "&cFailed to generate the map." );
 			} else {
 				IMapGenerator gen = generator;
-				game.World.SetData( generatedMap, gen.Width, gen.Height, gen.Length );
+				game.World.SetNewMap( generatedMap, gen.Width, gen.Height, gen.Length );
 				generatedMap = null;
-				
-				game.WorldEvents.RaiseOnNewMapLoaded();
 				ResetPlayerPosition();
+				game.WorldEvents.RaiseOnNewMapLoaded();
 			}
 			
 			generator = null;
@@ -120,12 +115,7 @@ namespace ClassicalSharp.Singleplayer {
 			generator.GenerateAsync( game, width, height, length, seed );
 		}
 		
-		unsafe void MapSet( int width, int length, byte* ptr, int yStart, int yEnd, byte block ) {
-			int startIndex = yStart * length * width;
-			int endIndex = ( yEnd * length + (length - 1) ) * width + (width - 1);
-			MemUtils.memset( (IntPtr)ptr, block, startIndex, endIndex - startIndex + 1 );
-		}
-		
+
 		void ResetPlayerPosition() {
 			int x = game.World.Width / 2, z = game.World.Length / 2;
 			int y = game.World.GetLightHeight( x, z ) + 2;
@@ -133,6 +123,7 @@ namespace ClassicalSharp.Singleplayer {
 			LocationUpdate update = LocationUpdate.MakePosAndOri( x, y, z, 0, 0, false );
 			game.LocalPlayer.SetLocation( update, false );
 			game.LocalPlayer.Spawn = new Vector3( x, y, z );
+			game.CurrentCameraPos = game.Camera.GetCameraPos( game.LocalPlayer.EyePosition );
 		}
 	}
 }

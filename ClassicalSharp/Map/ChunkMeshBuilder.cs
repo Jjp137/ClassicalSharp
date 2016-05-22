@@ -16,6 +16,7 @@ namespace ClassicalSharp {
 		byte tile;
 		BlockInfo info;
 		World map;
+		WorldEnv env;
 		Game game;
 		IGraphicsApi graphics;
 		const int chunkSize = 16, extChunkSize = 18;
@@ -36,10 +37,10 @@ namespace ClassicalSharp {
 		bool BuildChunk( int x1, int y1, int z1 ) {
 			PreStretchTiles( x1, y1, z1 );
 			byte* chunkPtr = stackalloc byte[extChunkSize3]; chunk = chunkPtr;
-			byte* countsPtr = stackalloc byte[chunkSize3 * TileSide.Sides]; counts = countsPtr;
+			byte* countsPtr = stackalloc byte[chunkSize3 * Side.Sides]; counts = countsPtr;
 			MemUtils.memset( (IntPtr)chunkPtr, 0, 0, extChunkSize3 );
 			if( ReadChunkData( x1, y1, z1 ) ) return false;
-			MemUtils.memset( (IntPtr)countsPtr, 1, 0, chunkSize3 * TileSide.Sides );
+			MemUtils.memset( (IntPtr)countsPtr, 1, 0, chunkSize3 * Side.Sides );
 			
 			Stretch( x1, y1, z1 );
 			PostStretchTiles( x1, y1, z1 );
@@ -54,8 +55,8 @@ namespace ClassicalSharp {
 					for( int x = x1, xx = 0; x < xMax; x++, xx++ ) {
 						tile = chunk[chunkIndex];
 						if( !info.IsAir[tile] ) {
-							int index = ((yy << 8) | (zz << 4) | xx) * TileSide.Sides;
-							RenderTile( chunkIndex, index, x, y, z );
+							int index = ((yy << 8) | (zz << 4) | xx) * Side.Sides;
+							RenderTile( index, x, y, z );
 						}
 						chunkIndex++;
 					}
@@ -66,7 +67,7 @@ namespace ClassicalSharp {
 		
 		bool ReadChunkData( int x1, int y1, int z1 ) {
 			bool allAir = true, allSolid = true;
-			fixed( byte* mapPtr = map.mapData ) {
+			fixed( byte* mapPtr = map.blocks ) {
 				
 				for( int yy = -1; yy < 17; yy++ ) {
 					int y = yy + y1;
@@ -100,11 +101,11 @@ namespace ClassicalSharp {
 				
 				if( x1 == 0 || y1 == 0 || z1 == 0 || x1 + chunkSize >= width ||
 				   y1 + chunkSize >= height || z1 + chunkSize >= length ) allSolid = false;
-				if( !( allAir || allSolid ) ) {
-					map.HeightmapHint( x1 - 1, z1 - 1, mapPtr );
-				}
+				if( allAir || allSolid ) return true;
+				
+				map.HeightmapHint( x1 - 1, z1 - 1, mapPtr );
+				return false;
 			}
-			return allAir || allSolid;
 		}
 		
 		public void GetDrawInfo( int x, int y, int z, ref ChunkPartInfo[] normalParts,
@@ -123,12 +124,12 @@ namespace ClassicalSharp {
 		}
 
 		Vector3 minBB, maxBB;
-		public void RenderTile( int chunkIndex, int index, int x, int y, int z ) {
+		public void RenderTile( int index, int x, int y, int z ) {
 			X = x; Y = y; Z = z;
 			
 			if( info.IsSprite[tile] ) {
 				fullBright = info.FullBright[tile];
-				int count = counts[index + TileSide.Top];
+				int count = counts[index + Side.Top];
 				if( count != 0 )
 					DrawSprite( count );
 				return;
@@ -179,22 +180,22 @@ namespace ClassicalSharp {
 			map.SunlightZSide = map.ShadowlightZSide = col;
 			map.SunlightYBottom = map.ShadowlightYBottom = col;
 			#endif
-			bool[] hidden = game.BlockInfo.hidden;
+			byte[] hidden = game.BlockInfo.hidden;
 			
 			for( int y = y1, yy = 0; y < yMax; y++, yy++ ) {
 				for( int z = z1, zz = 0; z < zMax; z++, zz++ ) {
 					
-					int chunkIndex = (yy + 1) * extChunkSize2 + (zz + 1) * extChunkSize + (-1 + 1);
+					int cIndex = (yy + 1) * extChunkSize2 + (zz + 1) * extChunkSize + (-1 + 1);
 					for( int x = x1, xx = 0; x < xMax; x++, xx++ ) {
-						chunkIndex++;
-						byte tile = chunk[chunkIndex];
+						cIndex++;
+						byte tile = chunk[cIndex];
 						if( info.IsAir[tile] ) continue;
-						int countIndex = ((yy << 8) + (zz << 4) + xx) * TileSide.Sides;
+						int countIndex = ((yy << 8) + (zz << 4) + xx) * Side.Sides;
 						
 						// Sprites only use one face to indicate stretching count, so we can take a shortcut here.
 						// Note that sprites are not drawn with any of the DrawXFace, they are drawn using DrawSprite.
 						if( info.IsSprite[tile] ) {
-							countIndex += TileSide.Top;
+							countIndex += Side.Top;
 							if( counts[countIndex] != 0 ) {
 								X = x; Y = y; Z = z;
 								AddSpriteVertices( tile );
@@ -203,61 +204,61 @@ namespace ClassicalSharp {
 						} else {
 							X = x; Y = y; Z = z;
 							fullBright = info.FullBright[tile];
-							int tileAdj = tile * BlockInfo.BlocksCount;
+							int tileIdx = tile * BlockInfo.BlocksCount;
 							// All of these function calls are inlined as they can be called tens of millions to hundreds of millions of times.
 							
-							int index = countIndex + TileSide.Left;
+							int index = countIndex + Side.Left;
 							if( counts[index] == 0 || (x == 0 && Y < clipLevel) ||
-							   (x != 0 && hidden[(tileAdj + chunk[chunkIndex - 1]) * TileSide.Sides + TileSide.Left]) ) {
+							   (x != 0 && (hidden[tileIdx + chunk[cIndex - 1]] & (1 << Side.Left)) != 0 ) ) {
 								counts[index] = 0;
 							} else {
-								int count = StretchZ( zz, index, X, Y, Z, chunkIndex, tile, TileSide.Left );
-								AddVertices( tile, count, TileSide.Left ); counts[index] = (byte)count;
+								int count = StretchZ( zz, index, X, Y, Z, cIndex, tile, Side.Left );
+								AddVertices( tile, count, Side.Left ); counts[index] = (byte)count;
 							}
 							
-							index = countIndex + TileSide.Right;
+							index = countIndex + Side.Right;
 							if( counts[index] == 0 || (x == maxX && Y < clipLevel) ||
-							   (x != maxX && hidden[(tileAdj + chunk[chunkIndex + 1]) * TileSide.Sides + TileSide.Right]) ) {
+							   (x != maxX && (hidden[tileIdx + chunk[cIndex + 1]] & (1 << Side.Right)) != 0 ) ) {
 								counts[index] = 0;
 							} else {
-								int count = StretchZ( zz, index, X, Y, Z, chunkIndex, tile, TileSide.Right );
-								AddVertices( tile, count, TileSide.Right ); counts[index] = (byte)count;
+								int count = StretchZ( zz, index, X, Y, Z, cIndex, tile, Side.Right );
+								AddVertices( tile, count, Side.Right ); counts[index] = (byte)count;
 							}
 							
-							index = countIndex + TileSide.Front;
+							index = countIndex + Side.Front;
 							if( counts[index] == 0 || (z == 0 && Y < clipLevel) ||
-							   (z != 0 && hidden[(tileAdj + chunk[chunkIndex - 18]) * TileSide.Sides + TileSide.Front]) ) {
+							   (z != 0 && (hidden[tileIdx + chunk[cIndex - 18]] & (1 << Side.Front)) != 0 ) ) {
 								counts[index] = 0;
 							} else {
-								int count = StretchX( xx, index, X, Y, Z, chunkIndex, tile, TileSide.Front );
-								AddVertices( tile, count, TileSide.Front ); counts[index] = (byte)count;
+								int count = StretchX( xx, index, X, Y, Z, cIndex, tile, Side.Front );
+								AddVertices( tile, count, Side.Front ); counts[index] = (byte)count;
 							}
 							
-							index = countIndex + TileSide.Back;
+							index = countIndex + Side.Back;
 							if( counts[index] == 0 || (z == maxZ && Y < clipLevel) ||
-							   (z != maxZ && hidden[(tileAdj + chunk[chunkIndex + 18]) * TileSide.Sides + TileSide.Back]) ) {
+							   (z != maxZ && (hidden[tileIdx + chunk[cIndex + 18]] & (1 << Side.Back)) != 0 ) ) {
 								counts[index] = 0;
 							} else {
-								int count = StretchX( xx, index, X, Y, Z, chunkIndex, tile, TileSide.Back );
-								AddVertices( tile, count, TileSide.Back ); counts[index] = (byte)count;
+								int count = StretchX( xx, index, X, Y, Z, cIndex, tile, Side.Back );
+								AddVertices( tile, count, Side.Back ); counts[index] = (byte)count;
 							}
 							
-							index = countIndex + TileSide.Bottom;
+							index = countIndex + Side.Bottom;
 							if( counts[index] == 0 || y == 0 || 
-							   hidden[(tileAdj + chunk[chunkIndex - 324]) * TileSide.Sides + TileSide.Bottom] ) {
+							   (hidden[tileIdx + chunk[cIndex - 324]] & (1 << Side.Bottom)) != 0 ) {
 								counts[index] = 0;
 							} else {
-								int count = StretchX( xx, index, X, Y, Z, chunkIndex, tile, TileSide.Bottom );
-								AddVertices( tile, count, TileSide.Bottom ); counts[index] = (byte)count;
+								int count = StretchX( xx, index, X, Y, Z, cIndex, tile, Side.Bottom );
+								AddVertices( tile, count, Side.Bottom ); counts[index] = (byte)count;
 							}
 							
-							index = countIndex + TileSide.Top;
+							index = countIndex + Side.Top;
 							if( counts[index] == 0 || 
-							   hidden[(tileAdj + chunk[chunkIndex + 324]) * TileSide.Sides + TileSide.Top] ) {
+							   (hidden[tileIdx + chunk[cIndex + 324]] & (1 << Side.Top)) != 0 ) {
 								counts[index] = 0;
 							} else {
-								int count = StretchX( xx, index, X, Y, Z, chunkIndex, tile, TileSide.Top );
-								AddVertices( tile, count, TileSide.Top ); counts[index] = (byte)count;
+								int count = StretchX( xx, index, X, Y, Z, cIndex, tile, Side.Top );
+								AddVertices( tile, count, Side.Top ); counts[index] = (byte)count;
 							}
 							
 						}
@@ -270,16 +271,16 @@ namespace ClassicalSharp {
 			int count = 1;
 			x++;
 			chunkIndex++;
-			countIndex += TileSide.Sides;
+			countIndex += Side.Sides;
 			int max = chunkSize - xx;
-			bool stretchTile = info.CanStretch[tile * TileSide.Sides + face];
+			bool stretchTile = info.CanStretch[tile * Side.Sides + face];
 			
 			while( count < max && x < width && stretchTile && CanStretch( tile, chunkIndex, x, y, z, face ) ) {
 				counts[countIndex] = 0;
 				count++;
 				x++;
 				chunkIndex++;
-				countIndex += TileSide.Sides;
+				countIndex += Side.Sides;
 			}
 			return count;
 		}
@@ -288,16 +289,16 @@ namespace ClassicalSharp {
 			int count = 1;
 			z++;
 			chunkIndex += extChunkSize;
-			countIndex += chunkSize * TileSide.Sides;
+			countIndex += chunkSize * Side.Sides;
 			int max = chunkSize - zz;
-			bool stretchTile = info.CanStretch[tile * TileSide.Sides + face];
+			bool stretchTile = info.CanStretch[tile * Side.Sides + face];
 			
 			while( count < max && z < length && stretchTile && CanStretch( tile, chunkIndex, x, y, z, face ) ) {
 				counts[countIndex] = 0;
 				count++;
 				z++;
 				chunkIndex += extChunkSize;
-				countIndex += chunkSize * TileSide.Sides;
+				countIndex += chunkSize * Side.Sides;
 			}
 			return count;
 		}
@@ -307,10 +308,11 @@ namespace ClassicalSharp {
 		
 		public void OnNewMapLoaded() {
 			map = game.World;
+			env = game.World.Env;
 			width = map.Width;
 			height = map.Height;
 			length = map.Length;
-			clipLevel = Math.Max( 0, game.World.SidesHeight );
+			clipLevel = Math.Max( 0, game.World.Env.SidesHeight );
 			maxX = width - 1;
 			maxY = height - 1;
 			maxZ = length - 1;

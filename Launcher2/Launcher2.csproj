@@ -61,7 +61,7 @@
   <ItemGroup>
     <Compile Include="Gui\Drawer2DExt.cs" />
     <Compile Include="Gui\PlatformDrawer.cs" />
-    <Compile Include="Gui\Screens\ClassiCubeServersScreen.cs" />
+    <Compile Include="Gui\Screens\ServersScreen.cs" />
     <Compile Include="Gui\Screens\ColoursScreen.cs" />
     <Compile Include="Gui\Screens\DirectConnectScreen.cs" />
     <Compile Include="Gui\Screens\LauncherInputScreen.cs" />
@@ -71,27 +71,38 @@
     <Compile Include="Gui\Screens\ResourcesScreen.cs" />
     <Compile Include="Gui\Screens\ChooseModeScreen.cs" />
     <Compile Include="Gui\Screens\UpdatesScreen.cs" />
-    <Compile Include="Gui\TableWidget\LauncherTableWidget.Comparers.cs" />
+    <Compile Include="Gui\TableWidget\Comparers.cs" />
+    <Compile Include="Gui\TableWidget\LauncherTableView.cs" />
     <Compile Include="Gui\TableWidget\LauncherTableWidget.cs" />
-    <Compile Include="Gui\TableWidget\LauncherTableWidget.Drawing.cs" />
     <Compile Include="Gui\TableWidget\LauncherTableWidget.Input.cs" />
-    <Compile Include="Gui\Widgets\LauncherBooleanWidget.cs" />
+    <Compile Include="Gui\Views\ChooseModeView.cs" />
+    <Compile Include="Gui\Views\ColoursView.cs" />
+    <Compile Include="Gui\Views\DirectConnectView.cs" />
+    <Compile Include="Gui\Views\IView.cs" />
+    <Compile Include="Gui\Views\MainView.cs" />
+    <Compile Include="Gui\Views\ResourcesView.cs" />
+    <Compile Include="Gui\Views\ServersView.cs" />
+    <Compile Include="Gui\Views\UpdatesView.cs" />
+    <Compile Include="Gui\Widgets\LauncherBoolWidget.cs" />
     <Compile Include="Gui\Widgets\LauncherButtonWidget.cs" />
     <Compile Include="Gui\Widgets\LauncherInputWidget.cs" />
     <Compile Include="Gui\Widgets\LauncherLabelWidget.cs" />
     <Compile Include="Gui\Widgets\LauncherWidget.cs" />
+    <Compile Include="Gui\Widgets\WidgetConstructors.cs" />
     <Compile Include="LauncherWindow.Background.cs" />
     <Compile Include="LauncherWindow.cs" />
     <Compile Include="Patcher\Animations.cs" />
     <Compile Include="Patcher\BinUnpacker.cs" />
+    <Compile Include="Patcher\ResourceChecker.cs" />
     <Compile Include="Patcher\ResourceFetcher.cs" />
     <Compile Include="Patcher\ResourcePatcher.cs" />
+    <Compile Include="Patcher\ResourcesList.cs" />
     <Compile Include="Patcher\SoundPatcher.cs" />
     <Compile Include="Patcher\ZipWriter.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Updater\Scripts.cs" />
-    <Compile Include="Updater\Patcher.cs" />
+    <Compile Include="Updater\Applier.cs" />
     <Compile Include="Utils\Client.cs" />
     <Compile Include="Utils\ClientStartData.cs" />
     <Compile Include="Utils\JSON.cs" />
@@ -117,7 +128,15 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Gui\" />
+    <Folder Include="Gui" />
+    <Folder Include="Gui\Views" />
+    <Folder Include="Gui\TableWidget" />
+    <Folder Include="Gui\Screens" />
+    <Folder Include="Gui\Widgets" />
+    <Folder Include="Updater" />
+    <Folder Include="Utils" />
+    <Folder Include="Patcher" />
+    <Folder Include="WebService" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

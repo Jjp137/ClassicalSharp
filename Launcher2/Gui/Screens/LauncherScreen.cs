@@ -2,9 +2,10 @@
 using System;
 using System.Drawing;
 using ClassicalSharp;
+using Launcher.Gui.Widgets;
 using OpenTK.Input;
 
-namespace Launcher {
+namespace Launcher.Gui.Screens {
 	
 	public abstract class LauncherScreen {
 		protected internal LauncherWindow game;
@@ -32,18 +33,16 @@ namespace Launcher {
 		/// <summary> Cleans up all native resources held by this screen. </summary>
 		public abstract void Dispose();
 		
-		/// <summary>Function called when the pixels from the framebuffer 
+		/// <summary> Function called when the pixels from the framebuffer
 		/// are about to be transferred to the window. </summary>
 		public virtual void OnDisplay() { }
 		
 		protected LauncherWidget selectedWidget;
 		protected LauncherWidget[] widgets;
 		protected virtual void MouseMove( object sender, MouseMoveEventArgs e ) {
-			if( supressMove ) {
-				supressMove = false;
-				return;
-			}
+			if( supressMove ) { supressMove = false; return; }
 			mouseMoved = true;
+			
 			for( int i = 0; i < widgets.Length; i++ ) {
 				LauncherWidget widget = widgets[i];
 				if( widget == null ) continue;
@@ -64,19 +63,13 @@ namespace Launcher {
 			selectedWidget = null;
 		}
 		
-		protected Font buttonFont;
-		
 		/// <summary> Called when the user has moved their mouse away from a previously selected widget. </summary>
 		protected virtual void UnselectWidget( LauncherWidget widget ) {
 			LauncherButtonWidget button = widget as LauncherButtonWidget;
 			if( button != null ) {
 				button.Active = false;
 				button.RedrawBackground();
-				using( drawer ) {
-					drawer.SetBitmap( game.Framebuffer );
-					button.Redraw( drawer );
-				}
-				Dirty = true;
+				RedrawWidget( button );
 			}
 		}
 		
@@ -86,37 +79,16 @@ namespace Launcher {
 			if( button != null ) {
 				button.Active = true;
 				button.RedrawBackground();
-				using( drawer ) {
-					drawer.SetBitmap( game.Framebuffer );
-					button.Redraw( drawer );
-				}
-				Dirty = true;
+				RedrawWidget( button );
 			}
 		}
 		
-		protected void RedrawAllButtonBackgrounds() {
-			int buttons = 0;
-			for( int i = 0; i < widgets.Length; i++ ) {
-				if( widgets[i] == null || !(widgets[i] is LauncherButtonWidget) ) continue;
-				buttons++;
+		protected void RedrawWidget( LauncherWidget widget ) {
+			using( drawer ) {
+				drawer.SetBitmap( game.Framebuffer );
+				widget.Redraw( drawer );
 			}
-			if( buttons == 0 ) return;
-			
-			using( FastBitmap dst = new FastBitmap( game.Framebuffer, true, false ) ) {
-				for( int i = 0; i < widgets.Length; i++ ) {
-					if( widgets[i] == null ) continue;
-					LauncherButtonWidget button = widgets[i] as LauncherButtonWidget;
-					if( button != null )
-						button.RedrawBackground( dst );
-				}
-			}
-		}
-		
-		protected void RedrawAll() {
-			for( int i = 0; i < widgets.Length; i++ ) {
-				if( widgets[i] == null ) continue;
-				widgets[i].Redraw( drawer );
-			}
+			Dirty = true;
 		}
 		
 		protected LauncherWidget lastClicked;
@@ -177,53 +149,14 @@ namespace Launcher {
 		
 		protected void MakeButtonAt( string text, int width, int height, Font font,
 		                            Anchor verAnchor, int x, int y, Action<int, int> onClick ) {
-			MakeButtonAt( text, width, height, font, Anchor.Centre, verAnchor, x, y, onClick );
-		}
-		
-		protected void MakeButtonAt( string text, int width, int height, Font font, Anchor horAnchor,
-		                            Anchor verAnchor, int x, int y, Action<int, int> onClick ) {
-			LauncherButtonWidget widget;
-			if( widgets[widgetIndex] != null ) {
-				widget = (LauncherButtonWidget)widgets[widgetIndex];
-			} else {
-				widget = new LauncherButtonWidget( game );
-				widget.Text = text;
-				widget.OnClick = onClick;
-				widgets[widgetIndex] = widget;
-			}
-			
-			widget.Active = false;
-			widget.SetDrawData( drawer, text, font, horAnchor, verAnchor, width, height, x, y );
-			widgetIndex++;
+			WidgetConstructors.MakeButtonAt( game, widgets, ref widgetIndex,
+			                                text, width, height, font, Anchor.Centre,
+			                                verAnchor, x, y, onClick );
 		}
 		
 		protected void MakeLabelAt( string text, Font font, Anchor horAnchor, Anchor verAnchor, int x, int y ) {
-			LauncherLabelWidget widget;
-			if( widgets[widgetIndex] != null ) {
-				widget = (LauncherLabelWidget)widgets[widgetIndex];
-			} else {
-				widget = new LauncherLabelWidget( game, text );
-				widgets[widgetIndex] = widget;
-			}
-			
-			widget.SetDrawData( drawer, text, font, horAnchor, verAnchor, x, y );
-			widgetIndex++;
-		}
-		
-		protected void MakeBooleanAt( Anchor horAnchor, Anchor verAnchor, Font font, bool initValue,
-		                             int width, int height, int x, int y, Action<int, int> onClick ) {
-			LauncherBooleanWidget widget;
-			if( widgets[widgetIndex] != null ) {
-				widget = (LauncherBooleanWidget)widgets[widgetIndex];
-			} else {
-				widget = new LauncherBooleanWidget( game, font, width, height );
-				widget.Value = initValue;
-				widget.OnClick = onClick;
-				widgets[widgetIndex] = widget;
-			}
-			
-			widget.SetDrawData( drawer, horAnchor, verAnchor, x, y );
-			widgetIndex++;
+			WidgetConstructors.MakeLabelAt( game, widgets, ref widgetIndex,
+			                               text, font, horAnchor, verAnchor, x, y );
 		}
 	}
 }

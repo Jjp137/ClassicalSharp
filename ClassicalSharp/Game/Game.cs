@@ -34,9 +34,16 @@ namespace ClassicalSharp {
 			TerrainAtlas1D.UpdateState( TerrainAtlas );
 		}
 		
-		public void ChangeTerrainAtlas( Bitmap newAtlas ) {
-			LoadAtlas( newAtlas );
+		public bool ChangeTerrainAtlas( Bitmap atlas ) {
+			bool pow2 = Utils.IsPowerOf2( atlas.Width ) && Utils.IsPowerOf2( atlas.Height );
+			if( !pow2 || atlas.Width != atlas.Height ) {
+				Chat.Add( "&cCurrent texture pack has an invalid terrain.png" );
+				Chat.Add( "&cWidth and length must be the same, and also powers of two." );
+				return false;
+			}
+			LoadAtlas( atlas );
 			Events.RaiseTerrainAtlasChanged();
+			return true;
 		}
 		
 		public void Run() { window.Run(); }
@@ -55,13 +62,17 @@ namespace ClassicalSharp {
 			
 			Options.Load();			
 			Players = new EntityList( this );
-			AcceptedUrls.Load(); DeniedUrls.Load();
+			AcceptedUrls.Load(); 
+			DeniedUrls.Load();
+			ETags.Load();
 			InputHandler = new InputHandler( this );
 			defaultIb = Graphics.MakeDefaultIb();
-			ParticleManager = new ParticleManager( this );
+			ParticleManager = AddComponent( new ParticleManager() );
 			LoadOptions();
 			LoadGuiOptions();
 			Chat = AddComponent( new Chat() );
+			WorldEvents.OnNewMap += OnNewMapCore;
+			WorldEvents.OnNewMapLoaded += OnNewMapLoadedCore;
 			
 			BlockInfo = new BlockInfo();
 			BlockInfo.Init();
@@ -73,13 +84,7 @@ namespace ClassicalSharp {
 			
 			TerrainAtlas1D = new TerrainAtlas1D( Graphics );
 			TerrainAtlas = new TerrainAtlas2D( Graphics, Drawer2D );
-			Animations = new Animations( this );
-			defTexturePack = Options.Get( OptionsKey.DefaultTexturePack ) ?? "default.zip";
-			TexturePackExtractor extractor = new TexturePackExtractor();
-			extractor.Extract( "default.zip", this );
-			// in case the user's default texture pack doesn't have all required textures
-			if( defTexturePack != "default.zip" )
-				extractor.Extract( DefaultTexturePack, this );
+			Animations = AddComponent( new Animations() );
 			Inventory = AddComponent( new Inventory() );
 			
 			BlockInfo.SetDefaultBlockPermissions( Inventory.CanPlace, Inventory.CanDelete );
@@ -89,12 +94,12 @@ namespace ClassicalSharp {
 			width = Width;
 			height = Height;
 			MapRenderer = new MapRenderer( this );
-			MapBordersRenderer = new MapBordersRenderer( this );
-			EnvRenderer = new StandardEnvRenderer( this );
+			MapBordersRenderer = AddComponent( new MapBordersRenderer() );
+			EnvRenderer = AddComponent( new StandardEnvRenderer() );
 			if( IPAddress == null ) {
 				Network = new Singleplayer.SinglePlayerServer( this );
 			} else {
-				Network = new Net.NetworkProcessor( this );
+				Network = new Network.NetworkProcessor( this );
 			}
 			Graphics.LostContextFunction = Network.Tick;
 			
@@ -113,18 +118,19 @@ namespace ClassicalSharp {
 			//Graphics.DepthWrite = true;
 			Graphics.AlphaBlendFunc( BlendFunc.SourceAlpha, BlendFunc.InvSourceAlpha );
 			Graphics.AlphaTestFunc( CompareFunc.Greater, 0.5f );
-			fpsScreen = new FpsScreen( this );
-			fpsScreen.Init();
+			fpsScreen = AddComponent( new FpsScreen( this ) );
 			hudScreen = AddComponent( new HudScreen( this ) );
 			Culling = new FrustumCulling();
-			EnvRenderer.Init();
-			MapBordersRenderer.Init();
 			Picking = AddComponent( new PickedPosRenderer() );
 			AudioPlayer = AddComponent( new AudioPlayer() );
 			AxisLinesRenderer = AddComponent( new AxisLinesRenderer() );
+			SkyboxRenderer = AddComponent( new SkyboxRenderer() );
 			
 			foreach( IGameComponent comp in Components )
 				comp.Init( this );
+			ExtractInitialTexturePack();
+			foreach( IGameComponent comp in Components )
+				comp.Ready( this );
 			
 			LoadIcon();
 			string connectString = "Connecting to " + IPAddress + ":" + Port +  "..";
@@ -136,9 +142,13 @@ namespace ClassicalSharp {
 			Network.Connect( IPAddress, Port );
 		}
 		
-		public T AddComponent<T>( T obj ) {
-			Components.Add( (IGameComponent)obj );
-			return obj;
+		void ExtractInitialTexturePack() {
+			defTexturePack = Options.Get( OptionsKey.DefaultTexturePack ) ?? "default.zip";
+			TexturePackExtractor extractor = new TexturePackExtractor();
+			extractor.Extract( "default.zip", this );
+			// in case the user's default texture pack doesn't have all required textures
+			if( defTexturePack != "default.zip" )
+				extractor.Extract( DefaultTexturePack, this );
 		}
 		
 		void LoadOptions() {
@@ -167,6 +177,12 @@ namespace ClassicalSharp {
 			MouseSensitivity = Options.GetInt( OptionsKey.Sensitivity, 1, 100, 30 );
 			ShowBlockInHand = Options.GetBool( OptionsKey.ShowBlockInHand, true );
 			InvertMouse = Options.GetBool( OptionsKey.InvertMouse, false );
+			
+			bool skipSsl = Options.GetBool( "skip-ssl-check", false );
+			if( skipSsl ) {
+				ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
+				Options.Set( "skip-ssl-check", false );
+			}
 		}
 		
 		void LoadGuiOptions() {
@@ -198,6 +214,37 @@ namespace ClassicalSharp {
 			if( File.Exists( launcherPath ) ) {
 				window.Icon = Icon.ExtractAssociatedIcon( launcherPath );
 			}
+		}
+		
+		void OnNewMapCore( object sender, EventArgs e ) {
+			foreach( IGameComponent comp in Components )
+				comp.OnNewMap( this );
+		}
+		
+		void OnNewMapLoadedCore( object sender, EventArgs e ) {
+			foreach( IGameComponent comp in Components )
+				comp.OnNewMapLoaded( this );
+		}
+		
+		public T AddComponent<T>( T obj ) where T : IGameComponent {
+			Components.Add( obj );
+			return obj;
+		}
+		
+		public bool ReplaceComponent<T>( ref T old, T obj ) where T : IGameComponent {
+			for( int i = 0; i < Components.Count; i++ ) {
+				if( !object.ReferenceEquals( Components[i], old ) ) continue;
+				old.Dispose(); 
+				
+				Components[i] = obj;
+				old = obj;
+				obj.Init( this );				
+				return true;
+			}
+			
+			Components.Add( obj );
+			obj.Init( this );
+			return false;
 		}
 		
 		public void SetViewDistance( int distance, bool save ) {
@@ -268,10 +315,12 @@ namespace ClassicalSharp {
 		}
 		
 		void Render3D( double delta, float t ) {
+			CurrentCameraPos = Camera.GetCameraPos( LocalPlayer.EyePosition );
+			if( SkyboxRenderer.ShouldRender )
+				SkyboxRenderer.Render( delta );
 			AxisLinesRenderer.Render( delta );
 			Players.RenderModels( Graphics, delta, t );
-			Players.RenderNames( Graphics, delta, t );
-			CurrentCameraPos = Camera.GetCameraPos( LocalPlayer.EyePosition );
+			Players.RenderNames( Graphics, delta, t );		
 			
 			ParticleManager.Render( delta, t );
 			Camera.GetPickedBlock( SelectedPos ); // TODO: only pick when necessary
@@ -328,7 +377,6 @@ namespace ClassicalSharp {
 				Players.Tick( ticksPeriod );
 				ParticleManager.Tick( ticksPeriod );
 				Animations.Tick( ticksPeriod );
-				AudioPlayer.Tick( ticksPeriod );
 				BlockHandRenderer.Tick( ticksPeriod );
 				ticksThisFrame++;
 				ticksAccumulator -= ticksPeriod;
@@ -350,7 +398,7 @@ namespace ClassicalSharp {
 			
 			string timestamp = DateTime.Now.ToString( "dd-MM-yyyy-HH-mm-ss" );
 			string file = "screenshot_" + timestamp + ".png";
-			path = Path.Combine( "screenshots", file );
+			path = Path.Combine( path, file );
 			Graphics.TakeScreenshot( path, ClientSize.Width, ClientSize.Height );
 			Chat.Add( "&eTaken screenshot as: " + file );
 			screenshotRequested = false;
@@ -380,10 +428,10 @@ namespace ClassicalSharp {
 		public void Disconnect( string title, string reason ) {
 			SetNewScreen( new ErrorScreen( this, title, reason ) );
 			World.Reset();
-			World.mapData = null;
+			World.blocks = null;
 			Drawer2D.InitColours();
 			
-			for( int tile = BlockInfo.CpeBlocksCount; tile < BlockInfo.BlocksCount; tile++ )
+			for( int tile = BlockInfo.CpeCount; tile < BlockInfo.BlocksCount; tile++ )
 				BlockInfo.ResetBlockInfo( (byte)tile, false );
 			BlockInfo.SetupCullingCache();
 			BlockInfo.InitLightOffsets();
@@ -476,30 +524,28 @@ namespace ClassicalSharp {
 		
 		public void Dispose() {
 			MapRenderer.Dispose();
-			MapBordersRenderer.Dispose();
-			EnvRenderer.Dispose();
 			SetNewScreen( null );
 			fpsScreen.Dispose();
 			TerrainAtlas.Dispose();
 			TerrainAtlas1D.Dispose();
 			ModelCache.Dispose();
-			ParticleManager.Dispose();
 			Players.Dispose();
+			WorldEvents.OnNewMap -= OnNewMapCore;
+			WorldEvents.OnNewMapLoaded -= OnNewMapLoadedCore;
 			
 			foreach( IGameComponent comp in Components )
 				comp.Dispose();
 			
 			if( activeScreen != null )
 				activeScreen.Dispose();
-			Graphics.DeleteIb( defaultIb );
-			Graphics.Dispose();
+			Graphics.DeleteIb( defaultIb );		
 			Drawer2D.DisposeInstance();
-			Animations.Dispose();
-			Graphics.DeleteTexture( ref CloudsTexId );
-			Graphics.DeleteTexture( ref RainTexId );
-			Graphics.DeleteTexture( ref SnowTexId );
-			Graphics.DeleteTexture( ref GuiTexId );
-			Graphics.DeleteTexture( ref GuiClassicTexId );
+			Graphics.DeleteTexture( ref CloudsTex );
+			Graphics.DeleteTexture( ref GuiTex );
+			Graphics.DeleteTexture( ref GuiClassicTex );
+			Graphics.DeleteTexture( ref IconsTex );
+			Graphics.Dispose();
+			
 			foreach( WarningScreen screen in WarningOverlays )
 				screen.Dispose();
 			
@@ -516,6 +562,26 @@ namespace ClassicalSharp {
 			
 			return !ModifiableLiquids ? false :
 				Inventory.CanPlace[block] && Inventory.CanDelete[block];
+		}
+		
+		
+		/// <summary> Reads a bitmap from the stream (converting it to 32 bits per pixel if necessary),
+		/// and updates the native texture for it. </summary>
+		public void UpdateTexture( ref int texId, byte[] data, bool setSkinType ) {
+			MemoryStream stream = new MemoryStream( data );
+			Graphics.DeleteTexture( ref texId );
+			
+			using( Bitmap bmp = Platform.ReadBmp( stream ) ) {
+				if( setSkinType )
+					DefaultPlayerSkinType = Utils.GetSkinType( bmp );
+				
+				if( !FastBitmap.CheckFormat( bmp.PixelFormat ) ) {
+					using( Bitmap bmp32 = Drawer2D.ConvertTo32Bpp( bmp ) )
+						texId = Graphics.CreateTexture( bmp32 );
+				} else {
+					texId = Graphics.CreateTexture( bmp );
+				}
+			}
 		}
 		
 		public Game( string username, string mppass, string skinServer,

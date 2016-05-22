@@ -2,10 +2,11 @@
 using System;
 using System.Drawing;
 using ClassicalSharp;
+using Launcher.Gui.Widgets;
 using OpenTK;
 using OpenTK.Input;
 
-namespace Launcher {
+namespace Launcher.Gui.Screens {
 	
 	public abstract class LauncherInputScreen : LauncherScreen {
 		
@@ -19,7 +20,6 @@ namespace Launcher {
 		}
 		
 		public override void Init() {
-			buttonFont = titleFont;
 			game.Window.Mouse.Move += MouseMove;
 			game.Window.Mouse.ButtonDown += MouseButtonDown;
 			game.Window.Mouse.WheelChanged += MouseWheelChanged;
@@ -167,36 +167,18 @@ namespace Launcher {
 		protected override void WidgetUnclicked( LauncherWidget widget ) {
 			LauncherInputWidget input = widget as LauncherInputWidget;
 			if( input == null ) return;
-			using( drawer ) {
-				drawer.SetBitmap( game.Framebuffer );
-				input.Active = false;
-				input.Redraw( drawer );
-			}
+			input.Active = false;
+			RedrawWidget( input );
 			lastInput = null;
 			Dirty = true;
 		}
 		
-		protected void MakeInput( string text, int width, Anchor verAnchor, bool password,
-		                         int x, int y, int maxChars, string hint ) {
-			MakeInput( text, width, Anchor.Centre, verAnchor, password, x, y, maxChars, hint );
-		}
-		
-		protected void MakeInput( string text, int width, Anchor horAnchor, Anchor verAnchor,
-		                         bool password, int x, int y, int maxChars, string hint ) {
-			LauncherInputWidget widget;
-			if( widgets[widgetIndex] != null ) {
-				widget = (LauncherInputWidget)widgets[widgetIndex];
-			} else {
-				widget = new LauncherInputWidget( game );
-				widget.OnClick = InputClick;
-				widget.Password = password;
-				widget.MaxTextLength = maxChars;
-				widget.HintText = hint;
-				widgets[widgetIndex] = widget;
+		protected void SetupInputHandlers() {
+			for( int i = 0; i < widgets.Length; i++ ) {
+				if( widgets[i] == null || !(widgets[i] is LauncherInputWidget) )
+					continue;
+				widgets[i].OnClick = InputClick;
 			}
-			
-			widget.SetDrawData( drawer, text, inputFont, inputHintFont, horAnchor, verAnchor, width, 30, x, y );
-			widgetIndex++;
 		}
 		
 		public override void Dispose() {

@@ -2,87 +2,56 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.IO;
 using System.Net;
 using ClassicalSharp;
+using Launcher.Gui.Views;
+using Launcher.Gui.Widgets;
 
-namespace Launcher {
+namespace Launcher.Gui.Screens {
 	
 	public sealed class DirectConnectScreen : LauncherInputScreen {
 		
 		Font booleanFont;
-		const int skinsIndex = 7;
+		DirectConnectView view;
 		public DirectConnectScreen( LauncherWindow game ) : base( game, true ) {
 			booleanFont = new Font( game.FontName, 22, FontStyle.Regular );
 			enterIndex = 3;
-			widgets = new LauncherWidget[8];
+			view = new DirectConnectView( game );
+			widgets = view.widgets;
 		}
 
 		public override void Init() {
 			base.Init();
-			MakeWidgets();
-			RedrawAllButtonBackgrounds();
-			
-			using( drawer ) {
-				drawer.SetBitmap( game.Framebuffer );
-				RedrawAll();
-				LoadSavedInfo();
-			}
-			Dirty = true;
+			view.Init();
+			SetWidgetHandlers();
+			Resize();
 		}
 		
 		public override void Resize() {
-			MakeWidgets();
-			RedrawAllButtonBackgrounds();
-			
-			using( drawer ) {
-				drawer.SetBitmap( game.Framebuffer );			
-				RedrawAll();
-			}
+			view.DrawAll();
 			Dirty = true;
 		}
 		
-		void MakeWidgets() {
-			widgetIndex = 0;
-			
-			MakeInput( Get(), 330, Anchor.Centre, false, 0, -100, 32, "&7Username.." );
-			MakeInput( Get(), 330, Anchor.Centre, false, 0, -50, 64, "&7IP address:Port number.." );
-			MakeInput( Get(), 330, Anchor.Centre, false, 0, 0, 32, "&7Mppass.." );
-			
-			MakeButtonAt( "Connect", 110, 35, titleFont, Anchor.Centre, -110, 50, StartClient );
-			MakeButtonAt( "Back", 80, 35, titleFont, Anchor.Centre,
-			             125, 50, (x, y) => game.SetScreen( new MainScreen( game ) ) );
-			MakeLabelAt( "", titleFont, Anchor.Centre, Anchor.Centre, 0, 100 );
-			MakeLabelAt( "Use classicube.net for skins", inputFont, Anchor.Centre, Anchor.Centre, 30, 130 );
-			MakeBooleanAt( Anchor.Centre, Anchor.Centre, booleanFont, true,
-			              30, 30, -110, 130, UseClassicubeSkinsClick );
+		void SetWidgetHandlers() {
+			widgets[view.backIndex].OnClick =
+				(x, y) => game.SetScreen( new MainScreen( game ) );
+			widgets[view.connectIndex].OnClick = StartClient;
+			widgets[view.ccSkinsIndex].OnClick = UseClassicubeSkinsClick;			
+			SetupInputHandlers();
+			LoadSavedInfo();
 		}
 		
 		void SetStatus( string text ) {
 			LauncherLabelWidget widget = (LauncherLabelWidget)widgets[5];
 			game.ClearArea( widget.X, widget.Y, widget.Width, widget.Height );
-			
-			using( drawer ) {
-				drawer.SetBitmap( game.Framebuffer );
-				widget.SetDrawData( drawer, text, inputFont, Anchor.Centre, Anchor.Centre, 0, 100 );
-				widget.Redraw( drawer );
-				Dirty = true;
-			}
+			widget.SetDrawData( drawer, text, inputFont, Anchor.Centre, Anchor.Centre, 0, 100 );
+			RedrawWidget( widget );
 		}
 		
 		void UseClassicubeSkinsClick( int mouseX, int mouseY ) {
-			using( drawer ) {
-				game.Drawer.SetBitmap( game.Framebuffer );
-				LauncherBooleanWidget widget = (LauncherBooleanWidget)widgets[skinsIndex];
-				SetBool( !widget.Value );
-			}
-		}
-		
-		void SetBool( bool value ) {
-			LauncherBooleanWidget widget = (LauncherBooleanWidget)widgets[skinsIndex];
-			widget.Value = value;
-			widget.Redraw( game.Drawer );
-			Dirty = true;
+			LauncherBoolWidget widget = (LauncherBoolWidget)widgets[view.ccSkinsIndex];
+			widget.Value = !widget.Value;
+			RedrawWidget( widget );
 		}
 		
 		public override void Dispose() {
@@ -95,9 +64,9 @@ namespace Launcher {
 			Dictionary<string, object> metadata;
 			// restore what user last typed into the various fields
 			if( game.ScreenMetadata.TryGetValue( "screen-DC", out metadata ) ) {
-				Set( 0, (string)metadata["user"] );
-				Set( 1, (string)metadata["address"] );
-				Set( 2, (string)metadata["mppass"] );
+				SetText( 0, (string)metadata["user"] );
+				SetText( 1, (string)metadata["address"] );
+				SetText( 2, (string)metadata["mppass"] );
 				SetBool( (bool)metadata["skins"] );
 			} else {
 				LoadFromOptions();
@@ -114,12 +83,11 @@ namespace Launcher {
 			metadata["user"] = Get( 0 );
 			metadata["address"] = Get( 1 );
 			metadata["mppass"] = Get( 2 );
-			metadata["skins"] = ((LauncherBooleanWidget)widgets[skinsIndex]).Value;
+			metadata["skins"] = ((LauncherBoolWidget)widgets[view.ccSkinsIndex]).Value;
 		}
 		
 		void LoadFromOptions() {
-			if( !Options.Load() )
-				return;
+			if( !Options.Load() ) return;
 			
 			string user = Options.Get( "launcher-dc-username" ) ?? "";
 			string ip = Options.Get( "launcher-dc-ip" ) ?? "127.0.0.1";
@@ -134,9 +102,9 @@ namespace Launcher {
 			string mppass = Options.Get( "launcher-dc-mppass" );
 			mppass = Secure.Decode( mppass, user );
 			
-			Set( 0, user );
-			Set( 1, ip + ":" + port );
-			Set( 2, mppass );
+			SetText( 0, user );
+			SetText( 1, ip + ":" + port );
+			SetText( 2, mppass );
 			SetBool( ccSkins );
 		}
 		
@@ -152,6 +120,14 @@ namespace Launcher {
 			Options.Save();
 		}
 		
+		void SetText( int index, string text ) {
+			((LauncherInputWidget)widgets[index]).SetDrawData( drawer, text );
+		}
+		
+		void SetBool( bool value ) {
+			((LauncherBoolWidget)widgets[view.ccSkinsIndex]).Value = value;
+		}
+		
 		void StartClient( int mouseX, int mouseY ) {
 			string address = Get( 1 );
 			int index = address.LastIndexOf( ':' );
@@ -164,7 +140,7 @@ namespace Launcher {
 			ClientStartData data = GetStartData( Get( 0 ), Get( 2 ), ipPart, portPart );
 			if( data == null ) return;
 			
-			bool ccSkins = ((LauncherBooleanWidget)widgets[skinsIndex]).Value;
+			bool ccSkins = ((LauncherBoolWidget)widgets[view.ccSkinsIndex]).Value;
 			SaveToOptions( data, ccSkins );
 			Client.Start( data, ccSkins, ref game.ShouldExit );
 		}

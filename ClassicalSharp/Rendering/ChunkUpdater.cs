@@ -27,13 +27,8 @@ namespace ClassicalSharp.Renderers {
 			this.renderer = renderer;
 			info = game.BlockInfo;
 			
-			renderer._1DUsed = game.TerrainAtlas1D.CalcMaxUsedRow( game.TerrainAtlas, info );
-			renderer.totalUsed = new int[game.TerrainAtlas1D.TexIds.Length];
-			RecalcBooleans( true );
-			
 			builder = new ChunkMeshBuilder( game );
 			api = game.Graphics;
-			elementsPerBitmap = game.TerrainAtlas1D.elementsPerBitmap;
 			
 			game.Events.TerrainAtlasChanged += TerrainAtlasChanged;
 			game.WorldEvents.OnNewMap += OnNewMap;
@@ -60,10 +55,10 @@ namespace ClassicalSharp.Renderers {
 		
 		public void Refresh() {
 			chunkPos = new Vector3I( int.MaxValue );
-			renderer.totalUsed = new int[game.TerrainAtlas1D.TexIds.Length];			
-			if( renderer.chunks == null || game.World.IsNotLoaded ) return;			
+			renderer.totalUsed = new int[game.TerrainAtlas1D.TexIds.Length];
+			if( renderer.chunks == null || game.World.IsNotLoaded ) return;
 			ClearChunkCache();
-			CreateChunkCache();
+			ResetChunkCache();
 		}
 		
 		void RefreshBorders( int clipLevel ) {
@@ -87,17 +82,21 @@ namespace ClassicalSharp.Renderers {
 				Refresh();
 			} else if( e.Var == EnvVar.EdgeLevel ) {
 				int oldClip = builder.clipLevel;
-				builder.clipLevel = Math.Max( 0, game.World.SidesHeight );
+				builder.clipLevel = Math.Max( 0, game.World.Env.SidesHeight );
 				RefreshBorders( Math.Max( oldClip, builder.clipLevel ) );
 			}
 		}
 
 		void TerrainAtlasChanged( object sender, EventArgs e ) {
-			bool refreshRequired = elementsPerBitmap != game.TerrainAtlas1D.elementsPerBitmap;
-			elementsPerBitmap = game.TerrainAtlas1D.elementsPerBitmap;
-			renderer._1DUsed = game.TerrainAtlas1D.CalcMaxUsedRow( game.TerrainAtlas, info );
+			if( renderer._1DUsed == -1 ) {				
+				renderer.totalUsed = new int[game.TerrainAtlas1D.TexIds.Length];
+			} else {
+				bool refreshRequired = elementsPerBitmap != game.TerrainAtlas1D.elementsPerBitmap;
+				if( refreshRequired ) Refresh();
+			}
 			
-			if( refreshRequired ) Refresh();
+			renderer._1DUsed = game.TerrainAtlas1D.CalcMaxUsedRow( game.TerrainAtlas, info );
+			elementsPerBitmap = game.TerrainAtlas1D.elementsPerBitmap;			
 			RecalcBooleans( true );
 		}
 		
@@ -139,9 +138,9 @@ namespace ClassicalSharp.Renderers {
 			}
 			
 			for( int i = 0; i < used; i++ ) {
-				renderer.pendingTranslucent[i] = true; 
+				renderer.pendingTranslucent[i] = true;
 				renderer.usedTranslucent[i] = false;
-				renderer.pendingNormal[i] = true; 
+				renderer.pendingNormal[i] = true;
 				renderer.usedNormal[i] = false;
 			}
 		}
@@ -163,6 +162,30 @@ namespace ClassicalSharp.Renderers {
 			lastCamPos = new Vector3( float.MaxValue );
 			lastYaw = float.MaxValue;
 			lastPitch = float.MaxValue;
+		}
+		
+		void CreateChunkCache() {
+			int index = 0;
+			for( int z = 0; z < length; z += 16 )
+				for( int y = 0; y < height; y += 16 )
+					for( int x = 0; x < width; x += 16 )
+			{
+				renderer.chunks[index] = new ChunkInfo( x, y, z );
+				renderer.unsortedChunks[index] = renderer.chunks[index];
+				index++;
+			}
+		}
+		
+		void ResetChunkCache() {
+			int index = 0;
+			for( int z = 0; z < length; z += 16 )
+				for( int y = 0; y < height; y += 16 )
+					for( int x = 0; x < width; x += 16 )
+			{
+				renderer.chunks[index].Reset( x, y, z );
+				renderer.unsortedChunks[index] = renderer.chunks[index];
+				index++;
+			}
 		}
 		
 		void ClearChunkCache() {
@@ -189,18 +212,6 @@ namespace ClassicalSharp.Renderers {
 			for( int i = 0; i < parts.Length; i++ )
 				api.DeleteVb( parts[i].VbId );
 			parts = null;
-		}
-		
-		void CreateChunkCache() {
-			int index = 0;
-			for( int z = 0; z < length; z += 16 )
-				for( int y = 0; y < height; y += 16 )
-					for( int x = 0; x < width; x += 16 )
-			{
-				renderer.chunks[index] = new ChunkInfo( x, y, z );
-				renderer.unsortedChunks[index] = renderer.chunks[index];
-				index++;
-			}
 		}
 		
 		static int NextMultipleOf16( int value ) {

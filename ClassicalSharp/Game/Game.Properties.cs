@@ -25,11 +25,20 @@ namespace ClassicalSharp {
 	/// <summary> Represents a game component. </summary>
 	public interface IGameComponent : IDisposable {
 		
-		/// <summary> Called when the game has loaded. </summary>
+		/// <summary> Called when the game is being loaded. </summary>
 		void Init( Game game );
 		
-		/// <summary> Called to reset the state when the user is reconnecting to a server. </summary>
+		/// <summary> Called when the texture pack has been loaded and all components have been initalised. </summary>
+		void Ready( Game game );
+		
+		/// <summary> Called to reset the component's state when the user is reconnecting to a server. </summary>
 		void Reset( Game game );
+		
+		/// <summary> Called to update the component's state when the user begins loading a new map. </summary>
+		void OnNewMap( Game game );
+		
+		/// <summary> Called to update the component's state when the user has finished loading a new map. </summary>
+		void OnNewMapLoaded( Game game );
 	}
 	
 	public partial class Game {
@@ -96,15 +105,20 @@ namespace ClassicalSharp {
 		public OtherEvents Events = new OtherEvents();
 		public EntityEvents EntityEvents = new EntityEvents();
 		public WorldEvents WorldEvents = new WorldEvents();
+		public UserEvents UserEvents = new UserEvents();
 		public InputHandler InputHandler;
 		public Chat Chat;
 		public BlockHandRenderer BlockHandRenderer;
 		public AudioPlayer AudioPlayer;
 		public AxisLinesRenderer AxisLinesRenderer;
+		public SkyboxRenderer SkyboxRenderer;
 		
 		public List<IGameComponent> Components = new List<IGameComponent>();
 		
 		public List<WarningScreen> WarningOverlays = new List<WarningScreen>();
+		
+		/// <summary> Whether x to stone brick tiles should be used. </summary>
+		public bool UseCPEBlocks = false;
 		
 		/// <summary> Account username of the player. </summary>
 		public string Username;
@@ -164,9 +178,12 @@ namespace ClassicalSharp {
 		public Vector3 CurrentCameraPos;
 		
 		public Animations Animations;
-		internal int CloudsTexId, RainTexId, SnowTexId, GuiTexId, GuiClassicTexId;
+		internal int CloudsTex, GuiTex, GuiClassicTex, IconsTex;
 		internal bool screenshotRequested;
-		internal UrlsList AcceptedUrls = new UrlsList( "acceptedurls.txt" ), DeniedUrls = new UrlsList( "deniedurls.txt" );
+		internal EntryList AcceptedUrls = new EntryList( "acceptedurls.txt" ); 
+		internal EntryList DeniedUrls = new EntryList( "deniedurls.txt" );
+		internal EntryList ETags = new EntryList( "etags.txt" );
+		
 		
 		/// <summary> Calculates the amount that the hotbar widget should be scaled by when rendered. </summary>
 		/// <remarks> Affected by both the current resolution of the window, as well as the
@@ -185,7 +202,9 @@ namespace ClassicalSharp {
 		
 		float MinWindowScale { get { return Math.Min( Width / 640f, Height / 480f ); } }
 		
-		float Scale( float value ) { return (float)Math.Round( value * 10, MidpointRounding.AwayFromZero ) / 10; }
+		public float Scale( float value ) { 
+			return (float)Math.Round( value * 10, MidpointRounding.AwayFromZero ) / 10; 
+		}
 		
 		string defTexturePack = "default.zip";
 		/// <summary> Gets or sets the path of the default texture pack that should be used by the client. </summary>

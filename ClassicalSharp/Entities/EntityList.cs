@@ -98,7 +98,7 @@ namespace ClassicalSharp.Entities {
 		}
 		
 		void TextureChanged( object sender, TextureEventArgs e ) {
-			if( e.Texture != "char" ) return;
+			if( e.Name != "char.png" ) return;
 			for( int i = 0; i < Players.Length; i++ ) {
 				if( Players[i] == null || Players[i].TextureId != -1 ) continue;
 				Players[i].SkinType = game.DefaultPlayerSkinType;				
@@ -120,6 +120,8 @@ namespace ClassicalSharp.Entities {
 			}
 			game.Events.ChatFontChanged -= ChatFontChanged;
 			game.Events.TextureChanged -= TextureChanged;
+			if( ShadowComponent.shadowTex > 0 )
+				game.Graphics.DeleteTexture( ref ShadowComponent.shadowTex );
 		}
 		
 		public byte GetClosetPlayer( Player src ) {

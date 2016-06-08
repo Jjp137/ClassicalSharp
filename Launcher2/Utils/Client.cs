@@ -29,32 +29,42 @@ namespace Launcher {
 		
 		static bool StartImpl( ClientStartData data, bool classicubeSkins,
 		                      string args, ref bool shouldExit ) {
-			Process process = null;
 			string path = Path.Combine( Program.AppDirectory, "ClassicalSharp.exe" );
 			if( !File.Exists( path ) )
 				return false;
 			
 			CheckSettings( data, classicubeSkins, out shouldExit );
-			if( Configuration.RunningOnMono ) {
-				// We also need to handle the case of running Mono through wine
-				if( Configuration.RunningOnWindows ) {
-					try {
-						process = Process.Start( "mono", "\"" + path + "\" " + args );
-					} catch( Win32Exception ex ) {
-						if( !((uint)ex.ErrorCode == 0x80070002 || (uint)ex.ErrorCode == 0x80004005) )
-							throw; // File not found HRESULT, HRESULT thrown when running on wine
-						process = Process.Start( path, args );
-					}
-				} else {
-					process = Process.Start( "mono", "\"" + path + "\" " + args );
-				}			
-			} else {
-				process = Process.Start( path, args );
+			try {
+				StartProcess( path, args );
+			} catch( Win32Exception ex ) {
+				if( (uint)ex.ErrorCode != 0x80004005 )
+					throw; // HRESULT when user clicks 'cancel' to 'are you sure you want to run ClassicalSharp.exe'
+				shouldExit = false;
+				return false;
 			}
 			return true;
 		}
 		
-		internal static void CheckSettings( ClientStartData data, bool classiCubeSkins, out bool shouldExit ) {
+		static void StartProcess( string path, string args ) {
+			if( Configuration.RunningOnMono ) {
+				// We also need to handle the case of running Mono through wine
+				if( Configuration.RunningOnWindows ) {
+					try {
+						Process.Start( "mono", "\"" + path + "\" " + args );
+					} catch( Win32Exception ex ) {
+						if( !((uint)ex.ErrorCode == 0x80070002 || (uint)ex.ErrorCode == 0x80004005) )
+							throw; // File not found HRESULT, HRESULT thrown when running on wine
+						Process.Start( path, args );
+					}
+				} else {
+					Process.Start( "mono", "\"" + path + "\" " + args );
+				}			
+			} else {
+				Process.Start( path, args );
+			}
+		}
+		
+		internal static void CheckSettings( ClientStartData data, bool ccSkins, out bool shouldExit ) {
 			shouldExit = false;
 			// Make sure if the client has changed some settings in the meantime, we keep the changes
 			if( !Options.Load() )
@@ -62,12 +72,23 @@ namespace Launcher {
 			shouldExit = Options.GetBool( OptionsKey.AutoCloseLauncher, false );
 			if( data == null ) return;
 			
-			Options.Set( "launcher-username", data.RealUsername );
+			Options.Set( "launcher-username", data.Username );
 			Options.Set( "launcher-ip", data.Ip );
 			Options.Set( "launcher-port", data.Port );
-			Options.Set( "launcher-mppass", Secure.Encode( data.Mppass, data.RealUsername ) );
-			Options.Set( "launcher-ccskins", classiCubeSkins );		
+			Options.Set( "launcher-mppass", Secure.Encode( data.Mppass, data.Username ) );
+			Options.Set( "launcher-ccskins", ccSkins );		
 			Options.Save();
+		}
+	}
+	
+	public class ClientStartData {
+		public string Username, Mppass, Ip, Port;
+		
+		public ClientStartData( string user, string mppass, string ip, string port ) {
+			Username = user;
+			Mppass = mppass;
+			Ip = ip;
+			Port = port;
 		}
 	}
 }

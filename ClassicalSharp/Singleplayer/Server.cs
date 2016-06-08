@@ -20,13 +20,14 @@ namespace ClassicalSharp.Singleplayer {
 		public SinglePlayerServer( Game window ) {
 			game = window;
 			physics = new Physics( game );
-			ServerSupportsFullCP437 = true;
+			ServerSupportsFullCP437 = !game.ClassicMode;
 			ServerSupportsPartialMessages = true;
 		}
 		
 		public override bool IsSinglePlayer { get { return true; } }
 		
 		public override void Connect( IPAddress address, int port ) {
+			game.Chat.SetLogName( "Singleplayer" );
 			game.UseCPEBlocks = game.UseCPE;
 			int max = game.UseCPEBlocks ? BlockInfo.MaxCpeBlock : BlockInfo.MaxOriginalBlock;
 			for( int i = 1; i <= max; i++ ) {

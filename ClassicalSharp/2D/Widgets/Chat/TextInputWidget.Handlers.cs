@@ -57,14 +57,11 @@ namespace ClassicalSharp.Gui {
 			List<string> matches = new List<string>();
 			game.Chat.Add( null, MessageType.ClientStatus5 );
 			
-			bool extList = game.Network.UsingExtPlayerList;
-			CpeListInfo[] info = game.CpePlayersList;
-			Player[] players = game.Players.Players;
+			TabListEntry[] entries = game.TabList.Entries;
 			for( int i = 0; i < EntityList.MaxCount; i++ ) {
-				if( extList && info[i] == null ) continue;
-				if( !extList && players[i] == null ) continue;
+				if( entries[i] == null ) continue;
 				
-				string rawName = extList ? info[i].PlayerName : players[i].DisplayName;
+				string rawName = entries[i].PlayerName;
 				string name = Utils.StripColours( rawName );
 				if( name.StartsWith( part, StringComparison.OrdinalIgnoreCase ) )
 					matches.Add( name );
@@ -292,12 +289,18 @@ namespace ClassicalSharp.Gui {
 		public override bool HandlesMouseClick( int mouseX, int mouseY, MouseButton button ) {
 			if( altText.Active && altText.Bounds.Contains( mouseX, mouseY ) ) {
 				altText.HandlesMouseClick( mouseX, mouseY, button );
-				altText.texture.Y1 = game.Height - (YOffset + Height + altText.texture.Height);
-				altText.Y = altText.texture.Y1;
+				UpdateAltTextY();
 			} else if( button == MouseButton.Left ) {
 				SetCaretToCursor( mouseX, mouseY );
 			}
 			return true;
+		}
+		
+		void UpdateAltTextY() {
+			int blockSize = (int)(23 * 2 * game.GuiHotbarScale);
+			int height = Math.Max( Height + YOffset, blockSize ) + YOffset;
+			altText.texture.Y1 = game.Height - (height + altText.texture.Height);
+			altText.Y = altText.texture.Y1;
 		}
 		
 		unsafe void SetCaretToCursor( int mouseX, int mouseY ) {

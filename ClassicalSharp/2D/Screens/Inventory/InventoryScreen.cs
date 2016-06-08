@@ -28,19 +28,31 @@ namespace ClassicalSharp.Gui {
 		
 		int TableX { get { return startX - 5 - 10; } }
 		int TableY { get { return startY - 5 - 30; } }
-		int TableWidth { get { return blocksPerRow * blockSize + 10 + 10; } }
-		int TableHeight { get { return Math.Min( rows, maxRows ) * blockSize + 10 + 30; } }
+		int TableWidth { get { return blocksPerRow * blockSize + 10 + 20; } }
+		int TableHeight { get { return Math.Min( rows, maxRows ) * blockSize + 10 + 40; } }
 		
-		static FastColour normBackCol = new FastColour( 30, 30, 30, 200 );
-		static FastColour classicBackCol = new FastColour( 48, 48, 96, 192 );
+		// These were sourced by taking a screenshot of vanilla
+		// Then using paint to extract the colour components
+		// Then using wolfram alpha to solve the glblendfunc equation
+		static FastColour topCol = new FastColour( 34, 34, 34, 168 );
+		static FastColour bottomCol = new FastColour( 57, 57, 104, 202 );
+		static FastColour topSelCol = new FastColour( 255, 255, 255, 142 );
+		static FastColour bottomSelCol = new FastColour( 255, 255, 255, 192 );
+		
 		static VertexP3fT2fC4b[] vertices = new VertexP3fT2fC4b[8 * 10 * (4 * 4)];
 		int vb;
-		
 		public override void Render( double delta ) {
-			FastColour backCol = game.ClassicMode ? classicBackCol : normBackCol;
-			api.Draw2DQuad( TableX, TableY, TableWidth, TableHeight, backCol );
+			api.Draw2DQuad( TableX, TableY, TableWidth, TableHeight, topCol, bottomCol );
 			if( rows > maxRows )
 				DrawScrollbar();
+			
+			if( selIndex != -1 && game.ClassicMode ) {
+				int x, y;
+				GetCoords( selIndex, out x, out y );
+				float off = blockSize * 0.1f;
+				api.Draw2DQuad( x - off, y - off, blockSize + off * 2, 
+				               blockSize + off * 2, topSelCol, bottomSelCol );
+			}
 			api.Texturing = true;
 			api.SetBatchFormat( VertexFormat.P3fT2fC4b );
 			
@@ -150,11 +162,11 @@ namespace ClassicalSharp.Gui {
 			buffer.Append( ref index, value );
 			if( game.ClassicMode ) return;
 			
-			buffer.Append( ref index, " (ID: " );
+			buffer.Append( ref index, " (ID " );
 			buffer.AppendNum( ref index, (byte)block );
-			buffer.Append( ref index, ", place: " );
+			buffer.Append( ref index, "&f, place " );
 			buffer.Append( ref index, game.Inventory.CanPlace[(int)block] ? "&aYes" : "&cNo" );
-			buffer.Append( ref index, "&f, delete: " );
+			buffer.Append( ref index, "&f, delete " );
 			buffer.Append( ref index, game.Inventory.CanDelete[(int)block] ? "&aYes" : "&cNo" );
 			buffer.Append( ref index, "&f)" );
 		}
@@ -202,8 +214,7 @@ namespace ClassicalSharp.Gui {
 		}
 		
 		bool Show( Block block ) {
-			bool hackBlocks = !game.ClassicMode || game.ClassicHacks;
-			if( !hackBlocks && IsHackBlock( block ) )
+			if( game.PureClassic && IsHackBlock( block ) )
 				return false;
 			int count = game.UseCPEBlocks ? BlockInfo.CpeCount : BlockInfo.OriginalCount;
 			return (byte)block < count || game.BlockInfo.Name[(byte)block] != "Invalid";

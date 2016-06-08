@@ -79,8 +79,6 @@ namespace ClassicalSharp.Network {
 				game.Disconnect( "&eLost connection to the server", "I/O error when reading packets" );
 				Dispose();
 				return;
-			} catch {
-				throw;
 			}
 			
 			while( (reader.size - reader.index) > 0 ) {
@@ -129,11 +127,8 @@ namespace ClassicalSharp.Network {
 			}
 			try {
 				writer.Send();
-			} catch( IOException ex ) {
-				// NOTE: Not immediately disconnecting, because it means we miss out on kick messages sometimes.
-				//ErrorHandler.LogError( "writing packets", ex );
-				//game.Disconnect( "&eLost connection to the server", "I/O Error while writing packets" );
-				//Dispose();
+			} catch( IOException ) {
+				// NOTE: Not immediately disconnecting, as otherwise we sometimes miss out on kick messages
 				writer.index = 0;
 			}
 		}
@@ -220,13 +215,8 @@ namespace ClassicalSharp.Network {
 		
 		void OnNewMap( object sender, EventArgs e ) {
 			// wipe all existing entity states
-			for( int i = 0; i < 256; i++ ) {
-				if( game.CpePlayersList[i] != null ) {
-					game.EntityEvents.RaiseCpeListInfoRemoved( (byte)i );
-					game.CpePlayersList[i] = null;
-				}
+			for( int i = 0; i < 256; i++ )
 				RemoveEntity( (byte)i );
-			}
 		}
 		
 		double testAcc = 0;
@@ -237,7 +227,7 @@ namespace ClassicalSharp.Network {
 			
 			if( !socket.Connected || (socket.Poll( 1000, SelectMode.SelectRead ) && socket.Available == 0 ) ) {
 				game.Disconnect( "&eDisconnected from the server",
-				                "I/O connection timed out." );
+				                "Connection timed out" );
 				Dispose();
 			}
 		}

@@ -258,11 +258,22 @@ namespace ClassicalSharp.GraphicsAPI {
 		
 		internal VertexP3fC4b[] quadVerts = new VertexP3fC4b[4];
 		internal int quadVb;
-		public virtual void Draw2DQuad( float x, float y, float width, float height, FastColour col ) {
+		public virtual void Draw2DQuad( float x, float y, float width, float height, 
+		                               FastColour col ) {
 			quadVerts[0] = new VertexP3fC4b( x, y, 0, col );
 			quadVerts[1] = new VertexP3fC4b( x + width, y, 0, col );
 			quadVerts[2] = new VertexP3fC4b( x + width, y + height, 0, col );
 			quadVerts[3] = new VertexP3fC4b( x, y + height, 0, col );
+			SetBatchFormat( VertexFormat.P3fC4b );
+			UpdateDynamicIndexedVb( DrawMode.Triangles, quadVb, quadVerts, 4, 6 );
+		}
+		
+		public virtual void Draw2DQuad( float x, float y, float width, float height, 
+		                               FastColour topCol, FastColour bottomCol ) {
+			quadVerts[0] = new VertexP3fC4b( x, y, 0, topCol );
+			quadVerts[1] = new VertexP3fC4b( x + width, y, 0, topCol );
+			quadVerts[2] = new VertexP3fC4b( x + width, y + height, 0, bottomCol );
+			quadVerts[3] = new VertexP3fC4b( x, y + height, 0, bottomCol );
 			SetBatchFormat( VertexFormat.P3fC4b );
 			UpdateDynamicIndexedVb( DrawMode.Triangles, quadVb, quadVerts, 4, 6 );
 		}
@@ -338,13 +349,13 @@ namespace ClassicalSharp.GraphicsAPI {
 			IntPtr ptr = (IntPtr)indices;
 			
 			for( int i = 0; i < maxIndices; i += 6 ) {
-				*indices++ = (ushort)(element + 0);
-				*indices++ = (ushort)(element + 1);
-				*indices++ = (ushort)(element + 2);
+				*indices = (ushort)(element + 0); indices++;
+				*indices = (ushort)(element + 1); indices++;
+				*indices = (ushort)(element + 2); indices++;
 				
-				*indices++ = (ushort)(element + 2);
-				*indices++ = (ushort)(element + 3);
-				*indices++ = (ushort)(element + 0);
+				*indices = (ushort)(element + 2); indices++;
+				*indices = (ushort)(element + 3); indices++;
+				*indices = (ushort)(element + 0); indices++;
 				element += 4;
 			}
 			return CreateIb( ptr, maxIndices );

@@ -14,7 +14,7 @@ namespace ClassicalSharp.Generator {
 	
 	public sealed class ImprovedNoise : Noise {
 		
-		public ImprovedNoise( Random rnd ) {
+		public ImprovedNoise( JavaRandom rnd ) {
 			// shuffle randomly using fisher-yates		
 			for( int i = 0; i < 256; i++ )
 				p[i] = (byte)i;
@@ -59,7 +59,7 @@ namespace ClassicalSharp.Generator {
 	public sealed class OctaveNoise : Noise {
 		
 		readonly ImprovedNoise[] baseNoise;
-		public OctaveNoise( int octaves, Random rnd ) {
+		public OctaveNoise( int octaves, JavaRandom rnd ) {
 			baseNoise = new ImprovedNoise[octaves];
 			for( int i = 0; i < octaves; i++ )
 				baseNoise[i] = new ImprovedNoise( rnd );

@@ -106,10 +106,8 @@ namespace ClassicalSharp {
 			map[(byte)Block.Gold] = Block.CoalOre;
 			map[(byte)Block.Iron] = Block.IronOre;
 			// Fifth row
-			if( game.ClassicHacks )
-				map[(byte)Block.DoubleSlab] = Block.GoldOre;
-			map[(byte)Block.Slab] = game.ClassicHacks ? 
-				Block.DoubleSlab : Block.GoldOre;
+			if( !game.PureClassic ) map[(byte)Block.DoubleSlab] = Block.GoldOre;
+			map[(byte)Block.Slab] = game.PureClassic ? Block.GoldOre : Block.DoubleSlab;
 			map[(byte)Block.Brick] = Block.Iron;
 			map[(byte)Block.TNT] = Block.Gold;
 			map[(byte)Block.MossyRocks] = Block.TNT;

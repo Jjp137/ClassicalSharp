@@ -13,10 +13,10 @@ namespace ClassicalSharp.Gui {
 		float ScrollbarScale { get { return TableHeight / (float)rows; } }
 		
 		void DrawScrollbar() {
-			api.Draw2DQuad( TableX, TableY, scrollbarWidth, TableHeight, scrollCol );
+			api.Draw2DQuad( TableX - scrollbarWidth, TableY, scrollbarWidth, TableHeight, scrollCol );
 			int y, height;
 			GetScrollbarCoords( out y, out height );
-			api.Draw2DQuad( TableX, TableY + y, scrollbarWidth, height, scrollUsedCol );
+			api.Draw2DQuad( TableX - scrollbarWidth, TableY + y, scrollbarWidth, height, scrollUsedCol );
 		}
 		
 		void GetScrollbarCoords( out int y, out int height ) {
@@ -27,8 +27,8 @@ namespace ClassicalSharp.Gui {
 		}
 		
 		public override bool HandlesMouseScroll( int delta ) {
-			bool bounds = Contains( TableX, TableY, TableWidth, TableHeight,
-			                       game.Mouse.X, game.Mouse.Y );
+			bool bounds = Contains( TableX - scrollbarWidth, TableY, TableWidth + scrollbarWidth, 
+			                       TableHeight, game.Mouse.X, game.Mouse.Y );
 			bool hotbar = game.IsKeyDown( Key.AltLeft ) || game.IsKeyDown( Key.AltRight );
 			if( !bounds || hotbar ) return false;
 			

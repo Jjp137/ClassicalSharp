@@ -10,7 +10,7 @@ namespace ClassicalSharp {
 	
 	internal static class Program {
 		
-		public const string AppName = "ClassicalSharp 0.99.0";
+		public const string AppName = "ClassicalSharp 0.99.1";
 		
 		public static string AppDirectory;
 		
@@ -124,6 +124,7 @@ namespace ClassicalSharp {
 			string texPath = Path.Combine( Program.AppDirectory, TexturePackExtractor.Dir );
 			if( !Directory.Exists( texPath ) )
 				Directory.CreateDirectory( texPath );
+			
 			CopyFiles( "*.cw", mapPath );
 			CopyFiles( "*.dat", mapPath );
 			CopyFiles( "*.zip", texPath );
@@ -134,13 +135,13 @@ namespace ClassicalSharp {
 			for( int i = 0; i < files.Length; i++ ) {
 				string name = Path.GetFileName( files[i] );
 				string dst = Path.Combine( folder, name );
-				if( File.Exists( dst ) ) 
-					continue;
+				if( File.Exists( dst ) )  continue;
 				
 				try {
 					File.Copy( files[i], dst );
 					File.Delete( files[i] );
 				} catch( IOException ex ) {
+					ErrorHandler.LogError( "Program.CopyFiles()", ex );
 				}
 			}
 		}

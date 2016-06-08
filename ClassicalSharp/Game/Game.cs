@@ -61,13 +61,14 @@ namespace ClassicalSharp {
 			Graphics.MakeGraphicsInfo();
 			
 			Options.Load();			
-			Players = new EntityList( this );
+			Entities = new EntityList( this );
 			AcceptedUrls.Load(); 
 			DeniedUrls.Load();
 			ETags.Load();
 			InputHandler = new InputHandler( this );
 			defaultIb = Graphics.MakeDefaultIb();
 			ParticleManager = AddComponent( new ParticleManager() );
+			TabList = AddComponent( new TabList() );
 			LoadOptions();
 			LoadGuiOptions();
 			Chat = AddComponent( new Chat() );
@@ -81,6 +82,7 @@ namespace ClassicalSharp {
 			AsyncDownloader = AddComponent( new AsyncDownloader() );
 			Drawer2D = new GdiPlusDrawer2D( Graphics );
 			Drawer2D.UseBitmappedChat = ClassicMode || !Options.GetBool( OptionsKey.ArialChatFont, false );
+			Drawer2D.BlackTextShadows = Options.GetBool( OptionsKey.BlackTextShadows, false );
 			
 			TerrainAtlas1D = new TerrainAtlas1D( Graphics );
 			TerrainAtlas = new TerrainAtlas2D( Graphics, Drawer2D );
@@ -90,7 +92,7 @@ namespace ClassicalSharp {
 			BlockInfo.SetDefaultBlockPermissions( Inventory.CanPlace, Inventory.CanDelete );
 			World = new World( this );
 			LocalPlayer = new LocalPlayer( this );
-			Players[255] = LocalPlayer;
+			Entities[255] = LocalPlayer;
 			width = Width;
 			height = Height;
 			MapRenderer = new MapRenderer( this );
@@ -147,7 +149,7 @@ namespace ClassicalSharp {
 			TexturePackExtractor extractor = new TexturePackExtractor();
 			extractor.Extract( "default.zip", this );
 			// in case the user's default texture pack doesn't have all required textures
-			if( defTexturePack != "default.zip" )
+			if( DefaultTexturePack != "default.zip" )
 				extractor.Extract( DefaultTexturePack, this );
 		}
 		
@@ -319,8 +321,8 @@ namespace ClassicalSharp {
 			if( SkyboxRenderer.ShouldRender )
 				SkyboxRenderer.Render( delta );
 			AxisLinesRenderer.Render( delta );
-			Players.RenderModels( Graphics, delta, t );
-			Players.RenderNames( Graphics, delta, t );		
+			Entities.RenderModels( Graphics, delta, t );
+			Entities.RenderNames( Graphics, delta, t );		
 			
 			ParticleManager.Render( delta, t );
 			Camera.GetPickedBlock( SelectedPos ); // TODO: only pick when necessary
@@ -329,7 +331,7 @@ namespace ClassicalSharp {
 				Picking.Render( delta, SelectedPos );
 			MapRenderer.Render( delta );
 			SelectionManager.Render( delta );
-			Players.RenderHoveredNames( Graphics, delta, t );
+			Entities.RenderHoveredNames( Graphics, delta, t );
 			
 			bool left = IsMousePressed( MouseButton.Left );
 			bool middle = IsMousePressed( MouseButton.Middle );
@@ -374,7 +376,7 @@ namespace ClassicalSharp {
 			int ticksThisFrame = 0;
 			while( ticksAccumulator >= ticksPeriod ) {
 				Network.Tick( ticksPeriod );
-				Players.Tick( ticksPeriod );
+				Entities.Tick( ticksPeriod );
 				ParticleManager.Tick( ticksPeriod );
 				Animations.Tick( ticksPeriod );
 				BlockHandRenderer.Tick( ticksPeriod );
@@ -421,6 +423,8 @@ namespace ClassicalSharp {
 			if( activeScreen != null )
 				activeScreen.OnResize( width, height, Width, Height );
 			hudScreen.OnResize( width, height, Width, Height );
+			foreach( Screen overlay in WarningOverlays )
+				overlay.OnResize( width, height, Width, Height );
 			width = Width;
 			height = Height;
 		}
@@ -529,7 +533,7 @@ namespace ClassicalSharp {
 			TerrainAtlas.Dispose();
 			TerrainAtlas1D.Dispose();
 			ModelCache.Dispose();
-			Players.Dispose();
+			Entities.Dispose();
 			WorldEvents.OnNewMap -= OnNewMapCore;
 			WorldEvents.OnNewMapLoaded -= OnNewMapLoadedCore;
 			
@@ -598,34 +602,5 @@ namespace ClassicalSharp {
 		}
 	}
 
-	public sealed class CpeListInfo {
-		
-		public byte NameId;
-		
-		/// <summary> Unformatted name of the player for autocompletion, etc. </summary>
-		/// <remarks> Colour codes are always removed from this. </remarks>
-		public string PlayerName;
-		
-		/// <summary> Formatted name for display in the player list. </summary>
-		/// <remarks> Can include colour codes. </remarks>
-		public string ListName;
-		
-		/// <summary> Name of the group this player is in. </summary>
-		/// <remarks> Can include colour codes. </remarks>
-		public string GroupName;
-		
-		/// <summary> Player's rank within the group. (0 is highest) </summary>
-		/// <remarks> Multiple group members can share the same rank,
-		/// so a player's group rank is not a unique identifier. </remarks>
-		public byte GroupRank;
-		
-		public CpeListInfo( byte id, string playerName, string listName,
-		                   string groupName, byte groupRank ) {
-			NameId = id;
-			PlayerName = playerName;
-			ListName = listName;
-			GroupName = groupName;
-			GroupRank = groupRank;
-		}
-	}
+	
 }

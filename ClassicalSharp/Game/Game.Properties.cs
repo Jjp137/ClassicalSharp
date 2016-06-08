@@ -53,14 +53,14 @@ namespace ClassicalSharp {
 		public INetworkProcessor Network;
 		
 		/// <summary> List of all entities in the current map, including the player. </summary>
-		public EntityList Players;
+		public EntityList Entities;
 		
 		/// <summary> Entity representing the player. </summary>
 		public LocalPlayer LocalPlayer;
 		
-		/// <summary> Contains extended player listing information for each player in the current world. </summary>
-		/// <remarks> Only used if CPE extension ExtPlayerList is enabled. </remarks>
-		public CpeListInfo[] CpePlayersList = new CpeListInfo[256];
+		/// <summary> Contains information for each player in the current world 
+		/// (or for whole server if supported). </summary>
+		public TabList TabList;
 		
 		/// <summary> Current camera the player is using to view the world with. </summary>
 		/// <remarks> e.g. first person, thid person, forward third person, etc. </remarks>
@@ -165,6 +165,8 @@ namespace ClassicalSharp {
 		
 		public bool UseClassicGui, UseClassicTabList, UseClassicOptions, ClassicMode, ClassicHacks;
 		
+		public bool PureClassic { get { return ClassicMode && !ClassicHacks; } }
+		
 		public bool AllowCustomBlocks, UseCPE, AllowServerTextures;
 		
 		public string FontName = "Arial";
@@ -212,9 +214,9 @@ namespace ClassicalSharp {
 		/// this method returns "default.zip". </remarks>
 		public string DefaultTexturePack {
 			get {
-				string texPackDir = TexturePackExtractor.Dir;
-				string path = Path.Combine( Program.AppDirectory, Path.Combine( texPackDir, defTexturePack ) );
-				return File.Exists( path ) ? defTexturePack : "default.zip"; 
+				string path = Path.Combine( Program.AppDirectory, TexturePackExtractor.Dir );
+				path = Path.Combine( path, defTexturePack );
+				return File.Exists( path ) && !ClassicMode ? defTexturePack : "default.zip"; 
 			}
 			set {
 				defTexturePack = value;

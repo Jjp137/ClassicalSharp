@@ -21,6 +21,9 @@ namespace ClassicalSharp {
 		/// false uses the font supplied as the DrawTextArgs argument supplied to the function. </summary>
 		public bool UseBitmappedChat = false;
 		
+		/// <summary> Whether the shadows behind text (that uses shadows) is fully black. </summary>
+		public bool BlackTextShadows;
+		
 		/// <summary> Sets the underlying bitmap that drawing operations will be performed on. </summary>
 		public abstract void SetBitmap( Bitmap bmp );
 		
@@ -151,22 +154,21 @@ namespace ClassicalSharp {
 				Colours[i] = default(FastColour);
 			
 			for( int i = 0; i <= 9; i++ )
-				Colours['0' + i] = FastColour.GetHexEncodedCol( i );
-			
+				Colours['0' + i] = FastColour.GetHexEncodedCol( i, 191, 64 );
 			for( int i = 10; i <= 15; i++) {
-				Colours['a' + i - 10] = FastColour.GetHexEncodedCol( i );
-				Colours['A' + i - 10] = FastColour.GetHexEncodedCol( i );
+				Colours['a' + i - 10] = FastColour.GetHexEncodedCol( i, 191, 64 );
+				Colours['A' + i - 10] = Colours['a' + i - 10];
 			}
 		}
 		
 		protected List<TextPart> parts = new List<TextPart>( 64 );
 		protected struct TextPart {
 			public string Text;
-			public FastColour TextColour;
+			public FastColour Col;
 			
 			public TextPart( string text, FastColour col ) {
 				Text = text;
-				TextColour = col;
+				Col = col;
 			}
 		}
 		
@@ -174,7 +176,7 @@ namespace ClassicalSharp {
 			parts.Clear();
 			if( String.IsNullOrEmpty( value ) ) {
 			} else if( value.IndexOf( '&' ) == -1 ) {
-				parts.Add( new TextPart( value, FastColour.White ) );
+				parts.Add( new TextPart( value, Colours['f'] ) );
 			} else {
 				SplitText( value );
 			}
@@ -189,8 +191,7 @@ namespace ClassicalSharp {
 				
 				if( partLength > 0 ) {
 					string part = value.Substring( i, partLength );
-					FastColour col = Colours[code];
-					parts.Add( new TextPart( part, col ) );
+					parts.Add( new TextPart( part, Colours[code] ) );
 				}
 				i += partLength + 1;
 				

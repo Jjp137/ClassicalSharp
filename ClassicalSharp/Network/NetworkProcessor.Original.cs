@@ -78,6 +78,7 @@ namespace ClassicalSharp.Network {
 			ServerName = reader.ReadCp437String();
 			ServerMotd = reader.ReadCp437String();
 			receivedFirstPosition = false;
+			game.Chat.SetLogName( ServerName );
 			
 			game.LocalPlayer.Hacks.SetUserType( reader.ReadUInt8() );
 			game.LocalPlayer.Hacks.ParseHackFlags( ServerName, ServerMotd );
@@ -194,31 +195,26 @@ namespace ClassicalSharp.Network {
 			#endif
 		}
 		
-		bool[] needRemoveNames;
+		byte[] needRemoveNames = new byte[256 >> 3];
 		internal void HandleAddEntity() {
-			byte entityId = reader.ReadUInt8();
+			byte id = reader.ReadUInt8();
 			string name = reader.ReadAsciiString();
 			name = Utils.RemoveEndPlus( name );
-			AddEntity( entityId, name, name, true );
+			AddEntity( id, name, name, true );
+			// Also workaround for LegendCraft as it declares it supports ExtPlayerList but
+			// doesn't send ExtAddPlayerName packets.
 			
-			// Workaround for LegendCraft as it declares it supports ExtPlayerList but
-			// doesn't send ExtAddPlayerName packets. So we add a special case here, even
-			// though it is technically against the specification.
-			if( UsingExtPlayerList ) {
-				AddCpeInfo( entityId, name, name, "Players", 0 );
-				if( needRemoveNames == null )
-					needRemoveNames = new bool[EntityList.MaxCount];
-				needRemoveNames[entityId] = true;
-			}
+			AddTablistEntry( id, name, name, "Players", 0 );
+			needRemoveNames[id >> 3] |= (byte)(1 << (id & 0x7));
 		}
 		
 		internal void HandleEntityTeleport() {
-			byte entityId = reader.ReadUInt8();
-			ReadAbsoluteLocation( entityId, true );
+			byte id = reader.ReadUInt8();
+			ReadAbsoluteLocation( id, true );
 		}
 		
 		internal void HandleRelPosAndOrientationUpdate() {
-			byte playerId = reader.ReadUInt8();
+			byte id = reader.ReadUInt8();
 			float x = reader.ReadInt8() / 32f;
 			float y = reader.ReadInt8() / 32f;
 			float z = reader.ReadInt8() / 32f;
@@ -226,44 +222,44 @@ namespace ClassicalSharp.Network {
 			float yaw = (float)Utils.PackedToDegrees( reader.ReadUInt8() );
 			float pitch = (float)Utils.PackedToDegrees( reader.ReadUInt8() );
 			LocationUpdate update = LocationUpdate.MakePosAndOri( x, y, z, yaw, pitch, true );
-			UpdateLocation( playerId, update, true );
+			UpdateLocation( id, update, true );
 		}
 		
 		internal void HandleRelPositionUpdate() {
-			byte playerId = reader.ReadUInt8();
+			byte id = reader.ReadUInt8();
 			float x = reader.ReadInt8() / 32f;
 			float y = reader.ReadInt8() / 32f;
 			float z = reader.ReadInt8() / 32f;
 			
 			LocationUpdate update = LocationUpdate.MakePos( x, y, z, true );
-			UpdateLocation( playerId, update, true );
+			UpdateLocation( id, update, true );
 		}
 		
 		internal void HandleOrientationUpdate() {
-			byte playerId = reader.ReadUInt8();
+			byte id = reader.ReadUInt8();
 			float yaw = (float)Utils.PackedToDegrees( reader.ReadUInt8() );
 			float pitch = (float)Utils.PackedToDegrees( reader.ReadUInt8() );
 			
 			LocationUpdate update = LocationUpdate.MakeOri( yaw, pitch );
-			UpdateLocation( playerId, update, true );
+			UpdateLocation( id, update, true );
 		}
 		
 		internal void HandleRemoveEntity() {
-			byte entityId = reader.ReadUInt8();
-			RemoveEntity( entityId );
+			byte id = reader.ReadUInt8();
+			RemoveEntity( id );
 		}
 		
 		internal void HandleMessage() {
-			byte messageType = reader.ReadUInt8();
-			string text = reader.ReadChatString( ref messageType );
+			byte type = reader.ReadUInt8();
 			// Original vanilla server uses player ids in message types, 255 for server messages.
-			if( !cpe.useMessageTypes ) {
-				if( messageType == 0xFF ) text = "&e" + text;
-				messageType = (byte)MessageType.Normal;
-			}
+			bool prepend = !cpe.useMessageTypes && type == 0xFF;
+			
+			if( !cpe.useMessageTypes ) type = (byte)MessageType.Normal;
+			string text = reader.ReadChatString( ref type );
+			if( prepend ) text = "&e" + text;
 			
 			if( !text.StartsWith("^detail.user", StringComparison.OrdinalIgnoreCase ) )
-				game.Chat.Add( text, (MessageType)messageType );
+				game.Chat.Add( text, (MessageType)type );
 		}
 		
 		internal void HandleKick() {
@@ -276,16 +272,16 @@ namespace ClassicalSharp.Network {
 			game.LocalPlayer.Hacks.SetUserType( reader.ReadUInt8() );
 		}
 		
-		void AddEntity( byte entityId, string displayName, string skinName, bool readPosition ) {
+		void AddEntity( byte id, string displayName, string skinName, bool readPosition ) {
 			skinName = Utils.StripColours( skinName );
-			if( entityId != 0xFF ) {
-				Player oldPlayer = game.Players[entityId];
+			if( id != 0xFF ) {
+				Player oldPlayer = game.Entities[id];
 				if( oldPlayer != null ) {
-					game.EntityEvents.RaiseRemoved( entityId );
+					game.EntityEvents.RaiseRemoved( id );
 					oldPlayer.Despawn();
 				}
-				game.Players[entityId] = new NetPlayer( displayName, skinName, game, entityId );
-				game.EntityEvents.RaiseAdded( entityId );
+				game.Entities[id] = new NetPlayer( displayName, skinName, game, id );
+				game.EntityEvents.RaiseAdded( id );
 			} else {
 				// Server is only allowed to change our own name colours.
 				if( Utils.StripColours( displayName ) != game.Username )
@@ -295,12 +291,12 @@ namespace ClassicalSharp.Network {
 				game.LocalPlayer.UpdateName();
 			}
 			
-			string identifier = game.Players[entityId].SkinIdentifier;
+			string identifier = game.Entities[id].SkinIdentifier;
 			game.AsyncDownloader.DownloadSkin( identifier, skinName );
 			if( !readPosition ) return;
 			
-			ReadAbsoluteLocation( entityId, false );
-			if( entityId == 0xFF ) {
+			ReadAbsoluteLocation( id, false );
+			if( id == 0xFF ) {
 				LocalPlayer p = game.LocalPlayer;
 				p.Spawn = p.Position;
 				p.SpawnYaw = p.HeadYawDegrees;
@@ -308,40 +304,41 @@ namespace ClassicalSharp.Network {
 			}
 		}
 		
-		void RemoveEntity( byte entityId ) {
-			Player player = game.Players[entityId];
+		void RemoveEntity( byte id ) {
+			Player player = game.Entities[id];
 			if( player == null ) return;
 			
-			if( entityId != 0xFF ) {
-				game.EntityEvents.RaiseRemoved( entityId );
+			if( id != 0xFF ) {
+				game.EntityEvents.RaiseRemoved( id );
 				player.Despawn();
-				game.Players[entityId] = null;
+				game.Entities[id] = null;
 			}
+			
 			// See comment about LegendCraft in HandleAddEntity
-			if( needRemoveNames != null && needRemoveNames[entityId] ) {
-				game.EntityEvents.RaiseCpeListInfoRemoved( entityId );
-				game.CpePlayersList[entityId] = null;
-				needRemoveNames[entityId] = false;
-			}
+			int mask = id >> 3, bit = 1 << (id & 0x7);
+			if( (needRemoveNames[mask] & bit) == 0 ) return;
+			game.EntityEvents.RaiseTabEntryRemoved( id );
+			game.TabList.Entries[id] = null;
+			needRemoveNames[mask] &= (byte)~bit;
 		}
 
-		void ReadAbsoluteLocation( byte playerId, bool interpolate ) {
+		void ReadAbsoluteLocation( byte id, bool interpolate ) {
 			float x = reader.ReadInt16() / 32f;
 			float y = ( reader.ReadInt16() - 51 ) / 32f; // We have to do this.
-			if( playerId == 255 ) y += 22/32f;
+			if( id == 255 ) y += 22/32f;
 			
 			float z = reader.ReadInt16() / 32f;
 			float yaw = (float)Utils.PackedToDegrees( reader.ReadUInt8() );
 			float pitch = (float)Utils.PackedToDegrees( reader.ReadUInt8() );
-			if( playerId == 0xFF ) {
+			if( id == 0xFF ) {
 				receivedFirstPosition = true;
 			}
 			LocationUpdate update = LocationUpdate.MakePosAndOri( x, y, z, yaw, pitch, false );
-			UpdateLocation( playerId, update, interpolate );
+			UpdateLocation( id, update, interpolate );
 		}
 		
 		void UpdateLocation( byte playerId, LocationUpdate update, bool interpolate ) {
-			Player player = game.Players[playerId];
+			Player player = game.Entities[playerId];
 			if( player != null ) {
 				player.SetLocation( update, interpolate );
 			}

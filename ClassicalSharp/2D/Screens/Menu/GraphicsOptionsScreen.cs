@@ -17,26 +17,26 @@ namespace ClassicalSharp.Gui {
 			
 			widgets = new Widget[] {	
 				
-				Make2( -1, -50, "FPS mode", OnWidgetClick,
+				MakeOpt( -1, -50, "FPS mode", OnWidgetClick,
 				     g => g.FpsLimit.ToString(),
 				     (g, v) => { object raw = Enum.Parse( typeof(FpsLimitMethod), v );
 				     	g.SetFpsLimitMethod( (FpsLimitMethod)raw );
 				     	Options.Set( OptionsKey.FpsLimit, v ); } ),
 
-				Make2( -1, 0, "View distance", OnWidgetClick,
+				MakeOpt( -1, 0, "View distance", OnWidgetClick,
 				     g => g.ViewDistance.ToString(),
 				     (g, v) => g.SetViewDistance( Int32.Parse( v ), true ) ),
 				
-				Make2( 1, -50, "Names", OnWidgetClick,
-				     g => g.Players.NamesMode.ToString(),
+				MakeOpt( 1, -50, "Names", OnWidgetClick,
+				     g => g.Entities.NamesMode.ToString(),
 				     (g, v) => { object raw = Enum.Parse( typeof(NameMode), v );
-				     	g.Players.NamesMode = (NameMode)raw;
+				     	g.Entities.NamesMode = (NameMode)raw;
 				     	Options.Set( OptionsKey.NamesMode, v ); } ),
 				
-				Make2( 1, 0, "Shadows", OnWidgetClick,
-				     g => g.Players.ShadowMode.ToString(),
+				MakeOpt( 1, 0, "Shadows", OnWidgetClick,
+				     g => g.Entities.ShadowMode.ToString(),
 				     (g, v) => { object raw = Enum.Parse( typeof(EntityShadow), v );
-				     	g.Players.ShadowMode = (EntityShadow)raw;
+				     	g.Entities.ShadowMode = (EntityShadow)raw;
 				     	Options.Set( OptionsKey.EntityShadow, v ); } ),
 				
 				MakeBack( false, titleFont,

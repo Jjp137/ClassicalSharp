@@ -25,12 +25,12 @@ namespace ClassicalSharp.Gui {
 			if( game.HideGui ) return;
 			
 			bool showMinimal = game.ActiveScreen.BlocksWorld;
-			if( chat.HandlesAllInput )
+			if( chat.HandlesAllInput && !game.PureClassic )
 				chat.RenderBackground();
-			api.Texturing = true;
-			chat.Render( delta );
 			if( !showMinimal )
 				RenderHotbar( delta );
+			api.Texturing = true;
+			chat.Render( delta );
 			
 			//graphicsApi.BeginVbBatch( VertexFormat.Pos3fTex2fCol4b );
 			//graphicsApi.BindTexture( game.TerrainAtlas.TexId );
@@ -122,7 +122,7 @@ namespace ClassicalSharp.Gui {
 			Key playerListKey = game.Mapping( KeyBinding.PlayerList );
 			bool handles = playerListKey != Key.Tab || !game.TabAutocomplete || !chat.HandlesAllInput;
 			if( key == playerListKey && handles ) {
-				if( playerList == null )
+				if( playerList == null && !game.Network.IsSinglePlayer )
 					CreatePlayerListWidget();
 				return true;
 			}

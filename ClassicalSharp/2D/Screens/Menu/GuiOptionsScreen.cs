@@ -13,20 +13,21 @@ namespace ClassicalSharp.Gui {
 			
 			widgets = new Widget[] {
 				// Column 1
-				MakeBool( -1, -150, "Block in hand", OptionsKey.ShowBlockInHand,
-				     OnWidgetClick, g => g.ShowBlockInHand, (g, v) => g.ShowBlockInHand = v ),
+				MakeBool( -1, -150, "Black text shadows", OptionsKey.BlackTextShadows,
+				     OnWidgetClick, g => g.Drawer2D.BlackTextShadows,
+				     (g, v) => { g.Drawer2D.BlackTextShadows = v; HandleFontChange(); } ),		
 				
 				MakeBool( -1, -100, "Show FPS", OptionsKey.ShowFPS,
 				         OnWidgetClick, g => g.ShowFPS, (g, v) => g.ShowFPS = v ),
 				
-				Make2( -1, -50, "Hotbar scale", OnWidgetClick,
+				MakeOpt( -1, -50, "Hotbar scale", OnWidgetClick,
 				     g => g.HotbarScale.ToString( "F1" ),
 				     (g, v) => { g.HotbarScale = Single.Parse( v );
 				     	Options.Set( OptionsKey.HotbarScale, v );
 				     	g.RefreshHud();
 				     } ),
 				
-				Make2( -1, 0, "Inventory scale", OnWidgetClick,
+				MakeOpt( -1, 0, "Inventory scale", OnWidgetClick,
 				     g => g.InventoryScale.ToString( "F1" ),
 				     (g, v) => { g.InventoryScale = Single.Parse( v );
 				     	Options.Set( OptionsKey.InventoryScale, v );
@@ -40,14 +41,14 @@ namespace ClassicalSharp.Gui {
 				MakeBool( 1, -150, "Clickable chat", OptionsKey.ClickableChat,
 				     OnWidgetClick, g => g.ClickableChat, (g, v) => g.ClickableChat = v ),
 				
-				Make2( 1, -100, "Chat scale", OnWidgetClick,
+				MakeOpt( 1, -100, "Chat scale", OnWidgetClick,
 				     g => g.ChatScale.ToString( "F1" ),
 				     (g, v) => { g.ChatScale = Single.Parse( v );
 				     	Options.Set( OptionsKey.ChatScale, v );
 				     	g.RefreshHud();
 				     } ),
 
-				Make2( 1, -50, "Chat lines", OnWidgetClick,
+				MakeOpt( 1, -50, "Chat lines", OnWidgetClick,
 				     g => g.ChatLines.ToString(),
 				     (g, v) => { g.ChatLines = Int32.Parse( v );
 				     	Options.Set( OptionsKey.ChatLines, v );
@@ -56,9 +57,9 @@ namespace ClassicalSharp.Gui {
 				
 				MakeBool( 1, 0, "Use font", OptionsKey.ArialChatFont,
 				     OnWidgetClick, g => !g.Drawer2D.UseBitmappedChat,
-				     (g, v) => { g.Drawer2D.UseBitmappedChat = !v; HandleFontChange(); } ),		
+				     (g, v) => { g.Drawer2D.UseBitmappedChat = !v; HandleFontChange(); } ),
 				
-				Make2( 1, 50, "Font", OnWidgetClick,
+				MakeOpt( 1, 50, "Font", OnWidgetClick,
 				     g => g.FontName,
 				     (g, v) => { g.FontName = v;
 				     	Options.Set( OptionsKey.FontName, v );

@@ -68,18 +68,19 @@ namespace ClassicalSharp.Renderers {
 		public void Render( double deltaTime ) {
 			if( chunks == null ) return;
 			ChunkSorter.UpdateSortOrder( game, updater );
-			updater.UpdateChunks( deltaTime );
-			
-			RenderNormal( deltaTime );
-			game.MapBordersRenderer.Render( deltaTime );
-			RenderTranslucent( deltaTime );
-			game.Entities.DrawShadows();
+			updater.UpdateChunks( deltaTime );			
+			RenderNormalChunks( deltaTime );
+		}
+		
+		public void RenderTranslucent( double deltaTime ) {
+			if( chunks == null ) return;
+			RenderTranslucentChunks( deltaTime );
 		}
 		
 		
 		// Render solid and fully transparent to fill depth buffer.
 		// These blocks are treated as having an alpha value of either none or full.
-		void RenderNormal( double deltaTime ) {
+		void RenderNormalChunks( double deltaTime ) {
 			int[] texIds = game.TerrainAtlas1D.TexIds;
 			api.SetBatchFormat( VertexFormat.P3fT2fC4b );
 			api.Texturing = true;
@@ -120,8 +121,7 @@ namespace ClassicalSharp.Renderers {
 		}
 		
 		// Render translucent(liquid) blocks. These 'blend' into other blocks.
-		void RenderTranslucent( double deltaTime ) {
-			
+		void RenderTranslucentChunks( double deltaTime ) {			
 			// First fill depth buffer
 			int[] texIds = game.TerrainAtlas1D.TexIds;
 			api.SetBatchFormat( VertexFormat.P3fT2fC4b );

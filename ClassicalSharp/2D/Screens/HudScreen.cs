@@ -27,19 +27,15 @@ namespace ClassicalSharp.Gui {
 			bool showMinimal = game.ActiveScreen.BlocksWorld;
 			if( chat.HandlesAllInput && !game.PureClassic )
 				chat.RenderBackground();
-			if( !showMinimal )
-				RenderHotbar( delta );
-			api.Texturing = true;
-			chat.Render( delta );
 			
-			//graphicsApi.BeginVbBatch( VertexFormat.Pos3fTex2fCol4b );
-			//graphicsApi.BindTexture( game.TerrainAtlas.TexId );
-			//IsometricBlockDrawer.Draw( game, (byte)Block.Brick, 30, game.Width - 50, game.Height - 20 );
+			api.Texturing = true;
+			if( !showMinimal ) hotbar.Render( delta );			
+			chat.Render( delta );
 			
 			if( playerList != null && game.ActiveScreen == this ) {
 				playerList.Render( delta );
 				// NOTE: Should usually be caught by KeyUp, but just in case.
-				if( !game.IsKeyDown( KeyBinding.PlayerList ) ) {
+				if( !game.IsKeyDown( KeyBind.PlayerList ) ) {
 					playerList.Dispose();
 					playerList = null;
 				}
@@ -49,8 +45,6 @@ namespace ClassicalSharp.Gui {
 			if( playerList == null && !showMinimal )
 				DrawCrosshairs();
 		}
-		
-		public void RenderHotbar( double delta ) { hotbar.Render( delta ); }
 		
 		const int chExtent = 16, chWeight = 2;
 		static TextureRec chRec = new TextureRec( 0, 0, 16/256f, 16/256f );
@@ -119,7 +113,7 @@ namespace ClassicalSharp.Gui {
 		}
 		
 		public override bool HandlesKeyDown( Key key ) {
-			Key playerListKey = game.Mapping( KeyBinding.PlayerList );
+			Key playerListKey = game.Mapping( KeyBind.PlayerList );
 			bool handles = playerListKey != Key.Tab || !game.TabAutocomplete || !chat.HandlesAllInput;
 			if( key == playerListKey && handles ) {
 				if( playerList == null && !game.Network.IsSinglePlayer )
@@ -145,7 +139,7 @@ namespace ClassicalSharp.Gui {
 		}
 		
 		public override bool HandlesKeyUp( Key key ) {
-			if( key == game.Mapping( KeyBinding.PlayerList ) ) {
+			if( key == game.Mapping( KeyBind.PlayerList ) ) {
 				if( playerList != null ) {
 					playerList.Dispose();
 					playerList = null;

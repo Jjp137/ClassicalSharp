@@ -304,7 +304,7 @@ namespace ClassicalSharp {
 		
 		void CheckZoomFov() {
 			bool allowZoom = activeScreen == null && !hudScreen.HandlesAllInput;
-			if( allowZoom && IsKeyDown( KeyBinding.ZoomScrolling ) )
+			if( allowZoom && IsKeyDown( KeyBind.ZoomScrolling ) )
 				InputHandler.SetFOV( ZoomFov, false );
 		}
 		
@@ -326,10 +326,16 @@ namespace ClassicalSharp {
 			
 			ParticleManager.Render( delta, t );
 			Camera.GetPickedBlock( SelectedPos ); // TODO: only pick when necessary
-			EnvRenderer.Render( delta );
+			EnvRenderer.Render( delta );		
+			MapRenderer.Render( delta );
+			MapBordersRenderer.RenderSides( delta );
+			
 			if( SelectedPos.Valid && !HideGui )
 				Picking.Render( delta, SelectedPos );
-			MapRenderer.Render( delta );
+			MapBordersRenderer.RenderEdges( delta );
+			MapRenderer.RenderTranslucent( delta );
+			
+			Entities.DrawShadows();
 			SelectionManager.Render( delta );
 			Entities.RenderHoveredNames( Graphics, delta, t );
 			
@@ -520,11 +526,11 @@ namespace ClassicalSharp {
 		
 		public bool IsKeyDown( Key key ) { return InputHandler.IsKeyDown( key ); }
 		
-		public bool IsKeyDown( KeyBinding binding ) { return InputHandler.IsKeyDown( binding ); }
+		public bool IsKeyDown( KeyBind binding ) { return InputHandler.IsKeyDown( binding ); }
 		
 		public bool IsMousePressed( MouseButton button ) { return InputHandler.IsMousePressed( button ); }
 		
-		public Key Mapping( KeyBinding mapping ) { return InputHandler.Keys[mapping]; }
+		public Key Mapping( KeyBind mapping ) { return InputHandler.Keys[mapping]; }
 		
 		public void Dispose() {
 			MapRenderer.Dispose();
@@ -601,6 +607,4 @@ namespace ClassicalSharp {
 			this.skinServer = skinServer;
 		}
 	}
-
-	
 }

@@ -47,14 +47,14 @@ namespace ClassicalSharp.GraphicsAPI {
 			GL.UseArbVboAddresses();
 		}
 
-		public override bool AlphaTest { 
+		public override bool AlphaTest {
 			set { if( value ) GL.Enable( EnableCap.AlphaTest );
-				else GL.Disable( EnableCap.AlphaTest ); } 
+				else GL.Disable( EnableCap.AlphaTest ); }
 		}
 		
 		public override bool AlphaBlending {
-			set { if( value ) GL.Enable( EnableCap.Blend);
-				else GL.Disable( EnableCap.Blend ); } 
+			set { if( value ) GL.Enable( EnableCap.Blend );
+				else GL.Disable( EnableCap.Blend ); }
 		}
 		
 		Compare[] compareFuncs;
@@ -111,8 +111,7 @@ namespace ClassicalSharp.GraphicsAPI {
 		
 		public override bool FaceCulling {
 			set { if( value ) GL.Enable( EnableCap.CullFace );
-				else GL.Disable( EnableCap.CullFace );
-			}
+				else GL.Disable( EnableCap.CullFace ); }
 		}
 		
 		public override void Clear() {
@@ -133,10 +132,9 @@ namespace ClassicalSharp.GraphicsAPI {
 			GL.DepthFunc( compareFuncs[(int)func] );
 		}
 		
-		public override bool DepthTest {
+		public override bool DepthTest  {
 			set { if( value ) GL.Enable( EnableCap.DepthTest );
-				else GL.Disable( EnableCap.DepthTest );
-			}
+				else GL.Disable( EnableCap.DepthTest ); }
 		}
 		
 		public override bool DepthWrite { set { GL.DepthMask( value ); } }
@@ -150,8 +148,7 @@ namespace ClassicalSharp.GraphicsAPI {
 		
 		public override bool Texturing {
 			set { if( value ) GL.Enable( EnableCap.Texture2D );
-				else GL.Disable( EnableCap.Texture2D );
-			}
+				else GL.Disable( EnableCap.Texture2D ); }
 		}
 		
 		public override int CreateTexture( int width, int height, IntPtr scan0 ) {
@@ -460,7 +457,7 @@ namespace ClassicalSharp.GraphicsAPI {
 		}
 		
 		void InitFields() {
-			// See comment in Inventory() constructor for why this is necessary.
+			// See comment in KeyMap() constructor for why this is necessary.
 			blendFuncs = new BlendingFactor[6];
 			blendFuncs[0] = BlendingFactor.Zero; blendFuncs[1] = BlendingFactor.One;
 			blendFuncs[2] = BlendingFactor.SrcAlpha; blendFuncs[3] = BlendingFactor.OneMinusSrcAlpha;

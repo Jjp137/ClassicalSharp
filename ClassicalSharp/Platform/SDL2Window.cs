@@ -301,11 +301,34 @@ namespace ClassicalSharp
 		}
 		
 		public virtual void Draw( Bitmap framebuffer ) {
+			Draw( framebuffer, Rectangle.Empty );
+		}
+		
+		public virtual void Draw( Bitmap framebuffer, Rectangle rec ) {
 			using( FastBitmap fastBmp = new FastBitmap( framebuffer, true, true ) ) {
 				IntPtr image = SDL.SDL_CreateRGBSurfaceFrom( fastBmp.Scan0, fastBmp.Width, fastBmp.Height, 32,
-				                                             fastBmp.Stride, 0x00FF0000, 0x0000FF00, 0x000000FF,
-				                                             0xFF000000 );
-				SDL.SDL_BlitSurface( image, IntPtr.Zero, this.surface, IntPtr.Zero );
+				                                            fastBmp.Stride, 0x00FF0000, 0x0000FF00, 0x000000FF,
+				                                            0xFF000000 );
+				
+				if( rec.IsEmpty ) {
+					SDL.SDL_BlitSurface( image, IntPtr.Zero, this.surface, IntPtr.Zero );
+				}
+				else {
+					SDL.SDL_Rect srcRect;
+					srcRect.x = rec.X;
+					srcRect.y = rec.Y;
+					srcRect.w = rec.Width;
+					srcRect.h = rec.Height;
+					
+					SDL.SDL_Rect dstRect;  // Width and height are ignored for the destination rectangle
+					dstRect.x = rec.X;
+					dstRect.y = rec.Y;
+					dstRect.w = 0;
+					dstRect.h = 0;
+					
+					SDL.SDL_BlitSurface( image, ref srcRect, this.surface, ref dstRect );
+				}
+				
 				SDL.SDL_FreeSurface( image );
 			}
 

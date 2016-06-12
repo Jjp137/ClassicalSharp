@@ -187,12 +187,11 @@ namespace Launcher {
 			Screen.OnDisplay();
 
 			Dirty = false;			
-			Window.Draw( Framebuffer );
-			
-			/*if( DirtyArea.Width > 0 )
-				platformDrawer.Redraw( Framebuffer, DirtyArea );
+
+			if( DirtyArea.Width > 0 )
+				Window.Draw( Framebuffer, DirtyArea );
 			else
-				platformDrawer.Redraw( Framebuffer );*/
+				Window.Draw( Framebuffer );
 			DirtyArea = Rectangle.Empty;
 		}
 		

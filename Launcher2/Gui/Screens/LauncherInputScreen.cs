@@ -32,6 +32,7 @@ namespace Launcher.Gui.Screens {
 		
 		DateTime widgetOpenTime;
 		bool lastCaretFlash = false;
+		Rectangle lastRec;
 		public override void Tick() {
 			double elapsed = (DateTime.UtcNow - widgetOpenTime).TotalSeconds;
 			bool caretShow = (elapsed % 1) < 0.5;
@@ -42,9 +43,14 @@ namespace Launcher.Gui.Screens {
 				drawer.SetBitmap( game.Framebuffer );
 				lastInput.SetDrawData( drawer, lastInput.Text );
 				lastInput.Redraw( drawer );
-				if( caretShow )
-					lastInput.DrawCaret( drawer, inputFont );
-				Dirty = true;
+				
+				Rectangle r = lastInput.MeasureCaret( drawer, inputFont );
+				if( caretShow ) 
+					drawer.Clear( FastColour.White, r.X, r.Y, r.Width, r.Height );
+				
+				if( lastRec == r ) game.DirtyArea = r;
+				lastRec = r;
+				game.Dirty = true;
 			}
 			lastCaretFlash = caretShow;
 		}
@@ -121,7 +127,7 @@ namespace Launcher.Gui.Screens {
 			using( drawer ) {
 				drawer.SetBitmap( game.Framebuffer );
 				lastInput.Redraw( drawer );
-				Dirty = true;
+				game.Dirty = true;
 			}
 		}
 		
@@ -161,7 +167,7 @@ namespace Launcher.Gui.Screens {
 				input.Redraw( drawer );
 			}
 			lastInput = input;
-			Dirty = true;
+			game.Dirty = true;
 		}
 		
 		protected override void WidgetUnclicked( LauncherWidget widget ) {
@@ -170,7 +176,7 @@ namespace Launcher.Gui.Screens {
 			input.Active = false;
 			RedrawWidget( input );
 			lastInput = null;
-			Dirty = true;
+			game.Dirty = true;
 		}
 		
 		protected void SetupInputHandlers() {

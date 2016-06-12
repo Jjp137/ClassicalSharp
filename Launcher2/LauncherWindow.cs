@@ -32,6 +32,9 @@ namespace Launcher {
 		/// <summary> Whether the client drawing area needs to be redrawn/presented to the screen. </summary>
 		public bool Dirty;
 		
+		/// <summary> The specific area/region of the window that needs to be redrawn. </summary>
+		public Rectangle DirtyArea;
+		
 		/// <summary> Currently active logged in session with classicube.net. </summary>
 		public ClassicubeSession Session = new ClassicubeSession();
 		
@@ -74,7 +77,7 @@ namespace Launcher {
 			LoadFont();
 			logoFont = new Font( FontName, 32, FontStyle.Regular );
 			string path = Assembly.GetExecutingAssembly().Location;
-			Window.Icon = Icon.ExtractAssociatedIcon( path );			
+			Window.Icon = Icon.ExtractAssociatedIcon( path );
 			//Minimised = Window.WindowState == WindowState.Minimized;
 		}
 		
@@ -159,15 +162,14 @@ namespace Launcher {
 				Window.ProcessEvents();
 				if( !Window.Exists ) break;
 				if( ShouldExit ) {
-					if( Screen != null ) 
+					if( Screen != null )
 						Screen.Dispose();
 					break;
 				}
 				
 				Screen.Tick();
-				if( Dirty || Screen.Dirty )
-					Display();
-				Thread.Sleep( 1 );
+				if( Dirty ) Display();
+				Thread.Sleep( 10 );
 			}
 			
 			if( Options.Load() ) {
@@ -183,9 +185,15 @@ namespace Launcher {
 		
 		void Display() {
 			Screen.OnDisplay();
+
 			Dirty = false;			
-			Screen.Dirty = false;
 			Window.Draw( Framebuffer );
+			
+			/*if( DirtyArea.Width > 0 )
+				platformDrawer.Redraw( Framebuffer, DirtyArea );
+			else
+				platformDrawer.Redraw( Framebuffer );*/
+			DirtyArea = Rectangle.Empty;
 		}
 		
 		Key lastKey;
@@ -199,7 +207,7 @@ namespace Launcher {
 			Window.Resize -= Resize;
 			Window.FocusedChanged -= FocusedChanged;
 			Window.WindowStateChanged -= Resize;
-			Window.Keyboard.KeyDown -= KeyDown;			
+			Window.Keyboard.KeyDown -= KeyDown;
 			logoFont.Dispose();
 		}
 		

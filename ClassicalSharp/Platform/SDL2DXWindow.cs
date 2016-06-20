@@ -9,13 +9,14 @@ namespace ClassicalSharp
 	// FIXME: there's some code copied from SDL2GLWindow
 	public class SDL2DXWindow : SDL2Window, IPlatformWindow, IDisposable
 	{
-		// TODO: implement
+		// SDL2DXApi (and Direct3D9Api) handle VSync already, so just store the current value.
+		bool vsync = true;
 		public bool VSync {
 			get {
-				return false;
+				return vsync;
 			}
 			set {
-				// TODO: fill in
+				vsync = value;
 			}
 		}
 		
@@ -67,7 +68,7 @@ namespace ClassicalSharp
 		}
 		
 		public void SwapBuffers() {
-			SDL.SDL_GL_SwapWindow( window );
+			// Do nothing; SDL2DXApi already handles that.
 		}
 
 		protected override void UpdateSurfacePointer() {

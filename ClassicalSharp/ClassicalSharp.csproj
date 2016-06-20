@@ -299,6 +299,7 @@
     <Compile Include="Platform\SDL2GLWindow.cs" />
     <Compile Include="Platform\SDL2Window.cs" />
     <Compile Include="Platform\SDL2InputMapping.cs" />
+    <Compile Include="Platform\SDL2DXWindow.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\credits.txt">
@@ -314,38 +315,21 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="2D\Drawing" />
-    <Folder Include="2D\Screens\Inventory" />
-    <Folder Include="2D\Utils" />
-    <Folder Include="2D\Screens" />
-    <Folder Include="2D\Screens\Menu" />
-    <Folder Include="2D\Widgets" />
-    <Folder Include="2D\Widgets\Menu" />
-    <Folder Include="2D\Widgets\Chat" />
-    <Folder Include="2D\Widgets\PlayerList" />
-    <Folder Include="Blocks" />
-    <Folder Include="Entities\AI" />
-    <Folder Include="Entities\Components" />
-    <Folder Include="Events" />
-    <Folder Include="Generator" />
-    <Folder Include="Mesh" />
-    <Folder Include="Platform" />
-    <Folder Include="Particles" />
-    <Folder Include="GraphicsAPI" />
-    <Folder Include="Entities" />
-    <Folder Include="Ionic.Zlib" />
-    <Folder Include="Map" />
-    <Folder Include="Game" />
-    <Folder Include="Map\Formats" />
-    <Folder Include="Entities\Model" />
-    <Folder Include="Network\Utils" />
-    <Folder Include="Hotkeys" />
-    <Folder Include="Audio" />
-    <Folder Include="Rendering\Env" />
-    <Folder Include="TexturePack" />
-    <Folder Include="Singleplayer" />
-    <Folder Include="Utils" />
-    <Folder Include="Math" />
+    <Folder Include="2D\" />
+    <Folder Include="2D\Screens\" />
+    <Folder Include="2D\" />
+    <Folder Include="2D\" />
+    <Folder Include="2D\Screens\" />
+    <Folder Include="2D\" />
+    <Folder Include="2D\Widgets\" />
+    <Folder Include="2D\Widgets\" />
+    <Folder Include="2D\Widgets\" />
+    <Folder Include="Entities\" />
+    <Folder Include="Entities\" />
+    <Folder Include="Map\" />
+    <Folder Include="Entities\" />
+    <Folder Include="Network\" />
+    <Folder Include="Rendering\" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\OpenTK\OpenTK.csproj">

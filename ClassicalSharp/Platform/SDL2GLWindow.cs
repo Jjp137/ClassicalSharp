@@ -1,3 +1,4 @@
+#if !USE_DX && !ANDROID
 using System;
 using System.Drawing;
 
@@ -34,7 +35,7 @@ namespace ClassicalSharp
 		private IntPtr glContext;
 
 		public SDL2GLWindow( Game game, string username, bool nullContext, int width, int height ) :
-			base( width, height, Program.AppName + " - (" + username + ")", 
+			base( width, height, Program.AppName + " - (" + username + " - OpenGL)", 
 			      SDL.SDL_WindowFlags.SDL_WINDOW_OPENGL | SDL.SDL_WindowFlags.SDL_WINDOW_RESIZABLE ) {
 
 			this.glContext = SDL.SDL_GL_CreateContext( window );
@@ -107,3 +108,4 @@ namespace ClassicalSharp
 		}
 	}
 }
+#endif

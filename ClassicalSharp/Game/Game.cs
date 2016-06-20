@@ -598,7 +598,7 @@ namespace ClassicalSharp {
 		            bool nullContext, int width, int height ) {
 			#if USE_DX
 			// TODO: implement SDL2 + DirectX and replace this
-			window = new DesktopWindow( this, username, nullContext, width, height );
+			window = new SDL2DXWindow( this, username, nullContext, width, height );
 			#else
 			window = new SDL2GLWindow( this, username, nullContext, width, height );
 			#endif

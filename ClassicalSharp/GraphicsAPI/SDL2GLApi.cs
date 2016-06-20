@@ -1,3 +1,4 @@
+// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
 #if !USE_DX && !ANDROID
 using System;
 using System.Runtime.InteropServices;

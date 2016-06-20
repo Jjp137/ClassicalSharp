@@ -300,6 +300,7 @@
     <Compile Include="Platform\SDL2Window.cs" />
     <Compile Include="Platform\SDL2InputMapping.cs" />
     <Compile Include="Platform\SDL2DXWindow.cs" />
+    <Compile Include="GraphicsAPI\SDL2DXApi.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\credits.txt">
@@ -317,17 +318,9 @@
   <ItemGroup>
     <Folder Include="2D\" />
     <Folder Include="2D\Screens\" />
-    <Folder Include="2D\" />
-    <Folder Include="2D\" />
-    <Folder Include="2D\Screens\" />
-    <Folder Include="2D\" />
     <Folder Include="2D\Widgets\" />
-    <Folder Include="2D\Widgets\" />
-    <Folder Include="2D\Widgets\" />
-    <Folder Include="Entities\" />
     <Folder Include="Entities\" />
     <Folder Include="Map\" />
-    <Folder Include="Entities\" />
     <Folder Include="Network\" />
     <Folder Include="Rendering\" />
   </ItemGroup>

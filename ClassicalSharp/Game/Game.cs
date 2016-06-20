@@ -56,7 +56,7 @@ namespace ClassicalSharp {
 			#if !USE_DX
 			Graphics = new SDL2GLApi();
 			#else
-			Graphics = new Direct3D9Api( this );
+			Graphics = new SDL2DXApi( this );
 			#endif
 			Graphics.MakeGraphicsInfo();
 			

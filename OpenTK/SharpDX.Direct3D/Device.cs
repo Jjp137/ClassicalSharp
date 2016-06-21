@@ -19,33 +19,153 @@
 // THE SOFTWARE.
 
 using System;
+using System.Runtime.InteropServices;
 using OpenTK;
 
 namespace SharpDX.Direct3D9
 {
-	[InteropPatch]
 	public unsafe class Device : ComObject
 	{
+		// FIXME: all of this assumes that the comPointer field will never change
+		private delegate int DXTestCooperativeLevel(IntPtr comPointer);
+		private DXTestCooperativeLevel TestCooperativeLevelFunc;
+		
+		private delegate uint DXAvailableTextureMemory(IntPtr comPointer);
+		private DXAvailableTextureMemory AvailableTextureMemoryFunc;
+		
+		private delegate int DXEvictManagedResources(IntPtr comPointer);
+		private DXEvictManagedResources EvictManagedResourcesFunc;
+		
+		private delegate int DXCapabilities(IntPtr comPointer, IntPtr caps);
+		private DXCapabilities CapabilitiesFunc;
+		
+		private delegate int DXGetDisplayMode(IntPtr comPointer, int iSwapChain, IntPtr modeOut);
+		private DXGetDisplayMode GetDisplayModeFunc;
+		
+		private delegate int DXReset(IntPtr comPointer, IntPtr presentParameters);
+		private DXReset ResetFunc;
+		
+		private delegate int DXPresent(IntPtr comPointer, IntPtr sourceRect, IntPtr destRect,IntPtr destWindowOverride,
+		                               IntPtr dirtyRegion);
+		private DXPresent PresentFunc;
+		
+		private delegate int DXGetBackBuffer(IntPtr comPointer, int iSwapChain, int iBackBuffer, int type, IntPtr backBufferOut);
+		private DXGetBackBuffer GetBackBufferFunc;
+		
+		private delegate int DXCreateTexture(IntPtr comPointer, int width, int height, int levels, int usage,
+		                                     int format, int pool, IntPtr textureOut, IntPtr sharedHandle);
+		private DXCreateTexture CreateTextureFunc;
+		
+		private delegate int DXCreateVertexBuffer(IntPtr comPointer, int length, int usage, int vertexFormat,
+		                                          int pool, IntPtr vertexBufferOut, IntPtr sharedHandle);
+		private DXCreateVertexBuffer CreateVertexBufferFunc;
+		
+		private delegate int DXCreateIndexBuffer(IntPtr comPointer, int length, int usage, int format, int pool,
+		                                         IntPtr indexBufferOut, IntPtr sharedHandle);
+		private DXCreateIndexBuffer CreateIndexBufferFunc;
+		
+		private delegate int DXGetRenderTargetData(IntPtr comPointer, IntPtr renderTarget, IntPtr destSurface);
+		private DXGetRenderTargetData GetRenderTargetDataFunc;
+		
+		private delegate int DXCreateOffscreenPlainSurface(IntPtr comPointer, int width, int height, int format,
+		                                                   int pool, IntPtr surfaceOut, IntPtr sharedHandle);
+		private DXCreateOffscreenPlainSurface CreateOffscreenPlainSurfaceFunc;
+		
+		private delegate int DXBeginScene(IntPtr comPointer);
+		private DXBeginScene BeginSceneFunc;
+		
+		private delegate int DXEndScene(IntPtr comPointer);
+		private DXEndScene EndSceneFunc;
+		
+		private delegate int DXClear(IntPtr comPointer, int count, IntPtr rects, int flags, int colorBGRA, float z, int stencil);
+		private DXClear ClearFunc;
+		
+		private delegate int DXSetTransform(IntPtr comPointer, int state, IntPtr matrix);
+		private DXSetTransform SetTransformFunc;
+		
+		private delegate int DXSetRenderState(IntPtr comPointer, int state, int value);
+		private DXSetRenderState SetRenderStateFunc;
+		
+		private delegate int DXSetTexture(IntPtr comPointer, int stage, IntPtr texture);
+		private DXSetTexture SetTextureFunc;
+		
+		private delegate int DXSetTextureStageState(IntPtr comPointer, int stage, int type, int value);
+		private DXSetTextureStageState SetTextureStageStateFunc;
+		
+		private delegate int DXDrawPrimitives(IntPtr comPointer, int type, int startVertex, int primitiveCount);
+		private DXDrawPrimitives DrawPrimitivesFunc;
+		
+		private delegate int DXDrawIndexedPrimitives(IntPtr comPointer, int type, int baseVertexIndex, int minVertexIndex,
+		                                             int numVertices, int startIndex, int primCount);
+		private DXDrawIndexedPrimitives DrawIndexedPrimitivesFunc;
+		
+		private delegate int DXSetVertexFormat(IntPtr comPointer, int vertexFormat);
+		private DXSetVertexFormat SetVertexFormatFunc;
+		
+		private delegate int DXSetStreamSource(IntPtr comPointer, int streamNumber, IntPtr streamData, int offsetInBytes, int stride);
+		private DXSetStreamSource SetStreamSourceFunc;
+		
+		private delegate int DXSetIndices(IntPtr comPointer, IntPtr indexData);
+		private DXSetIndices SetIndicesFunc;
+		
+		private Delegate GetFunc(IntPtr comPtr, int index, Type t) {
+			return Marshal.GetDelegateForFunctionPointer((*(IntPtr**)comPtr)[index], t);
+		}
+		
+		private void GetFuncPointers(IntPtr comPtr) {
+			try {
+				TestCooperativeLevelFunc = (DXTestCooperativeLevel) GetFunc(comPtr, 3, typeof(DXTestCooperativeLevel));
+				AvailableTextureMemoryFunc = (DXAvailableTextureMemory) GetFunc(comPtr, 4, typeof(DXAvailableTextureMemory));
+				EvictManagedResourcesFunc = (DXEvictManagedResources) GetFunc(comPtr, 5, typeof(DXEvictManagedResources));
+				CapabilitiesFunc = (DXCapabilities) GetFunc(comPtr, 7, typeof(DXCapabilities));
+				GetDisplayModeFunc = (DXGetDisplayMode) GetFunc(comPtr, 8, typeof(DXGetDisplayMode));
+				ResetFunc = (DXReset) GetFunc(comPtr, 16, typeof(DXReset));
+				PresentFunc = (DXPresent) GetFunc(comPtr, 17, typeof(DXPresent));
+				GetBackBufferFunc = (DXGetBackBuffer) GetFunc(comPtr, 18, typeof(DXGetBackBuffer));
+				CreateTextureFunc = (DXCreateTexture) GetFunc(comPtr, 23, typeof(DXCreateTexture));
+				CreateVertexBufferFunc = (DXCreateVertexBuffer) GetFunc(comPtr, 26, typeof(DXCreateVertexBuffer));
+				CreateIndexBufferFunc = (DXCreateIndexBuffer) GetFunc(comPtr, 27, typeof(DXCreateIndexBuffer));
+				GetRenderTargetDataFunc = (DXGetRenderTargetData) GetFunc(comPtr, 32, typeof(DXGetRenderTargetData));
+				CreateOffscreenPlainSurfaceFunc = (DXCreateOffscreenPlainSurface) GetFunc(comPtr, 36, typeof(DXCreateOffscreenPlainSurface));
+				BeginSceneFunc = (DXBeginScene) GetFunc(comPtr, 41, typeof(DXBeginScene));
+				EndSceneFunc = (DXEndScene) GetFunc(comPtr, 42, typeof(DXEndScene));
+				ClearFunc = (DXClear) GetFunc(comPtr, 43, typeof(DXClear));
+				SetTransformFunc = (DXSetTransform) GetFunc(comPtr, 44, typeof(DXSetTransform));
+				SetRenderStateFunc = (DXSetRenderState) GetFunc(comPtr, 57, typeof(DXSetRenderState));
+				SetTextureFunc = (DXSetTexture) GetFunc(comPtr, 65, typeof(DXSetTexture));
+				SetTextureStageStateFunc = (DXSetTextureStageState) GetFunc(comPtr, 67, typeof(DXSetTextureStageState));
+				DrawPrimitivesFunc = (DXDrawPrimitives) GetFunc(comPtr, 81, typeof(DXDrawPrimitives));
+				DrawIndexedPrimitivesFunc = (DXDrawIndexedPrimitives) GetFunc(comPtr, 82, typeof(DXDrawIndexedPrimitives));
+				SetVertexFormatFunc = (DXSetVertexFormat) GetFunc(comPtr, 89, typeof(DXSetVertexFormat));
+				SetStreamSourceFunc = (DXSetStreamSource) GetFunc(comPtr, 100, typeof(DXSetStreamSource));
+				SetIndicesFunc = (DXSetIndices) GetFunc(comPtr, 104, typeof(DXSetIndices));
+			}
+			catch {
+				throw new InvalidOperationException("Can't obtain DirectX function pointers!");
+			}
+		}
+		
 		public Device(IntPtr nativePtr) : base(nativePtr) {
+			GetFuncPointers(nativePtr);
 		}
 
 		public int TestCooperativeLevel() {
-			return Interop.Calli(comPointer,(*(IntPtr**)comPointer)[3]);
+			return TestCooperativeLevelFunc(comPointer);
 		}
 		
 		public uint AvailableTextureMemory {
-			get { return (uint)Interop.Calli(comPointer,(*(IntPtr**)comPointer)[4]); }
+			get { return (uint)AvailableTextureMemoryFunc(comPointer); }
 		}
 		
 		public void EvictManagedResources() {
-			int res = Interop.Calli(comPointer,(*(IntPtr**)comPointer)[5]);
+			int res = EvictManagedResourcesFunc(comPointer);
 			if( res < 0 ) { throw new SharpDXException( res ); }
 		}
 		
 		public Capabilities Capabilities {
 			get {
 				Capabilities caps = new Capabilities();
-				int res = Interop.Calli(comPointer, (IntPtr)(void*)&caps,(*(IntPtr**)comPointer)[7]);
+				int res = CapabilitiesFunc(comPointer, (IntPtr)(void*)&caps);
 				if( res < 0 ) { throw new SharpDXException( res ); }
 				return caps;
 			}
@@ -53,29 +173,30 @@ namespace SharpDX.Direct3D9
 		
 		public DisplayMode GetDisplayMode(int iSwapChain) {
 			DisplayMode modeRef = new DisplayMode();
-			int res = Interop.Calli(comPointer, iSwapChain, (IntPtr)(void*)&modeRef,(*(IntPtr**)comPointer)[8]);
+			int res = GetDisplayModeFunc(comPointer, iSwapChain, (IntPtr)(void*)&modeRef);
 			if( res < 0 ) { throw new SharpDXException( res ); }
 			return modeRef;
 		}
 		
 		public int Reset( PresentParameters presentParams ) {
-			return Interop.Calli(comPointer, (IntPtr)(void*)&presentParams,(*(IntPtr**)comPointer)[16]);
+			return ResetFunc(comPointer, (IntPtr)(void*)&presentParams);
 		}
 		
 		public int Present() {
-			return Interop.Calli(comPointer, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero,(*(IntPtr**)comPointer)[17]);
+			return PresentFunc(comPointer, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
 		}
 		
 		public Surface GetBackBuffer(int iSwapChain, int iBackBuffer, BackBufferType type) {
 			IntPtr backBufferOut = IntPtr.Zero;
-			int res = Interop.Calli(comPointer, iSwapChain, iBackBuffer, (int)type, (IntPtr)(void*)&backBufferOut,(*(IntPtr**)comPointer)[18]);
+			int res = GetBackBufferFunc(comPointer, iSwapChain, iBackBuffer, (int)type, (IntPtr)(void*)&backBufferOut);
 			if( res < 0 ) { throw new SharpDXException( res ); }
 			return ( backBufferOut == IntPtr.Zero ) ? null : new Surface( backBufferOut );
 		}
 		
 		public Texture CreateTexture(int width, int height, int levels, Usage usage, Format format, Pool pool) {
 			IntPtr pOut = IntPtr.Zero;
-			int res = Interop.Calli(comPointer, width, height, levels, (int)usage, (int)format, (int)pool, (IntPtr)(void*)&pOut, IntPtr.Zero,(*(IntPtr**)comPointer)[23]);
+			int res = CreateTextureFunc(comPointer, width, height, levels, (int)usage, (int)format, (int)pool,
+			                                    (IntPtr)(void*)&pOut, IntPtr.Zero);
 			if( res < 0 ) { throw new SharpDXException( res ); }
 			return new Texture( pOut );
 		}
@@ -83,56 +204,60 @@ namespace SharpDX.Direct3D9
 		// Really the same as CreateVertexBuffer - but we need a separate return type so we make a new method.
 		public DynamicDataBuffer CreateDynamicVertexBuffer(int length, VertexFormat vertexFormat) {
 			IntPtr pOut = IntPtr.Zero;
-			int res = Interop.Calli(comPointer, length, (int)Usage.Dynamic, (int)vertexFormat, (int)Pool.Default, (IntPtr)(void*)&pOut, IntPtr.Zero,(*(IntPtr**)comPointer)[26]);
+			int res = CreateVertexBufferFunc(comPointer, length, (int)Usage.Dynamic, (int)vertexFormat,
+			                                         (int)Pool.Default, (IntPtr)(void*)&pOut, IntPtr.Zero);
 			if( res < 0 ) { throw new SharpDXException( res ); }
 			return new DynamicDataBuffer( pOut );
 		}
 		
 		public DataBuffer CreateVertexBuffer(int length, Usage usage, VertexFormat vertexFormat, Pool pool) {
 			IntPtr pOut = IntPtr.Zero;
-			int res = Interop.Calli(comPointer, length, (int)usage, (int)vertexFormat, (int)pool, (IntPtr)(void*)&pOut, IntPtr.Zero,(*(IntPtr**)comPointer)[26]);
+			int res = CreateVertexBufferFunc(comPointer, length, (int)usage, (int)vertexFormat, (int)pool,
+			                                         (IntPtr)(void*)&pOut, IntPtr.Zero);
 			if( res < 0 ) { throw new SharpDXException( res ); }
 			return new DataBuffer( pOut );
 		}
 		
 		public DataBuffer CreateIndexBuffer(int length, Usage usage, Format format, Pool pool) {
 			IntPtr pOut = IntPtr.Zero;
-			int res = Interop.Calli(comPointer, length, (int)usage, (int)format, (int)pool, (IntPtr)(void*)&pOut, IntPtr.Zero,(*(IntPtr**)comPointer)[27]);
+			int res = CreateIndexBufferFunc(comPointer, length, (int)usage, (int)format, (int)pool,
+			                                        (IntPtr)(void*)&pOut, IntPtr.Zero);
 			if( res < 0 ) { throw new SharpDXException( res ); }
 			return new DataBuffer( pOut );
 		}
 		
 		public void GetRenderTargetData(Surface renderTarget, Surface destSurface) {
-			int res = Interop.Calli(comPointer, renderTarget.comPointer, destSurface.comPointer,(*(IntPtr**)comPointer)[32]);
+			int res = GetRenderTargetDataFunc(comPointer, renderTarget.comPointer, destSurface.comPointer);
 			if( res < 0 ) { throw new SharpDXException( res ); }
 		}
 		
 		public Surface CreateOffscreenPlainSurface(int width, int height, Format format, Pool pool) {
 			IntPtr pOut = IntPtr.Zero;
-			int res = Interop.Calli(comPointer, width, height, (int)format, (int)pool, (IntPtr)(void*)&pOut, IntPtr.Zero,(*(IntPtr**)comPointer)[36]);
+			int res = CreateOffscreenPlainSurfaceFunc(comPointer, width, height, (int)format, (int)pool,
+			                                                  (IntPtr)(void*)&pOut, IntPtr.Zero);
 			if( res < 0 ) { throw new SharpDXException( res ); }
 			return new Surface(pOut);
 		}
 
 		public void BeginScene() {
-			int res = Interop.Calli(comPointer,(*(IntPtr**)comPointer)[41]);
+			int res = BeginSceneFunc(comPointer);
 			if( res < 0 ) { throw new SharpDXException( res ); }
 		}
 
 		public void EndScene() {
-			int res = Interop.Calli(comPointer,(*(IntPtr**)comPointer)[42]);
+			int res = EndSceneFunc(comPointer);
 			if( res < 0 ) { throw new SharpDXException( res ); }
 		}
 		
 		public void Clear(ClearFlags flags, int colorBGRA, float z, int stencil) {
-			int res = Interop.Calli(comPointer, 0, IntPtr.Zero, (int)flags, colorBGRA, z, stencil, (*(IntPtr**)comPointer)[43]);
+			int res = ClearFunc(comPointer, 0, IntPtr.Zero, (int)flags, colorBGRA, z, stencil);
 			if( res < 0 ) { throw new SharpDXException( res ); }
 		}
 
 		public void SetTransform(TransformState state, ref Matrix4 matrixRef) {
 			int res;
 			fixed (void* matrixRef_ = &matrixRef)
-				res = Interop.Calli(comPointer, (int)state, (IntPtr)matrixRef_,(*(IntPtr**)comPointer)[44]);
+				res = SetTransformFunc(comPointer, (int)state, (IntPtr)matrixRef_);
 			if( res < 0 ) { throw new SharpDXException( res ); }
 		}
 		
@@ -145,42 +270,44 @@ namespace SharpDX.Direct3D9
 		}
 
 		public void SetRenderState(RenderState state, int value) {
-			int res = Interop.Calli(comPointer, (int)state, value,(*(IntPtr**)comPointer)[57]);
+			int res = SetRenderStateFunc(comPointer, (int)state, value);
 			if( res < 0 ) { throw new SharpDXException( res ); }
 		}
 		
 		public void SetTexture(int stage, Texture texture) {
-			int res = Interop.Calli(comPointer, stage, (texture == null)?IntPtr.Zero:texture.comPointer,(*(IntPtr**)comPointer)[65]);
+			int res = SetTextureFunc(comPointer, stage, (texture == null) ? IntPtr.Zero : texture.comPointer);
 			if( res < 0 ) { throw new SharpDXException( res ); }
 		}
 		
 		public void SetTextureStageState(int stage, TextureStage type, int value) {
-			int res = Interop.Calli(comPointer, stage, (int)type, value,(*(IntPtr**)comPointer)[67]);
+			int res = SetTextureStageStateFunc(comPointer, stage, (int)type, value);
 			if( res < 0 ) { throw new SharpDXException( res ); }
 		}
 		
 		public void DrawPrimitives(PrimitiveType type, int startVertex, int primitiveCount) {
-			int res = Interop.Calli(comPointer, (int)type, startVertex, primitiveCount,(*(IntPtr**)comPointer)[81]);
+			int res = DrawPrimitivesFunc(comPointer, (int)type, startVertex, primitiveCount);
 			if( res < 0 ) { throw new SharpDXException( res ); }
 		}
 		
 		public void DrawIndexedPrimitives(PrimitiveType type, int baseVertexIndex, int minVertexIndex, int numVertices, int startIndex, int primCount) {
-			int res = Interop.Calli(comPointer, (int)type, baseVertexIndex, minVertexIndex, numVertices, startIndex, primCount,(*(IntPtr**)comPointer)[82]);
+			int res = DrawIndexedPrimitivesFunc(comPointer, (int)type, baseVertexIndex, minVertexIndex, numVertices,
+			                                      startIndex, primCount);
 			if( res < 0 ) { throw new SharpDXException( res ); }
 		}
 
 		public void SetVertexFormat(VertexFormat vertexFormat) {
-			int res = Interop.Calli(comPointer, (int)vertexFormat,(*(IntPtr**)comPointer)[89]);
+			int res = SetVertexFormatFunc(comPointer, (int)vertexFormat);
 			if( res < 0 ) { throw new SharpDXException( res ); }
 		}
 		
 		public void SetStreamSource(int streamNumber, DataBuffer streamData, int offsetInBytes, int stride) {
-			int res = Interop.Calli(comPointer, streamNumber,(streamData == null)?IntPtr.Zero:streamData.comPointer,offsetInBytes, stride,(*(IntPtr**)comPointer)[100]);
+			int res = SetStreamSourceFunc(comPointer, streamNumber, (streamData == null) ? IntPtr.Zero : streamData.comPointer,
+			                                offsetInBytes, stride);
 			if( res < 0 ) { throw new SharpDXException( res ); }
 		}
 		
 		public void SetIndices(DataBuffer indexData) {
-			int res = Interop.Calli(comPointer,(indexData == null)?IntPtr.Zero:indexData.comPointer,(*(IntPtr**)comPointer)[104]);
+			int res = SetIndicesFunc(comPointer, (indexData == null) ? IntPtr.Zero : indexData.comPointer);
 			if( res < 0 ) { throw new SharpDXException( res ); }
 		}
 	}

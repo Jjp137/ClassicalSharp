@@ -30,7 +30,7 @@ namespace SharpDX.Direct3D9
 		private delegate int DXTestCooperativeLevel(IntPtr comPointer);
 		private DXTestCooperativeLevel TestCooperativeLevelFunc;
 		
-		private delegate uint DXAvailableTextureMemory(IntPtr comPointer);
+		private delegate int DXAvailableTextureMemory(IntPtr comPointer);
 		private DXAvailableTextureMemory AvailableTextureMemoryFunc;
 		
 		private delegate int DXEvictManagedResources(IntPtr comPointer);

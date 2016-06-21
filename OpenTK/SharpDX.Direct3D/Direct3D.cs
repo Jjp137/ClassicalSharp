@@ -24,11 +24,62 @@ using OpenTK;
 
 namespace SharpDX.Direct3D9 {
 	
-	[InteropPatch]
 	public unsafe class Direct3D : ComObject {
+		
+		private delegate int DXGetAdapterCount(IntPtr comPointer);
+		private DXGetAdapterCount GetAdapterCountFunc;
+		
+		private delegate int DXGetAdapterIdentifier(IntPtr comPointer, int adapter, int flags, IntPtr identifier);
+		private DXGetAdapterIdentifier GetAdapterIdentifierFunc;
+		
+		private delegate int DXGetAdapterModeCount(IntPtr comPointer, int adapter, int format);
+		private DXGetAdapterModeCount GetAdapterModeCountFunc;
+		
+		private delegate int DXEnumAdapterModes(IntPtr comPointer, int adapter, int format, int mode, IntPtr modeRef);
+		private DXEnumAdapterModes EnumAdapterModesFunc;
+		
+		private delegate int DXGetAdapterDisplayMode(IntPtr comPointer, int adapter, IntPtr modeRef);
+		private DXGetAdapterDisplayMode GetAdapterDisplayModeFunc;
+		
+		private delegate int DXCheckDeviceType(IntPtr comPointer, int adapter, int deviceType, int adapterFormat,
+		                                       int backBufferFormat, int windowed);
+		private DXCheckDeviceType CheckDeviceTypeFunc;
+		
+		private delegate int DXCheckDepthStencilMatch(IntPtr comPointer, int adapter, int deviceType, int adapterFormat,
+		                                              int renderTargetFormat, int depthStencilFormat);
+		private DXCheckDepthStencilMatch CheckDepthStencilMatchFunc;
+		
+		private delegate int DXGetDeviceCaps(IntPtr comPionter, int adapter, int deviceType, IntPtr capsRef);
+		private DXGetDeviceCaps GetDeviceCapsFunc;
+		
+		private delegate IntPtr DXGetAdapterMonitor(IntPtr comPointer, int adapter);
+		private DXGetAdapterMonitor GetAdapterMonitorFunc;
+		
+		private delegate int DXCreateDevice(IntPtr comPointer, int adapter, int deviceType, IntPtr hFocusWindow,
+		                                    int behaviorFlags, IntPtr presentParams, IntPtr devicePtr);
+		private DXCreateDevice CreateDeviceFunc;
+		
+		private Delegate GetFunc(IntPtr comPtr, int index, Type t) {
+			return Marshal.GetDelegateForFunctionPointer((*(IntPtr**)comPtr)[index], t);
+		}
+		
+		private void GetFuncPointers(IntPtr comPtr) {
+			GetAdapterCountFunc = (DXGetAdapterCount) GetFunc(comPtr, 4, typeof(DXGetAdapterCount));
+			GetAdapterIdentifierFunc = (DXGetAdapterIdentifier) GetFunc(comPtr, 5, typeof(DXGetAdapterIdentifier));
+			GetAdapterModeCountFunc = (DXGetAdapterModeCount) GetFunc(comPtr, 6, typeof(DXGetAdapterModeCount));
+			EnumAdapterModesFunc = (DXEnumAdapterModes) GetFunc(comPtr, 7, typeof(DXEnumAdapterModes));
+			GetAdapterDisplayModeFunc = (DXGetAdapterDisplayMode) GetFunc(comPtr, 8, typeof(DXGetAdapterDisplayMode));
+			CheckDeviceTypeFunc = (DXCheckDeviceType) GetFunc(comPtr, 9, typeof(DXCheckDeviceType));
+			CheckDepthStencilMatchFunc = (DXCheckDepthStencilMatch) GetFunc(comPtr, 12, typeof(DXCheckDepthStencilMatch));
+			GetDeviceCapsFunc = (DXGetDeviceCaps) GetFunc(comPtr, 14, typeof(DXGetDeviceCaps));
+			GetAdapterMonitorFunc = (DXGetAdapterMonitor) GetFunc(comPtr, 15, typeof(DXGetAdapterMonitor));
+			CreateDeviceFunc = (DXCreateDevice) GetFunc(comPtr, 16, typeof(DXCreateDevice));
+		}
 		
 		public Direct3D() {
 			comPointer = Direct3DCreate9( SdkVersion );
+			
+			GetFuncPointers(comPointer);
 			
 			int count = GetAdapterCount();
 			Adapters = new List<AdapterInformation>( count );
@@ -43,12 +94,12 @@ namespace SharpDX.Direct3D9 {
 		static extern IntPtr Direct3DCreate9( int sdkVersion );
 		
 		public int GetAdapterCount() {
-			return Interop.Calli(comPointer,(*(IntPtr**)comPointer)[4]);
+			return GetAdapterCountFunc(comPointer);
 		}
 		
 		public AdapterDetails GetAdapterIdentifier( int adapter ) {			
 			AdapterDetails.Native identifierNative = new AdapterDetails.Native();
-			int res = Interop.Calli(comPointer, adapter, 0, (IntPtr)(void*)&identifierNative,(*(IntPtr**)comPointer)[5]);
+			int res = GetAdapterIdentifierFunc(comPointer, adapter, 0, (IntPtr)(void*)&identifierNative);
 			if( res < 0 ) { throw new SharpDXException( res ); }
 			
 			AdapterDetails identifier = new AdapterDetails();
@@ -57,48 +108,48 @@ namespace SharpDX.Direct3D9 {
 		}
 		
 		public int GetAdapterModeCount(int adapter, Format format) {
-			return Interop.Calli(comPointer, adapter, (int)format,(*(IntPtr**)comPointer)[6]);
+			return GetAdapterModeCountFunc(comPointer, adapter, (int)format);
 		}
 		
 		public DisplayMode EnumAdapterModes(int adapter, Format format, int mode) {
 			DisplayMode modeRef = new DisplayMode();
-			int res = Interop.Calli(comPointer, adapter, (int)format, mode, (IntPtr)(void*)&modeRef,(*(IntPtr**)comPointer)[7]);
+			int res = EnumAdapterModesFunc(comPointer, adapter, (int)format, mode, (IntPtr)(void*)&modeRef);
 			if( res < 0 ) { throw new SharpDXException( res ); }
 			return modeRef;
 		}
 		
 		public DisplayMode GetAdapterDisplayMode(int adapter) {
 			DisplayMode modeRef = new DisplayMode();
-			int res = Interop.Calli(comPointer, adapter, (IntPtr)(void*)&modeRef,(*(IntPtr**)comPointer)[8]);
+			int res = GetAdapterDisplayModeFunc(comPointer, adapter, (IntPtr)(void*)&modeRef);
 			if( res < 0 ) { throw new SharpDXException( res ); }
 			return modeRef;
 		}
 		
 		public bool CheckDeviceType(int adapter, DeviceType devType, Format adapterFormat, Format backBufferFormat, bool bWindowed) {
-			return Interop.Calli(comPointer, adapter, (int)devType, (int)adapterFormat, 
-			                             (int)backBufferFormat, bWindowed ? 1 : 0,(*(IntPtr**)comPointer)[9]) == 0;
+			return CheckDeviceTypeFunc(comPointer, adapter, (int)devType, (int)adapterFormat,
+			                           (int)backBufferFormat, bWindowed ? 1 : 0) == 0;
 		}
 		
 		public bool CheckDepthStencilMatch(int adapter, DeviceType deviceType, Format adapterFormat, Format renderTargetFormat, Format depthStencilFormat) {
-			return Interop.Calli(comPointer, adapter, (int)deviceType, (int)adapterFormat, 
-			                             (int)renderTargetFormat, (int)depthStencilFormat,(*(IntPtr**)comPointer)[12]) == 0;
+			return CheckDepthStencilMatchFunc(comPointer, adapter, (int)deviceType, (int)adapterFormat, 
+			                                  (int)renderTargetFormat, (int)depthStencilFormat) == 0;
 		}
 		
 		public Capabilities GetDeviceCaps(int adapter, DeviceType deviceType) {
 			Capabilities capsRef = new Capabilities();
-			int res = Interop.Calli(comPointer, adapter, (int)deviceType, (IntPtr)(void*)&capsRef,(*(IntPtr**)comPointer)[14]);
+			int res = GetDeviceCapsFunc(comPointer, adapter, (int)deviceType, (IntPtr)(void*)&capsRef);
 			if( res < 0 ) { throw new SharpDXException( res ); }
 			return capsRef;
 		}
 		
 		public IntPtr GetAdapterMonitor(int adapter) {
-			return Interop.Calli_IntPtr(comPointer, adapter,(*(IntPtr**)comPointer)[15]);
+			return GetAdapterMonitorFunc(comPointer, adapter);
 		}
 		
 		public Device CreateDevice(int adapter, DeviceType deviceType, IntPtr hFocusWindow, CreateFlags behaviorFlags,  PresentParameters presentParams) {
 			IntPtr devicePtr = IntPtr.Zero;
-			int res = Interop.Calli(comPointer, adapter, (int)deviceType, hFocusWindow, (int)behaviorFlags, (IntPtr)(void*)&presentParams, 
-			                           (IntPtr)(void*)&devicePtr,(*(IntPtr**)comPointer)[16]);
+			int res = CreateDeviceFunc(comPointer, adapter, (int)deviceType, hFocusWindow, (int)behaviorFlags,
+			                           (IntPtr)(void*)&presentParams, (IntPtr)(void*)&devicePtr);
 			
 			if( res < 0 ) { throw new SharpDXException( res ); }
 			return new Device( devicePtr );

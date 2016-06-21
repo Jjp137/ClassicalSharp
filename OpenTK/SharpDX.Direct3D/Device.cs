@@ -113,36 +113,31 @@ namespace SharpDX.Direct3D9
 		}
 		
 		private void GetFuncPointers(IntPtr comPtr) {
-			try {
-				TestCooperativeLevelFunc = (DXTestCooperativeLevel) GetFunc(comPtr, 3, typeof(DXTestCooperativeLevel));
-				AvailableTextureMemoryFunc = (DXAvailableTextureMemory) GetFunc(comPtr, 4, typeof(DXAvailableTextureMemory));
-				EvictManagedResourcesFunc = (DXEvictManagedResources) GetFunc(comPtr, 5, typeof(DXEvictManagedResources));
-				CapabilitiesFunc = (DXCapabilities) GetFunc(comPtr, 7, typeof(DXCapabilities));
-				GetDisplayModeFunc = (DXGetDisplayMode) GetFunc(comPtr, 8, typeof(DXGetDisplayMode));
-				ResetFunc = (DXReset) GetFunc(comPtr, 16, typeof(DXReset));
-				PresentFunc = (DXPresent) GetFunc(comPtr, 17, typeof(DXPresent));
-				GetBackBufferFunc = (DXGetBackBuffer) GetFunc(comPtr, 18, typeof(DXGetBackBuffer));
-				CreateTextureFunc = (DXCreateTexture) GetFunc(comPtr, 23, typeof(DXCreateTexture));
-				CreateVertexBufferFunc = (DXCreateVertexBuffer) GetFunc(comPtr, 26, typeof(DXCreateVertexBuffer));
-				CreateIndexBufferFunc = (DXCreateIndexBuffer) GetFunc(comPtr, 27, typeof(DXCreateIndexBuffer));
-				GetRenderTargetDataFunc = (DXGetRenderTargetData) GetFunc(comPtr, 32, typeof(DXGetRenderTargetData));
-				CreateOffscreenPlainSurfaceFunc = (DXCreateOffscreenPlainSurface) GetFunc(comPtr, 36, typeof(DXCreateOffscreenPlainSurface));
-				BeginSceneFunc = (DXBeginScene) GetFunc(comPtr, 41, typeof(DXBeginScene));
-				EndSceneFunc = (DXEndScene) GetFunc(comPtr, 42, typeof(DXEndScene));
-				ClearFunc = (DXClear) GetFunc(comPtr, 43, typeof(DXClear));
-				SetTransformFunc = (DXSetTransform) GetFunc(comPtr, 44, typeof(DXSetTransform));
-				SetRenderStateFunc = (DXSetRenderState) GetFunc(comPtr, 57, typeof(DXSetRenderState));
-				SetTextureFunc = (DXSetTexture) GetFunc(comPtr, 65, typeof(DXSetTexture));
-				SetTextureStageStateFunc = (DXSetTextureStageState) GetFunc(comPtr, 67, typeof(DXSetTextureStageState));
-				DrawPrimitivesFunc = (DXDrawPrimitives) GetFunc(comPtr, 81, typeof(DXDrawPrimitives));
-				DrawIndexedPrimitivesFunc = (DXDrawIndexedPrimitives) GetFunc(comPtr, 82, typeof(DXDrawIndexedPrimitives));
-				SetVertexFormatFunc = (DXSetVertexFormat) GetFunc(comPtr, 89, typeof(DXSetVertexFormat));
-				SetStreamSourceFunc = (DXSetStreamSource) GetFunc(comPtr, 100, typeof(DXSetStreamSource));
-				SetIndicesFunc = (DXSetIndices) GetFunc(comPtr, 104, typeof(DXSetIndices));
-			}
-			catch {
-				throw new InvalidOperationException("Can't obtain DirectX function pointers!");
-			}
+			TestCooperativeLevelFunc = (DXTestCooperativeLevel) GetFunc(comPtr, 3, typeof(DXTestCooperativeLevel));
+			AvailableTextureMemoryFunc = (DXAvailableTextureMemory) GetFunc(comPtr, 4, typeof(DXAvailableTextureMemory));
+			EvictManagedResourcesFunc = (DXEvictManagedResources) GetFunc(comPtr, 5, typeof(DXEvictManagedResources));
+			CapabilitiesFunc = (DXCapabilities) GetFunc(comPtr, 7, typeof(DXCapabilities));
+			GetDisplayModeFunc = (DXGetDisplayMode) GetFunc(comPtr, 8, typeof(DXGetDisplayMode));
+			ResetFunc = (DXReset) GetFunc(comPtr, 16, typeof(DXReset));
+			PresentFunc = (DXPresent) GetFunc(comPtr, 17, typeof(DXPresent));
+			GetBackBufferFunc = (DXGetBackBuffer) GetFunc(comPtr, 18, typeof(DXGetBackBuffer));
+			CreateTextureFunc = (DXCreateTexture) GetFunc(comPtr, 23, typeof(DXCreateTexture));
+			CreateVertexBufferFunc = (DXCreateVertexBuffer) GetFunc(comPtr, 26, typeof(DXCreateVertexBuffer));
+			CreateIndexBufferFunc = (DXCreateIndexBuffer) GetFunc(comPtr, 27, typeof(DXCreateIndexBuffer));
+			GetRenderTargetDataFunc = (DXGetRenderTargetData) GetFunc(comPtr, 32, typeof(DXGetRenderTargetData));
+			CreateOffscreenPlainSurfaceFunc = (DXCreateOffscreenPlainSurface) GetFunc(comPtr, 36, typeof(DXCreateOffscreenPlainSurface));
+			BeginSceneFunc = (DXBeginScene) GetFunc(comPtr, 41, typeof(DXBeginScene));
+			EndSceneFunc = (DXEndScene) GetFunc(comPtr, 42, typeof(DXEndScene));
+			ClearFunc = (DXClear) GetFunc(comPtr, 43, typeof(DXClear));
+			SetTransformFunc = (DXSetTransform) GetFunc(comPtr, 44, typeof(DXSetTransform));
+			SetRenderStateFunc = (DXSetRenderState) GetFunc(comPtr, 57, typeof(DXSetRenderState));
+			SetTextureFunc = (DXSetTexture) GetFunc(comPtr, 65, typeof(DXSetTexture));
+			SetTextureStageStateFunc = (DXSetTextureStageState) GetFunc(comPtr, 67, typeof(DXSetTextureStageState));
+			DrawPrimitivesFunc = (DXDrawPrimitives) GetFunc(comPtr, 81, typeof(DXDrawPrimitives));
+			DrawIndexedPrimitivesFunc = (DXDrawIndexedPrimitives) GetFunc(comPtr, 82, typeof(DXDrawIndexedPrimitives));
+			SetVertexFormatFunc = (DXSetVertexFormat) GetFunc(comPtr, 89, typeof(DXSetVertexFormat));
+			SetStreamSourceFunc = (DXSetStreamSource) GetFunc(comPtr, 100, typeof(DXSetStreamSource));
+			SetIndicesFunc = (DXSetIndices) GetFunc(comPtr, 104, typeof(DXSetIndices));
 		}
 		
 		public Device(IntPtr nativePtr) : base(nativePtr) {

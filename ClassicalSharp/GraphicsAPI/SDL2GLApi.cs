@@ -309,56 +309,51 @@ namespace ClassicalSharp.GraphicsAPI
 			}
 
 			public static void LoadEntryPoints() {
-				try {
-					glAlphaFunc = (GLAlphaFunc) GetFunc( "glAlphaFunc", typeof(GLAlphaFunc) );
-					glBindBuffer = (GLBindBuffer) GetFunc( "glBindBuffer", typeof(GLBindBuffer) );
-					glBindTexture = (GLBindTexture) GetFunc( "glBindTexture", typeof(GLBindTexture) );
-					glBlendFunc = (GLBlendFunc) GetFunc( "glBlendFunc", typeof(GLBlendFunc) );
-					glBufferData = (GLBufferData) GetFunc( "glBufferData", typeof(GLBufferData) );
-					glBufferSubData = (GLBufferSubData) GetFunc( "glBufferSubData", typeof(GLBufferSubData) );
-					glClear = (GLClear) GetFunc( "glClear", typeof(GLClear) );
-					glClearColor = (GLClearColor) GetFunc( "glClearColor", typeof(GLClearColor)) ;
-					glColorMask = (GLColorMask) GetFunc( "glColorMask", typeof(GLColorMask) );
-					glColorPointer = (GLColorPointer) GetFunc( "glColorPointer", typeof(GLColorPointer) );
-					glCullFace = (GLCullFace) GetFunc( "glCullFace", typeof(GLCullFace) );
-					glDeleteBuffers = (GLDeleteBuffers) GetFunc( "glDeleteBuffers", typeof(GLDeleteBuffers) );
-					glDeleteTextures = (GLDeleteTextures) GetFunc( "glDeleteTextures", typeof(GLDeleteTextures) );
-					glDepthFunc = (GLDepthFunc) GetFunc( "glDepthFunc", typeof(GLDepthFunc) );
-					glDepthMask = (GLDepthMask) GetFunc( "glDepthMask", typeof(GLDepthMask) );
-					glDisable = (GLDisable) GetFunc( "glDisable", typeof(GLDisable) );
-					glDisableClientState = (GLDisableClientState) GetFunc( "glDisableClientState", typeof(GLDisableClientState) );
-					glDrawArrays = (GLDrawArrays) GetFunc( "glDrawArrays", typeof(GLDrawArrays) );
-					glDrawElements = (GLDrawElements) GetFunc( "glDrawElements", typeof(GLDrawElements) );
-					glEnable = (GLEnable) GetFunc( "glEnable", typeof(GLEnable) );
-					glEnableClientState = (GLEnableClientState) GetFunc( "glEnableClientState", typeof(GLEnableClientState) );
-					glFogf = (GLFogf) GetFunc( "glFogf", typeof(GLFogf) );
-					glFogfv = (GLFogfv) GetFunc( "glFogfv", typeof(GLFogfv) );
-					glFogi = (GLFogi) GetFunc( "glFogi", typeof(GLFogi) );
-					glGenBuffers = (GLGenBuffers) GetFunc( "glGenBuffers", typeof(GLGenBuffers) );
-					glGenTextures = (GLGenTextures) GetFunc( "glGenTextures", typeof(GLGenTextures) );
-					glGetError = (GLGetError) GetFunc( "glGetError", typeof(GLGetError) );
-					glGetFloatv = (GLGetFloatv) GetFunc( "glGetFloatv", typeof(GLGetFloatv)) ;
-					glGetIntegerv = (GLGetIntegerv) GetFunc( "glGetIntegerv", typeof(GLGetIntegerv) );
-					glGetString = (GLGetString) GetFunc( "glGetString", typeof(GLGetString) );
-					glHint = (GLHint) GetFunc( "glHint", typeof(GLHint) );
-					glLoadIdentity = (GLLoadIdentity) GetFunc( "glLoadIdentity", typeof(GLLoadIdentity) );
-					glLoadMatrixf = (GLLoadMatrixf) GetFunc( "glLoadMatrixf", typeof(GLLoadMatrixf) );
-					glMatrixMode = (GLMatrixMode) GetFunc( "glMatrixMode", typeof(GLMatrixMode) );
-					glMultMatrixf = (GLMultMatrixf) GetFunc( "glMultMatrixf", typeof(GLMultMatrixf) );
-					glPopMatrix = (GLPopMatrix) GetFunc( "glPopMatrix", typeof(GLPopMatrix) );
-					glPushMatrix = (GLPushMatrix) GetFunc( "glPushMatrix", typeof(GLPushMatrix) );
-					glReadPixels = (GLReadPixels) GetFunc( "glReadPixels", typeof(GLReadPixels) );
-					glShadeModel = (GLShadeModel) GetFunc( "glShadeModel", typeof(GLShadeModel) );
-					glTexCoordPointer = (GLTexCoordPointer) GetFunc( "glTexCoordPointer", typeof(GLTexCoordPointer) );
-					glTexImage2D = (GLTexImage2D) GetFunc( "glTexImage2D", typeof(GLTexImage2D) );
-					glTexParameteri = (GLTexParameteri) GetFunc( "glTexParameteri", typeof(GLTexParameteri) );
-					glTexSubImage2D = (GLTexSubImage2D) GetFunc( "glTexSubImage2D", typeof(GLTexSubImage2D) );
-					glVertexPointer = (GLVertexPointer) GetFunc( "glVertexPointer", typeof(GLVertexPointer) );
-					glViewport = (GLViewport) GetFunc( "glViewport", typeof(GLViewport) );
-				}
-				catch {
-					throw new InvalidOperationException( "Can't load GL entry points!" );
-				}
+				glAlphaFunc = (GLAlphaFunc) GetFunc( "glAlphaFunc", typeof(GLAlphaFunc) );
+				glBindBuffer = (GLBindBuffer) GetFunc( "glBindBuffer", typeof(GLBindBuffer) );
+				glBindTexture = (GLBindTexture) GetFunc( "glBindTexture", typeof(GLBindTexture) );
+				glBlendFunc = (GLBlendFunc) GetFunc( "glBlendFunc", typeof(GLBlendFunc) );
+				glBufferData = (GLBufferData) GetFunc( "glBufferData", typeof(GLBufferData) );
+				glBufferSubData = (GLBufferSubData) GetFunc( "glBufferSubData", typeof(GLBufferSubData) );
+				glClear = (GLClear) GetFunc( "glClear", typeof(GLClear) );
+				glClearColor = (GLClearColor) GetFunc( "glClearColor", typeof(GLClearColor)) ;
+				glColorMask = (GLColorMask) GetFunc( "glColorMask", typeof(GLColorMask) );
+				glColorPointer = (GLColorPointer) GetFunc( "glColorPointer", typeof(GLColorPointer) );
+				glCullFace = (GLCullFace) GetFunc( "glCullFace", typeof(GLCullFace) );
+				glDeleteBuffers = (GLDeleteBuffers) GetFunc( "glDeleteBuffers", typeof(GLDeleteBuffers) );
+				glDeleteTextures = (GLDeleteTextures) GetFunc( "glDeleteTextures", typeof(GLDeleteTextures) );
+				glDepthFunc = (GLDepthFunc) GetFunc( "glDepthFunc", typeof(GLDepthFunc) );
+				glDepthMask = (GLDepthMask) GetFunc( "glDepthMask", typeof(GLDepthMask) );
+				glDisable = (GLDisable) GetFunc( "glDisable", typeof(GLDisable) );
+				glDisableClientState = (GLDisableClientState) GetFunc( "glDisableClientState", typeof(GLDisableClientState) );
+				glDrawArrays = (GLDrawArrays) GetFunc( "glDrawArrays", typeof(GLDrawArrays) );
+				glDrawElements = (GLDrawElements) GetFunc( "glDrawElements", typeof(GLDrawElements) );
+				glEnable = (GLEnable) GetFunc( "glEnable", typeof(GLEnable) );
+				glEnableClientState = (GLEnableClientState) GetFunc( "glEnableClientState", typeof(GLEnableClientState) );
+				glFogf = (GLFogf) GetFunc( "glFogf", typeof(GLFogf) );
+				glFogfv = (GLFogfv) GetFunc( "glFogfv", typeof(GLFogfv) );
+				glFogi = (GLFogi) GetFunc( "glFogi", typeof(GLFogi) );
+				glGenBuffers = (GLGenBuffers) GetFunc( "glGenBuffers", typeof(GLGenBuffers) );
+				glGenTextures = (GLGenTextures) GetFunc( "glGenTextures", typeof(GLGenTextures) );
+				glGetError = (GLGetError) GetFunc( "glGetError", typeof(GLGetError) );
+				glGetFloatv = (GLGetFloatv) GetFunc( "glGetFloatv", typeof(GLGetFloatv)) ;
+				glGetIntegerv = (GLGetIntegerv) GetFunc( "glGetIntegerv", typeof(GLGetIntegerv) );
+				glGetString = (GLGetString) GetFunc( "glGetString", typeof(GLGetString) );
+				glHint = (GLHint) GetFunc( "glHint", typeof(GLHint) );
+				glLoadIdentity = (GLLoadIdentity) GetFunc( "glLoadIdentity", typeof(GLLoadIdentity) );
+				glLoadMatrixf = (GLLoadMatrixf) GetFunc( "glLoadMatrixf", typeof(GLLoadMatrixf) );
+				glMatrixMode = (GLMatrixMode) GetFunc( "glMatrixMode", typeof(GLMatrixMode) );
+				glMultMatrixf = (GLMultMatrixf) GetFunc( "glMultMatrixf", typeof(GLMultMatrixf) );
+				glPopMatrix = (GLPopMatrix) GetFunc( "glPopMatrix", typeof(GLPopMatrix) );
+				glPushMatrix = (GLPushMatrix) GetFunc( "glPushMatrix", typeof(GLPushMatrix) );
+				glReadPixels = (GLReadPixels) GetFunc( "glReadPixels", typeof(GLReadPixels) );
+				glShadeModel = (GLShadeModel) GetFunc( "glShadeModel", typeof(GLShadeModel) );
+				glTexCoordPointer = (GLTexCoordPointer) GetFunc( "glTexCoordPointer", typeof(GLTexCoordPointer) );
+				glTexImage2D = (GLTexImage2D) GetFunc( "glTexImage2D", typeof(GLTexImage2D) );
+				glTexParameteri = (GLTexParameteri) GetFunc( "glTexParameteri", typeof(GLTexParameteri) );
+				glTexSubImage2D = (GLTexSubImage2D) GetFunc( "glTexSubImage2D", typeof(GLTexSubImage2D) );
+				glVertexPointer = (GLVertexPointer) GetFunc( "glVertexPointer", typeof(GLVertexPointer) );
+				glViewport = (GLViewport) GetFunc( "glViewport", typeof(GLViewport) );
 			}
 
 			public static void UseArbVboAddresses() {

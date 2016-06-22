@@ -33,11 +33,8 @@ namespace ClassicalSharp {
 			nullContext = false;
 			#endif
 			int width, height;
-			#if !USE_DX
+
 			SelectResolutionSDL( out width, out height );
-			#else
-			SelectResolution( out width, out height );
-			#endif
 				
 			if( args.Length == 0 || args.Length == 1 ) {
 				const string skinServer = "http://static.classicube.net/skins/";
@@ -49,18 +46,6 @@ namespace ClassicalSharp {
 				     + " provide command line arguments to start the client." );
 			} else {
 				RunMultiplayer( args, nullContext, width, height );
-			}
-		}
-		
-		static void SelectResolution( out int width, out int height ) {
-			DisplayDevice device = DisplayDevice.Default;
-			width = 640; height = 480;
-			
-			if( device.Width >= 1024 && device.Height >= 768 ) {
-				width = 800; height = 600;
-			}
-			if( device.Width >= 1920 && device.Height >= 1080 ) {
-				width = 1600; height = 900;
 			}
 		}
 		

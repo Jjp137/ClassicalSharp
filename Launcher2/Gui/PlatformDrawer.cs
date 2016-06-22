@@ -1,5 +1,8 @@
 ﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
-using System;
+
+// SDL2 branch note: Keep this file around to make dealing with merge conflicts easier, but don't compile it anymore.
+
+/*using System;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Security;
@@ -286,6 +289,7 @@ namespace Launcher {
 			              0, 0, 0, 0, bmp.Width, bmp.Height );
 			API.XFree( image );
 			Marshal.FreeHGlobal( ptr );
-		}*/
+		}
 	}
 }
+*/

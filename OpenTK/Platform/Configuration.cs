@@ -64,7 +64,8 @@ namespace OpenTK {
 			// Hack: it seems that this check will cause X to initialize itself on Mac OS X Leopard and newer.
 			// We don't want that (we'll be using the native interfaces anyway), so we'll avoid this check when we detect Mac OS X.
 			if( !RunningOnMacOS && !RunningOnWindows ) {
-				try { RunningOnX11 = OpenTK.Platform.X11.API.DefaultDisplay != IntPtr.Zero; }
+				// SDL2 branch note: assume yes for now; this isn't used anywhere in ClassicalSharp anyway
+				try { RunningOnX11 = true; }
 				catch { }
 			}
 
@@ -72,7 +73,7 @@ namespace OpenTK {
 			if( Type.GetType("Mono.Runtime") != null )
 				RunningOnMono = true;
 			
-			Debug.Print("Detected configuration: {0} / {1}",
+			Console.WriteLine("Detected configuration: {0} / {1}",
 			            RunningOnWindows ? "Windows" : RunningOnLinux ? "Linux" : RunningOnMacOS ? "MacOS" :
 			            RunningOnUnix ? "Unix" : RunningOnX11 ? "X11" : "Unknown Platform",
 			            RunningOnMono ? "Mono" : ".Net");

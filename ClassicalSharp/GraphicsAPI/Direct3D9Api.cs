@@ -1,5 +1,8 @@
 ﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
 #if USE_DX && !ANDROID
+// SDL2 branch note: Keep this file around to make dealing with merge conflicts easier, but don't compile it anymore.
+
+/*
 using System;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -652,4 +655,5 @@ namespace ClassicalSharp.GraphicsAPI {
 		}
 	}
 }
+*/
 #endif

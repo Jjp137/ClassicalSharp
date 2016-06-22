@@ -253,7 +253,7 @@ namespace ClassicalSharp
 			while( SDL.SDL_PollEvent( out curEvent ) != 0 ) {
 				switch( curEvent.type ) {
 					case SDL.SDL_EventType.SDL_QUIT:
-						DestroyWindow();
+						Close();
 						break;
 					case SDL.SDL_EventType.SDL_WINDOWEVENT:
 						HandleWindowEvent( curEvent );

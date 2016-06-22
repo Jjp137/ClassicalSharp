@@ -108,10 +108,6 @@ namespace SharpDX.Direct3D9
 		private delegate int DXSetIndices(IntPtr comPointer, IntPtr indexData);
 		private DXSetIndices SetIndicesFunc;
 		
-		private Delegate GetFunc(IntPtr comPtr, int index, Type t) {
-			return Marshal.GetDelegateForFunctionPointer((*(IntPtr**)comPtr)[index], t);
-		}
-		
 		private void GetFuncPointers(IntPtr comPtr) {
 			TestCooperativeLevelFunc = (DXTestCooperativeLevel) GetFunc(comPtr, 3, typeof(DXTestCooperativeLevel));
 			AvailableTextureMemoryFunc = (DXAvailableTextureMemory) GetFunc(comPtr, 4, typeof(DXAvailableTextureMemory));

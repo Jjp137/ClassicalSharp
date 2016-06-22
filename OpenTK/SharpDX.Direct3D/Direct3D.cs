@@ -59,10 +59,6 @@ namespace SharpDX.Direct3D9 {
 		                                    int behaviorFlags, IntPtr presentParams, IntPtr devicePtr);
 		private DXCreateDevice CreateDeviceFunc;
 		
-		private Delegate GetFunc(IntPtr comPtr, int index, Type t) {
-			return Marshal.GetDelegateForFunctionPointer((*(IntPtr**)comPtr)[index], t);
-		}
-		
 		private void GetFuncPointers(IntPtr comPtr) {
 			GetAdapterCountFunc = (DXGetAdapterCount) GetFunc(comPtr, 4, typeof(DXGetAdapterCount));
 			GetAdapterIdentifierFunc = (DXGetAdapterIdentifier) GetFunc(comPtr, 5, typeof(DXGetAdapterIdentifier));

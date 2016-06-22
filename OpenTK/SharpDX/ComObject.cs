@@ -33,6 +33,10 @@ namespace SharpDX
 		protected ComObject() {
 		}
 
+		protected unsafe Delegate GetFunc(IntPtr comPtr, int index, Type t) {
+			return Marshal.GetDelegateForFunctionPointer((*(IntPtr**)comPtr)[index], t);
+		}
+		
 		public bool IsDisposed;
 
 		public void Dispose() {

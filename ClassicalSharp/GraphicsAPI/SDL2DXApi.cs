@@ -15,7 +15,7 @@ namespace ClassicalSharp.GraphicsAPI {
 
 	/// <summary> Alternate implementation of Direct3D9Api that uses SDL2. </summary>
 	/// <remarks> Any usage of this class assumes that SDL's video subsystem was initialized. </remarks>
-	public class SDL2DXApi : IGraphicsApi {
+	public unsafe class SDL2DXApi : IGraphicsApi {
 
 		Device device;
 		Direct3D d3d;
@@ -247,14 +247,20 @@ namespace ClassicalSharp.GraphicsAPI {
 		}
 		
 		public override void UpdateDynamicVb( DrawMode mode, int vb, VertexP3fC4b[] vertices, int count ) {
-			UpdateDynamicVb<VertexP3fC4b>( mode, vb, vertices, count );
+			fixed ( VertexP3fC4b* p = vertices ) {
+				IntPtr ptr = (IntPtr)p;
+				UpdateDynamicVb( mode, vb, ptr, count );
+			}
 		}
 
 		public override void UpdateDynamicVb( DrawMode mode, int vb, VertexP3fT2fC4b[] vertices, int count ) {
-			UpdateDynamicVb<VertexP3fT2fC4b>( mode, vb, vertices, count );
+			fixed ( VertexP3fT2fC4b* p = vertices ) {
+				IntPtr ptr = (IntPtr)p;
+				UpdateDynamicVb( mode, vb, ptr, count );
+			}
 		}
 		
-		public void UpdateDynamicVb<T>( DrawMode mode, int vb, T[] vertices, int count ) where T : struct {
+		public void UpdateDynamicVb( DrawMode mode, int vb, IntPtr vertices, int count ) {
 			int size = count * batchStride;
 			DataBuffer buffer = dynamicvBuffers[vb];
 			buffer.SetData( vertices, size, LockFlags.Discard );
@@ -263,17 +269,21 @@ namespace ClassicalSharp.GraphicsAPI {
 			device.DrawPrimitives( modeMappings[(int)mode], 0, NumPrimitives( count, mode ) );
 		}
 		
-		public override void UpdateDynamicIndexedVb( DrawMode mode, int vb, VertexP3fC4b[] vertices, 
-		                                             int vCount, int indicesCount ) {
-			UpdateDynamicIndexedVb<VertexP3fC4b>( mode, vb, vertices, vCount, indicesCount );
+		public override void UpdateDynamicIndexedVb( DrawMode mode, int vb, VertexP3fC4b[] vertices, int vCount, int indicesCount ) {
+			fixed ( VertexP3fC4b* p = vertices ) {
+				IntPtr ptr = (IntPtr)p;
+				UpdateDynamicIndexedVb( mode, vb, ptr, vCount, indicesCount );
+			}
 		}
 
-		public override void UpdateDynamicIndexedVb( DrawMode mode, int vb, VertexP3fT2fC4b[] vertices, 
-		                                             int vCount, int indicesCount) {
-			UpdateDynamicIndexedVb<VertexP3fT2fC4b>( mode, vb, vertices, vCount, indicesCount );
+		public override void UpdateDynamicIndexedVb( DrawMode mode, int vb, VertexP3fT2fC4b[] vertices, int vCount, int indicesCount ) {
+			fixed ( VertexP3fT2fC4b* p = vertices ) {
+				IntPtr ptr = (IntPtr)p;
+				UpdateDynamicIndexedVb( mode, vb, ptr, vCount, indicesCount );
+			}
 		}
 		
-		public void UpdateDynamicIndexedVb<T>( DrawMode mode, int vb, T[] vertices, int vCount, int indicesCount ) where T : struct {
+		public void UpdateDynamicIndexedVb( DrawMode mode, int vb, IntPtr vertices, int vCount, int indicesCount ) {
 			int size = vCount * batchStride;
 			DataBuffer buffer = dynamicvBuffers[vb];
 			buffer.SetData( vertices, size, LockFlags.Discard );
@@ -283,14 +293,20 @@ namespace ClassicalSharp.GraphicsAPI {
 		}
 		
 		public override void SetDynamicVbData( DrawMode mode, int vb, VertexP3fC4b[] vertices, int count ) {
-			SetDynamicVbData<VertexP3fC4b>( mode, vb, vertices, count );
+			fixed ( VertexP3fC4b* p = vertices ) {
+				IntPtr ptr = (IntPtr)p;
+				SetDynamicVbData( mode, vb, ptr, count ); 
+			}
 		}
 
 		public override void SetDynamicVbData( DrawMode mode, int vb, VertexP3fT2fC4b[] vertices, int count ) {
-			SetDynamicVbData<VertexP3fT2fC4b>( mode, vb, vertices, count );
+			fixed ( VertexP3fT2fC4b* p = vertices ) {
+				IntPtr ptr = (IntPtr)p;
+				SetDynamicVbData( mode, vb, ptr, count ); 
+			}
 		}
 		
-		public void SetDynamicVbData<T>( DrawMode mode, int vb, T[] vertices, int count ) where T: struct {
+		public void SetDynamicVbData( DrawMode mode, int vb, IntPtr vertices, int count ) {
 			int size = count * batchStride;
 			DataBuffer buffer = dynamicvBuffers[vb];
 			buffer.SetData( vertices, size, LockFlags.Discard );
@@ -302,20 +318,20 @@ namespace ClassicalSharp.GraphicsAPI {
 		}
 
 		public override int CreateVb( VertexP3fC4b[] vertices, VertexFormat format, int count ) {
-			return CreateVb<VertexP3fC4b>( vertices, format, count );
+			fixed ( VertexP3fC4b* p = vertices ) {
+				IntPtr ptr = (IntPtr)p;
+				return CreateVb( ptr, format, count );
+			}
 		}
 
 		public override int CreateVb( VertexP3fT2fC4b[] vertices, VertexFormat format, int count ) {
-			return CreateVb<VertexP3fT2fC4b>( vertices, format, count );
+			fixed ( VertexP3fT2fC4b* p = vertices ) {
+				IntPtr ptr = (IntPtr)p;
+				return CreateVb( ptr, format, count );
+			}
 		}
 		
 		D3D.VertexFormat[] formatMapping;
-		public int CreateVb<T>( T[] vertices, VertexFormat format, int count ) where T : struct {
-			int size = count * strideSizes[(int)format];
-			DataBuffer buffer = device.CreateVertexBuffer( size, Usage.None, formatMapping[(int)format], Pool.Managed );
-			buffer.SetData( vertices, size, LockFlags.None );
-			return GetOrExpand( ref vBuffers, buffer, vBufferSize );
-		}
 		
 		public override int CreateVb( IntPtr vertices, VertexFormat format, int count ) {
 			int size = count * strideSizes[(int)format];

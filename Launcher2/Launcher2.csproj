@@ -127,15 +127,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Gui" />
-    <Folder Include="Gui\Views" />
-    <Folder Include="Gui\TableWidget" />
-    <Folder Include="Gui\Screens" />
-    <Folder Include="Gui\Widgets" />
-    <Folder Include="Updater" />
-    <Folder Include="Utils" />
-    <Folder Include="Patcher" />
-    <Folder Include="WebService" />
+    <Folder Include="Gui\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

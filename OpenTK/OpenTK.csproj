@@ -135,19 +135,5 @@
     <Folder Include="Platform\" />
     <Folder Include="Platform\MacOS\" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\InteropPatcher\InteropPatcher.csproj">
-      <Project>{4A4110EE-21CA-4715-AF67-0C8B7CE0642F}</Project>
-      <Name>InteropPatcher</Name>
-    </ProjectReference>
-  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <!-- This actually rewrites the calli and fixed code.-->
-  <Target Name="AfterBuild">
-    <Exec Command="$(OutputPath)InteropPatcher.exe $(OutDir)OpenTK.dll" />
-    <!--Copy back *.dll from bin/Debug|Release to obj/Debug/Release directory-->
-    <Copy SourceFiles="@(MainAssembly)" DestinationFolder="$(IntermediateOutputPath)" SkipUnchangedFiles="true" />
-    <!-- Copy back *.pdb from bin/Debug|Release to obj/Debug/Release directory-->
-    <Copy SourceFiles="@(_DebugSymbolsOutputPath)" DestinationFiles="@(_DebugSymbolsIntermediatePath)" SkipUnchangedFiles="true" Condition="'$(_DebugSymbolsProduced)'=='true' and '$(SkipCopyingSymbolsToOutputDirectory)' != 'true'" />
-  </Target>
 </Project>

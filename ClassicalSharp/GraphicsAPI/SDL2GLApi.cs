@@ -621,17 +621,17 @@ namespace ClassicalSharp.GraphicsAPI
 			}
 		}
 		
-		public override void SetDynamicVbData( DrawMode mode, int vb, VertexP3fC4b[] vertices, int count ) {
+		public override void SetDynamicVbData( int vb, VertexP3fC4b[] vertices, int count ) {
 			fixed ( VertexP3fC4b* p = vertices ) {
 				IntPtr ptr = (IntPtr)p;
-				SetDynamicVbData( mode, vb, ptr, count ); 
+				SetDynamicVbData( vb, ptr, count ); 
 			}
 		}
 		
-		public override void SetDynamicVbData( DrawMode mode, int vb, VertexP3fT2fC4b[] vertices, int count ) {
+		public override void SetDynamicVbData( int vb, VertexP3fT2fC4b[] vertices, int count ) {
 			fixed ( VertexP3fT2fC4b* p = vertices ) {
 				IntPtr ptr = (IntPtr)p;
-				SetDynamicVbData( mode, vb, ptr, count ); 
+				SetDynamicVbData( vb, ptr, count ); 
 			}
 		}
 		
@@ -652,7 +652,7 @@ namespace ClassicalSharp.GraphicsAPI
 			GLFuncs.DrawElements( modeMappings[(int)mode], indicesCount, indexType, zero );
 		}
 
-		public void SetDynamicVbData( DrawMode mode, int id, IntPtr vertices, int count ) {
+		public void SetDynamicVbData( int id, IntPtr vertices, int count ) {
 			GLFuncs.BindBuffer( BufferTarget.ArrayBuffer, id );
 			GLFuncs.BufferSubData( BufferTarget.ArrayBuffer, IntPtr.Zero, new IntPtr( count * batchStride ), vertices );
 		}

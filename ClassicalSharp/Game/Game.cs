@@ -113,7 +113,7 @@ namespace ClassicalSharp {
 			CommandManager = AddComponent( new CommandManager() );
 			SelectionManager = AddComponent( new SelectionManager() );
 			WeatherRenderer = AddComponent( new WeatherRenderer() );
-			BlockHandRenderer = AddComponent( new BlockHandRenderer() );
+			HeldBlockRenderer = AddComponent( new HeldBlockRenderer() );
 			
 			Graphics.DepthTest = true;
 			Graphics.DepthTestFunc( CompareFunc.LessEqual );
@@ -286,7 +286,7 @@ namespace ClassicalSharp {
 			float t = (float)( ticksAccumulator / ticksPeriod );
 			LocalPlayer.SetInterpPosition( t );
 			Graphics.Clear();
-			UpdateViewMatrix( delta );
+			UpdateViewMatrix( delta, t );
 			
 			bool visible = activeScreen == null || !activeScreen.BlocksWorld;
 			if( World.IsNotLoaded ) visible = false;
@@ -308,9 +308,9 @@ namespace ClassicalSharp {
 				InputHandler.SetFOV( ZoomFov, false );
 		}
 		
-		void UpdateViewMatrix( double delta ) {
+		void UpdateViewMatrix( double delta, float t ) {
 			Graphics.SetMatrixMode( MatrixType.Modelview );
-			Matrix4 modelView = Camera.GetView( delta );
+			Matrix4 modelView = Camera.GetView( delta, t );
 			View = modelView;
 			Graphics.LoadMatrix( ref modelView );
 			Culling.CalcFrustumEquations( ref Projection, ref modelView );
@@ -335,13 +335,13 @@ namespace ClassicalSharp {
 			
 			// Render water over translucent blocks when underwater for proper alpha blending
 			Vector3 pos = LocalPlayer.Position;
-			if( CurrentCameraPos.Y < World.Env.EdgeHeight 
+			if( CurrentCameraPos.Y < World.Env.EdgeHeight
 			   && (pos.X < 0 || pos.Z < 0 || pos.X > World.Width || pos.Z > World.Length) ) {
 				MapRenderer.RenderTranslucent( delta );
 				MapBordersRenderer.RenderEdges( delta );
 			} else {
-			    MapBordersRenderer.RenderEdges( delta );
-				MapRenderer.RenderTranslucent( delta );		
+				MapBordersRenderer.RenderEdges( delta );
+				MapRenderer.RenderTranslucent( delta );
 			}
 			
 			Entities.DrawShadows();
@@ -353,7 +353,7 @@ namespace ClassicalSharp {
 			bool right = IsMousePressed( MouseButton.Right );
 			InputHandler.PickBlocks( true, left, middle, right );
 			if( !HideGui )
-				BlockHandRenderer.Render( delta, t );
+				HeldBlockRenderer.Render( delta, t );
 		}
 		
 		void RenderGui( double delta ) {
@@ -394,7 +394,6 @@ namespace ClassicalSharp {
 				Entities.Tick( ticksPeriod );
 				ParticleManager.Tick( ticksPeriod );
 				Animations.Tick( ticksPeriod );
-				BlockHandRenderer.Tick( ticksPeriod );
 				ticksThisFrame++;
 				ticksAccumulator -= ticksPeriod;
 			}
@@ -423,7 +422,7 @@ namespace ClassicalSharp {
 		
 		public void UpdateProjection() {
 			DefaultFov = Options.GetInt( OptionsKey.FieldOfView, 1, 150, 70 );
-			Matrix4 projection = Camera.GetProjection( out HeldBlockProjection );
+			Matrix4 projection = Camera.GetProjection();
 			Projection = projection;
 			
 			Graphics.SetMatrixMode( MatrixType.Projection );
@@ -586,11 +585,18 @@ namespace ClassicalSharp {
 		
 		/// <summary> Reads a bitmap from the stream (converting it to 32 bits per pixel if necessary),
 		/// and updates the native texture for it. </summary>
-		public void UpdateTexture( ref int texId, byte[] data, bool setSkinType ) {
+		public bool UpdateTexture( ref int texId, string file, byte[] data, bool setSkinType ) {
 			MemoryStream stream = new MemoryStream( data );
-			Graphics.DeleteTexture( ref texId );
-			
+			int maxSize = Graphics.MaxTextureDimensions;
 			using( Bitmap bmp = Platform.ReadBmp( stream ) ) {
+				if( bmp.Width > maxSize || bmp.Height > maxSize ) {
+					Chat.Add( "&cUnable to use " + file + " from the texture pack." );
+					Chat.Add( "&c Its size is (" + bmp.Width + "," + bmp.Height
+						+ "), your GPU supports (" + maxSize + "," + maxSize + ") at most." );
+					return false;
+				}
+				
+				Graphics.DeleteTexture( ref texId );
 				if( setSkinType )
 					DefaultPlayerSkinType = Utils.GetSkinType( bmp );
 				
@@ -600,6 +606,7 @@ namespace ClassicalSharp {
 				} else {
 					texId = Graphics.CreateTexture( bmp );
 				}
+				return true;
 			}
 		}
 		

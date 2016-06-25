@@ -269,15 +269,15 @@ namespace ClassicalSharp.GraphicsAPI {
 			device.DrawIndexedPrimitives( modeMappings[(int)mode], 0, 0, indicesCount / 6 * 4, 0, NumPrimitives( indicesCount, mode ) );
 		}
 		
-		public override void SetDynamicVbData( DrawMode mode, int vb, VertexP3fC4b[] vertices, int count ) {
+		public override void SetDynamicVbData( int vb, VertexP3fC4b[] vertices, int count ) {
 			SetDynamicVbData<VertexP3fC4b>( mode, vb, vertices, count );
 		}
 
-		public override void SetDynamicVbData( DrawMode mode, int vb, VertexP3fT2fC4b[] vertices, int count ) {
+		public override void SetDynamicVbData( int vb, VertexP3fT2fC4b[] vertices, int count ) {
 			SetDynamicVbData<VertexP3fT2fC4b>( mode, vb, vertices, count );
 		}
 		
-		public void SetDynamicVbData<T>( DrawMode mode, int vb, T[] vertices, int count ) where T: struct {
+		public void SetDynamicVbData<T>( int vb, T[] vertices, int count ) where T: struct {
 			int size = count * batchStride;
 			DataBuffer buffer = dynamicvBuffers[vb];
 			buffer.SetData( vertices, size, LockFlags.Discard );

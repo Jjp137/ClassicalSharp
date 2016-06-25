@@ -97,23 +97,22 @@ namespace ClassicalSharp.Gui {
 		
 		void BackspaceKey( bool controlDown ) {
 			if( controlDown ) {
-				if( caretPos == -1 )
-					caretPos = buffer.Length - 1;
+				if( caretPos == -1 ) caretPos = buffer.Length - 1;
 				int len = buffer.GetBackLength( caretPos );
-				caretPos -= len;
+				if( len == 0 ) return;
 				
+				caretPos -= len;		
 				if( caretPos < 0 ) caretPos = 0;
-				if( caretPos != 0 ) caretPos++; // Don't remove space.
 				for( int i = 0; i <= len; i++ )
 					buffer.DeleteAt( caretPos );
 				
-				Dispose();
-				Init();
+				if( buffer.value[caretPos] != ' ' )
+					buffer.InsertAt( caretPos, ' ' );
+				Recreate();
 			} else if( !buffer.Empty && caretPos != 0 ) {
 				if( !BackspaceColourCode())
 					DeleteChar();
-				Dispose();
-				Init();
+				Recreate();
 			}
 		}
 		
@@ -141,8 +140,7 @@ namespace ClassicalSharp.Gui {
 			if( !buffer.Empty && caretPos != -1 ) {
 				buffer.DeleteAt( caretPos );
 				if( caretPos >= buffer.Length ) caretPos = -1;
-				Dispose();
-				Init();
+				Recreate();
 			}
 		}
 		
@@ -197,8 +195,7 @@ namespace ClassicalSharp.Gui {
 				buffer.Clear();
 				buffer.Append( 0, game.Chat.InputLog[typingLogPos] );
 				caretPos = -1;
-				Dispose();
-				Init();
+				Recreate();
 			}
 		}
 		
@@ -221,8 +218,7 @@ namespace ClassicalSharp.Gui {
 					buffer.Append( 0, game.Chat.InputLog[typingLogPos] );
 				}
 				caretPos = -1;
-				Dispose();
-				Init();
+				Recreate();
 			}
 		}
 		

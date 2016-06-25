@@ -9,10 +9,12 @@ namespace ClassicalSharp {
 	
 	public abstract class Camera {
 		protected Game game;
+		internal Matrix4 tiltM;
+		internal float bobbingVer, bobbingHor;
 		
-		public abstract Matrix4 GetProjection( out Matrix4 heldBlockProj );
+		public abstract Matrix4 GetProjection();
 		
-		public abstract Matrix4 GetView( double delta );
+		public abstract Matrix4 GetView( double delta, float t );
 		
 		/// <summary> Calculates the location of the camera's position in the world
 		/// based on the entity's eye position. </summary>
@@ -46,19 +48,16 @@ namespace ClassicalSharp {
 	public abstract class PerspectiveCamera : Camera {
 		
 		protected LocalPlayer player;
-		protected Matrix4 tiltMatrix;
 		public PerspectiveCamera( Game game ) {
 			this.game = game;
 			player = game.LocalPlayer;
-			tiltMatrix = Matrix4.Identity;
+			tiltM = Matrix4.Identity;
 		}
 		
-		public override Matrix4 GetProjection( out Matrix4 heldBlockProj ) {
+		public override Matrix4 GetProjection() {
 			float fovy = game.Fov * Utils.Deg2Rad;
 			float aspectRatio = (float)game.Width / game.Height;
 			float zNear = game.Graphics.MinZNear;
-			heldBlockProj = Matrix4.CreatePerspectiveFieldOfView( 70 * Utils.Deg2Rad,
-			                                                     aspectRatio, zNear, game.ViewDistance );
 			return Matrix4.CreatePerspectiveFieldOfView( fovy, aspectRatio, zNear, game.ViewDistance );
 		}
 		
@@ -106,35 +105,24 @@ namespace ClassicalSharp {
 				update.Pitch = player.nextPitch < 180 ? 89.9f : 270.1f;
 			game.LocalPlayer.SetLocation( update, true );
 		}
-
+		
 		public override void Tick( double elapsed ) {
 			if( game.ActiveScreen.HandlesAllInput ) return;
 			CentreMousePosition();
 			UpdateMouseRotation();
 		}
 		
-		protected float bobYOffset = 0, tilt = 0;
-		bool finishedTilt = true;
-		protected void CalcViewBobbing( double delta ) {
+		protected void CalcViewBobbing( double delta, float t, bool velTilt ) {
 			LocalPlayer p = game.LocalPlayer;
-			if( !game.ViewBobbing || !game.LocalPlayer.onGround ) {
-				// When player leaves the ground, still want to finish the current bob cycle.
-				if( finishedTilt || FinishTilt() ) return;
-			}
+			tiltM = Matrix4.RotateZ( -p.anim.tiltX * p.anim.bobStrength );
+			tiltM = tiltM * Matrix4.RotateX( Math.Abs( p.anim.tiltY ) * 3 * p.anim.bobStrength );
 			
-			tilt = p.anim.tilt;
-			tiltMatrix = Matrix4.RotateZ( tilt );
-			bobYOffset = p.anim.bobYOffset * (2.0f/2.5f);
-			finishedTilt = false;
-		}
-		
-		bool FinishTilt() {
-			LocalPlayer p = game.LocalPlayer;
-			if( Math.Sign( tilt ) == Math.Sign( p.anim.tilt ) ) return false;
-			tiltMatrix = Matrix4.Identity;
-			bobYOffset = 0;
-			finishedTilt = true;
-			return true;
+			bobbingHor = (p.anim.bobbingHor * 0.3f) * p.anim.bobStrength;
+			bobbingVer = (p.anim.bobbingVer * 0.6f) * p.anim.bobStrength;
+			
+			if( !velTilt || p.Hacks.Noclip || p.Hacks.Flying ) return;
+			float vel = Utils.Lerp( p.OldVelocity.Y + 0.08f, p.Velocity.Y + 0.08f, t );
+			tiltM = tiltM * Matrix4.RotateX( -vel * 0.05f );
 		}
 	}
 	
@@ -153,16 +141,16 @@ namespace ClassicalSharp {
 			return true;
 		}
 		
-		public override Matrix4 GetView( double delta ) {
-			CalcViewBobbing( delta );
+		public override Matrix4 GetView( double delta, float t ) {
+			CalcViewBobbing( delta, t, false );
 			Vector3 eyePos = player.EyePosition;
-			eyePos.Y += bobYOffset;
+			eyePos.Y += bobbingVer;
 			
 			Vector3 dir = -Utils.GetDirVector( player.HeadYawRadians,
 			                                  AdjustPitch( player.PitchDegrees ) );
 			Picking.ClipCameraPos( game, eyePos, dir, dist, game.CameraClipPos );
 			Vector3 cameraPos = game.CameraClipPos.IntersectPoint;
-			return Matrix4.LookAt( cameraPos, eyePos, Vector3.UnitY ) * tiltMatrix;
+			return Matrix4.LookAt( cameraPos, eyePos, Vector3.UnitY ) * tiltM;
 		}
 		
 		public override bool IsThirdPerson { get { return true; } }
@@ -190,16 +178,16 @@ namespace ClassicalSharp {
 			return true;
 		}
 		
-		public override Matrix4 GetView( double delta ) {
-			CalcViewBobbing( delta );
+		public override Matrix4 GetView( double delta, float t ) {
+			CalcViewBobbing( delta, t, false );
 			Vector3 eyePos = player.EyePosition;
-			eyePos.Y += bobYOffset;
+			eyePos.Y += bobbingVer;
 			
 			Vector3 dir = Utils.GetDirVector( player.HeadYawRadians,
 			                                 AdjustPitch( player.PitchDegrees ) );
 			Picking.ClipCameraPos( game, eyePos, dir, dist, game.CameraClipPos );
 			Vector3 cameraPos = game.CameraClipPos.IntersectPoint;
-			return Matrix4.LookAt( cameraPos, eyePos, Vector3.UnitY ) * tiltMatrix;
+			return Matrix4.LookAt( cameraPos, eyePos, Vector3.UnitY ) * tiltM;
 		}
 		
 		public override bool IsThirdPerson { get { return true; } }
@@ -221,13 +209,17 @@ namespace ClassicalSharp {
 			return new Vector2( player.HeadYawRadians, player.PitchRadians );
 		}
 		
-		public override Matrix4 GetView( double delta ) {
-			CalcViewBobbing( delta );
+		public override Matrix4 GetView( double delta, float t ) {
+			CalcViewBobbing( delta, t, true );
 			Vector3 eyePos = player.EyePosition;
-			eyePos.Y += bobYOffset;
+			eyePos.Y += bobbingVer;
 			Vector3 cameraDir = Utils.GetDirVector( player.HeadYawRadians,
 			                                       AdjustPitch( player.PitchDegrees ) );
-			return Matrix4.LookAt( eyePos, eyePos + cameraDir, Vector3.UnitY ) * tiltMatrix;
+			
+			double adjYaw = player.HeadYawRadians + Math.PI / 2;
+			eyePos.X += bobbingHor * (float)Math.Sin( adjYaw );
+			eyePos.Z -= bobbingHor * (float)Math.Cos( adjYaw );
+			return Matrix4.LookAt( eyePos, eyePos + cameraDir, Vector3.UnitY ) * tiltM;
 		}
 		
 		public override bool IsThirdPerson { get { return false; } }

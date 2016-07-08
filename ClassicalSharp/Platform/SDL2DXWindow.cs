@@ -43,6 +43,8 @@ namespace ClassicalSharp
 		
 		public void Run() {
 			game.OnLoad();
+			// Emulate OpenTK raising the resize event; fixes block in hand not showing up initially
+			game.OnResize();
 
 			uint curTime = 0;
 			uint prevTime = 0;

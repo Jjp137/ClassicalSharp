@@ -67,6 +67,7 @@ namespace Launcher {
 		
 		internal ResourceFetcher fetcher;
 		internal UpdateCheckTask checkTask;
+		bool fullRedraw;
 		
 		Font logoFont;
 		public void Init() {
@@ -101,6 +102,7 @@ namespace Launcher {
 		void Resize( object sender, EventArgs e ) {
 			MakeBackground();
 			Screen.Resize();
+			fullRedraw = true;
 		}
 		
 		public void SetScreen( LauncherScreen screen ) {
@@ -188,11 +190,12 @@ namespace Launcher {
 
 			Dirty = false;			
 
-			if( DirtyArea.Width > 0 )
+			if( !fullRedraw && DirtyArea.Width > 0 )
 				Window.Draw( Framebuffer, DirtyArea );
 			else
 				Window.Draw( Framebuffer );
 			DirtyArea = Rectangle.Empty;
+			fullRedraw = false;
 		}
 		
 		Key lastKey;

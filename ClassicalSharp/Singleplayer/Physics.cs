@@ -20,6 +20,7 @@ namespace ClassicalSharp.Singleplayer {
 		TNTPhysics tnt;
 		FoilagePhysics foilage;
 		LiquidPhysics liquid;
+		OtherPhysics other;
 		
 		bool enabled = true;
 		public bool Enabled {
@@ -28,6 +29,7 @@ namespace ClassicalSharp.Singleplayer {
 		}
 		
 		public Action<int, byte>[] OnActivate = new Action<int, byte>[256];
+		public Action<int, byte>[] OnRandomTick = new Action<int, byte>[256];
 		public Action<int, byte>[] OnPlace = new Action<int, byte>[256];
 		public Action<int, byte>[] OnDelete = new Action<int, byte>[256];
 		
@@ -43,6 +45,7 @@ namespace ClassicalSharp.Singleplayer {
 			tnt = new TNTPhysics( game, this );
 			foilage = new FoilagePhysics( game, this );
 			liquid = new LiquidPhysics( game, this );
+			other = new OtherPhysics( game, this );
 		}
 		
 		internal static bool CheckItem( Queue<uint> queue, out int posIndex ) {
@@ -74,14 +77,42 @@ namespace ClassicalSharp.Singleplayer {
 			if( !Enabled ) return;
 			Vector3I p = e.Coords;
 			int index = (p.Y * length + p.Z) * width + p.X;
+			byte block = e.Block;
+			
+			if( block == Block.Air && IsEdgeWater( p.X, p.Y, p.Z ) ) { 
+				block = Block.StillWater; 
+				game.UpdateBlock( p.X, p.Y, p.Z, Block.StillWater );
+			}
 			
 			if( e.Block == 0 ) {
 				Action<int, byte> delete = OnDelete[e.OldBlock];
 				if( delete != null ) delete( index, e.OldBlock );
 			} else {
-				Action<int, byte> place = OnPlace[e.Block];
-				if( place != null ) place( index, e.Block );
+				Action<int, byte> place = OnPlace[block];
+				if( place != null ) place( index, block );
 			}
+			
+			if( p.X > 0 ) Activate( index - 1 );
+			if( p.X < map.Width - 1 ) Activate( index + 1 );
+			if( p.Z > 0 ) Activate( index - map.Width );
+			if( p.Z < map.Length - 1 ) Activate( index + map.Width );
+			if( p.Y > 0 ) Activate( index - oneY );
+			if( p.Y < map.Height - 1 ) Activate( index + oneY );
+		}
+		
+		void Activate( int index ) {
+			byte block = map.blocks[index];
+			Action<int, byte> activate = OnActivate[block];
+			if( activate != null ) activate( index, block );
+		}
+		
+		bool IsEdgeWater( int x, int y, int z ) {
+			WorldEnv env = map.Env;
+			if( !(env.EdgeBlock == Block.Water || env.EdgeBlock == Block.StillWater) )
+				return false;
+			
+			return y >= env.SidesHeight && y < env.EdgeHeight 
+				&& (x == 0 || z == 0 || x == (map.Width - 1) || z == (map.Length - 1) );
 		}
 		
 		void ResetMap( object sender, EventArgs e ) {
@@ -111,18 +142,18 @@ namespace ClassicalSharp.Singleplayer {
 				// Inlined 3 random ticks for this chunk
 				int index = rnd.Next( lo, hi );
 				byte block = map.blocks[index];
-				Action<int, byte> activate = OnActivate[block];
-				if( activate != null ) activate( index, block );
+				Action<int, byte> tick = OnRandomTick[block];
+				if( tick != null ) tick( index, block );
 				
 				index = rnd.Next( lo, hi );
 				block = map.blocks[index];
-				activate = OnActivate[block];
-				if( activate != null ) activate( index, block );
+				tick = OnRandomTick[block];
+				if( tick != null ) tick( index, block );
 				
 				index = rnd.Next( lo, hi );
 				block = map.blocks[index];
-				activate = OnActivate[block];
-				if( activate != null ) activate( index, block );
+				tick = OnRandomTick[block];
+				if( tick != null ) tick( index, block );
 			}
 		}
 	}

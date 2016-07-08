@@ -9,7 +9,7 @@ namespace ClassicalSharp {
 		
 		public byte[] hidden = new byte[BlocksCount * BlocksCount];
 		
-		public bool[] CanStretch = new bool[BlocksCount * Side.Sides];
+		public byte[] CanStretch = new byte[BlocksCount];
 		
 		public bool[] IsAir = new bool[BlocksCount];
 
@@ -17,8 +17,8 @@ namespace ClassicalSharp {
 			IsAir[0] = true;
 			for( int block = 1; block < BlocksCount; block++ )
 				CheckOpaque( block );
-			for( int block = 0; block < CanStretch.Length; block++ )
-				CanStretch[block] = true;
+			for( int block = 0; block < BlocksCount; block++ )
+				CanStretch[block] = 0x3F;
 			
 			for( int blockI = 1; blockI < BlocksCount; blockI++ ) {
 				for( int neighbourI = 1; neighbourI < BlocksCount; neighbourI++ ) {
@@ -31,7 +31,7 @@ namespace ClassicalSharp {
 		internal void SetupCullingCache( byte block ) {
 			IsAir[0] = true;
 			CheckOpaque( block );
-			CanStretch[block] = true;
+			CanStretch[block] = 0x3F;
 			
 			for( int other = 1; other < BlocksCount; other++ ) {
 				UpdateCulling( block, (byte)other );
@@ -48,7 +48,10 @@ namespace ClassicalSharp {
 		
 		void UpdateCulling( byte block, byte other ) {
 			Vector3 bMin = MinBB[block], bMax = MaxBB[block];
-			Vector3 oMin = MinBB[other], oMax = MaxBB[other];			
+			Vector3 oMin = MinBB[other], oMax = MaxBB[other];
+			if( IsLiquid[block] ) { bMax.Y -= 1.5f/16; }
+			if( IsLiquid[other] ) { oMax.Y -= 1.5f/16; }
+			
 			if( IsSprite[block] ) {
 				SetHidden( block, other, Side.Left, true );
 				SetHidden( block, other, Side.Right, true );
@@ -59,13 +62,16 @@ namespace ClassicalSharp {
 			} else {
 				SetXStretch( block, bMin.X == 0 && bMax.X == 1 );
 				SetZStretch( block, bMin.Z == 0 && bMax.Z == 1 );
+				bool bothLiquid = IsLiquid[block] && IsLiquid[other];
 				
 				SetHidden( block, other, Side.Left, oMax.X == 1 && bMin.X == 0 );
 				SetHidden( block, other, Side.Right, oMin.X == 0 && bMax.X == 1 );
 				SetHidden( block, other, Side.Front, oMax.Z == 1 && bMin.Z == 0 );
 				SetHidden( block, other, Side.Back, oMin.Z == 0 && bMax.Z == 1 );
-				SetHidden( block, other, Side.Bottom, oMax.Y == 1 && bMin.Y == 0 );
-				SetHidden( block, other, Side.Top, oMin.Y == 0 && bMax.Y == 1 );
+				SetHidden( block, other, Side.Bottom, 
+				          bothLiquid || (oMax.Y == 1 && bMin.Y == 0) );
+				SetHidden( block, other, Side.Top, 
+				          bothLiquid || (oMin.Y == 0 && bMax.Y == 1) );
 			}
 		}
 		
@@ -74,11 +80,6 @@ namespace ClassicalSharp {
 			if( IsSprite[block] ) return false;
 			// All blocks (except for say leaves) cull with themselves.
 			if( block == other ) return CullWithNeighbours[block];
-			
-			// Special case for water/lava being offset
-			if( IsLiquid[block] && side == Side.Top && 
-			   (!IsTranslucent[other] || Collide[other] != CollideType.Solid))
-				return false;
 			
 			// An opaque neighbour (asides from lava) culls the face.
 			if( IsOpaque[other] && !IsLiquid[other] ) return true;
@@ -105,15 +106,15 @@ namespace ClassicalSharp {
 		}
 		
 		void SetXStretch( byte block, bool stretch ) {
-			CanStretch[block * Side.Sides + Side.Front] = stretch;
-			CanStretch[block * Side.Sides + Side.Back] = stretch;
-			CanStretch[block * Side.Sides + Side.Top] = stretch;
-			CanStretch[block * Side.Sides + Side.Bottom] = stretch;
+			const byte mask = 0x3C;
+			CanStretch[block] &= 0xC3; // ~0x3C
+			CanStretch[block] |= (stretch ? mask : (byte)0);
 		}
 		
 		void SetZStretch( byte block, bool stretch ) {
-			CanStretch[block * Side.Sides + Side.Left] = stretch;
-			CanStretch[block * Side.Sides + Side.Right] = stretch;
+			const byte mask = 0x03;
+			CanStretch[block] &= 0xFC; // ~0x03
+			CanStretch[block] |= (stretch ? mask : (byte)0);
 		}
 	}
 }

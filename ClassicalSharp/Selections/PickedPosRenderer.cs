@@ -7,13 +7,13 @@ namespace ClassicalSharp.Renderers {
 	
 	public sealed class PickedPosRenderer : IGameComponent {
 		
-		IGraphicsApi graphics;
+		IGraphicsApi api;
 		Game game;
 		int vb;
 		
 		public void Init( Game game ) {
-			graphics = game.Graphics;
-			vb = graphics.CreateDynamicVb( VertexFormat.P3fC4b, verticesCount );
+			api = game.Graphics;
+			vb = api.CreateDynamicVb( VertexFormat.P3fC4b, verticesCount );
 			this.game = game;
 		}
 
@@ -21,13 +21,14 @@ namespace ClassicalSharp.Renderers {
 		public void Reset( Game game ) { }
 		public void OnNewMap( Game game ) { }
 		public void OnNewMapLoaded( Game game ) { }
+		public void Dispose() { api.DeleteDynamicVb( vb ); }
 		
-		FastColour col = new FastColour( 20, 20, 20, 150 );
+		FastColour col = new FastColour( 0, 0, 0, 102 );
 		int index;
 		const int verticesCount = 16 * 6;
 		VertexP3fC4b[] vertices = new VertexP3fC4b[verticesCount];
 		
-		public void Render( double delta, PickedPos pickedPos ) {
+		public void UpdateState( PickedPos pickedPos ) {
 			index = 0;
 			Vector3 camPos = game.CurrentCameraPos;
 			float dist = (camPos - pickedPos.Min).LengthSquared;
@@ -38,7 +39,6 @@ namespace ClassicalSharp.Renderers {
 			Vector3 p1 = pickedPos.Min - new Vector3( offset, offset, offset );
 			Vector3 p2 = pickedPos.Max + new Vector3( offset, offset, offset );
 			
-			graphics.AlphaBlending = true;
 			float size = 1/16f;
 			if( dist < 32 * 32 ) size = 1/32f;
 			if( dist < 16 * 16 ) size = 1/64f;
@@ -47,7 +47,16 @@ namespace ClassicalSharp.Renderers {
 			if( dist < 2 * 2 ) size = 1/192f;
 
 			DrawLines( p1, p2, size );
-			graphics.AlphaBlending = false;
+		}
+		
+		public void Render( double delta ) {
+			api.AlphaBlending = true;
+			api.DepthWrite = false;
+			
+			api.SetBatchFormat( VertexFormat.P3fC4b );
+			api.UpdateDynamicIndexedVb( DrawMode.Triangles, vb, vertices, index, index * 6 / 4 );
+			api.AlphaBlending = false;
+			api.DepthWrite = true;
 		}
 		
 		void DrawLines( Vector3 p1, Vector3 p2, float size ) {
@@ -81,12 +90,7 @@ namespace ClassicalSharp.Renderers {
 			ZQuad( p2.Z, p2.X, p1.Y + size, p2.X - size, p2.Y - size );
 			ZQuad( p2.Z, p1.X, p1.Y, p2.X, p1.Y + size );
 			ZQuad( p2.Z, p1.X, p2.Y, p2.X, p2.Y - size );
-			
-			graphics.SetBatchFormat( VertexFormat.P3fC4b );
-			graphics.UpdateDynamicIndexedVb( DrawMode.Triangles, vb, vertices, index, index * 6 / 4 );
 		}
-		
-		public void Dispose() { graphics.DeleteDynamicVb( vb ); }
 		
 		void XQuad( float x, float z1, float y1, float z2, float y2 ) {
 			vertices[index++] = new VertexP3fC4b( x, y1, z1, col );

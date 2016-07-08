@@ -225,11 +225,23 @@ namespace ClassicalSharp.Network {
 			if( testAcc < 1 ) return;
 			testAcc = 0;
 			
-			if( !socket.Connected || (socket.Poll( 1000, SelectMode.SelectRead ) && socket.Available == 0 ) ) {
-				game.Disconnect( "&eDisconnected from the server",
-				                "Connection timed out" );
+			if( !socket.Connected || ( socket.Poll( 1000, SelectMode.SelectRead ) && socket.Available == 0 ) ) {
+				game.Disconnect( "&eDisconnected from the server", "Connection timed out" );
 				Dispose();
 			}
+		}
+		
+		void CheckName( byte id, ref string displayName, ref string skinName ) {
+			displayName = Utils.RemoveEndPlus( displayName );
+			skinName = Utils.RemoveEndPlus( skinName );
+			skinName = Utils.StripColours( skinName );
+			
+			// Server is only allowed to change our own name colours.
+			if( id != 0xFF ) return;			
+			if( Utils.StripColours( displayName ) != game.Username )
+				displayName = game.Username;
+			if( skinName == "" )
+				skinName = game.Username;
 		}
 	}
 }

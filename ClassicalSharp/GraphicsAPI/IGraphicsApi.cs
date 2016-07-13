@@ -1,8 +1,12 @@
 // ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
 using System;
 using System.Drawing;
-using System.Drawing.Imaging;
 using OpenTK;
+#if ANDROID
+using Android.Graphics;
+#else
+using System.Drawing.Imaging;
+#endif
 
 namespace ClassicalSharp.GraphicsAPI {
 	
@@ -16,6 +20,7 @@ namespace ClassicalSharp.GraphicsAPI {
 		public abstract bool Texturing { set; }
 		
 		internal float MinZNear = 0.1f;
+		readonly FastBitmap bmpBuffer = new FastBitmap();
 		
 		/// <summary> Creates a new native texture with the specified dimensions and using the
 		/// image data encapsulated by the Bitmap instance. </summary>
@@ -23,20 +28,15 @@ namespace ClassicalSharp.GraphicsAPI {
 		/// are powers of two, because otherwise they will not display properly on certain graphics cards.	<br/>
 		/// This method returns -1 if the input image is not a 32bpp format. </remarks>
 		public int CreateTexture( Bitmap bmp ) {
-			if( !FastBitmap.CheckFormat( bmp.PixelFormat ) ) {
-				string line2 = String.Format( "input bitmap was not 32bpp, it was {0}",
-				                             bmp.PixelFormat );
+			if( !Platform.Is32Bpp( bmp ) ) {
+				string line2 = String.Format( "input bitmap was not 32bpp" );
 				ErrorHandler.LogError( "IGraphicsApi.CreateTexture()",
 				                      Environment.NewLine + line2 +
 				                      Environment.NewLine + Environment.StackTrace );
 				return -1;
-			} else {
-				Rectangle rec = new Rectangle( 0, 0, bmp.Width, bmp.Height );
-				BitmapData data = bmp.LockBits( rec, ImageLockMode.ReadOnly, bmp.PixelFormat );
-				int texId = CreateTexture( data.Width, data.Height, data.Scan0 );
-				bmp.UnlockBits( data );
-				return texId;
 			}
+			bmpBuffer.SetData( bmp, false, true );
+			return CreateTexture( bmpBuffer );
 		}
 		
 		/// <summary> Creates a new native texture with the specified dimensions and FastBitmap instance
@@ -44,8 +44,7 @@ namespace ClassicalSharp.GraphicsAPI {
 		/// <remarks> Note that should make every effort you can to ensure that the dimensions are powers of two,
 		/// because otherwise they will not display properly on certain graphics cards.	</remarks>
 		public int CreateTexture( FastBitmap bmp ) {
-			if( !bmp.IsLocked )
-				bmp.LockBits();
+			if( !bmp.IsLocked ) bmp.LockBits();
 			int texId = CreateTexture( bmp.Width, bmp.Height, bmp.Scan0 );
 			bmp.UnlockBits();
 			return texId;
@@ -246,6 +245,9 @@ namespace ClassicalSharp.GraphicsAPI {
 		/// and is repeatedly invoked until the context can be retrieved. </summary>
 		public Action<double> LostContextFunction;
 		
+		/// <summary> Event invoked when a lost context is retrieves again. </summary>
+		public event EventHandler ContextRetrieved;
+		
 		protected void InitDynamicBuffers() {
 			quadVb = CreateDynamicVb( VertexFormat.P3fC4b, 4 );
 			texVb = CreateDynamicVb( VertexFormat.P3fT2fC4b, 4 );
@@ -260,20 +262,23 @@ namespace ClassicalSharp.GraphicsAPI {
 		internal int quadVb;
 		public virtual void Draw2DQuad( float x, float y, float width, float height, 
 		                               FastColour col ) {
-			quadVerts[0] = new VertexP3fC4b( x, y, 0, col );
-			quadVerts[1] = new VertexP3fC4b( x + width, y, 0, col );
-			quadVerts[2] = new VertexP3fC4b( x + width, y + height, 0, col );
-			quadVerts[3] = new VertexP3fC4b( x, y + height, 0, col );
+			int c = col.Pack();
+			quadVerts[0] = new VertexP3fC4b( x, y, 0, c );
+			quadVerts[1] = new VertexP3fC4b( x + width, y, 0, c );
+			quadVerts[2] = new VertexP3fC4b( x + width, y + height, 0, c );
+			quadVerts[3] = new VertexP3fC4b( x, y + height, 0, c );
 			SetBatchFormat( VertexFormat.P3fC4b );
 			UpdateDynamicIndexedVb( DrawMode.Triangles, quadVb, quadVerts, 4, 6 );
 		}
 		
 		public virtual void Draw2DQuad( float x, float y, float width, float height, 
 		                               FastColour topCol, FastColour bottomCol ) {
-			quadVerts[0] = new VertexP3fC4b( x, y, 0, topCol );
-			quadVerts[1] = new VertexP3fC4b( x + width, y, 0, topCol );
-			quadVerts[2] = new VertexP3fC4b( x + width, y + height, 0, bottomCol );
-			quadVerts[3] = new VertexP3fC4b( x, y + height, 0, bottomCol );
+			int c = topCol.Pack();
+			quadVerts[0] = new VertexP3fC4b( x, y, 0, c );
+			quadVerts[1] = new VertexP3fC4b( x + width, y, 0, c );
+			c = bottomCol.Pack();
+			quadVerts[2] = new VertexP3fC4b( x + width, y + height, 0, c );
+			quadVerts[3] = new VertexP3fC4b( x, y + height, 0, c );
 			SetBatchFormat( VertexFormat.P3fC4b );
 			UpdateDynamicIndexedVb( DrawMode.Triangles, quadVb, quadVerts, 4, 6 );
 		}
@@ -296,10 +301,11 @@ namespace ClassicalSharp.GraphicsAPI {
 			x1 -= 0.5f; x2 -= 0.5f;
 			y1 -= 0.5f; y2 -= 0.5f;
 			#endif
-			vertices[index++] = new VertexP3fT2fC4b( x1, y1, 0, tex.U1, tex.V1, col );
-			vertices[index++] = new VertexP3fT2fC4b( x2, y1, 0, tex.U2, tex.V1, col );
-			vertices[index++] = new VertexP3fT2fC4b( x2, y2, 0, tex.U2, tex.V2, col );
-			vertices[index++] = new VertexP3fT2fC4b( x1, y2, 0, tex.U1, tex.V2, col );
+			int c = col.Pack();
+			vertices[index++] = new VertexP3fT2fC4b( x1, y1, 0, tex.U1, tex.V1, c );
+			vertices[index++] = new VertexP3fT2fC4b( x2, y1, 0, tex.U2, tex.V1, c );
+			vertices[index++] = new VertexP3fT2fC4b( x2, y2, 0, tex.U2, tex.V2, c );
+			vertices[index++] = new VertexP3fT2fC4b( x1, y2, 0, tex.U1, tex.V2, c );
 		}
 		
 		/// <summary> Updates the various matrix stacks and properties so that the graphics API state
@@ -352,6 +358,11 @@ namespace ClassicalSharp.GraphicsAPI {
 				element += 4;
 			}
 			return CreateIb( ptr, maxIndices );
+		}
+		
+		protected void RaiseContextRetrieved() {
+			if( ContextRetrieved != null ) 
+				ContextRetrieved( null, null );
 		}
 	}
 

@@ -1,10 +1,11 @@
 ﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
 using System;
 using System.Drawing;
-using System.Drawing.Imaging;
 #if ANDROID
 using Android.Graphics;
 using Java.Nio;
+#else
+using System.Drawing.Imaging;
 #endif
 
 namespace ClassicalSharp {
@@ -24,8 +25,7 @@ namespace ClassicalSharp {
 		
 		public void SetData( Bitmap bmp, bool lockBits, bool readOnly ) {
 			Bitmap = bmp;
-			if( lockBits )
-				LockBits();
+			if( lockBits ) LockBits();
 			ReadOnly = readOnly;
 		}
 		
@@ -40,7 +40,11 @@ namespace ClassicalSharp {
 		
 		public Bitmap Bitmap;
 		public bool ReadOnly;
+		#if !ANDROID
 		BitmapData data;
+		#else
+		ByteBuffer data;
+		#endif
 		byte* scan0Byte;
 		
 		public bool IsLocked { get { return data != null; } }
@@ -48,10 +52,6 @@ namespace ClassicalSharp {
 		public IntPtr Scan0;
 		public int Stride;
 		public int Width, Height;
-		
-		public static bool CheckFormat( PixelFormat format ) {
-			return format == PixelFormat.Format32bppRgb || format == PixelFormat.Format32bppArgb;
-		}
 		
 		/// <summary> Returns a pointer to the start of the y'th scanline. </summary>
 		public int* GetRowPtr( int y ) {
@@ -82,7 +82,7 @@ namespace ClassicalSharp {
 			if( data != null ) return;
 			
 			PixelFormat format = Bitmap.PixelFormat;
-			if( !CheckFormat( format ) )
+			if( !Platform.Is32Bpp( Bitmap ) )
 				throw new NotSupportedException( "Unsupported bitmap pixel format: " + format );
 			
 			Rectangle rec = new Rectangle( 0, 0, Bitmap.Width, Bitmap.Height );
@@ -107,6 +107,9 @@ namespace ClassicalSharp {
 		#else
 		
 		public void LockBits() {
+			// ====
+			// TODO: Use Bitmap.LockPixels, need to cast the pointer though
+			// ====
 			if( Bitmap == null ) throw new InvalidOperationException( "Underlying bitmap is null." );
 			if( data != null ) return;
 

@@ -53,7 +53,7 @@ namespace ClassicalSharp.TexturePack {
 		
 		/// <summary> Sets the atlas bitmap that animation frames are contained within. </summary>
 		void SetAtlas( Bitmap bmp ) {
-			if( !FastBitmap.CheckFormat( bmp.PixelFormat ) )
+			if( !Platform.Is32Bpp( bmp ) )
 				game.Drawer2D.ConvertTo32Bpp( ref bmp );
 			
 			this.animBmp = bmp;
@@ -73,8 +73,8 @@ namespace ClassicalSharp.TexturePack {
 			}
 			if( !validated ) ValidateAnimations();			
 			
-			foreach( AnimationData anim in animations )
-				ApplyAnimation( anim );
+			for( int i = 0; i < animations.Count; i++ )
+				ApplyAnimation( animations[i] );
 		}
 		
 		/// <summary> Reads a text file that contains a number of lines, with each line describing:<br/>

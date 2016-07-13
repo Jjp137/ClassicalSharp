@@ -93,8 +93,7 @@ namespace ClassicalSharp {
 			World = new World( this );
 			LocalPlayer = AddComponent( new LocalPlayer( this ) );
 			Entities[255] = LocalPlayer;
-			width = Width;
-			height = Height;
+			Width = window.Width; Height = window.Height;
 			
 			MapRenderer = new MapRenderer( this );
 			string renType = Options.Get( OptionsKey.RenderType ) ?? "normal";
@@ -171,6 +170,7 @@ namespace ClassicalSharp {
 			SetFpsLimitMethod( method );
 			ViewDistance = Options.GetInt( OptionsKey.ViewDist, 16, 4096, 512 );
 			UserViewDistance = ViewDistance;
+			SmoothLighting = Options.GetBool( OptionsKey.SmoothLighting, false );
 			
 			DefaultFov = Options.GetInt( OptionsKey.FieldOfView, 1, 150, 70 );
 			Fov = DefaultFov;
@@ -428,7 +428,7 @@ namespace ClassicalSharp {
 			string timestamp = DateTime.Now.ToString( "dd-MM-yyyy-HH-mm-ss" );
 			string file = "screenshot_" + timestamp + ".png";
 			path = Path.Combine( path, file );
-			Graphics.TakeScreenshot( path, ClientSize.Width, ClientSize.Height );
+			Graphics.TakeScreenshot( path, Width, Height );
 			Chat.Add( "&eTaken screenshot as: " + file );
 			screenshotRequested = false;
 		}
@@ -445,15 +445,16 @@ namespace ClassicalSharp {
 		}
 		
 		internal void OnResize() {
+			int oWidth = window.Width, oHeight = window.Height;
+			Width = window.Width; Height = window.Height;			
 			Graphics.OnWindowResize( this );
 			UpdateProjection();
+			
 			if( activeScreen != null )
-				activeScreen.OnResize( width, height, Width, Height );
-			hudScreen.OnResize( width, height, Width, Height );
+				activeScreen.OnResize( oWidth, oHeight, Width, Height );
+			hudScreen.OnResize( oWidth, oHeight, Width, Height );
 			foreach( Screen overlay in WarningOverlays )
-				overlay.OnResize( width, height, Width, Height );
-			width = Width;
-			height = Height;
+				overlay.OnResize( oWidth, oHeight, Width, Height );
 		}
 		
 		public void Disconnect( string title, string reason ) {
@@ -619,7 +620,7 @@ namespace ClassicalSharp {
 				if( setSkinType )
 					DefaultPlayerSkinType = Utils.GetSkinType( bmp );
 				
-				if( !FastBitmap.CheckFormat( bmp.PixelFormat ) ) {
+				if( !Platform.Is32Bpp( bmp ) ) {
 					using( Bitmap bmp32 = Drawer2D.ConvertTo32Bpp( bmp ) )
 						texId = Graphics.CreateTexture( bmp32 );
 				} else {

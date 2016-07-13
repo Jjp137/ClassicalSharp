@@ -156,7 +156,6 @@ namespace ClassicalSharp {
 		
 		public long Vertices;
 		public FrustumCulling Culling;
-		int width, height;
 		public AsyncDownloader AsyncDownloader;
 		public Matrix4 View, Projection;
 		
@@ -170,6 +169,8 @@ namespace ClassicalSharp {
 		public bool PureClassic { get { return ClassicMode && !ClassicHacks; } }
 		
 		public bool AllowCustomBlocks, UseCPE, AllowServerTextures;
+		
+		public bool SmoothLighting;
 		
 		public string FontName = "Arial";
 		
@@ -230,11 +231,7 @@ namespace ClassicalSharp {
 		public MouseDevice Mouse;
 		public KeyboardDevice Keyboard;
 		
-		public int Width { get { return window.Width; } }
-		
-		public int Height { get { return window.Height; } }
-		
-		public Size ClientSize { get { return window.ClientSize; } }
+		public int Width, Height;
 		
 		public bool Focused { get { return window.Focused; } }
 		

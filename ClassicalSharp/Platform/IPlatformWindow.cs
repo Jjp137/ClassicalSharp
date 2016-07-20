@@ -2,10 +2,8 @@
 using System;
 using System.Drawing;
 using OpenTK;
-using OpenTK.Graphics;
 using OpenTK.Input;
 using OpenTK.Platform;
-using Clipboard = System.Windows.Forms.Clipboard;
 
 namespace ClassicalSharp {
 	
@@ -30,8 +28,6 @@ namespace ClassicalSharp {
 		
 		KeyboardDevice Keyboard { get; }
 		
-		Icon Icon { get; set; }
-		
 		Point PointToScreen( Point coords );
 		
 		WindowState WindowState { get; set; }
@@ -39,6 +35,8 @@ namespace ClassicalSharp {
 		IWindowInfo WindowInfo { get; }
 		
 		string ClipboardText { get; set; }
+		
+		void LoadIcon();
 		
 		void Run();
 		

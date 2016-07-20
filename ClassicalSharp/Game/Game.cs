@@ -22,6 +22,7 @@ using OpenTK.Input;
 #if ANDROID
 using Android.Graphics;
 #endif
+using PathIO = System.IO.Path; // Android.Graphics.Path clash otherwise
 
 namespace ClassicalSharp {
 
@@ -136,7 +137,7 @@ namespace ClassicalSharp {
 			foreach( IGameComponent comp in Components )
 				comp.Ready( this );
 			
-			LoadIcon();
+			window.LoadIcon();
 			string connectString = "Connecting to " + IPAddress + ":" + Port +  "..";
 			if( Graphics.WarnIfNecessary( Chat ) ) {
 				MapBordersRenderer.UseLegacyMode( true );
@@ -207,17 +208,6 @@ namespace ClassicalSharp {
 			} catch( Exception ) {
 				FontName = "Arial";
 				Options.Set( OptionsKey.FontName, "Arial" );
-			}
-		}
-		
-		void LoadIcon() {
-			string launcherPath = Path.Combine( Program.AppDirectory, "Launcher2.exe" );
-			if( File.Exists( launcherPath ) ) {
-				window.Icon = Icon.ExtractAssociatedIcon( launcherPath ); return;
-			}
-			launcherPath = Path.Combine( Program.AppDirectory, "Launcher.exe" );
-			if( File.Exists( launcherPath ) ) {
-				window.Icon = Icon.ExtractAssociatedIcon( launcherPath );
 			}
 		}
 		
@@ -421,13 +411,13 @@ namespace ClassicalSharp {
 		}
 		
 		void TakeScreenshot() {
-			string path = Path.Combine( Program.AppDirectory, "screenshots" );
+			string path = PathIO.Combine( Program.AppDirectory, "screenshots" );
 			if( !Directory.Exists( path ) )
 				Directory.CreateDirectory( path );
 			
 			string timestamp = DateTime.Now.ToString( "dd-MM-yyyy-HH-mm-ss" );
 			string file = "screenshot_" + timestamp + ".png";
-			path = Path.Combine( path, file );
+			path = PathIO.Combine( path, file );
 			Graphics.TakeScreenshot( path, Width, Height );
 			Chat.Add( "&eTaken screenshot as: " + file );
 			screenshotRequested = false;

@@ -172,6 +172,10 @@ namespace ClassicalSharp
 			}
 		}
 
+		public void LoadIcon() {
+			// TODO: actually implement this
+		}
+
 		public IWindowInfo WindowInfo { get { return windowInfo; } }
 		
 		public string ClipboardText { 

@@ -253,7 +253,6 @@
     <Compile Include="Math\IntersectionUtils.cs" />
     <Compile Include="Math\PickedPos.cs" />
     <Compile Include="Math\Picking.cs" />
-    <Compile Include="Platform\DesktopWindow.cs" />
     <Compile Include="Platform\Font.cs" />
     <Compile Include="Platform\IPlatformWindow.cs" />
     <Compile Include="Platform\Platform.cs" />
@@ -322,38 +321,21 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="2D\Drawing" />
-    <Folder Include="2D\Screens\Inventory" />
-    <Folder Include="2D\Utils" />
-    <Folder Include="2D\Screens" />
-    <Folder Include="2D\Screens\Menu" />
-    <Folder Include="2D\Widgets" />
-    <Folder Include="2D\Widgets\Menu" />
-    <Folder Include="2D\Widgets\Chat" />
-    <Folder Include="2D\Widgets\PlayerList" />
-    <Folder Include="Blocks" />
-    <Folder Include="Entities\AI" />
-    <Folder Include="Entities\Components" />
-    <Folder Include="Events" />
-    <Folder Include="Generator" />
-    <Folder Include="MeshBuilder" />
-    <Folder Include="Platform" />
-    <Folder Include="Particles" />
-    <Folder Include="GraphicsAPI" />
-    <Folder Include="Entities" />
-    <Folder Include="Ionic.Zlib" />
-    <Folder Include="Map" />
-    <Folder Include="Game" />
-    <Folder Include="Map\Formats" />
-    <Folder Include="Entities\Model" />
-    <Folder Include="Network\Utils" />
-    <Folder Include="Hotkeys" />
-    <Folder Include="Audio" />
-    <Folder Include="Rendering\Env" />
-    <Folder Include="TexturePack" />
-    <Folder Include="Singleplayer" />
-    <Folder Include="Utils" />
-    <Folder Include="Math" />
+    <Folder Include="2D\" />
+    <Folder Include="2D\Screens\" />
+    <Folder Include="2D\" />
+    <Folder Include="2D\" />
+    <Folder Include="2D\Screens\" />
+    <Folder Include="2D\" />
+    <Folder Include="2D\Widgets\" />
+    <Folder Include="2D\Widgets\" />
+    <Folder Include="2D\Widgets\" />
+    <Folder Include="Entities\" />
+    <Folder Include="Entities\" />
+    <Folder Include="Map\" />
+    <Folder Include="Entities\" />
+    <Folder Include="Network\" />
+    <Folder Include="Rendering\" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\OpenTK\OpenTK.csproj">

@@ -95,12 +95,12 @@ namespace Launcher {
 
 		void FocusedChanged( object sender, EventArgs e ) {
 			if( Program.ShowingErrorDialog ) return;
-			MakeBackground();
+			RedrawBackground();
 			Screen.Resize();
 		}
 
 		void Resize( object sender, EventArgs e ) {
-			MakeBackground();
+			RedrawBackground();
 			Screen.Resize();
 			fullRedraw = true;
 		}
@@ -109,7 +109,7 @@ namespace Launcher {
 			if( this.Screen != null )
 				this.Screen.Dispose();
 			
-			MakeBackground();
+			RedrawBackground();
 			this.Screen = screen;
 			screen.Init();
 		}

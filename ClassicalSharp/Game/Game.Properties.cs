@@ -41,6 +41,12 @@ namespace ClassicalSharp {
 		void OnNewMapLoaded( Game game );
 	}
 	
+	/// <summary> Represents a task that runs on the main thread every certain interval. </summary>
+	public class ScheduledTask {
+		public double Accumulator, Interval;
+		public Action<ScheduledTask> Callback;
+	}
+	
 	public partial class Game {
 		
 		/// <summary> Abstracts the underlying 3D graphics rendering API. </summary>
@@ -93,6 +99,7 @@ namespace ClassicalSharp {
 		public WeatherRenderer WeatherRenderer;
 		public Inventory Inventory;
 		public IDrawer2D Drawer2D;
+		public GuiInterface Gui;
 		
 		public CommandManager CommandManager;
 		public SelectionManager SelectionManager;
@@ -102,8 +109,6 @@ namespace ClassicalSharp {
 		public ModelCache ModelCache;
 		internal string skinServer, chatInInputBuffer = null;
 		internal int defaultIb;
-		FpsScreen fpsScreen;
-		internal HudScreen hudScreen;
 		public OtherEvents Events = new OtherEvents();
 		public EntityEvents EntityEvents = new EntityEvents();
 		public WorldEvents WorldEvents = new WorldEvents();
@@ -116,9 +121,8 @@ namespace ClassicalSharp {
 		public SkyboxRenderer SkyboxRenderer;
 		
 		public List<IGameComponent> Components = new List<IGameComponent>();
-		
-		public List<WarningScreen> WarningOverlays = new List<WarningScreen>();
-		
+		public List<ScheduledTask> Tasks = new List<ScheduledTask>();
+
 		/// <summary> Whether x to stone brick tiles should be used. </summary>
 		public bool UseCPEBlocks = false;
 		
@@ -183,7 +187,7 @@ namespace ClassicalSharp {
 		public Vector3 CurrentCameraPos;
 		
 		public Animations Animations;
-		internal int CloudsTex, GuiTex, GuiClassicTex, IconsTex;
+		internal int CloudsTex;
 		internal bool screenshotRequested;
 		internal EntryList AcceptedUrls = new EntryList( "acceptedurls.txt" ); 
 		internal EntryList DeniedUrls = new EntryList( "deniedurls.txt" );
@@ -253,7 +257,7 @@ namespace ClassicalSharp {
 			set {
 				// Defer mouse visibility changes.
 				realVisible = value;
-				if( WarningOverlays.Count > 0 ) return;
+				if( Gui.overlays.Count > 0 ) return;
 				   
 				// Only set the value when it has changes.
 				if( visible == value ) return;

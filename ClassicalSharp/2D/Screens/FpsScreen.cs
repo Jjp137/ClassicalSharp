@@ -32,7 +32,7 @@ namespace ClassicalSharp.Gui {
 			
 			api.Texturing = true;
 			fpsText.Render( delta );
-			if( !game.ClassicMode && game.activeScreen == null ) {
+			if( !game.ClassicMode && game.Gui.activeScreen == null ) {
 				UpdateHackState( false );
 				DrawPosition();
 				hackStates.Render( delta );
@@ -128,7 +128,7 @@ namespace ClassicalSharp.Gui {
 		
 		void ChatFontChanged( object sender, EventArgs e ) { Recreate(); }
 		
-		public override void OnResize( int oldWidth, int oldHeight, int width, int height ) {
+		public override void OnResize( int width, int height ) {
 		}
 		
 		void DrawPosition() {

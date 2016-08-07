@@ -285,8 +285,8 @@ namespace ClassicalSharp.Gui {
 			UpdateChatYOffset( true );
 		}
 		
-		public override void OnResize( int oldWidth, int oldHeight, int width, int height ) {
-			announcement.OnResize( oldWidth, oldHeight, width, height );
+		public override void OnResize( int width, int height ) {
+			announcement.OnResize( width, height );
 			announcement.YOffset = -height / 4;
 			announcement.MoveTo( announcement.X, announcement.YOffset - announcement.Height / 2 );
 			blockSize = (int)(23 * 2 * game.GuiHotbarScale);
@@ -295,8 +295,8 @@ namespace ClassicalSharp.Gui {
 			
 			int inputY = game.Height - textInput.Height - textInput.YOffset;
 			textInput.MoveTo( textInput.X, inputY );
-			status.OnResize( oldWidth, oldHeight, width, height );
-			bottomRight.OnResize( oldWidth, oldHeight, width, height );
+			status.OnResize( width, height );
+			bottomRight.OnResize( width, height );
 			UpdateChatYOffset( true );
 		}
 
@@ -404,7 +404,7 @@ namespace ClassicalSharp.Gui {
 			string url = Utils.StripColours( text );
 			
 			if( Utils.IsUrlPrefix( url, 0 ) ) {
-				game.ShowWarning( new WarningScreen(
+				game.Gui.ShowWarning( new WarningScreen(
 					game, url, false, false, "Are you sure you want to go to this url?",
 					OpenUrl, AppendUrl, null, url,
 					"Be careful - urls from strangers may link to websites that",

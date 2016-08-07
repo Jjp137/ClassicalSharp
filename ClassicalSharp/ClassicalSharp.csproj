@@ -172,7 +172,9 @@
     <Compile Include="Events\Events.cs" />
     <Compile Include="Events\UserEvents.cs" />
     <Compile Include="Events\WorldEvents.cs" />
+    <Compile Include="Game\Game.Init.cs" />
     <Compile Include="Game\Game.Properties.cs" />
+    <Compile Include="Game\GuiInterface.cs" />
     <Compile Include="Game\PickingHandler.cs" />
     <Compile Include="Generator\FlatGrassGenerator.cs" />
     <Compile Include="Generator\IMapGenerator.cs" />
@@ -323,17 +325,9 @@
   <ItemGroup>
     <Folder Include="2D\" />
     <Folder Include="2D\Screens\" />
-    <Folder Include="2D\" />
-    <Folder Include="2D\" />
-    <Folder Include="2D\Screens\" />
-    <Folder Include="2D\" />
     <Folder Include="2D\Widgets\" />
-    <Folder Include="2D\Widgets\" />
-    <Folder Include="2D\Widgets\" />
-    <Folder Include="Entities\" />
     <Folder Include="Entities\" />
     <Folder Include="Map\" />
-    <Folder Include="Entities\" />
     <Folder Include="Network\" />
     <Folder Include="Rendering\" />
   </ItemGroup>

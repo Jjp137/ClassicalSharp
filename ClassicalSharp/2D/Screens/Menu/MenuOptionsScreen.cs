@@ -51,7 +51,7 @@ namespace ClassicalSharp.Gui {
 		
 		public override bool HandlesKeyDown( Key key ) {
 			if( key == Key.Escape ) {
-				game.SetNewScreen( null );
+				game.Gui.SetNewScreen( null );
 				return true;
 			} else if( (key == Key.Enter || key == Key.KeypadEnter)
 			          && inputWidget != null ) {
@@ -68,10 +68,10 @@ namespace ClassicalSharp.Gui {
 			return inputWidget.HandlesKeyUp( key );
 		}
 		
-		public override void OnResize( int oldWidth, int oldHeight, int width, int height ) {			
-			base.OnResize( oldWidth, oldHeight, width, height );
+		public override void OnResize( int width, int height ) {			
+			base.OnResize( width, height );
 			if( extendedHelp == null ) return;
-			extendedHelp.OnResize( oldWidth, oldHeight, width, height );
+			extendedHelp.OnResize( width, height );
 		}
 		
 		public override void Dispose() {

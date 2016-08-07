@@ -40,7 +40,7 @@ namespace ClassicalSharp.Gui {
 		public override bool HandlesKeyDown( Key key ) {
 			RemoveOverwrites();
 			if( key == Key.Escape ) {
-				game.SetNewScreen( null );
+				game.Gui.SetNewScreen( null );
 				return true;
 			}
 			return inputWidget.HandlesKeyDown( key );
@@ -68,14 +68,14 @@ namespace ClassicalSharp.Gui {
 				                    Anchor.Centre, regularFont ),
 				null,
 				MakeBack( false, titleFont,
-				         (g, w) => g.SetNewScreen( new PauseScreen( g ) ) ),
+				         (g, w) => g.Gui.SetNewScreen( new PauseScreen( g ) ) ),
 			};
 		}
 		
 		
-		public override void OnResize( int oldWidth, int oldHeight, int width, int height ) {
-			inputWidget.OnResize( oldWidth, oldHeight, width, height );
-			base.OnResize( oldWidth, oldHeight, width, height );
+		public override void OnResize( int width, int height ) {
+			inputWidget.OnResize( width, height );
+			base.OnResize( width, height );
 		}
 		
 		public override void Dispose() {
@@ -145,7 +145,7 @@ namespace ClassicalSharp.Gui {
 				return;
 			}
 			game.Chat.Add( "&eSaved map to: " + Path.GetFileName( path ) );
-			game.SetNewScreen( new PauseScreen( game ) );
+			game.Gui.SetNewScreen( new PauseScreen( game ) );
 		}
 		
 		void MakeDescWidget( string text ) {

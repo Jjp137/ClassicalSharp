@@ -61,10 +61,10 @@ namespace ClassicalSharp.Gui {
 			                                         Anchor.Centre, Anchor.Centre, keyFont );
 			if( game.ClassicMode ) {
 				widgets[index++] = MakeBack( false, titleFont,
-				                            (g, w) => g.SetNewScreen( new ClassicOptionsScreen( g ) ) );
+				                            (g, w) => g.Gui.SetNewScreen( new ClassicOptionsScreen( g ) ) );
 			} else {
 				widgets[index++] = MakeBack( "Back to menu", 5, titleFont,
-				                            (g, w) => g.SetNewScreen( new OptionsGroupScreen( g ) ) );
+				                            (g, w) => g.Gui.SetNewScreen( new OptionsGroupScreen( g ) ) );
 			}
 		}
 		
@@ -111,7 +111,7 @@ namespace ClassicalSharp.Gui {
 		
 		public override bool HandlesKeyDown( Key key ) {
 			if( key == Key.Escape ) {
-				game.SetNewScreen( null );
+				game.Gui.SetNewScreen( null );
 			} else if( curWidget != null ) {
 				int index = Array.IndexOf<Widget>( widgets, curWidget ) - 2;
 				KeyBind mapping = Get( index, left, right );
@@ -140,9 +140,9 @@ namespace ClassicalSharp.Gui {
 			return index < a.Length ? a[index] : b[index - a.Length];
 		}
 		
-		public override void OnResize( int oldWidth, int oldHeight, int width, int height ) {
-			base.OnResize( oldWidth, oldHeight, width, height );
-			statusWidget.OnResize( oldWidth, oldHeight, width, height );
+		public override void OnResize( int width, int height ) {
+			base.OnResize( width, height );
+			statusWidget.OnResize( width, height );
 		}
 		
 		public override void Dispose() {

@@ -51,9 +51,9 @@ namespace ClassicalSharp.Gui {
 				widgets[i].Dispose();
 		}
 		
-		public override void OnResize( int oldWidth, int oldHeight, int width, int height ) {
+		public override void OnResize( int width, int height ) {
 			for( int i = 0; i < widgets.Length; i++ )
-				widgets[i].OnResize( oldWidth, oldHeight, width, height );
+				widgets[i].OnResize( width, height );
 			clearTime = DateTime.UtcNow.AddSeconds( 0.5 );
 		}
 		
@@ -112,7 +112,7 @@ namespace ClassicalSharp.Gui {
 				comp.Reset( game );
 			game.BlockInfo.Reset( game );
 			
-			game.SetNewScreen( new LoadingMapScreen( game, connectString, "Waiting for handshake" ) );
+			game.Gui.SetNewScreen( new LoadingMapScreen( game, connectString, "Waiting for handshake" ) );
 			game.Network.Connect( game.IPAddress, game.Port );
 		}
 		

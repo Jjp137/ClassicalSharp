@@ -10,8 +10,11 @@ namespace ClassicalSharp.Model {
 	public class SheepModel : IModel {
 
 		public bool Fur = true;
+		int furIndex;
 		
-		public SheepModel( Game window ) : base( window ) { }
+		public SheepModel( Game game ) : base( game ) {
+			furIndex = game.ModelCache.GetTextureIndex( "sheep_fur.png" );
+		}
 		
 		internal override void CreateParts() {
 			vertices = new ModelVertex[boxVertices * 6 * ( Fur ? 2 : 1 )];
@@ -72,8 +75,8 @@ namespace ClassicalSharp.Model {
 		}
 		
 		protected override void DrawModel( Player p ) {
-			int texId = p.MobTextureId <= 0 ? cache.SheepTexId : p.MobTextureId;
-			graphics.BindTexture( texId );
+			IGraphicsApi api = game.Graphics;
+			api.BindTexture( GetTexture( p.MobTextureId ) );
 			DrawHeadRotate( -p.PitchRadians, 0, 0, Head );
 			
 			DrawPart( Torso );
@@ -81,20 +84,19 @@ namespace ClassicalSharp.Model {
 			DrawRotate( -p.anim.legXRot, 0, 0, RightLegFront );
 			DrawRotate( -p.anim.legXRot, 0, 0, LeftLegBack );
 			DrawRotate( p.anim.legXRot, 0, 0, RightLegBack );
-			graphics.UpdateDynamicIndexedVb( DrawMode.Triangles, cache.vb, cache.vertices, index, index * 6 / 4 );
-			index = 0;
+			UpdateVB();
 			
-			if( Fur ) {
-				graphics.BindTexture( cache.SheepFurTexId );
-				DrawHeadRotate( -p.PitchRadians, 0, 0, FurHead );
-				
-				DrawPart( FurTorso );
-				DrawRotate( p.anim.legXRot, 0, 0, FurLeftLegFront );
-				DrawRotate( -p.anim.legXRot, 0, 0, FurRightLegFront );
-				DrawRotate( -p.anim.legXRot, 0, 0, FurLeftLegBack );
-				DrawRotate( p.anim.legXRot, 0, 0, FurRightLegBack );
-				graphics.UpdateDynamicIndexedVb( DrawMode.Triangles, cache.vb, cache.vertices, index, index * 6 / 4 );
-			}
+			if( !Fur ) return;
+			ModelCache cache = game.ModelCache;
+			api.BindTexture( cache.Textures[furIndex].TexID );
+			DrawHeadRotate( -p.PitchRadians, 0, 0, FurHead );
+			
+			DrawPart( FurTorso );
+			DrawRotate( p.anim.legXRot, 0, 0, FurLeftLegFront );
+			DrawRotate( -p.anim.legXRot, 0, 0, FurRightLegFront );
+			DrawRotate( -p.anim.legXRot, 0, 0, FurLeftLegBack );
+			DrawRotate( p.anim.legXRot, 0, 0, FurRightLegBack );
+			UpdateVB();
 		}
 		
 		ModelPart Head, Torso, LeftLegFront, RightLegFront, LeftLegBack, RightLegBack;

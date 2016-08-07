@@ -28,6 +28,7 @@ namespace ClassicalSharp.Network {
 		Screen prevScreen;
 		bool prevCursorVisible;
 		CPESupport cpe;
+		ScheduledTask task;
 		
 		public override void Connect( IPAddress address, int port ) {
 			
@@ -65,12 +66,14 @@ namespace ClassicalSharp.Network {
 			Disconnected = true;
 		}
 		
-		public override void Tick( double delta ) {
+		public override void Tick( ScheduledTask task ) {
 			if( Disconnected ) return;
 			if( (DateTime.UtcNow - lastPacket).TotalSeconds >= 20 )
-				CheckDisconnection( delta );
+				CheckDisconnection( task.Interval );
 			if( Disconnected ) return;
+			
 			LocalPlayer player = game.LocalPlayer;
+			this.task = task;
 			
 			try {
 				reader.ReadPendingData();

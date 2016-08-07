@@ -1,6 +1,5 @@
 ﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
 using System;
-using System.Drawing;
 using ClassicalSharp.Entities;
 using ClassicalSharp.GraphicsAPI;
 using OpenTK;
@@ -85,9 +84,8 @@ namespace ClassicalSharp.Model {
 		}
 		
 		protected override void DrawModel( Player p ) {
-			int texId = p.TextureId <= 0 ? cache.HumanoidTexId : p.TextureId;
-			graphics.BindTexture( texId );
-			graphics.AlphaTest = false;
+			game.Graphics.BindTexture( GetTexture( p.TextureId ) );
+			game.Graphics.AlphaTest = false;
 			
 			SkinType skinType = p.SkinType;
 			bool _64x64 = skinType != SkinType.Type64x32;
@@ -105,9 +103,9 @@ namespace ClassicalSharp.Model {
 			DrawRotate( p.anim.leftXRot, 0, p.anim.leftZRot, model.LeftArm );
 			DrawRotate( p.anim.rightXRot, 0, p.anim.rightZRot, model.RightArm );
 			Rotate = RotateOrder.ZYX;
-			graphics.UpdateDynamicIndexedVb( DrawMode.Triangles, cache.vb, cache.vertices, index, index * 6 / 4 );
+			UpdateVB();
 			
-			graphics.AlphaTest = true;
+			game.Graphics.AlphaTest = true;
 			index = 0;
 			if( _64x64 ) {
 				DrawPart( model.TorsoLayer );
@@ -119,7 +117,7 @@ namespace ClassicalSharp.Model {
 				Rotate = RotateOrder.ZYX;
 			}
 			DrawHeadRotate( -p.PitchRadians, 0, 0, model.Hat );
-			graphics.UpdateDynamicIndexedVb( DrawMode.Triangles, cache.vb, cache.vertices, index, index * 6 / 4 );
+			UpdateVB();
 		}
 		
 		class ModelSet {

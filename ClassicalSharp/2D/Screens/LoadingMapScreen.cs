@@ -108,10 +108,9 @@ namespace ClassicalSharp.Gui {
 			game.WorldEvents.MapLoading -= MapLoading;
 		}
 		
-		public override void OnResize( int oldWidth, int oldHeight, int width, int height ) {
-			int dx = (width - oldWidth) / 2;
-			messageWidget.OnResize( oldWidth, oldHeight, width, height );
-			titleWidget.OnResize( oldWidth, oldHeight, width, height );
+		public override void OnResize( int width, int height ) {
+			messageWidget.OnResize( width, height );
+			titleWidget.OnResize( width, height );
 		}
 		
 		public override bool BlocksWorld { get { return true; } }
@@ -122,16 +121,16 @@ namespace ClassicalSharp.Gui {
 		
 		public override bool HandlesKeyDown( Key key ) {
 			if( key == Key.Tab ) return true;
-			return game.hudScreen.HandlesKeyDown( key );
+			return game.Gui.hudScreen.HandlesKeyDown( key );
 		}
 		
 		public override bool HandlesKeyPress( char key )  {
-			return game.hudScreen.HandlesKeyPress( key );
+			return game.Gui.hudScreen.HandlesKeyPress( key );
 		}
 		
 		public override bool HandlesKeyUp( Key key ) {
 			if( key == Key.Tab ) return true;
-			return game.hudScreen.HandlesKeyUp( key );
+			return game.Gui.hudScreen.HandlesKeyUp( key );
 		}
 		
 		public override bool HandlesMouseClick( int mouseX, int mouseY, MouseButton button ) { return true; }

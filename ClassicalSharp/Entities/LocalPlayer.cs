@@ -59,6 +59,7 @@ namespace ClassicalSharp.Entities {
 			bool wasOnGround = onGround;
 			
 			HandleInput( ref xMoving, ref zMoving );
+			physics.DoEntityPush( ref xMoving, ref zMoving );
 			physics.UpdateVelocityState( xMoving, zMoving );
 			physics.PhysicsTick( xMoving, zMoving );
 			
@@ -86,7 +87,7 @@ namespace ClassicalSharp.Entities {
 		}
 		
 		void HandleInput( ref float xMoving, ref float zMoving ) {
-			if( game.ActiveScreen.HandlesAllInput ) {
+			if( game.Gui.ActiveScreen.HandlesAllInput ) {
 				physics.jumping = Hacks.Speeding = Hacks.FlyingUp = Hacks.FlyingDown = false;
 			} else {
 				if( game.IsKeyDown( KeyBind.Forward ) ) xMoving -= 0.98f;

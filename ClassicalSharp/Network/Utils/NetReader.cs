@@ -8,25 +8,25 @@ namespace ClassicalSharp.Network {
 		
 		public byte[] buffer = new byte[4096 * 5];
 		public int index = 0, size = 0;
-		public NetworkStream Stream;
+		Socket socket;
 		
-		public NetReader( NetworkStream stream ) {
-			Stream = stream;
+		public NetReader( Socket socket ) {
+			this.socket = socket;
 		}
 		
 		public void ReadPendingData() {
-			if( !Stream.DataAvailable ) return;
+			if( socket.Available == 0 ) return;
 			// NOTE: Always using a read call that is a multiple of 4096
 			// (appears to?) improve read performance.
-			int received = Stream.Read( buffer, size, 4096 * 4 );
-			size += received;
+			int recv = socket.Receive( buffer, size, 4096 * 4, SocketFlags.None );
+			size += recv;
 		}
 		
 		public void Skip( int byteCount ) {
 			index += byteCount;
 		}
 		
-		public void RemoveProcessed() {			
+		public void RemoveProcessed() {
 			size -= index;
 			if( size > 0 ) // only copy left over bytes
 				Buffer.BlockCopy( buffer, index, buffer, 0, size );			
@@ -73,12 +73,12 @@ namespace ClassicalSharp.Network {
 		}
 
 		public string ReadCp437String() {
-			int length = GetString( false, 64 );
+			int length = GetString( false, Utils.StringLength );
 			return new String( characters, 0, length );
 		}
 		
 		public string ReadAsciiString() {
-			int length = GetString( true, 64 );
+			int length = GetString( true, Utils.StringLength );
 			return new String( characters, 0, length );
 		}
 		
@@ -88,7 +88,7 @@ namespace ClassicalSharp.Network {
 		}
 		
 		internal string ReadChatString( ref byte messageType ) {
-			int length = GetString( false, 64 );
+			int length = GetString( false, Utils.StringLength );
 			
 			int offset = 0;
 			if( length >= womDetail.Length && IsWomDetailString() ) {
@@ -99,7 +99,7 @@ namespace ClassicalSharp.Network {
 			return new String( characters, offset, length );
 		}
 		
-		static char[] characters = new char[64];
+		static char[] characters = new char[Utils.StringLength];
 		const string womDetail = "^detail.user=";		
 		static bool IsWomDetailString() {
 			for( int i = 0; i < womDetail.Length; i++ ) {

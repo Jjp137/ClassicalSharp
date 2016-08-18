@@ -8,14 +8,14 @@ namespace ClassicalSharp.Network {
 		
 		public byte[] buffer = new byte[131];
 		public int index = 0;
-		public NetworkStream Stream;
+		Socket socket;
 		
-		public NetWriter( NetworkStream stream ) {
-			Stream = stream;
+		public NetWriter( Socket socket ) {
+			this.socket = socket;
 		}
 		
 		public void WriteString( string value ) {
-			int count = Math.Min( value.Length, 64 );
+			int count = Math.Min( value.Length, Utils.StringLength );
 			for( int i = 0; i < count; i++ ) {
 				char c = value[i];
 				int cpIndex = 0;
@@ -31,10 +31,10 @@ namespace ClassicalSharp.Network {
 					buffer[index + i] = (byte)'?';
 				}
 			}
-			for( int i = value.Length; i < 64; i++ ) {
+			
+			for( int i = value.Length; i < Utils.StringLength; i++ )
 				buffer[index + i] = (byte)' ';
-			}
-			index += 64;
+			index += Utils.StringLength;
 		}
 		
 		public void WriteUInt8( byte value ) {
@@ -54,7 +54,9 @@ namespace ClassicalSharp.Network {
 		}
 
 		public void Send() {
-			Stream.Write( buffer, 0, index );
+			int offset = 0;
+			while( offset < index )
+				offset += socket.Send( buffer, offset, index - offset, SocketFlags.None );
 			index = 0;
 		}
 	}

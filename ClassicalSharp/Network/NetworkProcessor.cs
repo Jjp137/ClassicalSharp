@@ -43,9 +43,8 @@ namespace ClassicalSharp.Network {
 				return;
 			}
 			
-			NetworkStream stream = new NetworkStream( socket, true );
-			reader = new NetReader( stream );
-			writer = new NetWriter( stream );
+			reader = new NetReader( socket );
+			writer = new NetWriter( socket );
 			gzippedMap = new FixedBufferStream( reader.buffer );
 			
 			Disconnected = false;
@@ -68,7 +67,7 @@ namespace ClassicalSharp.Network {
 		
 		public override void Tick( ScheduledTask task ) {
 			if( Disconnected ) return;
-			if( (DateTime.UtcNow - lastPacket).TotalSeconds >= 20 )
+			if( (DateTime.UtcNow - lastPacket).TotalSeconds >= 30 )
 				CheckDisconnection( task.Interval );
 			if( Disconnected ) return;
 			
@@ -77,7 +76,7 @@ namespace ClassicalSharp.Network {
 			
 			try {
 				reader.ReadPendingData();
-			} catch( IOException ex ) {
+			} catch( SocketException ex ) {
 				ErrorHandler.LogError( "reading packets", ex );
 				game.Disconnect( "&eLost connection to the server", "I/O error when reading packets" );
 				Dispose();
@@ -130,7 +129,7 @@ namespace ClassicalSharp.Network {
 			}
 			try {
 				writer.Send();
-			} catch( IOException ) {
+			} catch( SocketException ) {
 				// NOTE: Not immediately disconnecting, as otherwise we sometimes miss out on kick messages
 				writer.index = 0;
 			}

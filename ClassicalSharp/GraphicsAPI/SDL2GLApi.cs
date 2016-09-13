@@ -786,7 +786,7 @@ namespace ClassicalSharp.GraphicsAPI
 		}
 
 		bool isIntelRenderer;
-		protected override void MakeApiInfo() {
+		internal override void MakeApiInfo() {
 			string vendor = new String( (sbyte*)GLFuncs.GetString( StringName.Vendor ) );
 			string renderer = new String( (sbyte*)GLFuncs.GetString( StringName.Renderer ) );
 			string version = new String( (sbyte*)GLFuncs.GetString( StringName.Version ) );

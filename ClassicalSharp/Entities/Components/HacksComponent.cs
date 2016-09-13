@@ -70,6 +70,8 @@ namespace ClassicalSharp.Entities {
 		/// <summary> Whether the player is currently walking at base speed * 0.5 * speed multiplier. </summary>
 		public bool HalfSpeeding;
 		
+		public bool CanJumpHigher { get { return Enabled && CanAnyHacks && CanSpeed; } }
+		
 		/// <summary> Parses hack flags specified in the motd and/or name of the server. </summary>
 		/// <remarks> Recognises +/-hax, +/-fly, +/-noclip, +/-speed, +/-respawn, +/-ophax, and horspeed=xyz </remarks>
 		public void ParseHackFlags( string name, string motd ) {
@@ -109,10 +111,11 @@ namespace ClassicalSharp.Entities {
 		}
 		
 		static void ParseFlag( Action<bool> action, string joined, string flag ) {
-			if( joined.Contains( "+" + flag ) )
+			if( joined.Contains( "+" + flag ) ) {
 				action( true );
-			else if( joined.Contains( "-" + flag ) )
+			} else if( joined.Contains( "-" + flag ) ) {
 				action( false );
+			}
 		}
 		
 		/// <summary> Sets the user type of this user. This is used to control permissions for grass,

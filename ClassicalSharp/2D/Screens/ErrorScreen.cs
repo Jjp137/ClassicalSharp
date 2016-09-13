@@ -98,6 +98,7 @@ namespace ClassicalSharp.Gui {
 			Redraw( delta );
 			lastSecsLeft = secsLeft;
 			lastActive = btn.Active;
+			clearTime = DateTime.UtcNow.AddSeconds( 0.5 );
 		}
 		
 		readonly FastColour top = new FastColour( 64, 32, 32 ), bottom = new FastColour( 80, 16, 16 );
@@ -117,7 +118,7 @@ namespace ClassicalSharp.Gui {
 			game.BlockInfo.Reset( game );
 			
 			game.Gui.SetNewScreen( new LoadingMapScreen( game, connectString, "Waiting for handshake" ) );
-			game.Network.Connect( game.IPAddress, game.Port );
+			game.Server.Connect( game.IPAddress, game.Port );
 		}
 		
 		void ContextRecreated( object sender, EventArgs e ) {

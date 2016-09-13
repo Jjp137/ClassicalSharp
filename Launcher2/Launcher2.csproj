@@ -59,8 +59,12 @@
     <Reference Include="System.Windows.Forms" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Gui\Drawer2DExt.cs" />
-    <Compile Include="Gui\PlatformDrawer.cs" />
+    <Compile Include="Drawing\Drawer2DExt.cs" />
+    <Compile Include="Drawing\Gradient.cs" />
+    <Compile Include="Drawing\Platform\OSXDrawer.cs" />
+    <Compile Include="Drawing\Platform\PlatformDrawer.cs" />
+    <Compile Include="Drawing\Platform\WindowsDrawer.cs" />
+    <Compile Include="Drawing\Platform\X11Drawer.cs" />
     <Compile Include="Gui\Screens\ServersScreen.cs" />
     <Compile Include="Gui\Screens\ColoursScreen.cs" />
     <Compile Include="Gui\Screens\DirectConnectScreen.cs" />
@@ -84,6 +88,7 @@
     <Compile Include="Gui\Views\ServersView.cs" />
     <Compile Include="Gui\Views\UpdatesView.cs" />
     <Compile Include="Gui\Widgets\LauncherBoolWidget.cs" />
+    <Compile Include="Gui\Widgets\LauncherInputText.cs" />
     <Compile Include="Gui\Widgets\LauncherButtonWidget.cs" />
     <Compile Include="Gui\Widgets\LauncherInputWidget.cs" />
     <Compile Include="Gui\Widgets\LauncherLabelWidget.cs" />
@@ -128,7 +133,17 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Gui\" />
+    <Folder Include="Gui" />
+    <Folder Include="Drawing\Platform" />
+    <Folder Include="Gui\Views" />
+    <Folder Include="Gui\TableWidget" />
+    <Folder Include="Gui\Screens" />
+    <Folder Include="Gui\Widgets" />
+    <Folder Include="Drawing" />
+    <Folder Include="Updater" />
+    <Folder Include="Utils" />
+    <Folder Include="Patcher" />
+    <Folder Include="WebService" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

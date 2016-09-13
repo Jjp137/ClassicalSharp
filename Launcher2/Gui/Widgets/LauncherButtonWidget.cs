@@ -9,7 +9,7 @@ namespace Launcher.Gui.Widgets {
 		
 		public bool Shadow = true;
 		public bool Active = false;
-		const int border = 2;
+		const int border = 1;
 		Size textSize;
 		Font font;
 		
@@ -19,7 +19,8 @@ namespace Launcher.Gui.Widgets {
 		public void SetDrawData( IDrawer2D drawer, string text, Font font, Anchor horAnchor,
 		                        Anchor verAnchor, int width, int height, int x, int y ) {
 			Width = width; Height = height;
-			CalculateOffset( x, y, horAnchor, verAnchor );
+			SetAnchors( horAnchor, verAnchor ).SetOffsets( x, y )
+				.CalculatePosition();
 			this.font = font;
 
 			Text = text;
@@ -43,27 +44,27 @@ namespace Launcher.Gui.Widgets {
 		
 		void DrawBorder( IDrawer2D drawer ) {
 			FastColour backCol = Window.ClassicBackground ? FastColour.Black : LauncherSkin.ButtonBorderCol;
-			drawer.Clear( backCol, X + 1, Y, Width - 2, border );
-			drawer.Clear( backCol, X + 1, Y + Height - border, Width - 2, border );
-			drawer.Clear( backCol, X, Y + 1, border, Height - 2 );
-			drawer.Clear( backCol, X + Width - border, Y + 1, border, Height - 2 );
+			drawer.Clear( backCol, X + border, Y, Width - border * 2, border );
+			drawer.Clear( backCol, X + border, Y + Height - border, Width - border * 2, border );
+			drawer.Clear( backCol, X, Y + border, border, Height - border * 2 );
+			drawer.Clear( backCol, X + Width - border, Y + border, border, Height - border * 2 );
 		}
 		
 		void DrawNormal( IDrawer2D drawer ) {
 			if( Active ) return;
 			FastColour lineCol = LauncherSkin.ButtonHighlightCol;
-			drawer.Clear( lineCol, X + border + 1, Y + border, Width - (border * 2 + 1), border );
+			drawer.Clear( lineCol, X + border * 2, Y + border, Width - border * 4, border );
 		}
 		
 		void DrawClassic( IDrawer2D drawer ) {
 			FastColour highlightCol = Active ? new FastColour( 189, 198, 255 ) : new FastColour( 168, 168, 168 );
-			drawer.Clear( highlightCol, X + border + 1, Y + border, Width - (border * 2 + 1), border );
-			drawer.Clear( highlightCol, X + border, Y + border + 1, border, Height - (border * 2 + 1) );
+			drawer.Clear( highlightCol, X + border * 2, Y + border, Width - border * 4, border );
+			drawer.Clear( highlightCol, X + border, Y + border * 2, border, Height - border * 4 );
 		}
 		
 		public void RedrawBackground() {
 			if( Window.Minimised ) return;
-			using( FastBitmap dst = new FastBitmap( Window.Framebuffer, true, false ) )
+			using( FastBitmap dst = Window.LockBits() )
 				RedrawBackground( dst );
 		}
 		
@@ -72,11 +73,20 @@ namespace Launcher.Gui.Widgets {
 			Rectangle rect = new Rectangle( X + border, Y + border, Width - border * 2, Height - border * 2 );
 			if( Window.ClassicBackground ) {
 				FastColour foreCol = Active ? new FastColour( 126, 136, 191 ) : new FastColour( 111, 111, 111 );
-				Drawer2DExt.DrawNoise( dst, rect, foreCol, 8 );
+				Gradient.Noise( dst, rect, foreCol, 8 );
 			} else {
 				FastColour foreCol = Active ? LauncherSkin.ButtonForeActiveCol : LauncherSkin.ButtonForeCol;
-				Drawer2DExt.FastClear( dst, rect, foreCol );
+				FastColour top = Expand( foreCol, 8 ), bottom = Expand( foreCol, -8 );
+				Gradient.Vertical( dst, rect, top, bottom );
+
 			}
+		}
+		
+		static FastColour Expand( FastColour a, int amount ) {
+			int r = a.R + amount; Utils.Clamp( ref r, 0, 255 );
+			int g = a.G + amount; Utils.Clamp( ref g, 0, 255 );
+			int b = a.B + amount; Utils.Clamp( ref b, 0, 255 );
+			return new FastColour( r, g, b );
 		}
 	}
 }

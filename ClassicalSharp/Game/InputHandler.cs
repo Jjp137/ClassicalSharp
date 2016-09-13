@@ -61,11 +61,11 @@ namespace ClassicalSharp {
 		
 		internal void ButtonStateChanged( MouseButton button, bool pressed, byte targetId ) {
 			if( buttonsDown[(int)button] ) {
-				game.Network.SendPlayerClick( button, false, targetId, game.SelectedPos );
+				game.Server.SendPlayerClick( button, false, targetId, game.SelectedPos );
 				buttonsDown[(int)button] = false;
 			}
 			if( pressed ) {
-				game.Network.SendPlayerClick( button, true, targetId, game.SelectedPos );
+				game.Server.SendPlayerClick( button, true, targetId, game.SelectedPos );
 				buttonsDown[(int)button] = true;
 			}
 		}
@@ -74,7 +74,7 @@ namespace ClassicalSharp {
 			if( oldScreen != null && oldScreen.HandlesAllInput )
 				picking.lastClick = DateTime.UtcNow;
 			
-			if( game.Network.UsingPlayerClick ) {
+			if( game.Server.UsingPlayerClick ) {
 				byte targetId = game.Entities.GetClosetPlayer( game.LocalPlayer );
 				ButtonStateChanged( MouseButton.Left, false, targetId );
 				ButtonStateChanged( MouseButton.Right, false, targetId );
@@ -87,7 +87,7 @@ namespace ClassicalSharp {
 		
 		void MouseButtonUp( object sender, MouseButtonEventArgs e ) {
 			if( !game.Gui.ActiveScreen.HandlesMouseUp( e.X, e.Y, e.Button ) ) {
-				if( game.Network.UsingPlayerClick && e.Button <= MouseButton.Middle ) {
+				if( game.Server.UsingPlayerClick && e.Button <= MouseButton.Middle ) {
 					byte targetId = game.Entities.GetClosetPlayer( game.LocalPlayer );
 					ButtonStateChanged( e.Button, false, targetId );
 				}
@@ -183,10 +183,11 @@ namespace ClassicalSharp {
 			bool more;
 			if( !Hotkeys.IsHotkey( key, game.Keyboard, out text, out more ) ) return;
 			
-			if( !more )
-				game.Network.SendChat( text, false );
-			else if( game.Gui.activeScreen == null )
+			if( !more ) {
+				game.Server.SendChat( text, false );
+			} else if( game.Gui.activeScreen == null ) {
 				game.Gui.hudScreen.OpenTextInputBar( text );
+			}
 		}
 		
 		MouseButtonEventArgs simArgs = new MouseButtonEventArgs();
@@ -219,7 +220,7 @@ namespace ClassicalSharp {
 						WindowState.Normal : WindowState.Fullscreen;
 				}
 			} else if( key == Keys[KeyBind.AxisLines] ) {
-				game.ShowAxisLines = !game.ShowAxisLines;
+				ToggleAxisLines();
 			} else if( key == Keys[KeyBind.ThirdPerson] ) {
 				game.CycleCamera();
 			} else if( key == Keys[KeyBind.ToggleFog] ) {
@@ -238,6 +239,16 @@ namespace ClassicalSharp {
 				return false;
 			}
 			return true;
+		}
+		
+		void ToggleAxisLines() {
+			game.ShowAxisLines = !game.ShowAxisLines;
+			Key key = Keys[KeyBind.AxisLines];
+			if( game.ShowAxisLines ) {
+				game.Chat.Add( "  &eAxis lines now show (&4X&e, &2Y&e, &1Z&e). Press &a" + key + " &eto disable." );
+			} else {
+				game.Chat.Add( "  &eAxis lines no longer show. Press &a" + key + " &eto re-enable." );
+			}
 		}
 		
 		void CycleDistanceForwards() {

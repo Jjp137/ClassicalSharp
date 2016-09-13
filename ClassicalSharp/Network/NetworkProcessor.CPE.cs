@@ -10,7 +10,7 @@ using OpenTK.Input;
 
 namespace ClassicalSharp.Network {
 
-	public partial class NetworkProcessor : INetworkProcessor {
+	public partial class NetworkProcessor : IServerConnection {
 		
 		#region Writing
 		
@@ -110,10 +110,6 @@ namespace ClassicalSharp.Network {
 			game.UseCPEBlocks = true;
 
 			if( supportLevel == 1 ) {
-				for( int i = BlockInfo.MaxOriginalBlock + 1; i <= BlockInfo.MaxCpeBlock; i++ ) {
-					game.Inventory.CanPlace[i] = true;
-					game.Inventory.CanDelete[i] = true;
-				}
 				game.Events.RaiseBlockPermissionsChanged();
 			} else {
 				Utils.LogDebug( "Server's block support level is {0}, this client only supports level 1.", supportLevel );
@@ -303,8 +299,10 @@ namespace ClassicalSharp.Network {
 			p.CheckHacksConsistency();
 			
 			float jumpHeight = reader.ReadInt16() / 32f;
-			if( jumpHeight < 0 ) p.physics.jumpVel = 0.42f;
-			else p.physics.CalculateJumpVelocity( jumpHeight );
+			if( jumpHeight < 0 ) 
+				p.physics.jumpVel = p.Hacks.CanJumpHigher ? p.physics.userJumpVel : 0.42f;
+			else 
+				p.physics.CalculateJumpVelocity( false, jumpHeight );
 			p.physics.serverJumpVel = p.physics.jumpVel;
 			game.Events.RaiseHackPermissionsChanged();
 		}
@@ -366,7 +364,7 @@ namespace ClassicalSharp.Network {
 			if( !game.AllowServerTextures ) return;
 			
 			if( url == "" ) {
-				ExtractDefault();
+				TexturePackExtractor.ExtractDefault( game );
 			} else if( Utils.IsUrlPrefix( url, 0 ) ) {
 				RetrieveTexturePack( url );
 			}

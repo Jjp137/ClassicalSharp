@@ -45,8 +45,9 @@ namespace Launcher.Gui.Screens {
 				curInput.Redraw( drawer );
 				
 				Rectangle r = curInput.MeasureCaret( drawer, inputFont );
-				if( caretShow ) 
-					drawer.Clear( FastColour.White, r.X, r.Y, r.Width, r.Height );
+				if( caretShow ) {
+					drawer.Clear( FastColour.Black, r.X, r.Y, r.Width, r.Height );
+				}
 				
 				if( lastRec == r ) game.DirtyArea = r;
 				lastRec = r;
@@ -70,25 +71,25 @@ namespace Launcher.Gui.Screens {
 				return;
 			}
 			
-			if( e.Key == Key.BackSpace && curInput.BackspaceChar() ) {
+			if( e.Key == Key.BackSpace && curInput.Chars.Backspace() ) {
 				RedrawLastInput();
 				OnRemovedChar();
-			} else if( e.Key == Key.Delete && curInput.DeleteChar() ) {
+			} else if( e.Key == Key.Delete && curInput.Chars.Delete() ) {
 				RedrawLastInput();
 				OnRemovedChar();
 			} else if( e.Key == Key.C && ControlDown ) {
-				curInput.CopyToClipboard();
+				curInput.Chars.CopyToClipboard();
 			} else if( e.Key == Key.V && ControlDown ) {
-				if( curInput.CopyFromClipboard() )
+				if( curInput.Chars.CopyFromClipboard() )
 					RedrawLastInput();
 			} else if( e.Key == Key.Escape ) {
-				if( curInput.ClearText() )
+				if( curInput.Chars.Clear() )
 					RedrawLastInput();
 			} else if( e.Key == Key.Left ) {
-				curInput.AdvanceCursorPos( -1 );
+				curInput.AdvanceCursorPos( false );
 				RedrawLastInput();
 			} else if( e.Key == Key.Right ) {
-				curInput.AdvanceCursorPos( +1 );
+				curInput.AdvanceCursorPos( true );
 				RedrawLastInput();
 			}
 		}
@@ -106,7 +107,7 @@ namespace Launcher.Gui.Screens {
 		}
 
 		protected void KeyPress( object sender, KeyPressEventArgs e ) {
-			if( curInput != null && curInput.AppendChar( e.KeyChar ) ) {
+			if( curInput != null && curInput.Chars.Append( e.KeyChar ) ) {
 				RedrawLastInput();
 				OnAddedChar();
 			}
@@ -114,7 +115,7 @@ namespace Launcher.Gui.Screens {
 		
 		protected virtual void RedrawLastInput() {
 			if( curInput.Width > curInput.ButtonWidth )
-				game.ClearArea( curInput.X, curInput.Y, curInput.Width, curInput.Height );
+				game.ResetArea( curInput.X, curInput.Y, curInput.Width, curInput.Height );
 			
 			using( drawer ) {
 				drawer.SetBitmap( game.Framebuffer );

@@ -97,8 +97,7 @@ namespace ClassicalSharp {
 		public bool Empty {
 			get {
 				for( int i = 0; i < Capacity; i++ ) {
-					if( value[i] != '\0' )
-						return false;
+					if( value[i] != '\0' ) return false;
 				}
 				return true;
 			}
@@ -108,20 +107,22 @@ namespace ClassicalSharp {
 			get {
 				int len = Capacity;
 				for( int i = Capacity - 1; i >= 0; i-- ) {
-					if( value[i] != '\0' )
-						break;
+					if( value[i] != '\0' ) break;
 					len--;
 				}
 				return len;
 			}
 		}
 		
-		public string GetString() {
-			return new String( value, 0, Length );
-		}
-		
-		public string GetSubstring( int length ) {
-			return new String( value, 0, length );
+		public int TextLength {
+			get {
+				int len = Capacity;
+				for( int i = Capacity - 1; i >= 0; i-- ) {
+					if( value[i] != '\0' && value[i] != ' ') break;
+					len--;
+				}
+				return len;
+			}
 		}
 		
 		public override string ToString() {

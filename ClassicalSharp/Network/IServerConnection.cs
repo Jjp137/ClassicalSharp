@@ -1,6 +1,7 @@
 ﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
 using System;
 using System.Drawing;
+using System.IO;
 using System.Net;
 using ClassicalSharp.Gui;
 using ClassicalSharp.Network;
@@ -14,7 +15,7 @@ using Android.Graphics;
 namespace ClassicalSharp {
 	
 	/// <summary> Represents a connection to either a multiplayer server, or an internal single player server. </summary>
-	public abstract class INetworkProcessor {
+	public abstract class IServerConnection {
 		
 		public abstract bool IsSinglePlayer { get; }
 		
@@ -47,10 +48,10 @@ namespace ClassicalSharp {
 		public bool UsingPlayerClick;
 		
 		/// <summary> Whether the server can handle partial message packets or not. </summary>
-		public bool ServerSupportsPartialMessages;
+		public bool SupportsPartialMessages;
 		
 		/// <summary> Whether the server supports receiving all code page 437 characters from this client. </summary>
-		public bool ServerSupportsFullCP437;
+		public bool SupportsFullCP437;
 		
 		
 		#region Texture pack / terrain.png
@@ -98,8 +99,8 @@ namespace ClassicalSharp {
 		
 		void DownloadTexturePack( string url ) {
 			if( game.DeniedUrls.HasEntry( url ) ) return;
-			DateTime lastModified = TextureCache.GetLastModifiedFromCache( url );
-			string etag = TextureCache.GetETagFromCache( url, game.ETags );
+			DateTime lastModified = TextureCache.GetLastModified( url, game.LastModified );
+			string etag = TextureCache.GetETag( url, game.ETags );
 
 			if( url.Contains( ".zip" ) )
 				game.AsyncDownloader.DownloadData( url, true, "texturePack",
@@ -109,62 +110,13 @@ namespace ClassicalSharp {
 				                                   lastModified, etag );
 		}
 		
-		protected internal void ExtractDefault() {
-			TexturePackExtractor extractor = new TexturePackExtractor();
-			extractor.Extract( game.DefaultTexturePack, game );
-			game.World.TextureUrl = null;
-		}
-		
 		protected void CheckAsyncResources() {
 			DownloadedItem item;
-			if( game.AsyncDownloader.TryGetItem( "terrain", out item ) )
-				ExtractTerrainPng( item );		
-			if( game.AsyncDownloader.TryGetItem( "texturePack", out item ) )
-				ExtractTexturePack( item );
-		}
-		
-		void ExtractTerrainPng( DownloadedItem item ) {
-			if( item.Data != null ) {
-				Bitmap bmp = (Bitmap)item.Data;
-				game.World.TextureUrl = item.Url;
-				game.Events.RaiseTexturePackChanged();
-				
-				if( !Platform.Is32Bpp( bmp ) ) {
-					Utils.LogDebug( "Converting terrain atlas to 32bpp image" );
-					game.Drawer2D.ConvertTo32Bpp( ref bmp );
-				}
-				if( !game.ChangeTerrainAtlas( bmp ) ) { bmp.Dispose(); return; }
-				TextureCache.AddToCache( item.Url, bmp );
-				TextureCache.AddETagToCache( item.Url, item.ETag, game.ETags );
-			} else {
-				Bitmap bmp = TextureCache.GetBitmapFromCache( item.Url );
-				if( bmp == null ) { // e.g. 404 errors
-					ExtractDefault();
-				} else if( item.Url != game.World.TextureUrl ) {
-					game.World.TextureUrl = item.Url;
-					game.Events.RaiseTexturePackChanged();
-					if( !game.ChangeTerrainAtlas( bmp ) ) { bmp.Dispose(); return; }
-				}
+			if( game.AsyncDownloader.TryGetItem( "terrain", out item ) ) {
+				TexturePackExtractor.ExtractTerrainPng( game, item );
 			}
-		}
-		
-		void ExtractTexturePack( DownloadedItem item ) {
-			if( item.Data != null ) {
-				game.World.TextureUrl = item.Url;
-				
-				TexturePackExtractor extractor = new TexturePackExtractor();
-				extractor.Extract( (byte[])item.Data, game );
-				TextureCache.AddToCache( item.Url, (byte[])item.Data );
-				TextureCache.AddETagToCache( item.Url, item.ETag, game.ETags );
-			} else {
-				byte[] data = TextureCache.GetDataFromCache( item.Url );
-				if( data == null ) { // e.g. 404 errors
-					ExtractDefault();
-				} else if( item.Url != game.World.TextureUrl ) {
-					game.World.TextureUrl = item.Url;
-					TexturePackExtractor extractor = new TexturePackExtractor();
-					extractor.Extract( data, game );
-				}
+			if( game.AsyncDownloader.TryGetItem( "texturePack", out item ) ) {
+				TexturePackExtractor.ExtractTexturePack( game, item );
 			}
 		}
 		#endregion

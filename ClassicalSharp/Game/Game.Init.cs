@@ -26,18 +26,24 @@ namespace ClassicalSharp {
 		internal void OnLoad() {
 			Mouse = window.Mouse;
 			Keyboard = window.Keyboard;
-			#if !USE_DX
+
+			#if ANDROID
+			Graphics = new OpenGLESApi();
+			#elif !USE_DX
 			Graphics = new SDL2GLApi();
 			#else
 			Graphics = new SDL2DXApi( this );
 			#endif
-			Graphics.MakeGraphicsInfo();
+			Graphics.MakeApiInfo();
+			ErrorHandler.AdditionalInfo = Graphics.ApiInfo;
 			
 			Options.Load();
 			Entities = new EntityList( this );
 			AcceptedUrls.Load();
 			DeniedUrls.Load();
 			ETags.Load();
+			LastModified.Load();
+			
 			InputHandler = new InputHandler( this );
 			defaultIb = Graphics.MakeDefaultIb();
 			ParticleManager = AddComponent( new ParticleManager() );
@@ -47,13 +53,20 @@ namespace ClassicalSharp {
 			Chat = AddComponent( new Chat() );
 			WorldEvents.OnNewMap += OnNewMapCore;
 			WorldEvents.OnNewMapLoaded += OnNewMapLoadedCore;
+			Events.TextureChanged += TextureChangedCore;
 			
 			BlockInfo = new BlockInfo();
 			BlockInfo.Init();
 			ModelCache = new ModelCache( this );
 			ModelCache.InitCache();
 			AsyncDownloader = AddComponent( new AsyncDownloader() );
+			
+			#if ANDROID
+			Drawer2D = new CanvasDrawer2D( Graphics );
+			#else
 			Drawer2D = new GdiPlusDrawer2D( Graphics );
+			#endif
+			
 			Drawer2D.UseBitmappedChat = ClassicMode || !Options.GetBool( OptionsKey.ArialChatFont, false );
 			Drawer2D.BlackTextShadows = Options.GetBool( OptionsKey.BlackTextShadows, false );
 			
@@ -74,11 +87,11 @@ namespace ClassicalSharp {
 				SetRenderType( "normal" );
 			
 			if( IPAddress == null ) {
-				Network = new Singleplayer.SinglePlayerServer( this );
+				Server = new Singleplayer.SinglePlayerServer( this );
 			} else {
-				Network = new Network.NetworkProcessor( this );
+				Server = new Network.NetworkProcessor( this );
 			}
-			Graphics.LostContextFunction = Network.Tick;
+			Graphics.LostContextFunction = Server.Tick;
 			
 			firstPersonCam = new FirstPersonCamera( this );
 			thirdPersonCam = new ThirdPersonCamera( this );
@@ -87,7 +100,7 @@ namespace ClassicalSharp {
 			UpdateProjection();
 			
 			Gui = AddComponent( new GuiInterface( this ) );
-			CommandManager = AddComponent( new CommandManager() );
+			CommandList = AddComponent( new CommandList() );
 			SelectionManager = AddComponent( new SelectionManager() );
 			WeatherRenderer = AddComponent( new WeatherRenderer() );
 			HeldBlockRenderer = AddComponent( new HeldBlockRenderer() );
@@ -117,7 +130,7 @@ namespace ClassicalSharp {
 				EnvRenderer.UseLegacyMode( true );
 			}
 			Gui.SetNewScreen( new LoadingMapScreen( this, connectString, "Waiting for handshake" ) );
-			Network.Connect( IPAddress, Port );
+			Server.Connect( IPAddress, Port );
 		}
 		
 		void ExtractInitialTexturePack() {
@@ -189,7 +202,7 @@ namespace ClassicalSharp {
 		void InitScheduledTasks() {
 			const double defTicks = 1.0 / 20, camTicks = 1.0 / 60;
 			AddScheduledTask( 30, AsyncDownloader.PurgeOldEntriesTask );
-			AddScheduledTask( defTicks, Network.Tick );
+			AddScheduledTask( defTicks, Server.Tick );
 			entTask = AddScheduledTask( defTicks, Entities.Tick );
 			
 			AddScheduledTask( defTicks, ParticleManager.Tick );

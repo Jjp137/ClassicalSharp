@@ -11,13 +11,13 @@ using System.IO.Compression;
 
 namespace ClassicalSharp.Network {
 
-	public partial class NetworkProcessor : INetworkProcessor {
+	public partial class NetworkProcessor : IServerConnection {
 		
 		#region Writing
 
 		public override void SendChat( string text, bool partial ) {
 			if( String.IsNullOrEmpty( text ) ) return;
-			byte payload = !ServerSupportsPartialMessages ? (byte)0xFF:
+			byte payload = !SupportsPartialMessages ? (byte)0xFF:
 				partial ? (byte)1 : (byte)0;
 			
 			writer.WriteUInt8( (byte)Opcode.Message );
@@ -122,8 +122,7 @@ namespace ClassicalSharp.Network {
 		internal void HandleLevelDataChunk() {
 			// Workaround for some servers that send LevelDataChunk before LevelInit
 			// due to their async packet sending behaviour.
-			if( gzipStream == null )
-				HandleLevelInit();
+			if( gzipStream == null ) HandleLevelInit();
 			int usedLength = reader.ReadInt16();
 			gzippedMap.Position = 0;
 			gzippedMap.Offset = reader.index;
@@ -152,8 +151,9 @@ namespace ClassicalSharp.Network {
 			task.Interval = 1.0 / 20;
 			game.Gui.SetNewScreen( null );
 			game.Gui.activeScreen = prevScreen;
-			if( prevScreen != null && prevCursorVisible != game.CursorVisible )
+			if( prevScreen != null && prevCursorVisible != game.CursorVisible ) {
 				game.CursorVisible = prevCursorVisible;
+			}
 			prevScreen = null;
 			
 			int mapWidth = reader.ReadInt16();

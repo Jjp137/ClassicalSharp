@@ -56,7 +56,7 @@ namespace ClassicalSharp {
 		public World World;
 		
 		/// <summary> Represents a connection to a multiplayer or a singleplayer server. </summary>
-		public INetworkProcessor Network;
+		public IServerConnection Server;
 		
 		/// <summary> List of all entities in the current map, including the player. </summary>
 		public EntityList Entities;
@@ -101,7 +101,7 @@ namespace ClassicalSharp {
 		public IDrawer2D Drawer2D;
 		public GuiInterface Gui;
 		
-		public CommandManager CommandManager;
+		public CommandList CommandList;
 		public SelectionManager SelectionManager;
 		public ParticleManager ParticleManager;
 		public PickedPosRenderer Picking;
@@ -192,6 +192,7 @@ namespace ClassicalSharp {
 		internal EntryList AcceptedUrls = new EntryList( "acceptedurls.txt" ); 
 		internal EntryList DeniedUrls = new EntryList( "deniedurls.txt" );
 		internal EntryList ETags = new EntryList( "etags.txt" );
+		internal EntryList LastModified = new EntryList( "lastmodified.txt" );
 		
 		
 		/// <summary> Calculates the amount that the hotbar widget should be scaled by when rendered. </summary>

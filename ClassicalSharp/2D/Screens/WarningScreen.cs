@@ -1,10 +1,10 @@
 ﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
 using System;
 using System.Drawing;
+using ClassicalSharp.Gui.Widgets;
 using OpenTK.Input;
 
-namespace ClassicalSharp.Gui {
-	
+namespace ClassicalSharp.Gui.Screens {
 	public sealed class WarningScreen : MenuScreen {
 		
 		public WarningScreen( Game game, object metadata, bool showAlways, bool confirmNo, string title,
@@ -65,7 +65,8 @@ namespace ClassicalSharp.Gui {
 		TextWidget[] labels;
 		
 		void CloseScreen() {
-			game.Gui.overlays.RemoveAt( 0 );
+			if( game.Gui.overlays.Count > 0 )
+				game.Gui.overlays.RemoveAt( 0 );
 			if( game.Gui.overlays.Count == 0 )
 				game.CursorVisible = game.realVisible;
 		}

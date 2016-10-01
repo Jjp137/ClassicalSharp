@@ -5,9 +5,8 @@ using System.Windows.Forms;
 using ClassicalSharp;
 
 namespace Launcher.Gui.Widgets {
-
 	/// <summary> Widget that represents text can have modified by the user. </summary>
-	public sealed class LauncherInputText {
+	public sealed class InputText {
 		
 		/// <summary> Maximum number of characters that the 'Text' field can contain. </summary>
 		public int MaxChars = 32;
@@ -16,7 +15,7 @@ namespace Launcher.Gui.Widgets {
 		public Func<string, string> ClipboardFilter;
 		
 		/// <summary> Delegate invoked when the text changes. </summary>
-		public Action<LauncherInputWidget> TextChanged;
+		public Action<InputWidget> TextChanged;
 		
 		/// <summary> Delegate that only lets certain characters be entered. </summary>
 		public Func<char, bool> TextFilter;
@@ -25,8 +24,8 @@ namespace Launcher.Gui.Widgets {
 		/// <remarks> -1 to insert/delete characters at end of the text. </remarks>
 		public int CaretPos = -1;
 		
-		LauncherInputWidget input;
-		public LauncherInputText( LauncherInputWidget input ) {
+		InputWidget input;
+		public InputText( InputWidget input ) {
 			this.input = input;
 		}
 		

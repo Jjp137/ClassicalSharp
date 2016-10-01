@@ -65,7 +65,7 @@
     <DebugType>None</DebugType>
     <Optimize>True</Optimize>
     <CheckForOverflowUnderflow>False</CheckForOverflowUnderflow>
-    <DefineConstants>TRACE;USE_DX</DefineConstants>
+    <DefineConstants>TRACE;USE_DX;</DefineConstants>
     <BaseIntermediateOutputPath>obj\</BaseIntermediateOutputPath>
     <StartAction>Project</StartAction>
   </PropertyGroup>
@@ -196,7 +196,11 @@
     <Compile Include="MeshBuilder\AdvLightingBuilder.cs" />
     <Compile Include="MeshBuilder\TileDrawer.cs" />
     <Compile Include="Network\CPESupport.cs" />
-    <Compile Include="Network\NetworkProcessor.CPECustom.cs" />
+    <Compile Include="Network\Protocols\BlockDefs.cs" />
+    <Compile Include="Network\Protocols\Classic.cs" />
+    <Compile Include="Network\Protocols\CPE.cs" />
+    <Compile Include="Network\Protocols\IProtocol.cs" />
+    <Compile Include="Network\Protocols\WoM.cs" />
     <Compile Include="Particles\CollidableParticle.cs" />
     <Compile Include="Particles\Particle.cs" />
     <Compile Include="Particles\ParticleManager.cs" />
@@ -240,14 +244,12 @@
     <Compile Include="Entities\Model\ZombieModel.cs" />
     <Compile Include="Network\Enums.cs" />
     <Compile Include="Network\IServerConnection.cs" />
-    <Compile Include="Network\NetworkProcessor.CPE.cs" />
     <Compile Include="Network\NetworkProcessor.cs" />
-    <Compile Include="Network\NetworkProcessor.Original.cs" />
+    <Compile Include="Network\NetworkProcessor.Helpers.cs" />
     <Compile Include="Network\Utils\AsyncDownloader.cs" />
     <Compile Include="Network\Utils\NetReader.cs" />
     <Compile Include="Network\Utils\FixedBufferStream.cs" />
     <Compile Include="Network\Utils\GZipHeaderReader.cs" />
-    <Compile Include="Network\NetworkProcessor.WoM.cs" />
     <Compile Include="Commands\CommandList.cs" />
     <Compile Include="Commands\CommandReader.cs" />
     <Compile Include="Network\Utils\NetWriter.cs" />
@@ -324,13 +326,39 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="2D\" />
-    <Folder Include="2D\Screens\" />
-    <Folder Include="2D\Widgets\" />
-    <Folder Include="Entities\" />
-    <Folder Include="Map\" />
-    <Folder Include="Network\" />
-    <Folder Include="Rendering\" />
+    <Folder Include="2D\Drawing" />
+    <Folder Include="2D\Screens\Inventory" />
+    <Folder Include="2D\Utils" />
+    <Folder Include="2D\Screens" />
+    <Folder Include="2D\Screens\Menu" />
+    <Folder Include="2D\Widgets" />
+    <Folder Include="2D\Widgets\Menu" />
+    <Folder Include="2D\Widgets\Chat" />
+    <Folder Include="2D\Widgets\PlayerList" />
+    <Folder Include="Blocks" />
+    <Folder Include="Entities\AI" />
+    <Folder Include="Entities\Components" />
+    <Folder Include="Events" />
+    <Folder Include="Generator" />
+    <Folder Include="MeshBuilder" />
+    <Folder Include="Network\Protocols" />
+    <Folder Include="Platform" />
+    <Folder Include="Particles" />
+    <Folder Include="GraphicsAPI" />
+    <Folder Include="Entities" />
+    <Folder Include="Ionic.Zlib" />
+    <Folder Include="Map" />
+    <Folder Include="Game" />
+    <Folder Include="Map\Formats" />
+    <Folder Include="Entities\Model" />
+    <Folder Include="Network\Utils" />
+    <Folder Include="Hotkeys" />
+    <Folder Include="Audio" />
+    <Folder Include="Rendering\Env" />
+    <Folder Include="TexturePack" />
+    <Folder Include="Singleplayer" />
+    <Folder Include="Utils" />
+    <Folder Include="Math" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\OpenTK\OpenTK.csproj">

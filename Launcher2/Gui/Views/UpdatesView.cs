@@ -6,7 +6,6 @@ using ClassicalSharp;
 using Launcher.Gui.Widgets;
 
 namespace Launcher.Gui.Views {
-	
 	public sealed class UpdatesView : IView {
 		
 		public DateTime LastStable, LastDev;
@@ -14,12 +13,12 @@ namespace Launcher.Gui.Views {
 		internal bool gameOpen;
 		
 		public UpdatesView( LauncherWindow game ) : base( game ) {
-			widgets = new LauncherWidget[13];
+			widgets = new Widget[13];
 		}
 
 		public override void Init() {
 			titleFont = new Font( game.FontName, 16, FontStyle.Bold );
-			inputFont = new Font( game.FontName, 14, FontStyle.Regular );
+			textFont = new Font( game.FontName, 14, FontStyle.Regular );
 			MakeWidgets();
 		}
 		
@@ -38,42 +37,55 @@ namespace Launcher.Gui.Views {
 		}
 		
 		const string dateFormat = "dd-MM-yyyy HH:mm";
-		void MakeWidgets() {
+		protected override void MakeWidgets() {
 			widgetIndex = 0;
 			string exePath = Path.Combine( Program.AppDirectory, "ClassicalSharp.exe" );
 			
-			MakeLabelAt( "Your build:", inputFont, Anchor.Centre, Anchor.Centre, -55, -120 );
+			Makers.Label( this, "Your build:", textFont )
+				.SetLocation( Anchor.Centre, Anchor.Centre, -55, -120 );
 			string yourBuild = File.GetLastWriteTime( exePath ).ToString( dateFormat );
-			MakeLabelAt( yourBuild, inputFont, Anchor.Centre, Anchor.Centre, 70, -120 );
+			Makers.Label( this, yourBuild, textFont )
+				.SetLocation( Anchor.Centre, Anchor.Centre, 70, -120 );
 			
-			MakeLabelAt( "Latest release:", inputFont, Anchor.Centre, Anchor.Centre, -70, -75 );
+			Makers.Label( this, "Latest release:", textFont )
+				.SetLocation( Anchor.Centre, Anchor.Centre, -70, -75 );
 			string latestStable = GetDateString( LastStable );
-			MakeLabelAt( latestStable, inputFont, Anchor.Centre, Anchor.Centre, 70, -75 );
+			Makers.Label( this, latestStable, textFont )
+				.SetLocation( Anchor.Centre, Anchor.Centre, 70, -75 );
 			relIndex = widgetIndex;
-			MakeButtonAt( "Direct3D 9", 130, 35, titleFont, Anchor.Centre, -80, -40 );
-			MakeButtonAt( "OpenGL", 130, 35, titleFont, Anchor.Centre, 80, -40 );
+			Makers.Button( this, "Direct3D 9", 130, 35, titleFont )
+				.SetLocation( Anchor.Centre, Anchor.Centre, -80, -40 );
+			Makers.Button( this, "OpenGL", 130, 35, titleFont )
+				.SetLocation( Anchor.Centre, Anchor.Centre, 80, -40 );
 			
-			MakeLabelAt( "Latest dev build:", inputFont, Anchor.Centre, Anchor.Centre, -80, 20 );
+			Makers.Label( this, "Latest dev build:", textFont )
+				.SetLocation( Anchor.Centre, Anchor.Centre, -80, 20 );
 			string latestDev = GetDateString( LastDev );
-			MakeLabelAt( latestDev, inputFont, Anchor.Centre, Anchor.Centre, 70, 20 );
+			Makers.Label( this, latestDev, textFont )
+				.SetLocation( Anchor.Centre, Anchor.Centre, 70, 20 );
 			devIndex = widgetIndex;
-			MakeButtonAt( "Direct3D 9", 130, 35, titleFont, Anchor.Centre, -80, 55 );
-			MakeButtonAt( "OpenGL", 130, 35, titleFont, Anchor.Centre, 80, 55 );
+			Makers.Button( this, "Direct3D 9", 130, 35, titleFont )
+				.SetLocation( Anchor.Centre, Anchor.Centre, -80, 55 );
+			Makers.Button( this, "OpenGL", 130, 35, titleFont )
+				.SetLocation( Anchor.Centre, Anchor.Centre, 80, 55 );
 			
-			MakeLabelAt( "&eDirect3D 9 is recommended for Windows",
-			            inputFont, Anchor.Centre, Anchor.Centre, 0, 105 );
+			Makers.Label( this, "&eDirect3D 9 is recommended for Windows", textFont )
+				.SetLocation( Anchor.Centre, Anchor.Centre, 0, 105 );
 			statusIndex = widgetIndex;
 			string text = gameOpen ? "&cThe game must be closed before updating" : "";
-			MakeLabelAt( text, inputFont, Anchor.Centre, Anchor.Centre, 0, 130 );
+			Makers.Label( this, text, textFont )
+				.SetLocation( Anchor.Centre, Anchor.Centre, 0, 130 );
 			
 			backIndex = widgetIndex;
-			MakeButtonAt( "Back", 80, 35, titleFont, Anchor.Centre, 0, 170 );
+			Makers.Button( this, "Back", 80, 35, titleFont )
+				.SetLocation( Anchor.Centre, Anchor.Centre, 0, 170 );
 		}
 		
 		internal void SetWarning() {
 			string text = gameOpen ? "&cThe game must be closed before updating" : "";
-			LauncherLabelWidget widget = (LauncherLabelWidget)widgets[statusIndex];
-			widget.SetDrawData( drawer, text, inputFont, Anchor.Centre, Anchor.Centre, 0, 130 );
+			LabelWidget widget = (LabelWidget)widgets[statusIndex];
+			widget.SetDrawData( drawer, text );
+			widget.SetLocation( Anchor.Centre, Anchor.Centre, 0, 130 );
 		}
 		
 		string GetDateString( DateTime last ) {

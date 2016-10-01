@@ -2,25 +2,23 @@
 using System;
 using System.Drawing;
 using ClassicalSharp;
+using Launcher.Drawing;
 
 namespace Launcher.Gui.Widgets {
-
-	public sealed class LauncherButtonWidget : LauncherWidget {
+	public sealed class ButtonWidget : Widget {
 		
 		public bool Shadow = true;
-		public bool Active = false;
 		const int border = 1;
 		Size textSize;
 		Font font;
 		
-		public LauncherButtonWidget( LauncherWindow window ) : base( window ) {
+		public ButtonWidget( LauncherWindow window ) : base( window ) {
+			TabSelectable = true;
 		}
 		
-		public void SetDrawData( IDrawer2D drawer, string text, Font font, Anchor horAnchor,
-		                        Anchor verAnchor, int width, int height, int x, int y ) {
+		public void SetDrawData( IDrawer2D drawer, string text, Font font, int width, int height ) {
 			Width = width; Height = height;
-			SetAnchors( horAnchor, verAnchor ).SetOffsets( x, y )
-				.CalculatePosition();
+			CalculatePosition();
 			this.font = font;
 
 			Text = text;
@@ -29,7 +27,7 @@ namespace Launcher.Gui.Widgets {
 		}
 		
 		public override void Redraw( IDrawer2D drawer ) {
-			if( Window.Minimised ) return;
+			if( Window.Minimised || !Visible ) return;
 			string text = Text;
 			if( !Active ) text = "&7" + text;
 			int xOffset = Width - textSize.Width, yOffset = Height - textSize.Height;
@@ -63,13 +61,13 @@ namespace Launcher.Gui.Widgets {
 		}
 		
 		public void RedrawBackground() {
-			if( Window.Minimised ) return;
+			if( Window.Minimised || !Visible ) return;
 			using( FastBitmap dst = Window.LockBits() )
 				RedrawBackground( dst );
 		}
 		
 		public void RedrawBackground( FastBitmap dst ) {
-			if( Window.Minimised ) return;
+			if( Window.Minimised || !Visible ) return;
 			Rectangle rect = new Rectangle( X + border, Y + border, Width - border * 2, Height - border * 2 );
 			if( Window.ClassicBackground ) {
 				FastColour foreCol = Active ? new FastColour( 126, 136, 191 ) : new FastColour( 111, 111, 111 );

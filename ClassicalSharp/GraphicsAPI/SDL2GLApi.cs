@@ -535,8 +535,7 @@ namespace ClassicalSharp.GraphicsAPI
 
 		public override void DeleteTexture( ref int texId ) {
 			if( texId <= 0 ) return;
-			int id = texId;
-			GLFuncs.DeleteTextures( 1, &id );
+			int id = texId; GLFuncs.DeleteTextures( 1, &id );
 			texId = -1;
 		}
 		#endregion
@@ -657,19 +656,22 @@ namespace ClassicalSharp.GraphicsAPI
 			GLFuncs.BufferSubData( BufferTarget.ArrayBuffer, IntPtr.Zero, new IntPtr( count * batchStride ), vertices );
 		}
 
-		public override void DeleteDynamicVb( int id ) {
-			if( id <= 0 ) return;
-			GLFuncs.DeleteBuffers( 1, &id );
-		}
-
-		public override void DeleteVb( int vb ) {
+		public override void DeleteDynamicVb( ref int vb ) {
 			if( vb <= 0 ) return;
-			GLFuncs.DeleteBuffers( 1, &vb );
+			int id = vb; GLFuncs.DeleteBuffers( 1, &id );
+			vb = -1;
 		}
 
-		public override void DeleteIb( int ib ) {
+		public override void DeleteVb( ref int vb ) {
+			if( vb <= 0 ) return;
+			int id = vb; GLFuncs.DeleteBuffers( 1, &id );
+			vb = -1;
+		}
+
+		public override void DeleteIb( ref int ib ) {
 			if( ib <= 0 ) return;
-			GLFuncs.DeleteBuffers( 1, &ib );
+			int id = ib; GLFuncs.DeleteBuffers( 1, &id );
+			ib = -1;
 		}
 
 		VertexFormat batchFormat = (VertexFormat)999;

@@ -4,25 +4,24 @@ using System.Drawing;
 using ClassicalSharp;
 using Launcher.Gui.Widgets;
 
-namespace Launcher.Gui.Views {
-	
+namespace Launcher.Gui.Views {	
 	public sealed class ChooseModeView : IView {
 
 		public bool FirstTime = true;
 		internal int backIndex = -1, nIndex, clIndex, clHaxIndex;
 		
 		public ChooseModeView( LauncherWindow game ) : base( game ) {
-			widgets = new LauncherWidget[14];
+			widgets = new Widget[11];
 		}
 
 		public override void Init() {
 			titleFont = new Font( game.FontName, 16, FontStyle.Bold );
-			inputFont = new Font( game.FontName, 14, FontStyle.Regular );
-			UpdateWidgets();
+			textFont = new Font( game.FontName, 14, FontStyle.Regular );
+			MakeWidgets();
 		}
 
 		public override void DrawAll() {
-			UpdateWidgets();
+			MakeWidgets();
 			RedrawAllButtonBackgrounds();
 			
 			using( drawer ) {
@@ -35,39 +34,44 @@ namespace Launcher.Gui.Views {
 			}
 		}
 		
-		void UpdateWidgets() {
+		protected override void MakeWidgets() {
 			widgetIndex = 0;
 			int middle = game.Width / 2;
-			MakeLabelAt( "&fChoose game mode", titleFont, Anchor.Centre, Anchor.Centre, 0, -135 );
+			Makers.Label( this, "&fChoose game mode", titleFont )
+				.SetLocation( Anchor.Centre, Anchor.Centre, 0, -135 );
 			
 			nIndex = widgetIndex;
-			MakeButtonAt( "Enhanced", 145, 35, titleFont, Anchor.LeftOrTop, Anchor.Centre, middle - 250, -72 );
-			MakeLabelAt( "&eEnables custom blocks, changing env",
-			             inputFont, Anchor.LeftOrTop, Anchor.Centre, middle - 85, -72 - 12 );
-			MakeLabelAt( "&esettings, longer messages, and more",
-			            inputFont, Anchor.LeftOrTop, Anchor.Centre, middle - 85, -72 + 12 );
+			Makers.Button( this, "Enhanced", 145, 35, titleFont )
+				.SetLocation( Anchor.LeftOrTop, Anchor.Centre, middle - 250, -72 );
+			Makers.Label( this, "&eEnables custom blocks, changing env", textFont )
+				.SetLocation( Anchor.LeftOrTop, Anchor.Centre, middle - 85, -72 - 12 );
+			Makers.Label( this, "&esettings, longer messages, and more", textFont )
+				.SetLocation( Anchor.LeftOrTop, Anchor.Centre, middle - 85, -72 + 12 );
 
 			clHaxIndex = widgetIndex;
-			MakeButtonAt( "Classic +hax", 145, 35, titleFont, Anchor.LeftOrTop, Anchor.Centre, middle - 250, 0 );
-			MakeLabelAt( "&eSame as Classic mode, except that",
-			            inputFont, Anchor.LeftOrTop, Anchor.Centre, middle - 85, 0 - 12 );
-			MakeLabelAt( "&ehacks (noclip/fly/speed) are enabled",
-			            inputFont, Anchor.LeftOrTop, Anchor.Centre, middle - 85, 0 + 12 );	
+			Makers.Button( this, "Classic +hax", 145, 35, titleFont )
+				.SetLocation( Anchor.LeftOrTop, Anchor.Centre, middle - 250, 0 );
+			Makers.Label( this, "&eSame as Classic mode, except that", textFont )
+				.SetLocation( Anchor.LeftOrTop, Anchor.Centre, middle - 85, 0 - 12 );
+			Makers.Label( this, "&ehacks (noclip/fly/speed) are enabled", textFont )
+				.SetLocation( Anchor.LeftOrTop, Anchor.Centre, middle - 85, 0 + 12 );
 			
 			clIndex = widgetIndex;
-			MakeButtonAt( "Classic", 145, 35, titleFont, Anchor.LeftOrTop, Anchor.Centre, middle - 250, 72 );
-			MakeLabelAt( "&eOnly uses blocks and features from",
-			            inputFont, Anchor.LeftOrTop, Anchor.Centre, middle - 85, 72 - 12 );
-			MakeLabelAt( "&ethe original minecraft classic",
-			            inputFont, Anchor.LeftOrTop, Anchor.Centre, middle - 85, 72 + 12 );
+			Makers.Button( this, "Classic", 145, 35, titleFont )
+				.SetLocation( Anchor.LeftOrTop, Anchor.Centre, middle - 250, 72 );
+			Makers.Label( this, "&eOnly uses blocks and features from", textFont )
+				.SetLocation( Anchor.LeftOrTop, Anchor.Centre, middle - 85, 72 - 12 );
+			Makers.Label( this, "&ethe original minecraft classic", textFont )
+				.SetLocation( Anchor.LeftOrTop, Anchor.Centre, middle - 85, 72 + 12 );
 			
 			if( FirstTime ) {
 				backIndex = -1;
-				MakeLabelAt( "&eClick &fEnhanced &eif you are unsure which mode to choose.",
-				            inputFont, Anchor.Centre, Anchor.Centre, 0, 160 );
+				Makers.Label( this, "&eClick &fEnhanced &eif you are unsure which mode to choose.", textFont )
+					.SetLocation( Anchor.Centre, Anchor.Centre, 0, 160 );
 			} else {
 				backIndex = widgetIndex;
-				MakeButtonAt( "Back", 80, 35, titleFont, Anchor.Centre, 0, 175 );
+				Makers.Button( this, "Back", 80, 35, titleFont )
+					.SetLocation( Anchor.Centre, Anchor.Centre, 0, 175 );
 			}
 		}
 	}

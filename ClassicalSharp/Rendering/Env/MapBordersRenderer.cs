@@ -82,25 +82,23 @@ namespace ClassicalSharp.Renderers {
 			
 			graphics.DeleteTexture( ref edgeTexId );
 			graphics.DeleteTexture( ref sideTexId );
-			graphics.DeleteVb( sidesVb );
-			graphics.DeleteVb( edgesVb );
-			sidesVb = edgesVb = -1;
+			graphics.DeleteVb( ref sidesVb );
+			graphics.DeleteVb( ref edgesVb );
 		}
 
 		public void Ready( Game game ) { }
 		public void Reset( Game game ) { OnNewMap( game ); }
 		
 		public void OnNewMap( Game game ) {
-			graphics.DeleteVb( sidesVb );
-			graphics.DeleteVb( edgesVb );
-			sidesVb = edgesVb = -1;
+			graphics.DeleteVb( ref sidesVb );
+			graphics.DeleteVb( ref edgesVb );
 			
 			MakeTexture( ref edgeTexId, ref lastEdgeTexLoc, map.Env.EdgeBlock );
 			MakeTexture( ref sideTexId, ref lastSideTexLoc, map.Env.SidesBlock );
 		}
 		
 		public void OnNewMapLoaded( Game game ) {
-			CalculateRects( game.ViewDistance );
+			CalculateRects( (int)game.ViewDistance );
 			RebuildSides( map.Env.SidesHeight, legacy ? 128 : 65536 );
 			RebuildEdges( map.Env.EdgeHeight, legacy ? 128 : 65536 );
 		}
@@ -130,20 +128,20 @@ namespace ClassicalSharp.Renderers {
 		}
 
 		void ResetSidesAndEdges( object sender, EventArgs e ) {
-			CalculateRects( game.ViewDistance );
+			CalculateRects( (int)game.ViewDistance );
 			ResetSides();
 			ResetEdges();
 		}
 		
 		void ResetSides() {
 			if( game.World.IsNotLoaded ) return;
-			graphics.DeleteVb( sidesVb );
+			graphics.DeleteVb( ref sidesVb );
 			RebuildSides( map.Env.SidesHeight, legacy ? 128 : 65536 );	
 		}
 		
 		void ResetEdges() {
 			if( game.World.IsNotLoaded ) return;
-			graphics.DeleteVb( edgesVb );
+			graphics.DeleteVb( ref edgesVb );
 			RebuildEdges( map.Env.EdgeHeight, legacy ? 128 : 65536 );
 		}
 		
@@ -192,19 +190,24 @@ namespace ClassicalSharp.Renderers {
 			int col = fullColEdge ? FastColour.WhitePacked : map.Env.Sun;
 			for( int i = 0; i < rects.Length; i++ ) {
 				Rectangle r = rects[i];
-				DrawY( r.X, r.Y, r.X + r.Width, r.Y + r.Height, y, axisSize, col, -0.1f/16, YOffset( block ), ref v );
+				DrawY( r.X, r.Y, r.X + r.Width, r.Y + r.Height, y, axisSize, col, 
+				      HorOffset( block ), YOffset( block ), ref v );
 			}
 			edgesVb = graphics.CreateVb( ptr, VertexFormat.P3fT2fC4b, edgesVertices );
+		}
+
+		float HorOffset( byte block ) {
+			BlockInfo info = game.BlockInfo;
+			if( info.IsLiquid( block ) ) return -0.1f/16;
+			if( info.IsTranslucent[block] && info.Collide[block] != CollideType.Solid ) return 0.1f/16;
+			 return 0;
 		}
 		
 		float YOffset( byte block ) {
 			BlockInfo info = game.BlockInfo;
-			float offset = 0;
-			if( info.IsTranslucent[block] && info.Collide[block] != CollideType.Solid )
-				offset -= 0.1f/16;
-			if( info.IsLiquid( block ) )
-			   offset -= 1.5f/16;
-			 return offset;
+			if( info.IsLiquid( block ) ) return -1.5f/16;
+			if( info.IsTranslucent[block] && info.Collide[block] != CollideType.Solid ) return -0.1f/16;
+			 return 0;
 		}
 		
 		void DrawX( int x, int z1, int z2, int y1, int y2, int axisSize, 

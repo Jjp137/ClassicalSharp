@@ -1,10 +1,10 @@
 ﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
 using System;
 using System.Drawing;
+using ClassicalSharp.Gui.Widgets;
 using OpenTK.Input;
 
-namespace ClassicalSharp.Gui {
-	
+namespace ClassicalSharp.Gui.Screens {
 	public class PauseScreen : MenuScreen {
 		
 		public PauseScreen( Game game ) : base( game ) {
@@ -43,8 +43,12 @@ namespace ClassicalSharp.Gui {
 				     (g, w) => g.Gui.SetNewScreen( new SaveLevelScreen( g ) ) ),
 				Make( -1, 0, "Select texture pack",
 				     (g, w) => g.Gui.SetNewScreen( new TexturePackScreen( g ) ) ),
+				#if !ANDROID
 				Make( -1, 50, "Hotkeys",
 				     (g, w) => g.Gui.SetNewScreen( new HotkeyListScreen( g ) ) ),
+				#else
+				null,
+				#endif
 				
 				// Other
 				ButtonWidget.Create( game, 5, 5, 120, 40, "Quit game",

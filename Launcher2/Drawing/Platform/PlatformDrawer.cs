@@ -6,8 +6,7 @@
 using System.Drawing;
 using OpenTK.Platform;
 
-namespace Launcher {
-	
+namespace Launcher.Drawing {	
 	/// <summary> Per-platform class used to transfer a framebuffer directly to the native window. </summary>
 	public abstract class PlatformDrawer {
 		
@@ -25,14 +24,9 @@ namespace Launcher {
 		/// <summary> Updates the variables when the native window changes dimensions. </summary>
 		public abstract void Resize();
 		
-		/// <summary> Redraws the entire framebuffer to the window. </summary>
-		public abstract void Redraw( Bitmap framebuffer );
-		
 		/// <summary> Redraws a portion of the framebuffer to the window. </summary>
-		/// <remarks> This is only a hint, the entire framebuffer may still be
+		/// <remarks> r is only a hint, the entire framebuffer may still be
 		/// redrawn on some platforms. </remarks>
-		public virtual void Redraw( Bitmap framebuffer, Rectangle rec ) { 
-			Redraw( framebuffer ); 
-		}
+		public abstract void Redraw( Bitmap framebuffer, Rectangle r );
 	}
 }*/

@@ -17,6 +17,8 @@ namespace ClassicalSharp {
 		
 		/// <summary> Sets the bitmap that contains the bitmapped font characters as an atlas. </summary>
 		public void SetFontBitmap( Bitmap bmp ) {
+			DisposeBitmappedText();
+			
 			FontBitmap = bmp;
 			boxSize = FontBitmap.Width / 16;
 			fontPixels = new FastBitmap( FontBitmap, true, true );
@@ -96,8 +98,9 @@ namespace ClassicalSharp {
 				
 				DrawRun( dst, x, y, xMul, runCount, coordsPtr, point, lastCol );
 				lastY = coords >> 4; lastCol = col;
-				for( int j = 0; j < runCount; j++ )
-					x += PtToPx( point, widths[coordsPtr[j]] + 1 );
+				for( int j = 0; j < runCount; j++ ) {
+					x += PaddedWidth( point, widths[coordsPtr[j]] );
+				}
 				coordsPtr[0] = (byte)coords; runCount = 1;
 			}
 			DrawRun( dst, x, y, xMul, runCount, coordsPtr, point, lastCol );
@@ -113,7 +116,7 @@ namespace ClassicalSharp {
 			
 			ushort* dstWidths = stackalloc ushort[runCount];
 			for( int i = 0; i < runCount; i++ )
-				dstWidths[i] = (ushort)PtToPx( point, widths[coords[i]] );
+				dstWidths[i] = (ushort)Width( point, widths[coords[i]] );
 			
 			for( int yy = 0; yy < textHeight; yy++ ) {
 				int fontY = srcY + yy * boxSize / textHeight;
@@ -140,7 +143,7 @@ namespace ClassicalSharp {
 						pixel |= (((src >> 16) & 0xFF) * col.R / 255) << 16;
 						dstRow[dstX] = pixel;
 					}
-					x += PtToPx( point, srcWidth + 1 );
+					x += PaddedWidth( point, srcWidth );
 				}
 				x = startX;
 			}
@@ -170,7 +173,7 @@ namespace ClassicalSharp {
 					if( shadowCol ) col = FastColour.Black.ToArgb();
 					
 					int coords = ConvertToCP437( c );
-					int width = PtToPx( point, widths[coords] + 1 );
+					int width = PaddedWidth( point, widths[coords] );
 					for( int xx = 0; xx < width; xx++ )
 						dstRow[x + xx] = col;
 					x += width;
@@ -194,7 +197,7 @@ namespace ClassicalSharp {
 				}
 				
 				int coords = ConvertToCP437( c );
-				total.Width += PtToPx( point, widths[coords] + 1 );
+				total.Width += PaddedWidth( point, widths[coords] );
 			}
 			
 			if( args.Font.Style == FontStyle.Italic )
@@ -222,9 +225,13 @@ namespace ClassicalSharp {
 			if( fontSize < 32 ) return 2;
 			return 3;
 		}
-		
-		protected int PtToPx( int point, int value ) {
+
+		protected int Width( int point, int value ) {
 			return Utils.CeilDiv( value * point, boxSize );
+		}
+		
+		protected int PaddedWidth( int point, int value ) {
+			return Utils.CeilDiv( value * point, boxSize ) + Utils.CeilDiv( point, 8 );
 		}
 		
 		/// <summary> Rounds the given font size up to the nearest whole
@@ -240,6 +247,7 @@ namespace ClassicalSharp {
 		}
 		
 		protected void DisposeBitmappedText() {
+			if( FontBitmap == null ) return;
 			fontPixels.Dispose();
 			FontBitmap.Dispose();
 		}

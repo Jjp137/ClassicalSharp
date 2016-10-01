@@ -4,8 +4,7 @@ using System.Drawing;
 using ClassicalSharp.GraphicsAPI;
 using OpenTK.Input;
 
-namespace ClassicalSharp.Gui {
-	
+namespace ClassicalSharp.Gui.Screens {
 	public partial class InventoryScreen : Screen {
 		
 		public InventoryScreen( Game game ) : base( game ) {
@@ -103,7 +102,7 @@ namespace ClassicalSharp.Gui {
 		public override void Dispose() {
 			font.Dispose();
 			api.DeleteTexture( ref blockInfoTexture );
-			api.DeleteDynamicVb( vb );
+			api.DeleteDynamicVb( ref vb );
 			game.Events.BlockPermissionsChanged -= BlockPermissionsChanged;
 			game.Keyboard.KeyRepeat = false;
 		}

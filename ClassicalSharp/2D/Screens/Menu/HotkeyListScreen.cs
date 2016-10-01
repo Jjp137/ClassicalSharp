@@ -1,11 +1,12 @@
 ﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+#if !ANDROID
 using System;
 using System.Drawing;
+using ClassicalSharp.Gui.Widgets;
 using ClassicalSharp.Hotkeys;
 using OpenTK.Input;
 
-namespace ClassicalSharp.Gui {
-	
+namespace ClassicalSharp.Gui.Screens {	
 	// TODO: Hotkey added event for CPE
 	public sealed class HotkeyListScreen : FilesScreen {
 		
@@ -56,3 +57,4 @@ namespace ClassicalSharp.Gui {
 		}
 	}
 }
+#endif

@@ -10,7 +10,7 @@ using ClassicalSharp.Commands;
 using ClassicalSharp.Entities;
 using ClassicalSharp.Events;
 using ClassicalSharp.GraphicsAPI;
-using ClassicalSharp.Gui;
+using ClassicalSharp.Gui.Screens;
 using ClassicalSharp.Map;
 using ClassicalSharp.Model;
 using ClassicalSharp.Network;
@@ -89,11 +89,10 @@ namespace ClassicalSharp {
 			return false;
 		}
 		
-		public void SetViewDistance( int distance, bool save ) {
+		public void SetViewDistance( float distance, bool save ) {
+			distance = Math.Min( distance, MaxViewDistance );
+			if( distance == ViewDistance ) return;
 			ViewDistance = distance;
-			if( ViewDistance > MaxViewDistance )
-				ViewDistance = MaxViewDistance;
-			Utils.LogDebug( "setting view distance to: {0} ({1})", distance, ViewDistance );
 			
 			if( save ) {
 				UserViewDistance = distance;
@@ -122,14 +121,16 @@ namespace ClassicalSharp {
 			
 			if( !SkipClear || SkyboxRenderer.ShouldRender )
 				Graphics.Clear();
-			UpdateViewMatrix( delta, t );
+			CurrentCameraPos = Camera.GetCameraPos( t );
+			UpdateViewMatrix();
 			
 			bool visible = Gui.activeScreen == null || !Gui.activeScreen.BlocksWorld;
 			if( World.IsNotLoaded ) visible = false;
-			if( visible )
+			if( visible ) {
 				Render3D( delta, t );
-			else
+			} else {
 				SelectedPos.SetAsInvalid();
+			}
 			
 			Gui.Render( delta );
 			if( screenshotRequested )
@@ -144,16 +145,15 @@ namespace ClassicalSharp {
 				InputHandler.SetFOV( ZoomFov, false );
 		}
 		
-		void UpdateViewMatrix( double delta, float t ) {
+		void UpdateViewMatrix() {
 			Graphics.SetMatrixMode( MatrixType.Modelview );
-			Matrix4 modelView = Camera.GetView( delta, t );
+			Matrix4 modelView = Camera.GetView();
 			View = modelView;
 			Graphics.LoadMatrix( ref modelView );
 			Culling.CalcFrustumEquations( ref Projection, ref modelView );
 		}
 		
 		void Render3D( double delta, float t ) {
-			CurrentCameraPos = Camera.GetCameraPos( LocalPlayer.EyePosition );
 			if( SkyboxRenderer.ShouldRender )
 				SkyboxRenderer.Render( delta );
 			AxisLinesRenderer.Render( delta );
@@ -332,7 +332,7 @@ namespace ClassicalSharp {
 			for( int i = 0; i < Components.Count; i++ )
 				Components[i].Dispose();
 			
-			Graphics.DeleteIb( defaultIb );
+			Graphics.DeleteIb( ref defaultIb );
 			Drawer2D.DisposeInstance();
 			Graphics.DeleteTexture( ref CloudsTex );
 			Graphics.Dispose();

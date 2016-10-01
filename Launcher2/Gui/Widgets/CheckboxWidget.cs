@@ -4,27 +4,21 @@ using System.Drawing;
 using ClassicalSharp;
 
 namespace Launcher.Gui.Widgets {
-
-	/// <summary> Widget that represents text can have modified by the user. </summary>
-	public sealed class LauncherBoolWidget : LauncherWidget {
+	/// <summary> Represents a state that can be toggled by the user. </summary>
+	public sealed class CheckboxWidget : Widget {
 		
 		public int BoxWidth, BoxHeight;
 		public bool Value;
 		Font font;
 		
-		public LauncherBoolWidget( LauncherWindow window, Font font, int width, int height ) : base( window ) {
+		public CheckboxWidget( LauncherWindow window, Font font, int width, int height ) : base( window ) {
 			BoxWidth = width; BoxHeight = height;
 			Width = width; Height = height;
 			this.font = font;
 		}
 
-		public void SetDrawData( IDrawer2D drawer, Anchor horAnchor, Anchor verAnchor, int x, int y ) {
-			SetAnchors( horAnchor, verAnchor ).SetOffsets( x, y )
-				.CalculatePosition();
-		}
-		
 		public override void Redraw( IDrawer2D drawer ) {
-			if( Window.Minimised ) return;
+			if( Window.Minimised || !Visible ) return;
 			drawer.DrawRect( FastColour.Black, X, Y, Width, Height );
 			if( Value ) {
 				DrawTextArgs args = new DrawTextArgs( "X", font, false );

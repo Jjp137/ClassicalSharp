@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Threading;
 using ClassicalSharp;
 using ClassicalSharp.Network;
+using Launcher.Drawing;
 using Launcher.Gui.Screens;
 using Launcher.Patcher;
 using Launcher.Web;
@@ -27,7 +28,7 @@ namespace Launcher {
 		public IDrawer2D Drawer;
 		
 		/// <summary> Currently active screen. </summary>
-		public LauncherScreen Screen;
+		public Screen Screen;
 		
 		/// <summary> Whether the client drawing area needs to be redrawn/presented to the screen. </summary>
 		public bool Dirty;
@@ -105,7 +106,7 @@ namespace Launcher {
 			fullRedraw = true;
 		}
 		
-		public void SetScreen( LauncherScreen screen ) {
+		public void SetScreen( Screen screen ) {
 			if( this.Screen != null )
 				this.Screen.Dispose();
 			
@@ -155,10 +156,12 @@ namespace Launcher {
 			fetcher.CheckResourceExistence();
 			checkTask = new UpdateCheckTask();
 			checkTask.CheckForUpdatesAsync();
-			if( !fetcher.AllResourcesExist )
+			
+			if( !fetcher.AllResourcesExist ) {
 				SetScreen( new ResourcesScreen( this ) );
-			else
+			} else {
 				SetScreen( new MainScreen( this ) );
+			}
 			
 			while( true ) {
 				Window.ProcessEvents();
@@ -188,12 +191,13 @@ namespace Launcher {
 		void Display() {
 			Screen.OnDisplay();
 
-			Dirty = false;			
-
-			if( !fullRedraw && DirtyArea.Width > 0 )
-				Window.Draw( Framebuffer, DirtyArea );
-			else
-				Window.Draw( Framebuffer );
+			Dirty = false;
+			
+			Rectangle rec = new Rectangle( 0, 0, Framebuffer.Width, Framebuffer.Height );
+			if( !fullRedraw && DirtyArea.Width > 0 ) {
+				rec = DirtyArea;
+			}
+			Window.Draw( Framebuffer, rec );
 			DirtyArea = Rectangle.Empty;
 			fullRedraw = false;
 		}

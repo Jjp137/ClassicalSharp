@@ -6,7 +6,7 @@ using ClassicalSharp.Audio;
 using ClassicalSharp.Commands;
 using ClassicalSharp.Entities;
 using ClassicalSharp.GraphicsAPI;
-using ClassicalSharp.Gui;
+using ClassicalSharp.Gui.Screens;
 using ClassicalSharp.Map;
 using ClassicalSharp.Model;
 using ClassicalSharp.Network;
@@ -94,8 +94,8 @@ namespace ClassicalSharp {
 			Graphics.LostContextFunction = Server.Tick;
 			
 			firstPersonCam = new FirstPersonCamera( this );
-			thirdPersonCam = new ThirdPersonCamera( this );
-			forwardThirdPersonCam = new ForwardThirdPersonCamera( this );
+			thirdPersonCam = new ThirdPersonCamera( this, false );
+			forwardThirdPersonCam = new ThirdPersonCamera( this, true );
 			Camera = firstPersonCam;
 			UpdateProjection();
 			

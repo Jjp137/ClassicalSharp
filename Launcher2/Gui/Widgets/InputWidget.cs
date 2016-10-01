@@ -2,47 +2,40 @@
 using System;
 using System.Drawing;
 using ClassicalSharp;
+using Launcher.Drawing;
 
 namespace Launcher.Gui.Widgets {
-
-	/// <summary> Widget that represents text can have modified by the user. </summary>
-	public sealed class LauncherInputWidget : LauncherWidget {
+	/// <summary> Represents text that can have modified by the user. </summary>
+	public sealed class InputWidget : Widget {
 		
 		public int ButtonWidth, ButtonHeight;
 		
 		/// <summary> Text displayed when the user has not entered anything in the text field. </summary>
 		public string HintText;
 		
-		/// <summary> Whether the input widget currently is focused through a mouse click or tab. </summary>
-		public bool Active;
-		
 		/// <summary> Whether all characters should be rendered as *. </summary>
 		public bool Password;
 		
-		public LauncherInputText Chars;
+		public InputText Chars;
+		
+		public int RealWidth;
 		
 		Font font, hintFont;
 		int textHeight;
-		public LauncherInputWidget( LauncherWindow window ) : base( window ) {
-			Chars = new LauncherInputText( this );
+		public InputWidget( LauncherWindow window ) : base( window ) {
+			Chars = new InputText( this );
+			TabSelectable = true;
 		}
 
-		public void SetDrawData( IDrawer2D drawer, string text, Font font, Font hintFont,
-		                        Anchor horAnchor, Anchor verAnchor, int width, int height, int x, int y ) {
+		public void SetDrawData( IDrawer2D drawer, string text, Font font, 
+		                        Font hintFont, int width, int height ) {
 			ButtonWidth = width; ButtonHeight = height;
 			Width = width; Height = height;
-			SetAnchors( horAnchor, verAnchor ).SetOffsets( x, y )
-				.CalculatePosition();
+			CalculatePosition();
 			
-			Text = text;
-			if( Password ) text = new String( '*', text.Length );
 			this.font = font;
 			this.hintFont = hintFont;
-			
-			DrawTextArgs args = new DrawTextArgs( text, font, true );
-			Size size = drawer.MeasureSize( ref args );
-			Width = Math.Max( ButtonWidth, size.Width + 15 );
-			textHeight = size.Height;
+			SetDrawData( drawer, text );
 		}
 		
 		public void SetDrawData( IDrawer2D drawer, string text ) {
@@ -51,7 +44,7 @@ namespace Launcher.Gui.Widgets {
 			
 			DrawTextArgs args = new DrawTextArgs( text, font, true );
 			Size size = drawer.MeasureSize( ref args );
-			Width = Math.Max( ButtonWidth, size.Width + 15 );
+			RealWidth = Math.Max( ButtonWidth, size.Width + 15 );
 			textHeight = size.Height;
 		}
 		
@@ -61,15 +54,15 @@ namespace Launcher.Gui.Widgets {
 			DrawTextArgs args = new DrawTextArgs( "&0" + text, font, false );
 			
 			Size size = drawer.MeasureSize( ref args );
-			Width = Math.Max( ButtonWidth, size.Width + 15 );
+			RealWidth = Math.Max( ButtonWidth, size.Width + 20 );
 			textHeight = size.Height;
 			args.SkipPartsCheck = true;
-			if( Window.Minimised ) return;
+			if( Window.Minimised || !Visible ) return;
 			
 			using( FastBitmap bmp = Window.LockBits() ) {
 				DrawOuterBorder( bmp );
 				DrawInnerBorder( bmp );
-				Clear( bmp, FastColour.White, X + 2, Y + 2, Width - 4, Height - 4 );
+				Clear( bmp, FastColour.White, X + 2, Y + 2, RealWidth - 4, Height - 4 );
 				BlendBoxTop( bmp );
 			}
 			DrawText( drawer, args );
@@ -81,29 +74,32 @@ namespace Launcher.Gui.Widgets {
 		
 		void DrawOuterBorder( FastBitmap bmp ) {
 			FastColour col = borderOut;
+			int width = RealWidth;
 			if( Active ) {
-				Clear( bmp, col, X, Y, Width, border );
-				Clear( bmp, col, X, Y + Height - border, Width, border );
+				Clear( bmp, col, X, Y, width, border );
+				Clear( bmp, col, X, Y + Height - border, width, border );
 				Clear( bmp, col, X, Y, border, Height );
-				Clear( bmp, col, X + Width - border, Y, border, Height );
+				Clear( bmp, col, X + width - border, Y, border, Height );
 			} else {
-				Window.ResetArea( X, Y, Width, border, bmp );
-				Window.ResetArea( X, Y + Height - border, Width, border, bmp );
+				Window.ResetArea( X, Y, width, border, bmp );
+				Window.ResetArea( X, Y + Height - border, width, border, bmp );
 				Window.ResetArea( X, Y, border, Height, bmp );
-				Window.ResetArea( X + Width - border, Y, border, Height, bmp );
+				Window.ResetArea( X + width - border, Y, border, Height, bmp );
 			}
 		}
 		
 		void DrawInnerBorder( FastBitmap bmp ) {
 			FastColour col = borderIn;
-			Clear( bmp, col, X + border, Y + border, Width - border * 2, border );
-			Clear( bmp, col, X + border, Y + Height - border * 2, Width - border * 2, border );
+			int width = RealWidth;
+			Clear( bmp, col, X + border, Y + border, width - border * 2, border );
+			Clear( bmp, col, X + border, Y + Height - border * 2, width - border * 2, border );
 			Clear( bmp, col, X + border, Y + border, border, Height - border * 2 );
-			Clear( bmp, col, X + Width - border * 2, Y + border, border, Height - border * 2 );
+			Clear( bmp, col, X + width - border * 2, Y + border, border, Height - border * 2 );
 		}
 		
 		void BlendBoxTop( FastBitmap bmp ) {
-			Rectangle r = new Rectangle( X + border, Y, Width - border * 2, border );
+			int width = RealWidth;
+			Rectangle r = new Rectangle( X + border, Y, width - border * 2, border );
 			r.Y += border; Gradient.Blend( bmp, r, FastColour.Black, 75 );
 			r.Y += border; Gradient.Blend( bmp, r, FastColour.Black, 50 );
 			r.Y += border; Gradient.Blend( bmp, r, FastColour.Black, 25 );
@@ -130,7 +126,7 @@ namespace Launcher.Gui.Widgets {
 			}
 		}
 		
-		public Rectangle MeasureCaret( IDrawer2D drawer, Font font ) {
+		public Rectangle MeasureCaret( IDrawer2D drawer ) {
 			string text = Text;
 			if( Password )
 				text = new String( '*', text.Length );
@@ -161,7 +157,7 @@ namespace Launcher.Gui.Widgets {
 				Chars.CaretPos = -1;
 		}
 		
-		public void SetCaretToCursor( int mouseX, int mouseY, IDrawer2D drawer, Font font ) {
+		public void SetCaretToCursor( int mouseX, int mouseY, IDrawer2D drawer ) {
 			string text = Text;
 			if( Password )
 				text = new String( '*', text.Length );

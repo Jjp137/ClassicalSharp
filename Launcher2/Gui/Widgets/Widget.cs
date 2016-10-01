@@ -3,13 +3,11 @@ using System;
 using ClassicalSharp;
 
 namespace Launcher.Gui.Widgets {
-
 	/// <summary> Represents a graphical element/control. </summary>
-	public abstract class LauncherWidget {
+	public abstract class Widget {
 		
 		public int X, Y, Width, Height;
 		public LauncherWindow Window;
-		public Action<int, int> OnClick;
 		
 		/// <summary> The text associated with this widget. </summary>
 		public string Text;
@@ -21,47 +19,53 @@ namespace Launcher.Gui.Widgets {
 		public Anchor VerticalAnchor;
 		
 		/// <summary> Horizontal offset from the reference point in pixels. </summary>
-		public int XOffset = 0;
+		public int XOffset;
 		
 		/// <summary> Vertical offset from the reference point in pixels. </summary>
-		public int YOffset = 0;
+		public int YOffset;
 		
+		/// <summary> Whether this widget should be rendered and interactable with. </summary>
+		public bool Visible = true;
 		
-		public LauncherWidget( LauncherWindow window ) {
+		/// <summary> Whether this widget is the active widget selected by the user. </summary>
+		public bool Active;
+		
+		/// <summary>Whether this widget can be selected via pressing tab. </summary>
+		public bool TabSelectable;
+		
+		public Action<int, int> OnClick;
+		
+		public Widget( LauncherWindow window ) {
 			Window = window;
 		}
 		
 		/// <summary> Redraws the contents of this widget. </summary>
 		public abstract void Redraw( IDrawer2D drawer );
 		
-		/// <summary> Sets the reference points for when this widget is resized. </summary>
-		public LauncherWidget SetAnchors( Anchor horAnchor, Anchor verAnchor ) {
-			HorizontalAnchor = horAnchor;
-			VerticalAnchor = verAnchor;
-			return this;
+
+		/// <summary> Sets the reference points for when this widget is resized,
+		/// and the offsets from the reference points (anchors) in pixels. </summary>
+		/// <remarks> Updates the position of the widget. </remarks>
+		public void SetLocation( Anchor horAnchor, Anchor verAnchor, 
+		                        int xOffset, int yOffset ) {
+			HorizontalAnchor = horAnchor; VerticalAnchor = verAnchor;
+			XOffset = xOffset; YOffset = yOffset;
+			CalculatePosition();
 		}
 		
-		/// <summary> Sets the offsets from the reference points (anchors) in pixels. </summary>
-		public LauncherWidget SetOffsets( int xOffset, int yOffset ) {
-			XOffset = xOffset;
-			YOffset = yOffset;
-			return this;
-		}
-		
-		/// <summary> Calculates the position of this widget in the window, 
+		/// <summary> Calculates the position of this widget in the window,
 		/// based on its anchor points and offset from the anchor points. </summary>
-		public LauncherWidget CalculatePosition() {
+		public void CalculatePosition() {
 			X = CalcPos( HorizontalAnchor, XOffset, Width, Window.Width );
 			Y = CalcPos( VerticalAnchor, YOffset, Height, Window.Height );
-			return this;
 		}
 		
 		static int CalcPos( Anchor anchor, int offset, int size, int axisLen ) {
-			if( anchor == Anchor.LeftOrTop ) 
+			if( anchor == Anchor.LeftOrTop )
 				return offset;
-			if( anchor == Anchor.Centre ) 
+			if( anchor == Anchor.Centre )
 				return offset + axisLen / 2 - size / 2;
-			if( anchor == Anchor.BottomOrRight ) 
+			if( anchor == Anchor.BottomOrRight )
 				return offset + axisLen - size;
 			return 0;
 		}

@@ -3,7 +3,7 @@ using System.Drawing;
 using ClassicalSharp;
 using Launcher.Gui.Views;
 
-namespace Launcher.Gui.Widgets {	
+namespace Launcher.Gui.Widgets {
 	/// <summary> Helper methods to construct widgets. </summary>
 	public static class Makers {
 		
@@ -37,12 +37,12 @@ namespace Launcher.Gui.Widgets {
 			return widget;
 		}
 		
-		public static Widget Checkbox( IView view, Font font, bool initValue, int size ) {
+		public static Widget Checkbox( IView view, bool initValue, int size ) {
 			CheckboxWidget widget;
 			if( view.widgets[view.widgetIndex] != null ) {
 				widget = (CheckboxWidget)view.widgets[view.widgetIndex];
 			} else {
-				widget = new CheckboxWidget( view.game, font, size, size );
+				widget = new CheckboxWidget( view.game, size, size );
 				widget.Value = initValue;
 				view.widgets[view.widgetIndex] = widget;
 			}
@@ -71,17 +71,33 @@ namespace Launcher.Gui.Widgets {
 		}
 		
 		public static Widget Slider( IView view, int width, int height,
-		                            int progress, FastColour progressCol ) {
+		                            int initValue, int maxValue,
+		                            FastColour progressCol ) {
 			SliderWidget widget;
 			if( view.widgets[view.widgetIndex] != null ) {
 				widget = (SliderWidget)view.widgets[view.widgetIndex];
 			} else {
 				widget = new SliderWidget( view.game, width, height );
 				view.widgets[view.widgetIndex] = widget;
+				widget.Value = initValue;
+				widget.MaxValue = maxValue;
 			}
 
-			widget.Progress = progress;
 			widget.ProgressColour = progressCol;
+			view.widgetIndex++;
+			return widget;
+		}
+		
+		public static Widget Bitmap( IView view, byte[] indices, 
+		                            FastColour[] palette, int size ) {
+			BitmapWidget widget;
+			if( view.widgets[view.widgetIndex] != null ) {
+				widget = (BitmapWidget)view.widgets[view.widgetIndex];
+			} else {
+				widget = new BitmapWidget( view.game, size, indices, palette );
+				view.widgets[view.widgetIndex] = widget;
+			}
+			
 			view.widgetIndex++;
 			return widget;
 		}

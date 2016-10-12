@@ -1,5 +1,6 @@
 ﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
 using System;
+using ClassicalSharp.Physics;
 using OpenTK;
 
 namespace ClassicalSharp.Entities {
@@ -226,7 +227,7 @@ namespace ClassicalSharp.Entities {
 				if( !blockBB.Intersects( bounds ) ) continue;
 				
 				modifier = Math.Min( modifier, info.SpeedMultiplier[block] );
-				if( block >= BlockInfo.CpeCount && type == CollideType.SwimThrough )
+				if( block >= Block.CpeCount && type == CollideType.SwimThrough )
 					useLiquidGravity = true;
 			}
 			return modifier;

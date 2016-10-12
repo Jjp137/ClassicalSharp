@@ -24,7 +24,6 @@ namespace ClassicalSharp.GraphicsAPI {
 		
 		D3D.Texture[] textures = new D3D.Texture[texBufferSize];
 		DataBuffer[] vBuffers = new DataBuffer[vBufferSize];
-		DynamicDataBuffer[] dynamicvBuffers = new DynamicDataBuffer[iBufferSize];
 		DataBuffer[] iBuffers = new DataBuffer[iBufferSize];
 		
 		MatrixStack viewStack, projStack, texStack, curStack;
@@ -180,8 +179,9 @@ namespace ClassicalSharp.GraphicsAPI {
 			set { if( !value ) device.SetTexture( 0, null ); }
 		}
 
-		public override int CreateTexture( int width, int height, IntPtr scan0 ) {
-			D3D.Texture texture = device.CreateTexture( width, height, 0, Usage.None, Format.A8R8G8B8, Pool.Managed );
+		protected override int CreateTexture( int width, int height, IntPtr scan0, bool managedPool ) {
+			Pool pool = managedPool ? Pool.Managed : Pool.Default;
+			D3D.Texture texture = device.CreateTexture( width, height, 0, Usage.None, Format.A8R8G8B8, pool );
 			texture.SetData( 0, LockFlags.None, scan0, width * height * 4 );
 			return GetOrExpand( ref textures, texture, texBufferSize );
 		}
@@ -238,59 +238,11 @@ namespace ClassicalSharp.GraphicsAPI {
 		
 		public override int CreateDynamicVb( VertexFormat format, int maxVertices ) {
 			int size = maxVertices * strideSizes[(int)format];
-			DynamicDataBuffer buffer = device.CreateDynamicVertexBuffer( size, formatMapping[(int)format] );
-			
-			buffer.Format = formatMapping[(int)format];
-			buffer.MaxSize = size;
-			return GetOrExpand( ref dynamicvBuffers, buffer, iBufferSize );
-		}
-		
-		public override void UpdateDynamicVb( DrawMode mode, int vb, VertexP3fC4b[] vertices, int count ) {
-			fixed ( VertexP3fC4b* p = vertices ) {
-				IntPtr ptr = (IntPtr)p;
-				UpdateDynamicVb( mode, vb, ptr, count );
-			}
+			DataBuffer buffer = device.CreateVertexBuffer( size, Usage.Dynamic,
+			                                              formatMapping[(int)format], Pool.Default );
+			return GetOrExpand( ref vBuffers, buffer, iBufferSize );
 		}
 
-		public override void UpdateDynamicVb( DrawMode mode, int vb, VertexP3fT2fC4b[] vertices, int count ) {
-			fixed ( VertexP3fT2fC4b* p = vertices ) {
-				IntPtr ptr = (IntPtr)p;
-				UpdateDynamicVb( mode, vb, ptr, count );
-			}
-		}
-		
-		public void UpdateDynamicVb( DrawMode mode, int vb, IntPtr vertices, int count ) {
-			int size = count * batchStride;
-			DataBuffer buffer = dynamicvBuffers[vb];
-			buffer.SetData( vertices, size, LockFlags.Discard );
-			
-			device.SetStreamSource( 0, buffer, 0, batchStride );
-			device.DrawPrimitives( modeMappings[(int)mode], 0, NumPrimitives( count, mode ) );
-		}
-		
-		public override void UpdateDynamicIndexedVb( DrawMode mode, int vb, VertexP3fC4b[] vertices, int vCount, int indicesCount ) {
-			fixed ( VertexP3fC4b* p = vertices ) {
-				IntPtr ptr = (IntPtr)p;
-				UpdateDynamicIndexedVb( mode, vb, ptr, vCount, indicesCount );
-			}
-		}
-
-		public override void UpdateDynamicIndexedVb( DrawMode mode, int vb, VertexP3fT2fC4b[] vertices, int vCount, int indicesCount ) {
-			fixed ( VertexP3fT2fC4b* p = vertices ) {
-				IntPtr ptr = (IntPtr)p;
-				UpdateDynamicIndexedVb( mode, vb, ptr, vCount, indicesCount );
-			}
-		}
-		
-		public void UpdateDynamicIndexedVb( DrawMode mode, int vb, IntPtr vertices, int vCount, int indicesCount ) {
-			int size = vCount * batchStride;
-			DataBuffer buffer = dynamicvBuffers[vb];
-			buffer.SetData( vertices, size, LockFlags.Discard );
-			
-			device.SetStreamSource( 0, buffer, 0, batchStride );
-			device.DrawIndexedPrimitives( modeMappings[(int)mode], 0, 0, indicesCount / 6 * 4, 0, NumPrimitives( indicesCount, mode ) );
-		}
-		
 		public override void SetDynamicVbData( int vb, VertexP3fC4b[] vertices, int count ) {
 			fixed ( VertexP3fC4b* p = vertices ) {
 				IntPtr ptr = (IntPtr)p;
@@ -307,13 +259,9 @@ namespace ClassicalSharp.GraphicsAPI {
 		
 		public void SetDynamicVbData( int vb, IntPtr vertices, int count ) {
 			int size = count * batchStride;
-			DataBuffer buffer = dynamicvBuffers[vb];
+			DataBuffer buffer = vBuffers[vb];
 			buffer.SetData( vertices, size, LockFlags.Discard );
 			device.SetStreamSource( 0, buffer, 0, batchStride );
-		}
-		
-		public override void DeleteDynamicVb( ref int vb ) {
-			Delete( dynamicvBuffers, ref vb );
 		}
 
 		public override int CreateVb( VertexP3fC4b[] vertices, VertexFormat format, int count ) {
@@ -519,10 +467,10 @@ namespace ClassicalSharp.GraphicsAPI {
 		
 		void RecreateDevice( Game game ) {
 			PresentParameters args = GetPresentArgs( game.Width, game.Height );
-			for( int i = 0; i < dynamicvBuffers.Length; i++ ) {
-				DynamicDataBuffer buffer = dynamicvBuffers[i];
-				if( buffer != null ) buffer.Dispose();
-			}
+			LostContext = true;
+			RaiseContextLost();
+			DeleteVb( ref quadVb );
+			DeleteVb( ref texVb );
 
 			while( (uint)device.Reset( args ) == (uint)Direct3DError.DeviceLost )
 				LoopUntilRetrieved();
@@ -530,16 +478,9 @@ namespace ClassicalSharp.GraphicsAPI {
 			SetDefaultRenderStates();
 			RestoreRenderStates();
 
-			for( int i = 0; i < dynamicvBuffers.Length; i++ ) {
-				DynamicDataBuffer buffer = dynamicvBuffers[i];
-				if( buffer == null ) continue;
-
-				dynamicvBuffers[i] = device.CreateDynamicVertexBuffer( buffer.MaxSize, buffer.Format );
-				dynamicvBuffers[i].Format = buffer.Format;
-				dynamicvBuffers[i].MaxSize = buffer.MaxSize;
-				buffer = dynamicvBuffers[i];
-			}
+			LostContext = false;
 			RaiseContextRecreated();
+			InitDynamicBuffers();
 		}
 		
 		void SetDefaultRenderStates() {

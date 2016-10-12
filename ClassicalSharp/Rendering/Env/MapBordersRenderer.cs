@@ -13,7 +13,7 @@ namespace ClassicalSharp.Renderers {
 		
 		World map;
 		Game game;
-		IGraphicsApi graphics;
+		IGraphicsApi gfx;
 		
 		int sidesVb = -1, edgesVb = -1;
 		int edgeTexId, sideTexId;
@@ -29,11 +29,13 @@ namespace ClassicalSharp.Renderers {
 		public void Init( Game game ) {
 			this.game = game;
 			map = game.World;
-			graphics = game.Graphics;
+			gfx = game.Graphics;
 			
 			game.WorldEvents.EnvVariableChanged += EnvVariableChanged;
 			game.Events.ViewDistanceChanged += ResetSidesAndEdges;
 			game.Events.TerrainAtlasChanged += ResetTextures;
+			game.Graphics.ContextLost += ContextLost;
+			game.Graphics.ContextRecreated += ContextRecreated;
 		}
 		
 		public void RenderSides( double delta ) {
@@ -41,14 +43,14 @@ namespace ClassicalSharp.Renderers {
 			byte block = game.World.Env.SidesBlock;
 			if( game.BlockInfo.IsAir[block] ) return;
 			
-			graphics.Texturing = true;
-			graphics.AlphaTest = true;
-			graphics.BindTexture( sideTexId );
-			graphics.SetBatchFormat( VertexFormat.P3fT2fC4b );
-			graphics.BindVb( sidesVb );
-			graphics.DrawIndexedVb_TrisT2fC4b( sidesVertices * 6 / 4, 0 );
-			graphics.Texturing = false;
-			graphics.AlphaTest = false;
+			gfx.Texturing = true;
+			gfx.AlphaTest = true;
+			gfx.BindTexture( sideTexId );
+			gfx.SetBatchFormat( VertexFormat.P3fT2fC4b );
+			gfx.BindVb( sidesVb );
+			gfx.DrawIndexedVb_TrisT2fC4b( sidesVertices * 6 / 4, 0 );
+			gfx.Texturing = false;
+			gfx.AlphaTest = false;
 		}
 		
 		public void RenderEdges( double delta ) {
@@ -57,51 +59,49 @@ namespace ClassicalSharp.Renderers {
 			if( game.BlockInfo.IsAir[block] ) return;
 			
 			Vector3 camPos = game.CurrentCameraPos;
-			graphics.AlphaBlending = true;
-			graphics.Texturing = true;
-			graphics.AlphaTest = true;
+			gfx.AlphaBlending = true;
+			gfx.Texturing = true;
+			gfx.AlphaTest = true;
 			
-			graphics.BindTexture( edgeTexId );
-			graphics.SetBatchFormat( VertexFormat.P3fT2fC4b );
-			graphics.BindVb( edgesVb );
+			gfx.BindTexture( edgeTexId );
+			gfx.SetBatchFormat( VertexFormat.P3fT2fC4b );
+			gfx.BindVb( edgesVb );
 			// Do not draw water when we cannot see it.
 			// Fixes some 'depth bleeding through' issues with 16 bit depth buffers on large maps.
 			float yVisible = Math.Min( 0, map.Env.SidesHeight );
 			if( camPos.Y >= yVisible )
-				graphics.DrawIndexedVb_TrisT2fC4b( edgesVertices * 6 / 4, 0 );
+				gfx.DrawIndexedVb_TrisT2fC4b( edgesVertices * 6 / 4, 0 );
 			
-			graphics.AlphaBlending = false;
-			graphics.Texturing = false;
-			graphics.AlphaTest = false;
+			gfx.AlphaBlending = false;
+			gfx.Texturing = false;
+			gfx.AlphaTest = false;
 		}
 		
 		public void Dispose() {
 			game.WorldEvents.EnvVariableChanged -= EnvVariableChanged;
 			game.Events.ViewDistanceChanged -= ResetSidesAndEdges;
 			game.Events.TerrainAtlasChanged -= ResetTextures;
+			game.Graphics.ContextLost -= ContextLost;
+			game.Graphics.ContextRecreated -= ContextRecreated;
 			
-			graphics.DeleteTexture( ref edgeTexId );
-			graphics.DeleteTexture( ref sideTexId );
-			graphics.DeleteVb( ref sidesVb );
-			graphics.DeleteVb( ref edgesVb );
+			gfx.DeleteTexture( ref edgeTexId );
+			gfx.DeleteTexture( ref sideTexId );
+			gfx.DeleteVb( ref sidesVb );
+			gfx.DeleteVb( ref edgesVb );
 		}
 
 		public void Ready( Game game ) { }
 		public void Reset( Game game ) { OnNewMap( game ); }
 		
 		public void OnNewMap( Game game ) {
-			graphics.DeleteVb( ref sidesVb );
-			graphics.DeleteVb( ref edgesVb );
+			gfx.DeleteVb( ref sidesVb );
+			gfx.DeleteVb( ref edgesVb );
 			
 			MakeTexture( ref edgeTexId, ref lastEdgeTexLoc, map.Env.EdgeBlock );
 			MakeTexture( ref sideTexId, ref lastSideTexLoc, map.Env.SidesBlock );
 		}
 		
-		public void OnNewMapLoaded( Game game ) {
-			CalculateRects( (int)game.ViewDistance );
-			RebuildSides( map.Env.SidesHeight, legacy ? 128 : 65536 );
-			RebuildEdges( map.Env.EdgeHeight, legacy ? 128 : 65536 );
-		}
+		public void OnNewMapLoaded( Game game ) { ResetSidesAndEdges( null, null ); }
 		
 		void EnvVariableChanged( object sender, EnvVarEventArgs e ) {
 			if( e.Var == EnvVar.EdgeBlock ) {
@@ -129,21 +129,31 @@ namespace ClassicalSharp.Renderers {
 
 		void ResetSidesAndEdges( object sender, EventArgs e ) {
 			CalculateRects( (int)game.ViewDistance );
-			ResetSides();
-			ResetEdges();
+			ContextRecreated();
 		}
 		
 		void ResetSides() {
-			if( game.World.IsNotLoaded ) return;
-			graphics.DeleteVb( ref sidesVb );
-			RebuildSides( map.Env.SidesHeight, legacy ? 128 : 65536 );	
+			if( game.World.IsNotLoaded || game.Graphics.LostContext ) return;
+			gfx.DeleteVb( ref sidesVb );
+			RebuildSides( map.Env.SidesHeight, legacy ? 128 : 65536 );
 		}
 		
 		void ResetEdges() {
-			if( game.World.IsNotLoaded ) return;
-			graphics.DeleteVb( ref edgesVb );
+			if( game.World.IsNotLoaded || game.Graphics.LostContext ) return;
+			gfx.DeleteVb( ref edgesVb );
 			RebuildEdges( map.Env.EdgeHeight, legacy ? 128 : 65536 );
 		}
+		
+		void ContextLost() {
+			game.Graphics.DeleteVb( ref sidesVb );
+			game.Graphics.DeleteVb( ref edgesVb );
+		}
+		
+		void ContextRecreated() {
+			ResetSides();
+			ResetEdges();
+		}
+
 		
 		void RebuildSides( int y, int axisSize ) {
 			byte block = game.World.Env.SidesBlock;
@@ -151,7 +161,7 @@ namespace ClassicalSharp.Renderers {
 			for( int i = 0; i < rects.Length; i++ ) {
 				Rectangle r = rects[i];
 				sidesVertices += Utils.CountVertices( r.Width, r.Height, axisSize ); // YQuads outside
-			}			
+			}
 			sidesVertices += Utils.CountVertices( map.Width, map.Length, axisSize ); // YQuads beneath map
 			sidesVertices += 2 * Utils.CountVertices( map.Width, Math.Abs( y ), axisSize ); // ZQuads
 			sidesVertices += 2 * Utils.CountVertices( map.Length, Math.Abs( y ), axisSize ); // XQuads
@@ -173,7 +183,7 @@ namespace ClassicalSharp.Renderers {
 			DrawZ( map.Length, 0, map.Width, y1, y2, axisSize, col, ref v );
 			DrawX( 0, 0, map.Length, y1, y2, axisSize, col, ref v );
 			DrawX( map.Width, 0, map.Length, y1, y2, axisSize, col, ref v );
-			sidesVb = graphics.CreateVb( ptr, VertexFormat.P3fT2fC4b, sidesVertices );
+			sidesVb = gfx.CreateVb( ptr, VertexFormat.P3fT2fC4b, sidesVertices );
 		}
 		
 		void RebuildEdges( int y, int axisSize ) {
@@ -190,27 +200,27 @@ namespace ClassicalSharp.Renderers {
 			int col = fullColEdge ? FastColour.WhitePacked : map.Env.Sun;
 			for( int i = 0; i < rects.Length; i++ ) {
 				Rectangle r = rects[i];
-				DrawY( r.X, r.Y, r.X + r.Width, r.Y + r.Height, y, axisSize, col, 
+				DrawY( r.X, r.Y, r.X + r.Width, r.Y + r.Height, y, axisSize, col,
 				      HorOffset( block ), YOffset( block ), ref v );
 			}
-			edgesVb = graphics.CreateVb( ptr, VertexFormat.P3fT2fC4b, edgesVertices );
+			edgesVb = gfx.CreateVb( ptr, VertexFormat.P3fT2fC4b, edgesVertices );
 		}
 
 		float HorOffset( byte block ) {
 			BlockInfo info = game.BlockInfo;
 			if( info.IsLiquid( block ) ) return -0.1f/16;
 			if( info.IsTranslucent[block] && info.Collide[block] != CollideType.Solid ) return 0.1f/16;
-			 return 0;
+			return 0;
 		}
 		
 		float YOffset( byte block ) {
 			BlockInfo info = game.BlockInfo;
 			if( info.IsLiquid( block ) ) return -1.5f/16;
 			if( info.IsTranslucent[block] && info.Collide[block] != CollideType.Solid ) return -0.1f/16;
-			 return 0;
+			return 0;
 		}
 		
-		void DrawX( int x, int z1, int z2, int y1, int y2, int axisSize, 
+		void DrawX( int x, int z1, int z2, int y1, int y2, int axisSize,
 		           int col, ref VertexP3fT2fC4b* v ) {
 			int endZ = z2, endY = y2, startY = y1;
 			for( ; z1 < endZ; z1 += axisSize ) {
@@ -230,7 +240,7 @@ namespace ClassicalSharp.Renderers {
 			}
 		}
 		
-		void DrawZ( int z, int x1, int x2, int y1, int y2, int axisSize, 
+		void DrawZ( int z, int x1, int x2, int y1, int y2, int axisSize,
 		           int col, ref VertexP3fT2fC4b* v ) {
 			int endX = x2, endY = y2, startY = y1;
 			for( ; x1 < endX; x1 += axisSize ) {
@@ -250,7 +260,7 @@ namespace ClassicalSharp.Renderers {
 			}
 		}
 		
-		void DrawY( int x1, int z1, int x2, int z2, float y, int axisSize, 
+		void DrawY( int x1, int z1, int x2, int z2, float y, int axisSize,
 		           int col, float offset, float yOffset, ref VertexP3fT2fC4b* v ) {
 			int endX = x2, endZ = z2, startZ = z1;
 			for( ; x1 < endX; x1 += axisSize ) {

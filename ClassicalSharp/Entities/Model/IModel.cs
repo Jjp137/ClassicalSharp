@@ -3,6 +3,7 @@ using System;
 using ClassicalSharp.Entities;
 using ClassicalSharp.GraphicsAPI;
 using ClassicalSharp.Map;
+using ClassicalSharp.Physics;
 using OpenTK;
 
 namespace ClassicalSharp.Model {
@@ -110,7 +111,7 @@ namespace ClassicalSharp.Model {
 		protected void UpdateVB() {
 			ModelCache cache = game.ModelCache;
 			game.Graphics.UpdateDynamicIndexedVb(
-				DrawMode.Triangles, cache.vb, cache.vertices, index, index * 6 / 4 );
+				DrawMode.Triangles, cache.vb, cache.vertices, index );
 			index = 0;
 		}
 		

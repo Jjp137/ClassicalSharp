@@ -70,7 +70,7 @@ namespace ClassicalSharp.Entities {
 				game.Graphics.BindTexture( shadowTex );
 				boundShadowTex = true;
 			}
-			game.Graphics.UpdateDynamicIndexedVb( DrawMode.Triangles, vb, verts, index, index * 6 / 4 );
+			game.Graphics.UpdateDynamicIndexedVb( DrawMode.Triangles, vb, verts, index );
 		}
 		
 		const byte c = 255; // avoids 'ambiguous match' compile errors.
@@ -199,7 +199,7 @@ namespace ClassicalSharp.Entities {
 		
 		internal static bool boundShadowTex = false;
 		internal static int shadowTex = -1;
-		static void CheckShadowTexture( IGraphicsApi graphics ) {
+		static void CheckShadowTexture( IGraphicsApi gfx ) {
 			if( shadowTex != -1 ) return;
 			const int size = 128, half = size / 2;
 			using( Bitmap bmp = Platform.CreateBmp( size, size ) )
@@ -215,7 +215,7 @@ namespace ClassicalSharp.Entities {
 						row[x] = dist < half * half ? inPix : outPix;
 					}
 				}
-				shadowTex = graphics.CreateTexture( fastBmp );
+				shadowTex = gfx.CreateTexture( fastBmp, true );
 			}
 		}
 	}

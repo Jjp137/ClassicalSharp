@@ -32,18 +32,22 @@ namespace ClassicalSharp.Renderers {
 			game.WorldEvents.OnNewMap += OnNewMap;
 			game.WorldEvents.OnNewMapLoaded += OnNewMapLoaded;
 			game.WorldEvents.EnvVariableChanged += EnvVariableChanged;
+			
 			game.Events.BlockDefinitionChanged += BlockDefinitionChanged;
 			game.Events.ViewDistanceChanged += ViewDistanceChanged;
 			game.Events.ProjectionChanged += ProjectionChanged;
+			game.Graphics.ContextLost += ContextLost;
+			game.Graphics.ContextRecreated += ContextRecreated;
 		}
 		
 		public void InitMeshBuilder() {
 			if( builder != null ) builder.Dispose();
 			
-			if( game.SmoothLighting )
+			if( game.SmoothLighting ) {
 				builder = new AdvLightingMeshBuilder();
-			else
+			} else {
 				builder = new NormalMeshBuilder();
+			}
 			
 			builder.Init( game );
 			builder.OnNewMapLoaded();
@@ -57,9 +61,12 @@ namespace ClassicalSharp.Renderers {
 			game.WorldEvents.OnNewMap -= OnNewMap;
 			game.WorldEvents.OnNewMapLoaded -= OnNewMapLoaded;
 			game.WorldEvents.EnvVariableChanged -= EnvVariableChanged;
+			
 			game.Events.BlockDefinitionChanged -= BlockDefinitionChanged;
 			game.Events.ViewDistanceChanged -= ViewDistanceChanged;
 			game.Events.ProjectionChanged -= ProjectionChanged;
+			game.Graphics.ContextLost -= ContextLost;
+			game.Graphics.ContextRecreated -= ContextRecreated;
 			builder.Dispose();
 		}
 		
@@ -232,9 +239,10 @@ namespace ClassicalSharp.Renderers {
 			parts = null;
 		}
 		
-		static int NextMultipleOf16( int value ) {
-			return (value + 0x0F) & ~0x0F;
-		}
+		static int NextMultipleOf16( int value ) { return (value + 0x0F) & ~0x0F; }
+		
+		void ContextLost() { ClearChunkCache(); }	
+		void ContextRecreated() { Refresh(); }
 		
 		
 		public void RedrawBlock( int x, int y, int z, byte block, int oldHeight, int newHeight ) {
@@ -248,7 +256,7 @@ namespace ClassicalSharp.Renderers {
 			ResetColumn( cx, cy, cz, minCy, maxCy );
 			World world = game.World;
 			
-			int bX = x & 0x0F, bY = y & 0x0F, bZ = z & 0x0F;			
+			int bX = x & 0x0F, bY = y & 0x0F, bZ = z & 0x0F;
 			if( bX == 0 && cx > 0 )
 				ResetNeighbour( x - 1, y, z, block, cx - 1, cy, cz, minCy, maxCy );
 			if( bY == 0 && cy > 0 && Needs( block, world.GetBlock( x, y - 1, z ) ) )
@@ -342,11 +350,15 @@ namespace ClassicalSharp.Renderers {
 				ChunkInfo info = chunks[i];
 				if( info.Empty ) continue;
 				int distSqr = distances[i];
-				bool inRange = distSqr <= adjViewDistSqr;
+				bool noData = info.NormalParts == null && info.TranslucentParts == null;
 				
-				if( info.NormalParts == null && info.TranslucentParts == null ) {
-					if( inRange && chunkUpdats < chunksTarget )
-						BuildChunk( info, ref chunkUpdats );
+				bool inRange = distSqr <= adjViewDistSqr;
+				if( !noData && distSqr >= adjViewDistSqr + 32 * 16 ) {
+					DeleteChunk( info, true ); continue;
+				}
+				
+				if( noData && inRange && chunkUpdats < chunksTarget ) {
+					BuildChunk( info, ref chunkUpdats );
 				}
 				info.Visible = inRange &&
 					game.Culling.SphereInFrustum( info.CentreX, info.CentreY, info.CentreZ, 14 ); // 14 ~ sqrt(3 * 8^2)
@@ -362,9 +374,14 @@ namespace ClassicalSharp.Renderers {
 				ChunkInfo info = chunks[i];
 				if( info.Empty ) continue;
 				int distSqr = distances[i];
-				bool inRange = distSqr <= adjViewDistSqr;
+				bool noData = info.NormalParts == null && info.TranslucentParts == null;
 				
-				if( info.NormalParts == null && info.TranslucentParts == null ) {
+				bool inRange = distSqr <= adjViewDistSqr;
+				if( !noData && distSqr >= adjViewDistSqr + 32 * 16 ) {
+					DeleteChunk( info, true ); continue;
+				}
+				
+				if( noData ) {
 					if( inRange && chunkUpdates < chunksTarget ) {
 						BuildChunk( info, ref chunkUpdates );
 						// only need to update the visibility of chunks in range.

@@ -508,10 +508,7 @@ namespace ClassicalSharp.GraphicsAPI
 			}
 		}
 
-		public override int CreateTexture( int width, int height, IntPtr scan0 ) {
-			if( !Utils.IsPowerOf2( width ) || !Utils.IsPowerOf2( height ) )
-				Utils.LogDebug( "Creating a non power of two texture." );
-
+		protected override int CreateTexture( int width, int height, IntPtr scan0, bool managedPool ) {
 			int texId = 0;
 			GLFuncs.GenTextures( 1, &texId );
 			GLFuncs.BindTexture( TextureTarget.Texture2D, texId );
@@ -519,7 +516,7 @@ namespace ClassicalSharp.GraphicsAPI
 			GLFuncs.TexParameteri( TextureTarget.Texture2D, TextureParameterName.MagFilter, (int)TextureFilter.Nearest );
 
 			GLFuncs.TexImage2D( TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba, width, height,
-			              GlPixelFormat.Bgra, PixelType.UnsignedByte, scan0 );
+			                   GlPixelFormat.Bgra, PixelType.UnsignedByte, scan0 );
 			return texId;
 		}
 
@@ -591,34 +588,6 @@ namespace ClassicalSharp.GraphicsAPI
 			GLFuncs.BindBuffer( target, id );
 			return id;
 		}
-
-		public override void UpdateDynamicVb( DrawMode mode, int vb, VertexP3fC4b[] vertices, int count ) {
-			fixed ( VertexP3fC4b* p = vertices ) {
-				IntPtr ptr = (IntPtr)p;
-				UpdateDynamicVb( mode, vb, ptr, count );
-			}
-		}
-		
-		public override void UpdateDynamicVb( DrawMode mode, int vb, VertexP3fT2fC4b[] vertices, int count ) {
-			fixed ( VertexP3fT2fC4b* p = vertices ) {
-				IntPtr ptr = (IntPtr)p;
-				UpdateDynamicVb( mode, vb, ptr, count );
-			}
-		}
-		
-		public override void UpdateDynamicIndexedVb( DrawMode mode, int vb, VertexP3fC4b[] vertices, int vCount, int indicesCount ) {
-			fixed ( VertexP3fC4b* p = vertices ) {
-				IntPtr ptr = (IntPtr)p;
-				UpdateDynamicIndexedVb( mode, vb, ptr, vCount, indicesCount );
-			}
-		}
-		
-		public override void UpdateDynamicIndexedVb( DrawMode mode, int vb, VertexP3fT2fC4b[] vertices, int vCount, int indicesCount ) {
-			fixed ( VertexP3fT2fC4b* p = vertices ) {
-				IntPtr ptr = (IntPtr)p;
-				UpdateDynamicIndexedVb( mode, vb, ptr, vCount, indicesCount );
-			}
-		}
 		
 		public override void SetDynamicVbData( int vb, VertexP3fC4b[] vertices, int count ) {
 			fixed ( VertexP3fC4b* p = vertices ) {
@@ -654,12 +623,6 @@ namespace ClassicalSharp.GraphicsAPI
 		public void SetDynamicVbData( int id, IntPtr vertices, int count ) {
 			GLFuncs.BindBuffer( BufferTarget.ArrayBuffer, id );
 			GLFuncs.BufferSubData( BufferTarget.ArrayBuffer, IntPtr.Zero, new IntPtr( count * batchStride ), vertices );
-		}
-
-		public override void DeleteDynamicVb( ref int vb ) {
-			if( vb <= 0 ) return;
-			int id = vb; GLFuncs.DeleteBuffers( 1, &id );
-			vb = -1;
 		}
 
 		public override void DeleteVb( ref int vb ) {

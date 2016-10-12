@@ -59,6 +59,7 @@
     <Reference Include="System.Windows.Forms" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Drawing\BitmapDrawer.cs" />
     <Compile Include="Drawing\Drawer2DExt.cs" />
     <Compile Include="Drawing\Gradient.cs" />
     <Compile Include="Drawing\Platform\OSXDrawer.cs" />
@@ -74,6 +75,7 @@
     <Compile Include="Gui\Screens\MainScreen.cs" />
     <Compile Include="Gui\Screens\ResourcesScreen.cs" />
     <Compile Include="Gui\Screens\ChooseModeScreen.cs" />
+    <Compile Include="Gui\Screens\SettingsScreen.cs" />
     <Compile Include="Gui\Screens\UpdatesScreen.cs" />
     <Compile Include="Gui\TableWidget\Comparers.cs" />
     <Compile Include="Gui\TableWidget\TableView.cs" />
@@ -86,7 +88,9 @@
     <Compile Include="Gui\Views\MainView.cs" />
     <Compile Include="Gui\Views\ResourcesView.cs" />
     <Compile Include="Gui\Views\ServersView.cs" />
+    <Compile Include="Gui\Views\SettingsView.cs" />
     <Compile Include="Gui\Views\UpdatesView.cs" />
+    <Compile Include="Gui\Widgets\BitmapWidget.cs" />
     <Compile Include="Gui\Widgets\CheckboxWidget.cs" />
     <Compile Include="Gui\Widgets\InputText.cs" />
     <Compile Include="Gui\Widgets\ButtonWidget.cs" />

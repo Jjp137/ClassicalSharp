@@ -1,6 +1,7 @@
 ﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
 using System;
 using ClassicalSharp.Model;
+using ClassicalSharp.Physics;
 using OpenTK;
 
 namespace ClassicalSharp.Entities {
@@ -93,7 +94,7 @@ namespace ClassicalSharp.Entities {
 				//	max.Y -= 4/16f;
 				
 				AABB blockBB = new AABB( min, max );
-				if( !blockBB.Intersects( bounds ) ) continue;		
+				if( !blockBB.Intersects( bounds ) ) continue;
 				if( block == block1 || block == block2 ) return true;
 			}
 			return false;

@@ -91,8 +91,8 @@ namespace ClassicalSharp.Entities {
 			if( nameTex.ID == 0 ) MakeNameTexture();
 			if( nameTex.ID == -1 ) return;
 			
-			IGraphicsApi api = game.Graphics;
-			api.BindTexture( nameTex.ID );
+			IGraphicsApi gfx = game.Graphics;
+			gfx.BindTexture( nameTex.ID );
 			Vector3 pos = Position; pos.Y += Model.NameYOffset * ModelScale;
 			float scale = Math.Min( 1, Model.NameScale * ModelScale ) / 70f;
 			
@@ -100,41 +100,41 @@ namespace ClassicalSharp.Entities {
 			int col = FastColour.WhitePacked;
 			Vector2 size = new Vector2( nameTex.Width * scale, nameTex.Height * scale );
 			Utils.CalcBillboardPoints( size, pos, ref game.View, out p111, out p121, out p212, out p222 );
-			api.texVerts[0] = new VertexP3fT2fC4b( ref p111, nameTex.U1, nameTex.V2, col );
-			api.texVerts[1] = new VertexP3fT2fC4b( ref p121, nameTex.U1, nameTex.V1, col );
-			api.texVerts[2] = new VertexP3fT2fC4b( ref p222, nameTex.U2, nameTex.V1, col );
-			api.texVerts[3] = new VertexP3fT2fC4b( ref p212, nameTex.U2, nameTex.V2, col );
+			gfx.texVerts[0] = new VertexP3fT2fC4b( ref p111, nameTex.U1, nameTex.V2, col );
+			gfx.texVerts[1] = new VertexP3fT2fC4b( ref p121, nameTex.U1, nameTex.V1, col );
+			gfx.texVerts[2] = new VertexP3fT2fC4b( ref p222, nameTex.U2, nameTex.V1, col );
+			gfx.texVerts[3] = new VertexP3fT2fC4b( ref p212, nameTex.U2, nameTex.V2, col );
 			
-			api.SetBatchFormat( VertexFormat.P3fT2fC4b );
-			api.UpdateDynamicIndexedVb( DrawMode.Triangles, api.texVb, api.texVerts, 4, 6 );
+			gfx.SetBatchFormat( VertexFormat.P3fT2fC4b );
+			gfx.UpdateDynamicIndexedVb( DrawMode.Triangles, gfx.texVb, gfx.texVerts, 4 );
 		}
 		
 		protected void CheckSkin() {
 			DownloadedItem item;
 			game.AsyncDownloader.TryGetItem( SkinIdentifier, out item );
-			if( item != null && item.Data != null ) {
-				Bitmap bmp = (Bitmap)item.Data;
-				game.Graphics.DeleteTexture( ref TextureId );
-				if( !Platform.Is32Bpp( bmp ) )
-					game.Drawer2D.ConvertTo32Bpp( ref bmp );
-				uScale = 1; vScale = 1;
-				EnsurePow2( ref bmp );
-				
-				try {
-					SkinType = Utils.GetSkinType( bmp );
-					if( Model is HumanoidModel )
-						ClearHat( bmp, SkinType );
-					TextureId = game.Graphics.CreateTexture( bmp );
-					MobTextureId = -1;
-					
-					// Custom mob textures.
-					if( Utils.IsUrlPrefix( SkinName, 0 ) && item.TimeAdded > lastModelChange )
-						MobTextureId = TextureId;
-				} catch( NotSupportedException ) {
-					ResetSkin( bmp );
-				}
-				bmp.Dispose();
+			if( item == null || item.Data == null ) return;
+			
+			Bitmap bmp = (Bitmap)item.Data;
+			game.Graphics.DeleteTexture( ref TextureId );
+			if( !Platform.Is32Bpp( bmp ) )
+				game.Drawer2D.ConvertTo32Bpp( ref bmp );
+			uScale = 1; vScale = 1;
+			EnsurePow2( ref bmp );
+			
+			SkinType = Utils.GetSkinType( bmp );
+			if( SkinType == SkinType.Invalid ) {
+				ResetSkin( bmp ); return;
 			}
+			
+			if( Model is HumanoidModel )
+				ClearHat( bmp, SkinType );
+			TextureId = game.Graphics.CreateTexture( bmp, true );
+			MobTextureId = -1;
+			
+			// Custom mob textures.
+			if( Utils.IsUrlPrefix( SkinName, 0 ) && item.TimeAdded > lastModelChange )
+				MobTextureId = TextureId;
+			bmp.Dispose();
 		}
 		
 		void ResetSkin( Bitmap bmp ) {
@@ -143,6 +143,7 @@ namespace ClassicalSharp.Entities {
 			MobTextureId = -1;
 			TextureId = -1;
 			SkinType = game.DefaultPlayerSkinType;
+			bmp.Dispose();
 		}
 		
 		unsafe static void ClearHat( Bitmap bmp, SkinType skinType ) {

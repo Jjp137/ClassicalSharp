@@ -2,6 +2,7 @@
 using System;
 using ClassicalSharp.Entities;
 using ClassicalSharp.GraphicsAPI;
+using ClassicalSharp.Physics;
 using ClassicalSharp.Renderers;
 using OpenTK;
 
@@ -75,8 +76,8 @@ namespace ClassicalSharp.Model {
 		}
 		
 		protected override void DrawModel( Player p ) {
-			IGraphicsApi api = game.Graphics;
-			api.BindTexture( GetTexture( p.MobTextureId ) );
+			IGraphicsApi gfx = game.Graphics;
+			gfx.BindTexture( GetTexture( p.MobTextureId ) );
 			DrawHeadRotate( -p.PitchRadians, 0, 0, Head );
 			
 			DrawPart( Torso );
@@ -88,7 +89,7 @@ namespace ClassicalSharp.Model {
 			
 			if( !Fur ) return;
 			ModelCache cache = game.ModelCache;
-			api.BindTexture( cache.Textures[furIndex].TexID );
+			gfx.BindTexture( cache.Textures[furIndex].TexID );
 			DrawHeadRotate( -p.PitchRadians, 0, 0, FurHead );
 			
 			DrawPart( FurTorso );

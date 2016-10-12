@@ -118,10 +118,7 @@ namespace ClassicalSharp.GraphicsAPI {
 		
 		public override bool Texturing { set { Toggle( All.Texture2D, value ); } }
 		
-		public override int CreateTexture( int width, int height, IntPtr scan0 ) {
-			if( !Utils.IsPowerOf2( width ) || !Utils.IsPowerOf2( height ) )
-				Utils.LogDebug( "Creating a non power of two texture." );
-			
+		protected override int CreateTexture( int width, int height, IntPtr scan0, bool managedPool ) {
 			int texId = 0;
 			GL.GenTextures( 1, &texId );
 			GL.BindTexture( All.Texture2D, texId );
@@ -196,41 +193,20 @@ namespace ClassicalSharp.GraphicsAPI {
 			return id;
 		}
 		
-		int batchStride;
-		public override void UpdateDynamicVb<T>( DrawMode mode, int id, T[] vertices, int count ) {
-			GL.BindBuffer( All.ArrayBuffer, id );
-			GL.BufferSubData( All.ArrayBuffer, IntPtr.Zero, new IntPtr( count * batchStride ), vertices );
-			
-			setupBatchFunc();
-			GL.DrawArrays( modeMappings[(int)mode], 0, count );
-		}
-		
-		public override void UpdateDynamicIndexedVb<T>( DrawMode mode, int id, T[] vertices, int vCount, int indicesCount ) {
-			GL.BindBuffer( All.ArrayBuffer, id );
-			GL.BufferSubData( All.ArrayBuffer, IntPtr.Zero, new IntPtr( vCount * batchStride ), vertices );
-			
-			setupBatchFunc();
-			GL.DrawElements( modeMappings[(int)mode], indicesCount, indexType, zero );
-		}
-		
+		int batchStride;		
 		public override void SetDynamicVbData<T>( int id, T[] vertices, int count ) {
 			GL.BindBuffer( All.ArrayBuffer, id );
-			GL.BufferSubData( All.ArrayBuffer, IntPtr.Zero, new IntPtr( count * batchStride ), vertices );
+			GL.BufferSubData( All.ArrayBuffer, IntPtr.Zero, 
+			                 new IntPtr( count * batchStride ), vertices );
 		}
 		
-		public override void DeleteDynamicVb( ref int vb ) {
+		public override void DeleteVb( ref int vb ) {
 			if( vb <= 0 ) return;
 			int id = vb; GL.DeleteBuffers( 1, &id );
 			vb = -1;
 		}
 		
-		public override void DeleteVb( int vb ) {
-			if( vb <= 0 ) return;
-			int id = vb; GL.DeleteBuffers( 1, &id );
-			vb = -1;
-		}
-		
-		public override void DeleteIb( int ib ) {
+		public override void DeleteIb( ref int ib ) {
 			if( ib <= 0 ) return;
 			int id = ib; GL.DeleteBuffers( 1, &id );
 			ib = -1;

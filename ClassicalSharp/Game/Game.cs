@@ -255,11 +255,7 @@ namespace ClassicalSharp {
 			World.Reset();
 			World.blocks = null;
 			Drawer2D.InitColours();
-			
-			for( int block = BlockInfo.CpeCount; block < BlockInfo.BlocksCount; block++ )
-				BlockInfo.ResetBlockInfo( (byte)block, false );
-			BlockInfo.SetupCullingCache();
-			BlockInfo.InitLightOffsets();
+			BlockInfo.Reset( this );
 			
 			TexturePackExtractor.ExtractDefault( this );
 			Gui.SetNewScreen( new ErrorScreen( this, title, reason ) );
@@ -367,14 +363,17 @@ namespace ClassicalSharp {
 				}
 				
 				Graphics.DeleteTexture( ref texId );
-				if( setSkinType )
+				if( setSkinType ) {
 					DefaultPlayerSkinType = Utils.GetSkinType( bmp );
+					if( DefaultPlayerSkinType == SkinType.Invalid )
+						throw new NotSupportedException( "char.png has invalid dimensions" );
+				}
 				
 				if( !Platform.Is32Bpp( bmp ) ) {
 					using( Bitmap bmp32 = Drawer2D.ConvertTo32Bpp( bmp ) )
-						texId = Graphics.CreateTexture( bmp32 );
+						texId = Graphics.CreateTexture( bmp32, true );
 				} else {
-					texId = Graphics.CreateTexture( bmp );
+					texId = Graphics.CreateTexture( bmp, true );
 				}
 				return true;
 			}

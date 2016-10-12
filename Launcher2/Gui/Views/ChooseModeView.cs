@@ -28,9 +28,9 @@ namespace Launcher.Gui.Views {
 				drawer.SetBitmap( game.Framebuffer );
 				RedrawAll();
 				FastColour col = LauncherSkin.ButtonBorderCol;
-				int middle = game.Height / 2;
-				game.Drawer.DrawRect( col, game.Width / 2 - 250, middle - 35, 490, 1 );
-				game.Drawer.DrawRect( col, game.Width / 2 - 250, middle + 35, 490, 1 );
+				int midX = game.Width / 2, midY = game.Height / 2;
+				game.Drawer.DrawRect( col, midX - 250, midY - 35, 490, 1 );
+				game.Drawer.DrawRect( col, midX - 250, midY + 35, 490, 1 );
 			}
 		}
 		
@@ -66,12 +66,12 @@ namespace Launcher.Gui.Views {
 			
 			if( FirstTime ) {
 				backIndex = -1;
-				Makers.Label( this, "&eClick &fEnhanced &eif you are unsure which mode to choose.", textFont )
+				Makers.Label( this, "&eClick &fEnhanced &eif you'e not sure which mode to choose.", textFont )
 					.SetLocation( Anchor.Centre, Anchor.Centre, 0, 160 );
 			} else {
 				backIndex = widgetIndex;
 				Makers.Button( this, "Back", 80, 35, titleFont )
-					.SetLocation( Anchor.Centre, Anchor.Centre, 0, 175 );
+					.SetLocation( Anchor.Centre, Anchor.Centre, 0, 170 );
 			}
 		}
 	}

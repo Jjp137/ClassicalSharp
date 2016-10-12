@@ -6,7 +6,7 @@ using Launcher.Gui.Views;
 using Launcher.Gui.Widgets;
 using OpenTK.Input;
 
-namespace Launcher.Gui.Screens {	
+namespace Launcher.Gui.Screens {
 	public sealed class ColoursScreen : InputScreen {
 		
 		ColoursView view;
@@ -21,7 +21,7 @@ namespace Launcher.Gui.Screens {
 			view.Init();
 			
 			widgets[view.defIndex].OnClick = (x, y) => ResetColours();
-			widgets[view.defIndex + 1].OnClick = (x, y) => game.SetScreen( new MainScreen( game ) );
+			widgets[view.defIndex + 1].OnClick = (x, y) => game.SetScreen( new SettingsScreen( game ) );
 			SetupInputHandlers();
 			for( int i = 0; i < widgets.Length; i++ ) {
 				InputWidget input = widgets[i] as InputWidget;
@@ -41,21 +41,40 @@ namespace Launcher.Gui.Screens {
 			base.Dispose();
 		}
 		
+		
+		protected override void MouseMove( int x, int y, int xDelta, int yDelta ) {
+			base.MouseMove( x, y, xDelta, yDelta );
+			
+			for( int i = 0; i < 3; i++) {
+				SliderWidget slider = (SliderWidget)widgets[view.sliderIndex + i];				
+				if( x < slider.X || y < slider.Y || x >= slider.X + slider.Width
+				   || y >= slider.Y + slider.Height ) continue;
+				
+				int value = x - slider.X;
+				// Map from 0 to 255
+				value = (255 * value) / (slider.Width - 1);
+				slider.Value = value;
+				RedrawWidget( slider );
+				return;
+			}
+		}
+		
 		protected override void MouseWheelChanged( object sender, MouseWheelEventArgs e ) {
 			AdjustSelectedColour( e.Delta );
 		}
 		
 		protected override void KeyDown( object sender, KeyboardKeyEventArgs e ) {
-			if( e.Key == Key.Left )
+			if( e.Key == Key.Left ) {
 				AdjustSelectedColour( -1 );
-			else if( e.Key == Key.Right)
+			} else if( e.Key == Key.Right ) {
 				AdjustSelectedColour( +1 );
-			else if( e.Key == Key.Up )
+			} else if( e.Key == Key.Up ) {
 				AdjustSelectedColour( +10 );
-			else if( e.Key == Key.Down )
+			} else if( e.Key == Key.Down ) {
 				AdjustSelectedColour( -10 );
-			else
+			} else {
 				base.KeyDown( sender, e );
+			}
 		}
 		
 		void AdjustSelectedColour( int delta ) {

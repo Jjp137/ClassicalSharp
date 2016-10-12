@@ -1,6 +1,7 @@
 ﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
 #if !USE_DX && !ANDROID
 // SDL2 branch note: Keep this file around to make dealing with merge conflicts easier, but don't compile it anymore.
+// This file isn't guaranteed to compile if uncommented.
 
 /*
 using System;
@@ -154,10 +155,7 @@ namespace ClassicalSharp.GraphicsAPI {
 				else GL.Disable( EnableCap.Texture2D ); }
 		}
 		
-		public override int CreateTexture( int width, int height, IntPtr scan0 ) {
-			if( !Utils.IsPowerOf2( width ) || !Utils.IsPowerOf2( height ) )
-				Utils.LogDebug( "Creating a non power of two texture." );
-			
+		protected override int CreateTexture( int width, int height, IntPtr scan0, bool managedPool ) {
 			int texId = 0;
 			GL.GenTextures( 1, &texId );
 			GL.BindTexture( TextureTarget.Texture2D, texId );
@@ -240,67 +238,20 @@ namespace ClassicalSharp.GraphicsAPI {
 		}
 		
 		int batchStride;
-		
-		public override void UpdateDynamicVb( DrawMode mode, int vb, VertexP3fC4b[] vertices, int count ) {
-			UpdateDynamicVb<VertexP3fC4b>( mode, vb, vertices, count );
-		}
-		
-		public override void UpdateDynamicVb( DrawMode mode, int vb, VertexP3fT2fC4b[] vertices, int count ) {
-			UpdateDynamicVb<VertexP3fT2fC4b>( mode, vb, vertices, count );
-		}
-		
-		public void UpdateDynamicVb<T>( DrawMode mode, int id, T[] vertices, int count ) where T : struct {
-			GL.BindBuffer( BufferTarget.ArrayBuffer, id );
-			GL.BufferSubData( BufferTarget.ArrayBuffer, IntPtr.Zero, new IntPtr( count * batchStride ), vertices );
-			
-			setupBatchFunc();
-			GL.DrawArrays( modeMappings[(int)mode], 0, count );
-		}
-		
-		public override void UpdateDynamicIndexedVb( DrawMode mode, int vb, VertexP3fC4b[] vertices, int vCount, 
-		                                             int indicesCount ) {
-			UpdateDynamicIndexedVb<VertexP3fC4b>( mode, vb, vertices, vCount, indicesCount );
-		}
-		
-		public override void UpdateDynamicIndexedVb( DrawMode mode, int vb, VertexP3fT2fC4b[] vertices, int vCount, 
-		                                             int indicesCount ) {
-			UpdateDynamicIndexedVb<VertexP3fT2fC4b>( mode, vb, vertices, vCount, indicesCount );
-		}
-		
-		public void UpdateDynamicIndexedVb<T>( DrawMode mode, int id, T[] vertices, int vCount, int indicesCount ) where T : struct {
-			GL.BindBuffer( BufferTarget.ArrayBuffer, id );
-			GL.BufferSubData( BufferTarget.ArrayBuffer, IntPtr.Zero, new IntPtr( vCount * batchStride ), vertices );
-			
-			setupBatchFunc();
-			GL.DrawElements( modeMappings[(int)mode], indicesCount, indexType, zero );
-		}
-		
-		public override void SetDynamicVbData( int vb, VertexP3fC4b[] vertices, int count ) {
-			SetDynamicVbData<VertexP3fC4b>( mode, vb, vertices, count );
-		}
-		
-		public override void SetDynamicVbData( int vb, VertexP3fT2fC4b[] vertices, int count ) {
-			SetDynamicVbData<VertexP3fT2fC4b>( mode, vb, vertices, count );
-		}
 
-		public void SetDynamicVbData<T>( int id, T[] vertices, int count ) where T : struct {
+		public override void SetDynamicVbData<T>( int id, T[] vertices, int count ) {
 			GL.BindBuffer( BufferTarget.ArrayBuffer, id );
-			GL.BufferSubData( BufferTarget.ArrayBuffer, IntPtr.Zero, new IntPtr( count * batchStride ), vertices );
+			GL.BufferSubData( BufferTarget.ArrayBuffer, IntPtr.Zero, 
+			                 new IntPtr( count * batchStride ), vertices );
 		}
 		
-		public override void DeleteDynamicVb( ref int vb ) {
+		public override void DeleteVb( ref int vb ) {
 			if( vb <= 0 ) return;
 			int id = vb; GL.DeleteBuffers( 1, &id );
 			vb = -1;
 		}
 		
-		public override void DeleteVb( int vb ) {
-			if( vb <= 0 ) return;
-			int id = vb; GL.DeleteBuffers( 1, &id );
-			vb = -1;
-		}
-		
-		public override void DeleteIb( int ib ) {
+		public override void DeleteIb( ref int ib ) {
 			if( ib <= 0 ) return;
 			int id = ib; GL.DeleteBuffers( 1, &id );
 			ib = -1;

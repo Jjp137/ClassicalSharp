@@ -34,17 +34,22 @@ namespace ClassicalSharp.Entities {
 			int sep = model.IndexOf( '|' );
 			string scale = sep == -1 ? null : model.Substring( sep + 1 );
 			ModelName = sep == -1 ? model : model.Substring( 0, sep );
+			ParseScale( scale );
+			
+			if( Utils.CaselessEquals( model, "giant" ) ) {
+				ModelName = "humanoid";
+				ModelScale *= 2;
+			}
 			
 			Model = game.ModelCache.Get( ModelName );
 			lastModelChange = DateTime.UtcNow;
-			MobTextureId = -1;
-			ParseScale( scale );
+			MobTextureId = -1;		
 		}
 		
 		void ParseScale( string scale ) {
 			if( scale == null ) return;
 			float value;
-			if( !float.TryParse( scale, out value ) || float.IsNaN( value ) )
+			if( !Utils.TryParseDecimal( scale, out value ) )
 				return;
 			
 			Utils.Clamp( ref value, 0.25f, Model.MaxScale );

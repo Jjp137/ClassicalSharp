@@ -64,6 +64,9 @@ namespace SharpDX.Direct3D9
 		                                         IntPtr indexBufferOut, IntPtr sharedHandle);
 		private DXCreateIndexBuffer CreateIndexBufferFunc;
 		
+		private delegate int DXUpdateTexture(IntPtr comPointer, IntPtr srcTex, IntPtr dstTex);
+		private DXUpdateTexture UpdateTextureFunc;
+		
 		private delegate int DXGetRenderTargetData(IntPtr comPointer, IntPtr renderTarget, IntPtr destSurface);
 		private DXGetRenderTargetData GetRenderTargetDataFunc;
 		
@@ -120,6 +123,7 @@ namespace SharpDX.Direct3D9
 			CreateTextureFunc = (DXCreateTexture) GetFunc(comPtr, 23, typeof(DXCreateTexture));
 			CreateVertexBufferFunc = (DXCreateVertexBuffer) GetFunc(comPtr, 26, typeof(DXCreateVertexBuffer));
 			CreateIndexBufferFunc = (DXCreateIndexBuffer) GetFunc(comPtr, 27, typeof(DXCreateIndexBuffer));
+			UpdateTextureFunc = (DXUpdateTexture) GetFunc(comPtr, 31, typeof(DXUpdateTexture));
 			GetRenderTargetDataFunc = (DXGetRenderTargetData) GetFunc(comPtr, 32, typeof(DXGetRenderTargetData));
 			CreateOffscreenPlainSurfaceFunc = (DXCreateOffscreenPlainSurface) GetFunc(comPtr, 36, typeof(DXCreateOffscreenPlainSurface));
 			BeginSceneFunc = (DXBeginScene) GetFunc(comPtr, 41, typeof(DXBeginScene));
@@ -206,6 +210,11 @@ namespace SharpDX.Direct3D9
 			                                        (IntPtr)(void*)&pOut, IntPtr.Zero);
 			if( res < 0 ) { throw new SharpDXException( res ); }
 			return new DataBuffer( pOut );
+		}
+		
+		public void UpdateTexture(Texture srcTex, Texture dstTex) {
+			int res = UpdateTextureFunc(comPointer, srcTex.comPointer, dstTex.comPointer);
+			if( res < 0 ) { throw new SharpDXException( res ); }
 		}
 		
 		public void GetRenderTargetData(Surface renderTarget, Surface destSurface) {

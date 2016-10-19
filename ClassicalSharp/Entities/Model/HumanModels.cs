@@ -36,36 +36,41 @@ namespace ClassicalSharp.Model {
 		public override AABB PickingBounds {
 			get { return new AABB( -4/16f, 0, -4/16f, 4/16f, 16/16f, 4/16f ); }
 		}
-	}
-	
-	public class GiantModel : HumanoidModel {
+	}	
+
+	public class HumanoidHeadModel : HumanoidModel {
 		
-		const float size = 2f;
-		public GiantModel( Game window ) : base( window ) { }
+		public HumanoidHeadModel( Game window ) : base( window ) { }
 		
-		protected override void MakeDescriptions() {
-			base.MakeDescriptions();
-			head = head.Scale( size ); torso = torso.Scale( size );
-			lLeg = lLeg.Scale( size ); rLeg = rLeg.Scale( size );
-			lArm = lArm.Scale( size ); rArm = rArm.Scale( size );
-			offset = 0.5f * size;
+		public ModelPart Head, Hat;
+		internal override void CreateParts() {
+			vertices = new ModelVertex[boxVertices * 2];
+			head = MakeBoxBounds( -4, 0, -4, 4, 8, 4 ).RotOrigin( 0, 4, 0 );
+			
+			Head = BuildBox( head.TexOrigin( 0, 0 ) );
+			Hat = BuildBox( head.TexOrigin( 32, 0 ).Expand( offset ) );
 		}
 		
-		public override float MaxScale { get { return 1; } }
+		public override float NameYOffset { get { return 8/16f + 0.5f/16f; } }
 		
-		public override float NameScale { get { return 2; } }
-
-		public override float NameYOffset { get { return 2 * size + 2.2f/16; } }
-		
-		public override float GetEyeY( Entity entity ) { return base.GetEyeY( entity ) * size; }
+		public override float GetEyeY( Entity entity ) { return 6/16f; }
 		
 		public override Vector3 CollisionSize {
-			get { return new Vector3( 8/16f * size + 0.6f/16f, 
-			                         28.1f/16f * size, 8/16f * size + 0.6f/16f ); }
+			get { return new Vector3( 7.9f/16f, 7.9f/16f, 7.9f/16f ); }
 		}
 		
 		public override AABB PickingBounds {
-			get { return base.PickingBounds.Scale( size ); }
+			get { return new AABB( -4/16f, 0, -4/16f, 4/16f, 8/16f, 4/16f ); }
+		}
+
+		protected override void RenderParts( Player p ) {
+			DrawHeadRotate( -p.PitchRadians, 0, 0, Head );
+			UpdateVB();
+			
+			game.Graphics.AlphaTest = true;
+			index = 0;
+			DrawHeadRotate( -p.PitchRadians, 0, 0, Hat );
+			UpdateVB();
 		}
 	}
 }

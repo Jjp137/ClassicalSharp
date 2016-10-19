@@ -13,7 +13,7 @@ using ClassicalSharp.Network;
 using ClassicalSharp.Particles;
 using ClassicalSharp.Renderers;
 using ClassicalSharp.Selections;
-using ClassicalSharp.TexturePack;
+using ClassicalSharp.Textures;
 #if ANDROID
 using Android.Graphics;
 #endif
@@ -93,10 +93,10 @@ namespace ClassicalSharp {
 			}
 			Graphics.LostContextFunction = Server.Tick;
 			
-			firstPersonCam = new FirstPersonCamera( this );
-			thirdPersonCam = new ThirdPersonCamera( this, false );
-			forwardThirdPersonCam = new ThirdPersonCamera( this, true );
-			Camera = firstPersonCam;
+			Cameras.Add( new FirstPersonCamera( this ) );
+			Cameras.Add( new ThirdPersonCamera( this, false ) );
+			Cameras.Add( new ThirdPersonCamera( this, true ) );
+			Camera = Cameras[0];
 			UpdateProjection();
 			
 			Gui = AddComponent( new GuiInterface( this ) );
@@ -135,7 +135,7 @@ namespace ClassicalSharp {
 		
 		void ExtractInitialTexturePack() {
 			defTexturePack = Options.Get( OptionsKey.DefaultTexturePack ) ?? "default.zip";
-			TexturePackExtractor extractor = new TexturePackExtractor();
+			TexturePack extractor = new TexturePack();
 			extractor.Extract( "default.zip", this );
 			// in case the user's default texture pack doesn't have all required textures
 			if( DefaultTexturePack != "default.zip" )

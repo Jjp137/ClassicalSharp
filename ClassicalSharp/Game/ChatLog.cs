@@ -10,7 +10,7 @@ namespace ClassicalSharp {
 	public sealed class Chat : IGameComponent {
 		
 		public ChatLine Status1, Status2, Status3, BottomRight1,
-		BottomRight2, BottomRight3, Announcement, ClientClock;
+		BottomRight2, BottomRight3, Announcement;
 		public ChatLine[] ClientStatus = new ChatLine[6];
 		
 		Game game;
@@ -41,7 +41,7 @@ namespace ClassicalSharp {
 			game.Server.SendChat( text, partial );
 		}
 		
-		static char[] trimChars = new [] { ' ', '\0' };
+		static char[] trimChars = new char[] { ' ', '\0' };
 		StringBuffer logBuffer = new StringBuffer( 128 );
 		public void Add( string text ) {
 			Log.Add( text );
@@ -69,8 +69,6 @@ namespace ClassicalSharp {
 				Announcement = text;
 			} else if( type >= MessageType.ClientStatus1 && type <= MessageType.ClientStatus6 ) {
 				ClientStatus[(int)(type - MessageType.ClientStatus1)] = text;
-			} else if( type == MessageType.ClientClock ) {
-				ClientClock = text;
 			}
 			game.Events.RaiseChatReceived( text, type );
 		}

@@ -90,16 +90,18 @@
     <Compile Include="2D\Drawing\IDrawer2D.cs" />
     <Compile Include="2D\Screens\ChatScreen.cs" />
     <Compile Include="2D\Screens\ClickableScreen.cs" />
+    <Compile Include="2D\Screens\DeathScreen.cs" />
     <Compile Include="2D\Screens\ErrorScreen.cs" />
-    <Compile Include="2D\Screens\FilesScreen.cs" />
     <Compile Include="2D\Screens\FpsScreen.cs" />
     <Compile Include="2D\Screens\Inventory\InventoryScreen.cs" />
     <Compile Include="2D\Screens\Inventory\InventoryScreen.Input.cs" />
     <Compile Include="2D\Screens\Inventory\InventoryScreen.Scrolling.cs" />
     <Compile Include="2D\Screens\LoadingMapScreen.cs" />
+    <Compile Include="2D\Screens\MenuScreen.cs" />
     <Compile Include="2D\Screens\Menu\ClassicOptionsScreen.cs" />
     <Compile Include="2D\Screens\Menu\EditHotkeyScreen.cs" />
     <Compile Include="2D\Screens\Menu\EnvSettingsScreen.cs" />
+    <Compile Include="2D\Screens\Menu\FilesScreen.cs" />
     <Compile Include="2D\Screens\Menu\GenLevelScreen.cs" />
     <Compile Include="2D\Screens\Menu\GraphicsOptionsScreen.cs" />
     <Compile Include="2D\Screens\Menu\GuiOptionsScreen.cs" />
@@ -109,7 +111,6 @@
     <Compile Include="2D\Screens\Menu\KeyBindingsScreens.cs" />
     <Compile Include="2D\Screens\Menu\LoadLevelScreen.cs" />
     <Compile Include="2D\Screens\Menu\MenuOptionsScreen.cs" />
-    <Compile Include="2D\Screens\Menu\MenuScreen.cs" />
     <Compile Include="2D\Screens\Menu\NostalgiaScreen.cs" />
     <Compile Include="2D\Screens\Menu\OptionsGroupScreen.cs" />
     <Compile Include="2D\Screens\Menu\PauseScreen.cs" />
@@ -122,6 +123,7 @@
     <Compile Include="2D\Texture.cs" />
     <Compile Include="2D\Utils\FastBitmap.cs" />
     <Compile Include="2D\Utils\FastColour.cs" />
+    <Compile Include="2D\Utils\TextAtlas.cs" />
     <Compile Include="2D\Widgets\BlockHotbarWidget.cs" />
     <Compile Include="2D\Widgets\Chat\AltTextInputWidget.Types.cs" />
     <Compile Include="2D\Widgets\Chat\ChatTextWidget.cs" />
@@ -255,7 +257,6 @@
     <Compile Include="Network\Utils\FixedBufferStream.cs" />
     <Compile Include="Network\Utils\GZipHeaderReader.cs" />
     <Compile Include="Commands\CommandList.cs" />
-    <Compile Include="Commands\CommandReader.cs" />
     <Compile Include="Network\Utils\NetWriter.cs" />
     <Compile Include="Math\PickedPos.cs" />
     <Compile Include="Math\Picking.cs" />
@@ -296,7 +297,7 @@
     <Compile Include="TexturePack\TextureCache.cs" />
     <Compile Include="TexturePack\TerrainAtlas1D.cs" />
     <Compile Include="TexturePack\TerrainAtlas2D.cs" />
-    <Compile Include="TexturePack\TexturePackExtractor.cs" />
+    <Compile Include="TexturePack\TexturePack.cs" />
     <Compile Include="TexturePack\ZipReader.cs" />
     <Compile Include="Utils\Camera.cs" />
     <Compile Include="Utils\ErrorHandler.cs" />

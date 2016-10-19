@@ -13,10 +13,10 @@ namespace ClassicalSharp.Gui.Widgets {
 		}
 		
 		/// <summary> Whether this widget is currently being moused over. </summary>
-		public virtual bool Active { get; set; }
+		public bool Active;
 		
 		/// <summary> Whether this widget is prevented from being interacted with. </summary>
-		public virtual bool Disabled { get; set; }
+		public bool Disabled;
 		
 		/// <summary> Invoked when this widget is clicked on. Can be null. </summary>
 		public ClickHandler OnClick;
@@ -40,10 +40,10 @@ namespace ClassicalSharp.Gui.Widgets {
 		public Anchor VerticalAnchor;
 		
 		/// <summary> Horizontal offset from the reference point in pixels. </summary>
-		public int XOffset = 0;
+		public int XOffset;
 		
 		/// <summary> Vertical offset from the reference point in pixels. </summary>
-		public int YOffset = 0;
+		public int YOffset;
 		
 		/// <summary> Width and height of widget in pixels. </summary>
 		public Size Size { get { return new Size( Width, Height ); } }

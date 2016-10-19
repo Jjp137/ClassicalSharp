@@ -16,7 +16,7 @@ using ClassicalSharp.Network;
 using ClassicalSharp.Particles;
 using ClassicalSharp.Renderers;
 using ClassicalSharp.Selections;
-using ClassicalSharp.TexturePack;
+using ClassicalSharp.Textures;
 using OpenTK;
 using OpenTK.Input;
 
@@ -68,10 +68,10 @@ namespace ClassicalSharp {
 		/// (or for whole server if supported). </summary>
 		public TabList TabList;
 		
-		/// <summary> Current camera the player is using to view the world with. </summary>
-		/// <remarks> e.g. first person, thid person, forward third person, etc. </remarks>
+		/// <summary> Current camera the player is using to view the world. </summary>
 		public Camera Camera;
-		Camera firstPersonCam, thirdPersonCam, forwardThirdPersonCam;
+		/// <summary> List of all cameras the user can use to view the world. </summary>
+		public List<Camera> Cameras = new List<Camera>();
 		
 		/// <summary> Contains the metadata about each currently defined block. </summary>
 		/// <remarks> e.g. blocks light, height, texture IDs, etc. </remarks>
@@ -88,8 +88,6 @@ namespace ClassicalSharp {
 		
 		/// <summary> Whether the third person camera should have their camera position clipped so as to not intersect blocks. </summary>
 		public bool CameraClipping = true;
-		
-		public bool ShowClock = false;
 		
 		public bool SkipClear = false;
 		
@@ -222,7 +220,7 @@ namespace ClassicalSharp {
 		/// this method returns "default.zip". </remarks>
 		public string DefaultTexturePack {
 			get {
-				string path = Path.Combine( Program.AppDirectory, TexturePackExtractor.Dir );
+				string path = Path.Combine( Program.AppDirectory, TexturePack.Dir );
 				path = Path.Combine( path, defTexturePack );
 				return File.Exists( path ) && !ClassicMode ? defTexturePack : "default.zip"; 
 			}

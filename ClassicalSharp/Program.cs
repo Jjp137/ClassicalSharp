@@ -2,7 +2,7 @@
 using System;
 using System.IO;
 using System.Net;
-using ClassicalSharp.TexturePack;
+using ClassicalSharp.Textures;
 using OpenTK;
 using SDL2;
 
@@ -10,7 +10,7 @@ namespace ClassicalSharp {
 	
 	internal static class Program {
 		
-		public const string AppName = "ClassicalSharp 0.99.2";
+		public const string AppName = "ClassicalSharp 0.99.4";
 		
 		public static string AppDirectory;
 		
@@ -22,7 +22,7 @@ namespace ClassicalSharp {
 			CleanupMainDirectory();
 			
 			Utils.LogDebug( "Starting " + AppName + ".." );
-			string path = Path.Combine( Program.AppDirectory, TexturePackExtractor.Dir );
+			string path = Path.Combine( Program.AppDirectory, TexturePack.Dir );
 			if( !File.Exists( Path.Combine( path, "default.zip" ) ) ) {
 				Utils.LogDebug( "default.zip not found. Cannot start." );
 				return;
@@ -106,7 +106,7 @@ namespace ClassicalSharp {
 			string mapPath = Path.Combine( Program.AppDirectory, "maps" );
 			if( !Directory.Exists( mapPath ) )
 				Directory.CreateDirectory( mapPath );
-			string texPath = Path.Combine( Program.AppDirectory, TexturePackExtractor.Dir );
+			string texPath = Path.Combine( Program.AppDirectory, TexturePack.Dir );
 			if( !Directory.Exists( texPath ) )
 				Directory.CreateDirectory( texPath );
 			

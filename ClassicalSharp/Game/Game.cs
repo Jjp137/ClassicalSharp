@@ -17,7 +17,7 @@ using ClassicalSharp.Network;
 using ClassicalSharp.Particles;
 using ClassicalSharp.Renderers;
 using ClassicalSharp.Selections;
-using ClassicalSharp.TexturePack;
+using ClassicalSharp.Textures;
 using OpenTK;
 using OpenTK.Input;
 #if ANDROID
@@ -89,15 +89,16 @@ namespace ClassicalSharp {
 			return false;
 		}
 		
-		public void SetViewDistance( float distance, bool save ) {
+		public void SetViewDistance( float distance, bool userDist ) {
+			if( userDist ) {
+				UserViewDistance = distance;
+				Options.Set( OptionsKey.ViewDist, distance );
+			}
+			
 			distance = Math.Min( distance, MaxViewDistance );
 			if( distance == ViewDistance ) return;
 			ViewDistance = distance;
 			
-			if( save ) {
-				UserViewDistance = distance;
-				Options.Set( OptionsKey.ViewDist, distance );
-			}
 			Events.RaiseViewDistanceChanged();
 			UpdateProjection();
 		}
@@ -257,23 +258,19 @@ namespace ClassicalSharp {
 			Drawer2D.InitColours();
 			BlockInfo.Reset( this );
 			
-			TexturePackExtractor.ExtractDefault( this );
+			TexturePack.ExtractDefault( this );
 			Gui.SetNewScreen( new ErrorScreen( this, title, reason ) );
 			GC.Collect();
 		}
 		
 		public void CycleCamera() {
-			if( ClassicMode ) return;
-			PerspectiveCamera oldCam = (PerspectiveCamera)Camera;
-			if( Camera == firstPersonCam ) Camera = thirdPersonCam;
-			else if( Camera == thirdPersonCam ) Camera = forwardThirdPersonCam;
-			else Camera = firstPersonCam;
-
+			if( ClassicMode ) return;			
+			
+			int i = Cameras.IndexOf( Camera );
+			i = (i + 1) % Cameras.Count;
+			Camera = Cameras[i];
 			if( !LocalPlayer.Hacks.CanUseThirdPersonCamera || !LocalPlayer.Hacks.Enabled )
-				Camera = firstPersonCam;
-			PerspectiveCamera newCam = (PerspectiveCamera)Camera;
-			newCam.delta = oldCam.delta;
-			newCam.previous = oldCam.previous;
+				Camera = Cameras[0];
 			UpdateProjection();
 		}
 		

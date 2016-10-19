@@ -81,6 +81,8 @@ namespace Launcher {
 			string path = Assembly.GetExecutingAssembly().Location;
 			Window.Icon = Icon.ExtractAssociatedIcon( path );
 			//Minimised = Window.WindowState == WindowState.Minimized;
+			
+			Drawer.Colours['g'] = new FastColour( 125, 125, 125 );
 		}
 		
 		void LoadFont() {

@@ -41,9 +41,9 @@ namespace Launcher.Gui.Views {
 		internal string updateText = "&eChecking..";
 		protected override void MakeWidgets() {
 			widgetIndex = 0;
-			MakeInput( Get( 0 ), 280, false, 16, "&7Username.." )
+			MakeInput( Get( 0 ), 280, false, 16, "&gUsername.." )
 				.SetLocation( Anchor.Centre, Anchor.Centre, 0, -120 );
-			MakeInput( Get( 1 ), 280, true, 64, "&7Password.." )
+			MakeInput( Get( 1 ), 280, true, 64, "&gPassword.." )
 				.SetLocation( Anchor.Centre, Anchor.Centre, 0, -75 );
 			
 			loginIndex = widgetIndex;
@@ -74,11 +74,11 @@ namespace Launcher.Gui.Views {
 			widgets[sslIndex + 1].Visible = sslVisible;
 			
 			Makers.Label( this, updateText, updateFont )
-				.SetLocation( Anchor.BottomOrRight, Anchor.LeftOrTop, -5, 50 );
+				.SetLocation( Anchor.BottomOrRight, Anchor.BottomOrRight, -10, -45 );
 			
 			settingsIndex = widgetIndex;
 			Makers.Button( this, "Options", 100, buttonHeight, buttonFont )
-				.SetLocation( Anchor.BottomOrRight, Anchor.LeftOrTop, -6, 6 );
+				.SetLocation( Anchor.BottomOrRight, Anchor.BottomOrRight, -6, -6 );
 		}
 	}
 }

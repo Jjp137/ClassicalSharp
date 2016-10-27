@@ -32,9 +32,7 @@ namespace ClassicalSharp.Gui {
 		
 		/// <summary> Causes the gui element to recreate all of its sub-elements and/or textures. </summary>
 		/// <remarks> Typically used when bitmap font changes. </remarks>
-		public virtual void Recreate() { 
-			Dispose(); Init();
-		}
+		public void Recreate() { Dispose(); Init(); }
 		
 		/// <summary> Called when the game window is resized. </summary>
 		public abstract void OnResize( int width, int height );
@@ -59,16 +57,7 @@ namespace ClassicalSharp.Gui {
 			return (axisSize - elemSize) / 2 + offset;
 		}
 		
-		protected bool IsValidInputChar( char c ) {
-			if( c >= ' ' && c <= '~' ) return true; // ascii
-			
-			bool isCP437 = Utils.ControlCharReplacements.IndexOf( c ) >= 0 ||
-				Utils.ExtendedCharReplacements.IndexOf( c ) >= 0;
-			bool supportsCP437 = game.Server.SupportsFullCP437;
-			return supportsCP437 && isCP437;
-		}
-		
-		protected static bool Contains( int recX, int recY, int width, int height, int x, int y ) {
+		public static bool Contains( int recX, int recY, int width, int height, int x, int y ) {
 			return x >= recX && y >= recY && x < recX + width && y < recY + height;
 		}
 	}

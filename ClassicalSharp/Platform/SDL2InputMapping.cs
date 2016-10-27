@@ -116,9 +116,6 @@ namespace ClassicalSharp
 			{ SDL.SDL_Keycode.SDLK_PRINTSCREEN, Key.PrintScreen },
 			{ SDL.SDL_Keycode.SDLK_PAUSE, Key.Pause },
 
-			{ SDL.SDL_Keycode.SDLK_CLEAR, Key.Clear },  // OpenTK: "Keypad5 with NumLock disabled", but is it really?
-			{ SDL.SDL_Keycode.SDLK_SLEEP, Key.Sleep },  // TODO: can anyone test this?
-
 			{ SDL.SDL_Keycode.SDLK_F1, Key.F1 },
 			{ SDL.SDL_Keycode.SDLK_F2, Key.F2 },
 			{ SDL.SDL_Keycode.SDLK_F3, Key.F3 },

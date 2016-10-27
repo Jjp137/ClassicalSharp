@@ -19,7 +19,7 @@ namespace ClassicalSharp.Gui.Screens {
 		HudScreen hud;
 		int chatLines;
 		ChatTextWidget announcement;
-		TextInputWidget textInput;
+		InputWidget textInput;
 		TextGroupWidget status, bottomRight, normalChat, clientStatus;
 		bool suppressNextPress = true;
 		int chatIndex;
@@ -50,7 +50,7 @@ namespace ClassicalSharp.Gui.Screens {
 		}
 		
 		void ConstructWidgets() {
-			textInput = new TextInputWidget( game, chatFont );
+			textInput = new ChatInputWidget( game, chatFont );
 			textInput.YOffset = 5;
 			altText = new AltTextInputWidget( game, chatFont, textInput );
 			altText.Init();
@@ -330,7 +330,7 @@ namespace ClassicalSharp.Gui.Screens {
 		
 		public void AppendTextToInput( string text ) {
 			if( !HandlesAllInput ) return;
-			textInput.AppendText( text );
+			textInput.Append( text );
 		}
 		
 		public override bool HandlesKeyDown( Key key ) {
@@ -346,7 +346,7 @@ namespace ClassicalSharp.Gui.Screens {
 					
 					if( key == game.Mapping( KeyBind.PauseOrExit ) )
 						textInput.Clear();
-					textInput.SendTextInBufferAndReset();
+					textInput.EnterInput();
 					altText.SetActive( false );
 					
 					chatIndex = game.Chat.Log.Count - chatLines;
@@ -420,12 +420,12 @@ namespace ClassicalSharp.Gui.Screens {
 				game.Gui.ShowWarning( warning );
 			} else if( game.ClickableChat ) {
 				for( int i = 0; i < text.Length; i++ ) {
-					if( !IsValidInputChar( text[i] ) ) {
+					if( !Utils.IsValidInputChar( text[i], game ) ) {
 						game.Chat.Add( "&eChatline contained characters that can't be sent on this server." );
 						return true;
 					}
 				}
-				textInput.AppendText( text );
+				textInput.Append( text );
 			}
 			return true;
 		}
@@ -440,7 +440,7 @@ namespace ClassicalSharp.Gui.Screens {
 		
 		void AppendUrl( WarningScreen screen ) {
 			if( !game.ClickableChat ) return;
-			textInput.AppendText( (string)screen.Metadata );
+			textInput.Append( (string)screen.Metadata );
 		}
 		
 		void ScrollHistory() {

@@ -185,8 +185,10 @@ namespace ClassicalSharp {
 			
 			// Need to render again over top of translucent block, as the selection outline
 			// is drawn without writing to the depth buffer
-			if( SelectedPos.Valid && !HideGui && BlockInfo.IsTranslucent[SelectedPos.Block] )
+			if( SelectedPos.Valid && !HideGui 
+			   && BlockInfo.Draw[SelectedPos.Block] == DrawType.Translucent ) {
 				Picking.Render( delta );
+			}
 			
 			Entities.DrawShadows();
 			SelectionManager.Render( delta );
@@ -337,8 +339,8 @@ namespace ClassicalSharp {
 		}
 		
 		internal bool CanPick( byte block ) {
-			if( BlockInfo.IsAir[block] ) return false;
-			if( BlockInfo.IsSprite[block] ) return true;
+			if( BlockInfo.Draw[block] == DrawType.Gas ) return false;
+			if( BlockInfo.Draw[block] == DrawType.Sprite ) return true;
 			if( BlockInfo.Collide[block] != CollideType.SwimThrough ) return true;
 			
 			return !ModifiableLiquids ? false :

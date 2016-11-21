@@ -6,28 +6,31 @@ using OpenTK.Input;
 using Android.Graphics;
 #endif
 
-namespace ClassicalSharp.Gui.Widgets {	
+namespace ClassicalSharp.Gui.Widgets {
 	public sealed class ButtonWidget : Widget {
 		
 		public ButtonWidget( Game game, Font font ) : base( game ) {
 			this.font = font;
 		}
 		
-		public static ButtonWidget Create( Game game, int x, int y, int width, int height, string text, Anchor horizontal,
-		                                  Anchor vertical, Font font, ClickHandler onClick ) {
+		public static ButtonWidget Create( Game game, int width, int height, string text, Font font, ClickHandler onClick ) {
 			ButtonWidget widget = new ButtonWidget( game, font );
 			widget.Init();
-			widget.HorizontalAnchor = horizontal;
-			widget.VerticalAnchor = vertical;
-			widget.XOffset = x; widget.YOffset = y;
-			widget.DesiredMaxWidth = width; widget.DesiredMaxHeight = height;
+			widget.MinWidth = width; widget.MinHeight = height;
 			widget.SetText( text );
 			widget.OnClick = onClick;
 			return widget;
 		}
 		
+		public ButtonWidget SetLocation( Anchor horAnchor, Anchor verAnchor, int xOffset, int yOffset ) {
+			HorizontalAnchor = horAnchor; VerticalAnchor = verAnchor;
+			XOffset = xOffset; YOffset = yOffset;
+			CalculatePosition();
+			return this;
+		}
+		
 		Texture texture;
-		public int DesiredMaxWidth, DesiredMaxHeight;
+		public int MinWidth, MinHeight;
 		int defaultHeight;
 		internal Font font;
 		
@@ -53,11 +56,10 @@ namespace ClassicalSharp.Gui.Widgets {
 			} else {
 				DrawTextArgs args = new DrawTextArgs( text, font, true );
 				texture = game.Drawer2D.MakeChatTextTexture( ref args, 0, 0 );
-				Width = Math.Max( texture.Width, DesiredMaxWidth );
-				Height = Math.Max( texture.Height, DesiredMaxHeight );
+				Width = Math.Max( texture.Width, MinWidth );
+				Height = Math.Max( texture.Height, MinHeight );
 				
-				X = CalcOffset( game.Width, Width, XOffset, HorizontalAnchor );
-				Y = CalcOffset( game.Height, Height, YOffset, VerticalAnchor );				
+				CalculatePosition();
 				texture.X1 = X + (Width / 2 - texture.Width / 2);
 				texture.Y1 = Y + (Height / 2 - texture.Height / 2);
 			}
@@ -84,10 +86,12 @@ namespace ClassicalSharp.Gui.Widgets {
 			gfx.DeleteTexture( ref texture );
 		}
 		
-		public override void MoveTo( int newX, int newY ) {
-			int deltaX = newX - X, deltaY = newY - Y;
-			texture.X1 += deltaX; texture.Y1 += deltaY;
-			X = newX; Y = newY;
+		public override void CalculatePosition() {
+			int oldX = X, oldY = Y;
+			base.CalculatePosition();
+			
+			texture.X1 += X - oldX;
+			texture.Y1 += Y - oldY;
 		}
 		
 		public Func<Game, string> GetValue;

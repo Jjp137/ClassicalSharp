@@ -15,22 +15,24 @@ namespace ClassicalSharp.Gui.Screens {
 			regularFont = new Font( game.FontName, 40, FontStyle.Regular );
 			
 			widgets = new Widget[] {
-				ChatTextWidget.Create( game, 0, -150, "Game over!", Anchor.Centre, Anchor.Centre, regularFont ),
-				ChatTextWidget.Create( game, 0, -75, "Score: 0", Anchor.Centre, Anchor.Centre, titleFont ),
-				ButtonWidget.Create( game, 0, 25, 401, 40, "Generate new level...",
-				                    Anchor.Centre, Anchor.Centre, titleFont, GenLevelClick ),
-				ButtonWidget.Create( game, 0, 75, 401, 40, "Load level...",
-				                    Anchor.Centre, Anchor.Centre, titleFont, LoadLevelClick ),
+				TextWidget.Create( game, "Game over!", regularFont )
+					.SetLocation( Anchor.Centre, Anchor.Centre, 0, -150 ),
+				TextWidget.Create( game, "Score: 0", titleFont )
+					.SetLocation( Anchor.Centre, Anchor.Centre, 0, -75 ),
+				ButtonWidget.Create( game, 401, 40, "Generate new level...", titleFont, GenLevelClick )
+					.SetLocation( Anchor.Centre, Anchor.Centre, 0, 25 ),
+				ButtonWidget.Create( game, 401, 40, "Load level...", titleFont, LoadLevelClick )
+					.SetLocation( Anchor.Centre, Anchor.Centre, 0, 75 ),
 			};
 		}
 
-		void GenLevelClick( Game g, Widget w, MouseButton mouseBtn ) {
-			if( mouseBtn != MouseButton.Left ) return;
+		void GenLevelClick( Game g, Widget w, MouseButton btn, int x, int y ) {
+			if( btn != MouseButton.Left ) return;
 			game.Gui.SetNewScreen( new GenLevelScreen( game ) );
 		}
 		
-		void LoadLevelClick( Game g, Widget w, MouseButton mouseBtn ) {
-			if( mouseBtn != MouseButton.Left ) return;
+		void LoadLevelClick( Game g, Widget w, MouseButton btn, int x, int y ) {
+			if( btn != MouseButton.Left ) return;
 			game.Gui.SetNewScreen( new LoadLevelScreen( game ) );
 		}
 	}

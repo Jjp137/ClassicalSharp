@@ -11,16 +11,22 @@ namespace ClassicalSharp.Gui.Screens {
 		readonly Font titleFont, messageFont;
 		Widget[] widgets;
 		DateTime initTime, clearTime;
+		bool canReconnect;
 		
 		public ErrorScreen( Game game, string title, string message ) : base( game ) {
 			this.title = title;
 			this.message = message;
+			
+			string reason = Utils.StripColours( message );
+			canReconnect = !(reason.StartsWith( "Kicked " ) || reason.StartsWith( "Banned " ) );
+			
 			titleFont = new Font( game.FontName, 16, FontStyle.Bold );
 			messageFont = new Font( game.FontName, 16, FontStyle.Regular );
 		}
 		
 		public override void Render( double delta ) {
-			UpdateReconnectState( delta );
+			if( canReconnect ) UpdateDelayLeft( delta );
+			
 			// NOTE: We need to make sure that both the front and back buffers have
 			// definitely been drawn over, so we redraw the background multiple times.
 			if( DateTime.UtcNow < clearTime )
@@ -29,12 +35,16 @@ namespace ClassicalSharp.Gui.Screens {
 		
 		public override void Init() {
 			game.SkipClear = true;
+			string msg = canReconnect ? "Reconnect in " + delay : "Reconnect";
 			widgets = new Widget[] {
-				ChatTextWidget.Create( game, 0, -30, title, Anchor.Centre, Anchor.Centre, titleFont ),
-				ChatTextWidget.Create( game, 0, 10, message, Anchor.Centre, Anchor.Centre, messageFont ),
-				ButtonWidget.Create( game, 0, 80, 301, 40, "Try to reconnect.. " + delay,
-				                    Anchor.Centre, Anchor.Centre, titleFont, ReconnectClick ),
+				TextWidget.Create( game, title, titleFont )
+					.SetLocation( Anchor.Centre, Anchor.Centre, 0, -30 ),
+				TextWidget.Create( game, message, messageFont )
+					.SetLocation( Anchor.Centre, Anchor.Centre, 0, 10 ),
+				ButtonWidget.Create( game, 301, 40, msg, titleFont, ReconnectClick )
+					.SetLocation( Anchor.Centre, Anchor.Centre, 0, 80 ),
 			};
+			widgets[2].Disabled = !canReconnect;
 			
 			game.Graphics.ContextRecreated += ContextRecreated;
 			initTime = DateTime.UtcNow;
@@ -53,7 +63,7 @@ namespace ClassicalSharp.Gui.Screens {
 		
 		public override void OnResize( int width, int height ) {
 			for( int i = 0; i < widgets.Length; i++ )
-				widgets[i].OnResize( width, height );
+				widgets[i].CalculatePosition();
 			clearTime = DateTime.UtcNow.AddSeconds( 0.5 );
 		}
 		
@@ -85,14 +95,13 @@ namespace ClassicalSharp.Gui.Screens {
 		int lastSecsLeft;
 		const int delay = 5;
 		bool lastActive = false;
-		void UpdateReconnectState( double delta ) {
+		void UpdateDelayLeft( double delta ) {
 			ButtonWidget btn = (ButtonWidget)widgets[2];
 			double elapsed = (DateTime.UtcNow - initTime).TotalSeconds;
 			int secsLeft = Math.Max( 0, (int)(delay - elapsed) );
 			if( lastSecsLeft == secsLeft && btn.Active == lastActive ) return;
-			
-			if( secsLeft == 0 ) btn.SetText( "Try to reconnect" );
-			else btn.SetText( "Try to reconnect.. " + secsLeft );
+			if( secsLeft == 0 ) btn.SetText( "Reconnect" );
+			else btn.SetText( "Reconnect in " + secsLeft );
 			btn.Disabled = secsLeft != 0;
 			
 			Redraw( delta );
@@ -110,8 +119,8 @@ namespace ClassicalSharp.Gui.Screens {
 			gfx.Texturing = false;
 		}
 		
-		void ReconnectClick( Game g, Widget w, MouseButton mouseBtn ) {
-			if( mouseBtn != MouseButton.Left ) return;
+		void ReconnectClick( Game g, Widget w, MouseButton btn, int x, int y ) {
+			if( btn != MouseButton.Left ) return;
 			string connectString = "Connecting to " + game.IPAddress + ":" + game.Port +  "..";
 			for( int i = 0; i < game.Components.Count; i++ )
 				game.Components[i].Reset( game );

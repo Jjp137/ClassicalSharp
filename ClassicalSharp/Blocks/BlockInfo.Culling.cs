@@ -10,8 +10,6 @@ namespace ClassicalSharp {
 		public byte[] hidden = new byte[Block.Count * Block.Count];
 		
 		public byte[] CanStretch = new byte[Block.Count];
-		
-		public bool[] IsAir = new bool[Block.Count];
 
 		internal void UpdateCulling() {
 			for( int block = 1; block < Block.Count; block++ )
@@ -38,8 +36,8 @@ namespace ClassicalSharp {
 		
 		void CheckOpaque( int block ) {
 			if( MinBB[block] != Vector3.Zero || MaxBB[block] != Vector3.One ) {
-				IsOpaque[block] = false;
-				IsTransparent[block] = true;
+				if( Draw[block] == DrawType.Opaque ) 
+					Draw[block] = DrawType.Transparent;
 			}
 		}
 		
@@ -49,7 +47,7 @@ namespace ClassicalSharp {
 			if( IsLiquid( block ) ) bMax.Y -= 1.5f/16;
 			if( IsLiquid( other ) ) oMax.Y -= 1.5f/16;
 			
-			if( IsSprite[block] ) {
+			if( Draw[block] == DrawType.Sprite ) {
 				SetHidden( block, other, Side.Left, true );
 				SetHidden( block, other, Side.Right, true );
 				SetHidden( block, other, Side.Front, true );
@@ -74,7 +72,7 @@ namespace ClassicalSharp {
 		
 		bool IsHidden( byte block, byte other, int side ) {
 			// Sprite blocks can never hide faces.
-			if( IsSprite[block] ) return false;
+			if( Draw[block] == DrawType.Sprite ) return false;
 			
 			// NOTE: Water is always culled by lava
 			if( (block == Block.Water || block == Block.StillWater)
@@ -82,11 +80,11 @@ namespace ClassicalSharp {
 				return true;
 			
 			// All blocks (except for say leaves) cull with themselves.
-			if( block == other ) return CullWithNeighbours[block];
+			if( block == other ) return Draw[block] != DrawType.TransparentThick;
 			
 			// An opaque neighbour (asides from lava) culls the face.
-			if( IsOpaque[other] && !IsLiquid( other ) ) return true;
-			if( !IsTranslucent[block] || !IsTranslucent[other] ) return false;
+			if( Draw[other] == DrawType.Opaque && !IsLiquid( other ) ) return true;
+			if( Draw[block] != DrawType.Translucent || Draw[other] != DrawType.Translucent ) return false;
 			
 			// e.g. for water / ice, don't need to draw water.
 			CollideType bType = Collide[block], oType = Collide[other];

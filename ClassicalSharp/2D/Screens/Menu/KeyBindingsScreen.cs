@@ -47,8 +47,8 @@ namespace ClassicalSharp.Gui.Screens {
 		}
 		
 		void MakeOthers() {
-			widgets[index++] = ChatTextWidget.Create( game, 0, -180, title,
-			                                         Anchor.Centre, Anchor.Centre, keyFont );
+			widgets[index++] = TextWidget.Create( game, title, keyFont )
+				.SetLocation( Anchor.Centre, Anchor.Centre, 0, -180 );
 			if( game.ClassicMode ) {
 				widgets[index++] = MakeBack( false, titleFont,
 				                            (g, w) => g.Gui.SetNewScreen( new ClassicOptionsScreen( g ) ) );
@@ -61,32 +61,32 @@ namespace ClassicalSharp.Gui.Screens {
 		void MakePages( int origin ) {
 			if( leftPage == null && rightPage == null ) return;
 			int btnY = origin + btnDistance * (left.Length / 2);
-			widgets[index++] = ButtonWidget.Create( game, -btnWidth - 35, btnY, btnHeight, btnHeight, "<",
-			                                       Anchor.Centre, Anchor.Centre, keyFont, LeftOnly( leftPage ) );
-			widgets[index++] = ButtonWidget.Create( game, btnWidth + 35, btnY, btnHeight, btnHeight, ">",
-			                                       Anchor.Centre, Anchor.Centre, keyFont, LeftOnly( rightPage ) );
+			widgets[index++] = ButtonWidget.Create( game, btnHeight, btnHeight, "<", keyFont, LeftOnly( leftPage ) )
+				.SetLocation( Anchor.Centre, Anchor.Centre, -btnWidth - 35, btnY );
+			widgets[index++] = ButtonWidget.Create( game, btnHeight, btnHeight, ">", keyFont, LeftOnly( rightPage ) )
+				.SetLocation( Anchor.Centre, Anchor.Centre, btnWidth + 35, btnY );
 			if( leftPage == null ) widgets[index - 2].Disabled = true;
 			if( rightPage == null ) widgets[index - 1].Disabled = true;
 		}
 		
 		void Make( int i, int x, ref int y ) {
 			string text = ButtonText( i );
-			widgets[index++] = ButtonWidget.Create( game, x, y, btnWidth, btnHeight, text,
-			                                       Anchor.Centre, Anchor.Centre, keyFont, OnBindingClick );
+			widgets[index++] = ButtonWidget.Create( game, btnWidth, btnHeight, text, keyFont, OnBindingClick )				
+				.SetLocation( Anchor.Centre, Anchor.Centre, x, y );
 			y += btnDistance;
 		}
 		
 		
 		ButtonWidget curWidget;
-		void OnBindingClick( Game game, Widget widget, MouseButton mouseBtn ) {
+		void OnBindingClick( Game game, Widget widget, MouseButton btn, int x, int y ) {
 			int index = 0;
-			if( mouseBtn == MouseButton.Right && (curWidget == null || curWidget == widget) ) {
+			if( btn == MouseButton.Right && (curWidget == null || curWidget == widget) ) {
 				curWidget = (ButtonWidget)widget;
 				index = Array.IndexOf<Widget>( widgets, curWidget ) - 2;
 				KeyBind mapping = Get( index, left, right );
 				HandlesKeyDown( game.InputHandler.Keys.GetDefault( mapping ) );
 			}
-			if( mouseBtn != MouseButton.Left ) return;
+			if( btn != MouseButton.Left ) return;
 			
 			if( curWidget != null ) {
 				index = Array.IndexOf<Widget>( widgets, curWidget ) - 2;

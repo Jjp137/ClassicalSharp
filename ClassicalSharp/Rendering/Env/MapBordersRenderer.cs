@@ -41,7 +41,7 @@ namespace ClassicalSharp.Renderers {
 		public void RenderSides( double delta ) {
 			if( sidesVb == -1 ) return;
 			byte block = game.World.Env.SidesBlock;
-			if( game.BlockInfo.IsAir[block] ) return;
+			if( game.BlockInfo.Draw[block] == DrawType.Gas ) return;
 			
 			gfx.Texturing = true;
 			gfx.AlphaTest = true;
@@ -56,7 +56,7 @@ namespace ClassicalSharp.Renderers {
 		public void RenderEdges( double delta ) {
 			if( edgesVb == -1 ) return;
 			byte block = game.World.Env.EdgeBlock;
-			if( game.BlockInfo.IsAir[block] ) return;
+			if( game.BlockInfo.Draw[block] == DrawType.Gas ) return;
 			
 			Vector3 camPos = game.CurrentCameraPos;
 			gfx.AlphaBlending = true;
@@ -208,14 +208,18 @@ namespace ClassicalSharp.Renderers {
 		float HorOffset( byte block ) {
 			BlockInfo info = game.BlockInfo;
 			if( info.IsLiquid( block ) ) return -0.1f/16;
-			if( info.IsTranslucent[block] && info.Collide[block] != CollideType.Solid ) return 0.1f/16;
+			
+			if( info.Draw[block] == DrawType.Translucent 
+			   && info.Collide[block] != CollideType.Solid ) return 0.1f/16;
 			return 0;
 		}
 		
 		float YOffset( byte block ) {
 			BlockInfo info = game.BlockInfo;
 			if( info.IsLiquid( block ) ) return -1.5f/16;
-			if( info.IsTranslucent[block] && info.Collide[block] != CollideType.Solid ) return -0.1f/16;
+			
+			if( info.Draw[block] == DrawType.Translucent 
+			   && info.Collide[block] != CollideType.Solid ) return -0.1f/16;
 			return 0;
 		}
 		

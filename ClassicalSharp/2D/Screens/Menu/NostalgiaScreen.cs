@@ -15,7 +15,7 @@ namespace ClassicalSharp.Gui.Screens {
 			
 			widgets = new Widget[] {
 				// Column 1
-				MakeBool( -1, -100, "Classic arms anim", OptionsKey.SimpleArmsAnim,
+				MakeBool( -1, -100, "Classic arms anim", OptionsKey.SimpleArmsAnim, true,
 				         OnWidgetClick, g => !g.SimpleArmsAnim, (g, v) => g.SimpleArmsAnim = !v ),				
 				MakeBool( -1, -50, "Classic gui textures", OptionsKey.UseClassicGui,
 				         OnWidgetClick, g => g.UseClassicGui, (g, v) => g.UseClassicGui = v ),				
@@ -32,9 +32,8 @@ namespace ClassicalSharp.Gui.Screens {
 				MakeBool( 1, 0, "Use server textures", OptionsKey.AllowServerTextures,
 				         OnWidgetClick, g => g.AllowServerTextures, (g, v) => g.AllowServerTextures = v ),
 
-				ChatTextWidget.Create( game, 0, 100,
-				                      "&eButtons on the right require a client restart",
-				                      Anchor.Centre, Anchor.Centre, regularFont ),				
+				TextWidget.Create( game, "&eButtons on the right require a client restart", regularFont )
+					.SetLocation( Anchor.Centre, Anchor.Centre, 0, 100 ),
 				MakeBack( false, titleFont,
 				         (g, w) => g.Gui.SetNewScreen( PreviousScreen() ) ),
 				null, null,

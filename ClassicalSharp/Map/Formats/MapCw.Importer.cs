@@ -154,8 +154,8 @@ namespace ClassicalSharp.Map {
 			
 			byte blockDraw = (byte)compound["BlockDraw"].Value;
 			if( (byte)compound["Shape"].Value == 0 )
-				blockDraw = (byte)BlockDraw.Sprite;
-			info.SetBlockDraw( id, (BlockDraw)blockDraw );
+				blockDraw = DrawType.Sprite;
+			info.SetBlockDraw( id, blockDraw );
 			
 			data = (byte[])compound["Fog"].Value;
 			info.FogDensity[id] = (data[0] + 1) / 128f;
@@ -166,11 +166,6 @@ namespace ClassicalSharp.Map {
 			data = (byte[])compound["Coords"].Value;
 			info.MinBB[id] = new Vector3( data[0] / 16f, data[1] / 16f, data[2] / 16f );
 			info.MaxBB[id] = new Vector3( data[3] / 16f, data[4] / 16f, data[5] / 16f );
-			
-			if( info.Collide[id] != CollideType.Solid ) {
-				info.IsTransparent[id] = true;
-				info.IsOpaque[id] = false;
-			}
 			
 			info.UpdateCulling( id );
 			info.LightOffset[id] = info.CalcLightOffset( id );

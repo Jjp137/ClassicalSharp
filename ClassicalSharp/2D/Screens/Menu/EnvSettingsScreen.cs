@@ -9,10 +9,11 @@ using OpenTK.Input;
 namespace ClassicalSharp.Gui.Screens {
 	public class EnvSettingsScreen : MenuOptionsScreen {
 		
-		string[] defaultValues;
-		int defaultIndex;
 		public EnvSettingsScreen( Game game ) : base( game ) {
 		}
+
+		string[] defaultValues;
+		int defaultIndex;
 		
 		public override void Init() {
 			base.Init();
@@ -33,7 +34,7 @@ namespace ClassicalSharp.Gui.Screens {
 				
 				MakeOpt( -1, 0, "Clouds speed", OnWidgetClick,
 				     g => g.World.Env.CloudsSpeed.ToString( "F2" ),
-				     (g, v) => g.World.Env.SetCloudsSpeed( Single.Parse( v ) ) ),
+				     (g, v) => g.World.Env.SetCloudsSpeed( Utils.ParseDecimal( v ) ) ),
 				
 				MakeOpt( -1, 50, "Clouds height", OnWidgetClick,
 				     g => g.World.Env.CloudHeight.ToString(),
@@ -54,7 +55,7 @@ namespace ClassicalSharp.Gui.Screens {
 				
 				MakeOpt( 1, 0, "Rain/Snow speed", OnWidgetClick,
 				     g => g.World.Env.WeatherSpeed.ToString( "F2" ),
-				     (g, v) => g.World.Env.SetWeatherSpeed( Single.Parse( v ) ) ),
+				     (g, v) => g.World.Env.SetWeatherSpeed( Utils.ParseDecimal( v ) ) ),
 				
 				MakeOpt( 1, 50, "Water level", OnWidgetClick,
 				     g => g.World.Env.EdgeHeight.ToString(),
@@ -79,7 +80,7 @@ namespace ClassicalSharp.Gui.Screens {
 				
 				WorldEnv.DefaultSunlight.ToRGBHexString(),
 				WorldEnv.DefaultShadowlight.ToRGBHexString(),
-				Weather.Sunny.ToString(),
+				null,
 				(1).ToString(),
 				(game.World.Height / 2).ToString(),
 			};
@@ -108,16 +109,17 @@ namespace ClassicalSharp.Gui.Screens {
 		}
 		
 		protected override void InputOpened() {
-			widgets[defaultIndex] = ButtonWidget.Create(
-				game, 0, 150, 201, 40, "Default value", Anchor.Centre, 
-				Anchor.Centre, titleFont, DefaultButtonClick );
+			widgets[defaultIndex] = ButtonWidget.Create( game, 201, 40, "Default value", titleFont, DefaultButtonClick )				
+				.SetLocation( Anchor.Centre, Anchor.Centre, 0, 150 );
 		}
 		
-		void DefaultButtonClick( Game game, Widget widget, MouseButton mouseBtn ) {
-			if( mouseBtn != MouseButton.Left ) return;
+		void DefaultButtonClick( Game game, Widget widget, MouseButton btn, int x, int y ) {
+			if( btn != MouseButton.Left ) return;
 			int index = Array.IndexOf<Widget>( widgets, targetWidget );
 			string defValue = defaultValues[index];
-			inputWidget.SetText( defValue );
+			
+			input.Clear();
+			input.Append( defValue );
 		}
 	}
 }

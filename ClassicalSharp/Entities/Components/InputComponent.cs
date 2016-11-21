@@ -12,7 +12,6 @@ namespace ClassicalSharp.Entities {
 		Entity entity;
 		Game game;
 		public HacksComponent Hacks;
-		public CollisionsComponent collisions;
 		public PhysicsComponent physics;
 		
 		public InputComponent( Game game, Entity entity ) {
@@ -35,14 +34,14 @@ namespace ClassicalSharp.Entities {
 				DoRespawn();
 			} else if( key == keys[KeyBind.Fly] && Hacks.CanFly && Hacks.Enabled ) {
 				Hacks.Flying = !Hacks.Flying;
-			} else if( key == keys[KeyBind.NoClip] && Hacks.CanNoclip && Hacks.Enabled ) {
+			} else if( key == keys[KeyBind.NoClip] && Hacks.CanNoclip && Hacks.Enabled && !Hacks.WOMStyleHacks ) {
 				if( Hacks.Noclip ) entity.Velocity.Y = 0;
 				Hacks.Noclip = !Hacks.Noclip;
 			} else if( key == keys[KeyBind.Jump] && !entity.onGround && !(Hacks.Flying || Hacks.Noclip) ) {
-				if( !physics.firstJump && Hacks.CanDoubleJump && Hacks.DoubleJump ) {
+				if( !physics.firstJump && Hacks.CanDoubleJump && Hacks.WOMStyleHacks ) {
 					physics.DoNormalJump();
 					physics.firstJump = true;
-				} else if( !physics.secondJump && Hacks.CanDoubleJump && Hacks.DoubleJump ) {
+				} else if( !physics.secondJump && Hacks.CanDoubleJump && Hacks.WOMStyleHacks ) {
 					physics.DoNormalJump();
 					physics.secondJump = true;
 				}
@@ -71,31 +70,14 @@ namespace ClassicalSharp.Entities {
 		
 		void FindHighestFree( ref Vector3 spawn ) {
 			BlockInfo info = game.BlockInfo;
-			Vector3 size = entity.Size;
-			AABB bb = AABB.Make( spawn, size );
+			AABB bb = AABB.Make( spawn, entity.Size );
 			
 			Vector3I P = Vector3I.Floor( spawn );
-			int bbMax = Utils.Floor( size.Y );
-			int minX = Utils.Floor( P.X - size.X / 2 ), maxX = Utils.Floor( P.X + size.X / 2 );
-			int minZ = Utils.Floor( P.Z - size.Z / 2 ), maxZ = Utils.Floor( P.Z + size.Z / 2 );
-			
 			// Spawn player at highest valid position.
 			for( int y = P.Y; y <= game.World.Height; y++ ) {
-				bool intersectAny = false;
-				for( int yy = 0; yy <= bbMax; yy++ )
-					for( int z = minZ; z <= maxZ; z++ )
-						for ( int x = minX; x <= maxX; x++ )
-				{
-					Vector3I coords = new Vector3I( x, y + yy, z );
-					byte block = collisions.GetPhysicsBlockId( coords.X, coords.Y, coords.Z );
-					Vector3 min = info.MinBB[block] + (Vector3)coords;
-					Vector3 max = info.MaxBB[block] + (Vector3)coords;
-					if( !bb.Intersects( new AABB( min, max ) ) ) continue;
-					intersectAny |= info.Collide[block] == CollideType.Solid;
-				}
-				
-				if( !intersectAny ) {
-					byte block = collisions.GetPhysicsBlockId( P.X, y, P.Z );
+				float spawnY = Respawn.HighestFreeY( game, ref bb );
+				if( spawnY == float.NegativeInfinity ) {
+					byte block = game.World.GetPhysicsBlock( P.X, y, P.Z );
 					float height = info.Collide[block] == CollideType.Solid ? info.MaxBB[block].Y : 0;
 					spawn.Y = y + height + Entity.Adjustment;
 					return;

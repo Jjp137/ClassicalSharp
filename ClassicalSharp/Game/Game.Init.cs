@@ -1,5 +1,6 @@
 ﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Net;
 using ClassicalSharp.Audio;
@@ -60,6 +61,7 @@ namespace ClassicalSharp {
 			ModelCache = new ModelCache(this);
 			ModelCache.InitCache();
 			AsyncDownloader = AddComponent(new AsyncDownloader());
+			Lighting = AddComponent(new BasicLighting());
 			
 			#if ANDROID
 			Drawer2D = new CanvasDrawer2D(Graphics);
@@ -116,12 +118,21 @@ namespace ClassicalSharp {
 			AxisLinesRenderer = AddComponent(new AxisLinesRenderer());
 			SkyboxRenderer = AddComponent(new SkyboxRenderer());
 			
+			plugins = new PluginLoader(this);
+			List<string> nonLoaded = plugins.LoadAll();
+			
 			for (int i = 0; i < Components.Count; i++)
 				Components[i].Init(this);
 			ExtractInitialTexturePack();
 			for (int i = 0; i < Components.Count; i++)
 				Components[i].Ready(this);
 			InitScheduledTasks();
+			
+			if (nonLoaded != null) {
+				for (int i = 0; i < nonLoaded.Count; i++) {
+					plugins.MakeWarning(this, nonLoaded[i]);
+				}
+			}
 			
 			window.LoadIcon();
 			string connectString = "Connecting to " + IPAddress + ":" + Port +  "..";
@@ -192,7 +203,7 @@ namespace ClassicalSharp {
 			
 			try {
 				using (Font f = new Font(FontName, 16)) { }
-			} catch(Exception) {
+			} catch (Exception) {
 				FontName = "Arial";
 				Options.Set(OptionsKey.FontName, "Arial");
 			}

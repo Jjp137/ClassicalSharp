@@ -28,17 +28,11 @@ namespace ClassicalSharp {
 		public FastColour(int r, int g, int b) {
 			A = 255; R = (byte)r; G = (byte)g; B = (byte)b;
 		}
-		
-		public FastColour(int argb) {
-			A = (byte)(argb >> 24);
-			R = (byte)(argb >> 16);
-			G = (byte)(argb >> 8);
-			B = (byte)argb;
-		}
 
-		public FastColour(Color c) {
-			A = c.A; R = c.R; G = c.G; B = c.B;
-		}
+		public FastColour(Color c) { A = c.A; R = c.R; G = c.G; B = c.B; }
+		
+		public Color ToColor() { return Color.FromArgb(A, R, G, B); }
+		
 		
 		/// <summary> Multiplies the RGB components of this instance by the
 		/// specified t parameter, where 0 ≤ t ≤ 1 </summary>
@@ -47,6 +41,17 @@ namespace ClassicalSharp {
 			value.G = (byte)(value.G * t);
 			value.B = (byte)(value.B * t);
 			return value;
+		}
+		
+		/// <summary> Multiplies the RGB components of this instance by the
+		/// specified t parameter, where 0 ≤ t ≤ 1 </summary>
+		public static int ScalePacked(int value, float t) {
+			int a = (value >> 16) & 0xFF; a = (int)(a * t);
+			int b = (value >> 8 ) & 0xFF; b = (int)(b * t);
+			int c = value         & 0xFF; c = (int)(c * t);
+			
+			value &= ~0xFFFFFF;
+			return value | (a << 16) | (b << 8) | c;
 		}
 		
 		/// <summary> Linearly interpolates the RGB components of the two colours
@@ -71,24 +76,45 @@ namespace ClassicalSharp {
 			zSide = FastColour.Scale(normal, ShadeZ).Pack();
 			yBottom = FastColour.Scale(normal, ShadeYBottom).Pack();
 		}
-		
-		public Color ToColor() {
-			return Color.FromArgb(A, R, G, B);
-		}
+
 		
 		/// <summary> Packs this instance into a 32 bit integer, where A occupies
 		/// the highest 8 bits and B occupies the lowest 8 bits. </summary>
-		public int ToArgb() {
-			return A << 24 | R << 16 | G << 8 | B;
+		public int ToArgb() { return A << 24 | R << 16 | G << 8 | B; }		
+				
+		public static FastColour Argb(int c) {
+			FastColour col = default(FastColour);
+			col.A = (byte)(c >> 24);
+			col.R = (byte)(c >> 16);
+			col.G = (byte)(c >> 8);
+			col.B = (byte)c;
+			return col;
 		}
 		
+		/// <summary> Packs this instance into a 32 bit integer, where A occupies
+		/// the highest 8 bits, and the order of RGB bytes is determined by the graphics API. </summary>
 		public int Pack() {
-			#if !USE_DX
-			return A << 24 | B << 16 | G << 8 | R;
+			#if USE_DX
+			return A << 24 | R << 16 | G << 8 | B;			
 			#else
-			return A << 24 | R << 16 | G << 8 | B;
+			return A << 24 | B << 16 | G << 8 | R;
 			#endif
 		}
+		
+		public static FastColour Unpack(int c) {
+			FastColour col = default(FastColour);
+			col.A = (byte)(c >> 24);
+			col.G = (byte)(c >> 8);
+			#if USE_DX			
+			col.R = (byte)(c >> 16);
+			col.B = (byte)c;
+			#else
+			col.B = (byte)(c >> 16);
+			col.R = (byte)c;	
+			#endif
+			return col;
+		}
+		
 		
 		public override bool Equals(object obj) {
 			return (obj is FastColour) && Equals((FastColour)obj);
@@ -149,6 +175,7 @@ namespace ClassicalSharp {
 		public static FastColour Magenta = new FastColour(255, 0, 255);
 		public static FastColour Cyan = new FastColour(0, 255, 255);
 		
+		
 		public static bool TryParse(string input, out FastColour value) {
 			value = default(FastColour);
 			if (input == null || input.Length < 6) return false;
@@ -163,7 +190,7 @@ namespace ClassicalSharp {
 				int b = Utils.ParseHex(input[i + 4]) * 16 + Utils.ParseHex(input[i + 5]);
 				value = new FastColour(r, g, b);
 				return true;
-			} catch(FormatException) {
+			} catch (FormatException) {
 				return false;
 			}
 		}

@@ -325,7 +325,7 @@ namespace ClassicalSharp.Network.Protocols {
 			WorldEnv env = game.World.Env;
 			Utils.Clamp(ref value, short.MinValue, short.MaxValue);
 			
-			switch(type) {
+			switch (type) {
 				case 0:
 					Utils.Clamp(ref value, byte.MinValue, byte.MaxValue);
 					env.SetSidesBlock((byte)value); break;
@@ -396,7 +396,7 @@ namespace ClassicalSharp.Network.Protocols {
 			int count = clientExts.Length;
 			if (!game.AllowCustomBlocks) count -= 2;
 			
-			SendExtInfo(Program.AppName, count);
+			SendExtInfo(net.AppName, count);
 			for (int i = 0; i < clientExts.Length; i++) {
 				string name = clientExts[i];
 				int ver = 1;

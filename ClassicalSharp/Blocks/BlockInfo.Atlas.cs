@@ -7,7 +7,7 @@ namespace ClassicalSharp {
 	/// <summary> Stores various properties about the blocks in Minecraft Classic. </summary>
 	public partial class BlockInfo {
 		
-		internal byte[] textures = new byte[Block.Count * Side.Sides];
+		public byte[] textures = new byte[Block.Count * Side.Sides];
 		
 		internal void SetSide(int textureId, byte blockId) {
 			int index = blockId * Side.Sides;
@@ -28,7 +28,7 @@ namespace ClassicalSharp {
 		void GetTextureRegion(byte block, int side, out Vector2 min, out Vector2 max) {
 			min = Vector2.Zero; max = Vector2.One;
 			Vector3 bbMin = MinBB[block], bbMax = MaxBB[block];		
-			switch(side) {
+			switch (side) {
 				case Side.Left:
 				case Side.Right:
 					min = new Vector2(bbMin.Z, bbMin.Y);

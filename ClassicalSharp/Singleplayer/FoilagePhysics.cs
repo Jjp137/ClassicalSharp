@@ -37,15 +37,17 @@ namespace ClassicalSharp.Singleplayer {
 			int x = index % map.Width;
 			int y = (index / map.Width) / map.Length;
 			int z = (index / map.Width) % map.Length;
-			if (y > map.GetLightHeight(x, z))
+			
+			if (game.Lighting.IsLit(x, y, z))
 				game.UpdateBlock(x, y, z, Block.Grass);
 		}
 		
 		void HandleGrass(int index, byte block) {
 			int x = index % map.Width;
 			int y = (index / map.Width) / map.Length;
-			int z = (index / map.Width) % map.Length;			
-			if (y <= map.GetLightHeight(x, z))
+			int z = (index / map.Width) % map.Length;
+			
+			if (!game.Lighting.IsLit(x, y, z))
 				game.UpdateBlock(x, y, z, Block.Dirt);
 		}
 		
@@ -53,7 +55,8 @@ namespace ClassicalSharp.Singleplayer {
 			int x = index % map.Width;
 			int y = (index / map.Width) / map.Length;
 			int z = (index / map.Width) % map.Length;
-			if (y <= map.GetLightHeight(x, z)) {
+			
+			if (!game.Lighting.IsLit(x, y, z)) {
 				game.UpdateBlock(x, y, z, Block.Air);
 				physics.ActivateNeighbours(x, y, z, index);
 				return;
@@ -71,7 +74,8 @@ namespace ClassicalSharp.Singleplayer {
 			int x = index % map.Width;
 			int y = (index / map.Width) / map.Length;
 			int z = (index / map.Width) % map.Length;
-			if (y > map.GetLightHeight(x, z)) {
+			
+			if (game.Lighting.IsLit(x, y, z)) {
 				game.UpdateBlock(x, y, z, Block.Air);
 				physics.ActivateNeighbours(x, y, z, index);
 				return;

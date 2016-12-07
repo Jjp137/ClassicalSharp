@@ -8,10 +8,10 @@ namespace ClassicalSharp.Textures {
 	public sealed class EntryList {
 		
 		public List<string> Entries = new List<string>();
-		const string folder = "texturecache";
-		string file;
+		string folder, file;
 		
-		public EntryList(string file) {
+		public EntryList(string folder, string file) {
+			this.folder = folder;
 			this.file = file;
 		}
 		
@@ -42,7 +42,7 @@ namespace ClassicalSharp.Textures {
 					}
 				}
 				return true;
-			} catch(IOException ex) {
+			} catch (IOException ex) {
 				ErrorHandler.LogError("loading " + file, ex);
 				return false;
 			}
@@ -61,7 +61,7 @@ namespace ClassicalSharp.Textures {
 						writer.WriteLine(Entries[i]);
 				}
 				return true;
-			} catch(IOException ex) {
+			} catch (IOException ex) {
 				ErrorHandler.LogError("saving " + file, ex);
 				return false;
 			}

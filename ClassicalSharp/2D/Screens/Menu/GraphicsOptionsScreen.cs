@@ -51,7 +51,8 @@ namespace ClassicalSharp.Gui.Screens {
 		
 		void SetSmoothLighting(Game g, bool v) {
 			g.SmoothLighting = v;
-			g.MapRenderer.updater.InitMeshBuilder();
+			ChunkMeshBuilder builder = g.MapRenderer.DefaultMeshBuilder();
+			g.MapRenderer.SetMeshBuilder(builder);
 			g.MapRenderer.Refresh();
 		}
 		

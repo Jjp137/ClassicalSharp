@@ -11,7 +11,7 @@ namespace ClassicalSharp.Model {
 		
 		public ChickenModel(Game window) : base(window) { }
 		
-		internal override void CreateParts() {
+		public override void CreateParts() {
 			vertices = new ModelVertex[boxVertices * 6 + quadVertices * 2 * 2];
 			Head = BuildBox(MakeBoxBounds(-2, 9, -6, 2, 15, -3)
 			                .TexOrigin(0, 0)
@@ -68,7 +68,7 @@ namespace ClassicalSharp.Model {
 			DrawRotate(0, 0, Math.Abs(p.anim.armXRot), RightWing);
 			
 			for (int i = 0; i < cols.Length; i++) {
-				cols[i] = FastColour.Scale(col, 0.7f).Pack();
+				cols[i] = FastColour.ScalePacked(col, 0.7f);
 			}
 			DrawRotate(p.anim.legXRot, 0, 0, LeftLeg);
 			DrawRotate(-p.anim.legXRot, 0, 0, RightLeg);

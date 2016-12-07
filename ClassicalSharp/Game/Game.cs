@@ -277,9 +277,9 @@ namespace ClassicalSharp {
 		}
 		
 		public void UpdateBlock(int x, int y, int z, byte block) {
-			int oldHeight = World.GetLightHeight(x, z) + 1;
+			int oldHeight = Lighting.GetLightHeight(x, z) + 1;
 			World.SetBlock(x, y, z, block);
-			int newHeight = World.GetLightHeight(x, z) + 1;
+			int newHeight = Lighting.GetLightHeight(x, z) + 1;
 			MapRenderer.RedrawBlock(x, y, z, block, oldHeight, newHeight);
 		}
 		
@@ -338,7 +338,7 @@ namespace ClassicalSharp {
 			Options.Save();
 		}
 		
-		internal bool CanPick(byte block) {
+		public bool CanPick(byte block) {
 			if (BlockInfo.Draw[block] == DrawType.Gas) return false;
 			if (BlockInfo.Draw[block] == DrawType.Sprite) return true;
 			if (BlockInfo.Collide[block] != CollideType.SwimThrough) return true;
@@ -358,6 +358,13 @@ namespace ClassicalSharp {
 					Chat.Add("&cUnable to use " + file + " from the texture pack.");
 					Chat.Add("&c Its size is (" + bmp.Width + "," + bmp.Height
 					         + "), your GPU supports (" + maxSize + "," + maxSize + ") at most.");
+					return false;
+				}
+
+				if (!Utils.IsPowerOf2(bmp.Width) || !Utils.IsPowerOf2(bmp.Height)) {
+					Chat.Add("&cUnable to use " + file + " from the texture pack.");
+					Chat.Add("&c Its size is (" + bmp.Width + "," + bmp.Height
+					         + "), which is not power of two dimensions.");
 					return false;
 				}
 				

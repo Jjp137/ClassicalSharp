@@ -168,6 +168,7 @@ namespace ClassicalSharp {
 			Key key = e.Key;
 			if (SimulateMouse(key, true)) return;
 			
+			
 			if (IsShutdown(key)) {
 				game.Exit();
 			} else if (key == Keys[KeyBind.Screenshot]) {
@@ -230,6 +231,8 @@ namespace ClassicalSharp {
 				}
 			} else if (key == Keys[KeyBind.AxisLines]) {
 				ToggleAxisLines();
+			} else if (key == Keys[KeyBind.Autorotate]) {
+				ToggleAutoRotate();
 			} else if (key == Keys[KeyBind.ThirdPerson]) {
 				game.CycleCamera();
 			} else if (key == Keys[KeyBind.ToggleFog]) {
@@ -255,6 +258,16 @@ namespace ClassicalSharp {
 				game.Chat.Add("  &eAxis lines (&4X&e, &2Y&e, &1Z&e) now show. Press &a" + key + " &eto disable.");
 			} else {
 				game.Chat.Add("  &eAxis lines no longer show. Press &a" + key + " &eto re-enable.");
+			}
+		}
+		
+		void ToggleAutoRotate() {
+			game.autoRotate = !game.autoRotate;
+			Key key = Keys[KeyBind.Autorotate];
+			if (game.autoRotate) {
+				game.Chat.Add("  &eAuto rotate is &aenabled. &aPress " + key + " &eto disable.");
+			} else {
+				game.Chat.Add("  &eAuto rotate is &cdisabled. &aPress " + key + " &eto re-enable.");
 			}
 		}
 		

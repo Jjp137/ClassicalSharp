@@ -91,6 +91,8 @@ namespace ClassicalSharp {
 		
 		public bool SkipClear = false;
 		
+		public IWorldLighting Lighting;
+		
 		public MapRenderer MapRenderer;
 		public MapBordersRenderer MapBordersRenderer;
 		public EnvRenderer EnvRenderer;
@@ -174,6 +176,8 @@ namespace ClassicalSharp {
 		
 		public bool SmoothLighting;
 		
+		public bool autoRotate = true;
+		
 		public string FontName = "Arial";
 		
 		public int ChatLines = 12;
@@ -187,11 +191,13 @@ namespace ClassicalSharp {
 		public Animations Animations;
 		internal int CloudsTex;
 		internal bool screenshotRequested;
-		internal EntryList AcceptedUrls = new EntryList("acceptedurls.txt"); 
-		internal EntryList DeniedUrls = new EntryList("deniedurls.txt");
-		internal EntryList ETags = new EntryList("etags.txt");
-		internal EntryList LastModified = new EntryList("lastmodified.txt");
 		
+		internal EntryList AcceptedUrls = new EntryList("texturecache", "acceptedurls.txt"); 
+		internal EntryList DeniedUrls = new EntryList("texturecache", "deniedurls.txt");
+		internal EntryList ETags = new EntryList("texturecache", "etags.txt");
+		internal EntryList LastModified = new EntryList("texturecache", "lastmodified.txt");
+		
+		PluginLoader plugins;		
 		
 		/// <summary> Calculates the amount that the hotbar widget should be scaled by when rendered. </summary>
 		/// <remarks> Affected by both the current resolution of the window, as well as the

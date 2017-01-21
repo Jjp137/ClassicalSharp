@@ -1,4 +1,4 @@
-﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 using System;
 using System.Drawing;
 #if ANDROID
@@ -146,6 +146,13 @@ namespace ClassicalSharp {
 		
 		public static bool operator != (FastColour left, FastColour right) {
 			return !left.Equals(right);
+		}
+		
+		public static FastColour operator * (FastColour left, FastColour right) {
+			left.R = (byte)((left.R * right.R) / 255);
+			left.G = (byte)((left.G * right.G) / 255);
+			left.B = (byte)((left.B * right.B) / 255);
+			return left;
 		}
 		
 		public static implicit operator FastColour(Color col) {

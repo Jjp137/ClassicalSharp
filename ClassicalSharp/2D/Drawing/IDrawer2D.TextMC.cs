@@ -1,4 +1,4 @@
-﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 using System;
 using System.Drawing;
 using ClassicalSharp.GraphicsAPI;
@@ -76,8 +76,8 @@ namespace ClassicalSharp {
 			
 			for (int i = 0; i < text.Length; i++) {
 				char c = text[i];
-				bool code = c == '&' && i < text.Length - 1;
-				if (code && ValidColour(text[i + 1])) {
+				bool isColCode = c == '&' && i < text.Length - 1;
+				if (isColCode && ValidColour(text[i + 1])) {
 					col = Colours[text[i + 1]];
 					if (shadowCol)
 						col = BlackTextShadows ? FastColour.Black : FastColour.Scale(col, 0.25f);
@@ -111,7 +111,8 @@ namespace ClassicalSharp {
 			if (runCount == 0) return;
 			int srcY = (coords[0] >> 4) * boxSize;
 			int textHeight = AdjTextSize(point), cellHeight = CellSize(textHeight);
-			int padding = (cellHeight - textHeight) / 2;
+			// inlined xPadding so we don't need to call PaddedWidth
+			int xPadding = Utils.CeilDiv(point, 8), yPadding = (cellHeight - textHeight) / 2;
 			int startX = x;
 			
 			ushort* dstWidths = stackalloc ushort[runCount];
@@ -121,7 +122,7 @@ namespace ClassicalSharp {
 			for (int yy = 0; yy < textHeight; yy++) {
 				int fontY = srcY + yy * boxSize / textHeight;
 				int* fontRow = fontPixels.GetRowPtr(fontY);
-				int dstY = y + (yy + padding);
+				int dstY = y + (yy + yPadding);
 				if (dstY >= dst.Height) return;
 				
 				int* dstRow = dst.GetRowPtr(dstY);
@@ -143,7 +144,7 @@ namespace ClassicalSharp {
 						pixel |= (((src >> 16) & 0xFF) * col.R / 255) << 16;
 						dstRow[dstX] = pixel;
 					}
-					x += PaddedWidth(point, srcWidth);
+					x += dstWidth + xPadding;
 				}
 				x = startX;
 			}
@@ -165,8 +166,8 @@ namespace ClassicalSharp {
 				
 				for (int i = 0; i < text.Length; i++) {
 					char c = text[i];
-					bool code = c == '&' && i < text.Length - 1;
-					if (code && ValidColour(text[i + 1])) {
+					bool isColCode = c == '&' && i < text.Length - 1;
+					if (isColCode && ValidColour(text[i + 1])) {
 						col = Colours[text[i + 1]].ToArgb();
 						i++; continue; // Skip over the colour code.
 					}
@@ -191,8 +192,8 @@ namespace ClassicalSharp {
 			
 			for (int i = 0; i < args.Text.Length; i++) {
 				char c = args.Text[i];
-				bool code = c == '&' && i < args.Text.Length - 1;
-				if (code && ValidColour(args.Text[i + 1])) {
+				bool isColCode = c == '&' && i < args.Text.Length - 1;
+				if (isColCode && ValidColour(args.Text[i + 1])) {
 					i++; continue; // Skip over the colour code.
 				}
 				

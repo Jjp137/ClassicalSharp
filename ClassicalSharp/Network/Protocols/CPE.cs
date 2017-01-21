@@ -1,4 +1,4 @@
-﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 using System;
 using ClassicalSharp.Entities;
 using ClassicalSharp.Hotkeys;
@@ -215,8 +215,8 @@ namespace ClassicalSharp.Network.Protocols {
 		void HandleChangeModel() {
 			byte playerId = reader.ReadUInt8();
 			string modelName = Utils.ToLower(reader.ReadAsciiString());
-			Player player = game.Entities[playerId];
-			if (player != null) player.SetModel(modelName);
+			Entity entity = game.Entities[playerId];
+			if (entity != null) entity.SetModel(modelName);
 		}
 		
 		void HandleEnvSetMapAppearance() {
@@ -345,7 +345,6 @@ namespace ClassicalSharp.Network.Protocols {
 					env.SetWeatherSpeed(value / 256f); break;
 				case 7:
 					Utils.Clamp(ref value, byte.MinValue, byte.MaxValue);
-					Console.WriteLine(value);
 					env.SetWeatherFade(value / 128f); break;
 			}
 		}

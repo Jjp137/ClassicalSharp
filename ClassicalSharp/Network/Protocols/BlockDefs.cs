@@ -1,4 +1,4 @@
-﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 using System;
 using OpenTK;
 
@@ -105,6 +105,7 @@ namespace ClassicalSharp.Network.Protocols {
 			info.FogDensity[id] = fogDensity == 0 ? 0 : (fogDensity + 1) / 128f;
 			info.FogColour[id] = new FastColour(
 				reader.ReadUInt8(), reader.ReadUInt8(), reader.ReadUInt8());
+			info.Tinted[id] = info.FogColour[id] != FastColour.Black && info.Name[id].IndexOf('#') >= 0;
 			
 			info.UpdateCulling(id);
 			game.Events.RaiseBlockDefinitionChanged();

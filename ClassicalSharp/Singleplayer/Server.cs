@@ -1,4 +1,4 @@
-﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 //#define TEST_VANILLA
 using System;
 using System.Net;
@@ -101,7 +101,6 @@ namespace ClassicalSharp.Singleplayer {
 			}
 			
 			generator = null;
-			game.Chat.Add("&ePlaying single player", MessageType.Status1);
 			GC.Collect();
 		}
 		
@@ -111,24 +110,12 @@ namespace ClassicalSharp.Singleplayer {
 			this.generator = generator;
 			game.Gui.SetNewScreen(new LoadingMapScreen(game, "Generating level", "Generating.."));
 			generator.GenerateAsync(game, width, height, length, seed);
-		}
-		
+		}		
 
 		void ResetPlayerPosition() {
-			Vector3 spawn = default(Vector3);
-			spawn.X = (game.World.Width / 2) + 0.5f;
-			spawn.Y = game.World.Height + Entity.Adjustment;
-			spawn.Z = (game.World.Length / 2) + 0.5f;
-			
-			AABB bb = AABB.Make(spawn, game.LocalPlayer.Size);
-			spawn.Y = 0;		
-			for (int y = game.World.Height; y >= 0; y--) {
-				float highestY = Respawn.HighestFreeY(game, ref bb);
-				if (highestY != float.NegativeInfinity) {
-					spawn.Y = highestY; break;
-				}
-				bb.Min.Y -= 1; bb.Max.Y -= 1;
-			}
+			float x = (game.World.Width / 2) + 0.5f;
+			float z = (game.World.Length / 2) + 0.5f;			
+			Vector3 spawn = Respawn.FindSpawnPosition(game, x, z, game.LocalPlayer.Size);
 			
 			LocationUpdate update = LocationUpdate.MakePosAndOri(spawn, 0, 0, false);
 			game.LocalPlayer.SetLocation(update, false);

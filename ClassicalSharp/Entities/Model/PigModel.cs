@@ -1,4 +1,4 @@
-﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 using System;
 using ClassicalSharp.Entities;
 using ClassicalSharp.GraphicsAPI;
@@ -32,8 +32,6 @@ namespace ClassicalSharp.Model {
 			                        .RotOrigin(0, 6, 7));
 		}
 		
-		public override bool Bobbing { get { return true; } }
-		
 		public override float NameYOffset { get { return 1.075f; } }
 		
 		public override float GetEyeY(Entity entity) { return 12/16f; }
@@ -46,7 +44,7 @@ namespace ClassicalSharp.Model {
 			get { return new AABB(-5/16f, 0, -14/16f, 5/16f, 16/16f, 9/16f); }
 		}
 		
-		protected override void DrawModel(Player p) {
+		protected override void DrawModel(Entity p) {
 			game.Graphics.BindTexture(GetTexture(p.MobTextureId));
 			DrawHeadRotate(-p.PitchRadians, 0, 0, Head);
 

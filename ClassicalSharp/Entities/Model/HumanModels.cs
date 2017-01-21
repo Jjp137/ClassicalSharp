@@ -1,4 +1,4 @@
-﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 using System;
 using ClassicalSharp.Entities;
 using ClassicalSharp.GraphicsAPI;
@@ -63,7 +63,7 @@ namespace ClassicalSharp.Model {
 			get { return new AABB(-4/16f, 0, -4/16f, 4/16f, 8/16f, 4/16f); }
 		}
 
-		protected override void RenderParts(Player p) {
+		protected override void RenderParts(Entity p) {
 			DrawHeadRotate(-p.PitchRadians, 0, 0, Head);
 			UpdateVB();
 			

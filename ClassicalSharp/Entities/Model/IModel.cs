@@ -1,4 +1,4 @@
-﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 using System;
 using ClassicalSharp.Entities;
 using ClassicalSharp.GraphicsAPI;
@@ -16,6 +16,7 @@ namespace ClassicalSharp.Model {
 		protected const int boxVertices = 6 * quadVertices;
 		protected RotateOrder Rotate = RotateOrder.ZYX;
 		internal CachedModel data;
+		internal bool initalised;
 
 		public IModel(Game game) { this.game = game; }
 		
@@ -24,7 +25,7 @@ namespace ClassicalSharp.Model {
 		/// <summary> Whether the entity should be slightly bobbed up and down when rendering. </summary>
 		/// <remarks> e.g. for players when their legs are at the peak of their swing,
 		/// the whole model will be moved slightly down. </remarks>
-		public abstract bool Bobbing { get; }
+		public bool Bobbing = true;
 		
 		/// <summary> Vertical offset from the model's feet/base that the name texture should be drawn at. </summary>
 		public abstract float NameYOffset { get; }
@@ -50,7 +51,7 @@ namespace ClassicalSharp.Model {
 		public abstract AABB PickingBounds { get; }
 		
 		protected Vector3 pos;
-		protected float cosYaw, sinYaw, cosHead, sinHead;
+		protected float cosHead, sinHead;
 		protected float uScale, vScale, scale;
 		
 		/// <summary> Returns whether the model should be rendered based on the given entity's position. </summary>
@@ -82,7 +83,7 @@ namespace ClassicalSharp.Model {
 		}
 		
 		/// <summary> Renders the model based on the given entity's position and orientation. </summary>
-		public void Render(Player p) {
+		public void Render(Entity p) {
 			index = 0;
 			pos = p.Position;
 			if (Bobbing) pos.Y += p.anim.bobbingModel;
@@ -97,16 +98,20 @@ namespace ClassicalSharp.Model {
 			cols[2] = FastColour.ScalePacked(col, FastColour.ShadeZ); cols[3] = cols[2];
 			cols[4] = FastColour.ScalePacked(col, FastColour.ShadeX); cols[5] = cols[4];
 			
-			cosYaw = (float)Math.Cos(p.YawDegrees * Utils.Deg2Rad);
-			sinYaw = (float)Math.Sin(p.YawDegrees * Utils.Deg2Rad);
-			cosHead = (float)Math.Cos(p.HeadYawDegrees * Utils.Deg2Rad);
-			sinHead = (float)Math.Sin(p.HeadYawDegrees * Utils.Deg2Rad);
+			float yawDelta = p.HeadYawDegrees - p.YawDegrees;
+			cosHead = (float)Math.Cos(yawDelta * Utils.Deg2Rad);
+			sinHead = (float)Math.Sin(yawDelta * Utils.Deg2Rad);
 
 			game.Graphics.SetBatchFormat(VertexFormat.P3fT2fC4b);
+			game.Graphics.PushMatrix();
+			Matrix4 m = Matrix4.RotateY(-p.YawRadians) * Matrix4.Scale(scale) * Matrix4.Translate(pos.X, pos.Y, pos.Z);
+			
+			game.Graphics.MultiplyMatrix(ref m);
 			DrawModel(p);
+			game.Graphics.PopMatrix();
 		}
 		
-		protected abstract void DrawModel(Player p);
+		protected abstract void DrawModel(Entity p);
 		
 		protected void UpdateVB() {
 			ModelCache cache = game.ModelCache;
@@ -149,9 +154,6 @@ namespace ClassicalSharp.Model {
 			
 			for (int i = 0; i < part.Count; i++) {
 				ModelVertex v = vertices[part.Offset + i];
-				float t = cosYaw * v.X - sinYaw * v.Z; v.Z = sinYaw * v.X + cosYaw * v.Z; v.X = t; // Inlined RotY
-				v.X *= scale; v.Y *= scale; v.Z *= scale;
-				v.X += pos.X; v.Y += pos.Y; v.Z += pos.Z;
 				vertex.X = v.X; vertex.Y = v.Y; vertex.Z = v.Z;
 				vertex.Colour = cols[i >> 2];
 				
@@ -196,18 +198,10 @@ namespace ClassicalSharp.Model {
 				}
 				
 				// Rotate globally
-				if (!head) {
-					v.X += x; v.Y += y; v.Z += z;
-					t = cosYaw * v.X - sinYaw * v.Z; v.Z = sinYaw * v.X + cosYaw * v.Z; v.X = t;     // Inlined RotY
-				} else {
+				if (head) {
 					t = cosHead * v.X - sinHead * v.Z; v.Z = sinHead * v.X + cosHead * v.Z; v.X = t; // Inlined RotY
-					float tX = x, tZ = z;
-					t = cosYaw * tX - sinYaw * tZ; tZ = sinYaw * tX + cosYaw * tZ; tX = t;           // Inlined RotY
-					v.X += tX; v.Y += y; v.Z += tZ;
 				}
-				v.X *= scale; v.Y *= scale; v.Z *= scale;
-				v.X += pos.X; v.Y += pos.Y; v.Z += pos.Z;
-				vertex.X = v.X; vertex.Y = v.Y; vertex.Z = v.Z;
+				vertex.X = v.X + x; vertex.Y = v.Y + y; vertex.Z = v.Z + z;
 				vertex.Colour = cols[i >> 2];
 				
 				vertex.U = v.U * uScale; vertex.V = v.V * vScale;

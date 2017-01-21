@@ -1,4 +1,4 @@
-﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 using System;
 using ClassicalSharp.Entities;
 using ClassicalSharp.GraphicsAPI;
@@ -70,8 +70,6 @@ namespace ClassicalSharp.Model {
 			rArm = MakeBoxBounds(4, 12, -2, 8, 24, 2).RotOrigin(5, 22, 0);
 		}
 		
-		public override bool Bobbing { get { return true; } }
-		
 		public override float NameYOffset { get { return 32/16f + 0.5f/16f; } }
 		
 		public override float GetEyeY(Entity entity) { return 26/16f; }
@@ -84,7 +82,7 @@ namespace ClassicalSharp.Model {
 			get { return new AABB(-8/16f, 0, -4/16f, 8/16f, 32/16f, 4/16f); }
 		}
 		
-		protected override void DrawModel(Player p) {
+		protected override void DrawModel(Entity p) {
 			game.Graphics.BindTexture(GetTexture(p.TextureId));
 			game.Graphics.AlphaTest = false;
 			
@@ -94,7 +92,7 @@ namespace ClassicalSharp.Model {
 			RenderParts(p);
 		}
 		
-		protected virtual void RenderParts(Player p) {
+		protected virtual void RenderParts(Entity p) {
 			SkinType skinType = p.SkinType;
 			ModelSet model = skinType == SkinType.Type64x64Slim ? SetSlim :
 				(skinType == SkinType.Type64x64 ? Set64 : Set);

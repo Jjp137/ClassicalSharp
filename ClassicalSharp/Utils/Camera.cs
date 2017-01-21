@@ -1,4 +1,4 @@
-﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 using System;
 using System.Drawing;
 using ClassicalSharp.Entities;
@@ -94,14 +94,14 @@ namespace ClassicalSharp {
 		static readonly float sensiFactor = 0.0002f / 3 * Utils.Rad2Deg;
 		private void UpdateMouseRotation() {
 			float sensitivity = sensiFactor * game.MouseSensitivity;
-			float yaw = player.nextYaw + delta.X * sensitivity;
+			float yaw = player.interp.nextHeadYaw + delta.X * sensitivity;
 			float yAdj = game.InvertMouse ? -delta.Y * sensitivity : delta.Y * sensitivity;
-			float pitch = player.nextPitch + yAdj;
+			float pitch = player.interp.nextPitch + yAdj;
 			LocationUpdate update = LocationUpdate.MakeOri(yaw, pitch);
 			
 			// Need to make sure we don't cross the vertical axes, because that gets weird.
 			if (update.Pitch >= 90 && update.Pitch <= 270)
-				update.Pitch = player.nextPitch < 180 ? 89.9f : 270.1f;
+				update.Pitch = player.interp.nextPitch < 180 ? 89.9f : 270.1f;
 			game.LocalPlayer.SetLocation(update, true);
 		}
 		

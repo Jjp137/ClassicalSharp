@@ -1,4 +1,4 @@
-﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 using System;
 using ClassicalSharp.Entities;
 using ClassicalSharp.GraphicsAPI;
@@ -29,7 +29,7 @@ namespace ClassicalSharp.Model {
 		internal AABB pickingBounds;
 		public override AABB PickingBounds { get { return pickingBounds; } }
 		
-		protected override void DrawModel(Player p) {
+		protected override void DrawModel(Entity p) {
 			int texId = p.TextureId <= 0 ? cache.HumanoidTexId : p.TextureId;
 		}
 		

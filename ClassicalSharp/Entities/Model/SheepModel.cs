@@ -1,4 +1,4 @@
-﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 using System;
 using ClassicalSharp.Entities;
 using ClassicalSharp.GraphicsAPI;
@@ -18,7 +18,12 @@ namespace ClassicalSharp.Model {
 		}
 		
 		public override void CreateParts() {
-			vertices = new ModelVertex[boxVertices * 6 * (Fur ? 2 : 1)];
+			vertices = new ModelVertex[boxVertices * 6 * 2];
+			MakeBaseModel();
+			MakeFurModel();
+		}
+		
+		void MakeBaseModel() {
 			Head = BuildBox(MakeBoxBounds(-3, 16, -14, 3, 22, -6)
 			                .TexOrigin(0, 0)
 			                .RotOrigin(0, 18, -8));
@@ -36,7 +41,6 @@ namespace ClassicalSharp.Model {
 			RightLegBack = BuildBox(MakeBoxBounds(1, 0, 5, 5, 12, 9)
 			                        .TexOrigin(0, 16)
 			                        .RotOrigin(0, 12, 7));
-			if (Fur) MakeFurModel();
 		}
 		
 		
@@ -61,8 +65,6 @@ namespace ClassicalSharp.Model {
 			                           .RotOrigin(0, 12, 7));
 		}
 		
-		public override bool Bobbing { get { return true; } }
-		
 		public override float NameYOffset { get { return Fur ? 1.48125f: 1.075f; } }
 		
 		public override float GetEyeY(Entity entity) { return 20/16f; }
@@ -75,7 +77,7 @@ namespace ClassicalSharp.Model {
 			get { return new AABB(-6/16f, 0, -13/16f, 6/16f, 23/16f, 10/16f); }
 		}
 		
-		protected override void DrawModel(Player p) {
+		protected override void DrawModel(Entity p) {
 			IGraphicsApi gfx = game.Graphics;
 			gfx.BindTexture(GetTexture(p.MobTextureId));
 			DrawHeadRotate(-p.PitchRadians, 0, 0, Head);
@@ -87,7 +89,7 @@ namespace ClassicalSharp.Model {
 			DrawRotate(p.anim.legXRot, 0, 0, RightLegBack);
 			UpdateVB();
 			
-			if (!Fur) return;
+			if (Utils.CaselessEquals(p.ModelName, "sheep_nofur")) return;
 			ModelCache cache = game.ModelCache;
 			gfx.BindTexture(cache.Textures[furIndex].TexID);
 			DrawHeadRotate(-p.PitchRadians, 0, 0, FurHead);

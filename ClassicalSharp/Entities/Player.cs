@@ -1,4 +1,4 @@
-﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 using System;
 using System.Drawing;
 using ClassicalSharp.GraphicsAPI;
@@ -14,50 +14,14 @@ namespace ClassicalSharp.Entities {
 	public abstract partial class Player : Entity {
 		
 		public string DisplayName, SkinName, SkinIdentifier;
-		public SkinType SkinType;
-		public AnimatedComponent anim;
 		internal ShadowComponent shadow;
-		internal float uScale = 1, vScale = 1;
+		protected Texture nameTex;
 		
 		public Player(Game game) : base(game) {
-			this.game = game;
 			StepSize = 0.5f;
-			SkinType = game.DefaultPlayerSkinType;
-			anim = new AnimatedComponent(game, this);
 			shadow = new ShadowComponent(game, this);
 			SetModel("humanoid");
 		}
-		
-		DateTime lastModelChange = new DateTime(1, 1, 1);
-		public void SetModel(string model) {
-			ModelScale = 1;
-			int sep = model.IndexOf('|');
-			string scale = sep == -1 ? null : model.Substring(sep + 1);
-			ModelName = sep == -1 ? model : model.Substring(0, sep);
-			ParseScale(scale);
-			
-			if (Utils.CaselessEquals(model, "giant")) {
-				ModelName = "humanoid";
-				ModelScale *= 2;
-			}
-			
-			Model = game.ModelCache.Get(ModelName);
-			lastModelChange = DateTime.UtcNow;
-			MobTextureId = -1;		
-		}
-		
-		void ParseScale(string scale) {
-			if (scale == null) return;
-			float value;
-			if (!Utils.TryParseDecimal(scale, out value))
-				return;
-			
-			Utils.Clamp(ref value, 0.25f, Model.MaxScale);
-			ModelScale = value;
-		}
-		
-		protected Texture nameTex;
-		public int TextureId = -1, MobTextureId = -1;
 		
 		public override void Despawn() {
 			game.Graphics.DeleteTexture(ref TextureId);
@@ -116,8 +80,9 @@ namespace ClassicalSharp.Entities {
 		
 		protected void CheckSkin() {
 			DownloadedItem item;
-			game.AsyncDownloader.TryGetItem(SkinIdentifier, out item);
-			if (item == null || item.Data == null) return;
+			if (!game.AsyncDownloader.TryGetItem(SkinIdentifier, out item)) return;
+			
+			if (item == null || item.Data == null) { ResetSkin(); return; }
 			
 			Bitmap bmp = (Bitmap)item.Data;
 			game.Graphics.DeleteTexture(ref TextureId);
@@ -128,7 +93,11 @@ namespace ClassicalSharp.Entities {
 			
 			SkinType = Utils.GetSkinType(bmp);
 			if (SkinType == SkinType.Invalid) {
-				ResetSkin(bmp); return;
+				string format = "Skin {0} has unsupported dimensions({1}, {2}), reverting to default.";
+				Utils.LogDebug(format, SkinName, bmp.Width, bmp.Height);
+				bmp.Dispose();
+				
+				ResetSkin(); return;
 			}
 			
 			if (Model is HumanoidModel)
@@ -142,13 +111,10 @@ namespace ClassicalSharp.Entities {
 			bmp.Dispose();
 		}
 		
-		void ResetSkin(Bitmap bmp) {
-			string formatString = "Skin {0} has unsupported dimensions({1}, {2}), reverting to default.";
-			Utils.LogDebug(formatString, SkinName, bmp.Width, bmp.Height);
+		void ResetSkin() {			
 			MobTextureId = -1;
 			TextureId = -1;
-			SkinType = game.DefaultPlayerSkinType;
-			bmp.Dispose();
+			SkinType = game.DefaultPlayerSkinType;			
 		}
 		
 		unsafe static void ClearHat(Bitmap bmp, SkinType skinType) {

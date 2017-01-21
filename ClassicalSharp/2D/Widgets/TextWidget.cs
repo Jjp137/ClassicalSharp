@@ -1,4 +1,4 @@
-﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 using System;
 using System.Drawing;
 
@@ -45,7 +45,6 @@ namespace ClassicalSharp.Gui.Widgets {
 		}
 		
 		public void SetText(string text) {
-			
 			gfx.DeleteTexture(ref texture);
 			if (String.IsNullOrEmpty(text)) {
 				texture = new Texture();

@@ -1,4 +1,4 @@
-﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 using System;
 using ClassicalSharp.GraphicsAPI;
 using ClassicalSharp.Map;
@@ -70,14 +70,14 @@ namespace ClassicalSharp.Particles {
 		
 		static Vector2 terrainSize = new Vector2(1/8f, 1/8f);
 		internal TextureRec rec;
-		internal ushort flags; // lower 8 bits for tex location, next bit for fullbright
+		internal byte texLoc, block;
 		
 		public override bool Tick(Game game, double delta) {
 			return Tick(game, 5.4f, delta);
 		}
 		
 		public override int Get1DBatch(Game game) {
-			return game.TerrainAtlas1D.Get1DIndex(flags & 0xFF);
+			return game.TerrainAtlas1D.Get1DIndex(texLoc);
 		}
 		
 		public override void Render(Game game, double delta, float t,
@@ -85,10 +85,17 @@ namespace ClassicalSharp.Particles {
 			Position = Vector3.Lerp(lastPos, nextPos, t);
 			
 			int col = FastColour.WhitePacked;
-			if ((flags & 0x100) == 0) { // not full bright
+			if (!game.BlockInfo.FullBright[block]) {
 				Vector3I P = Vector3I.Floor(Position);
 				col = game.World.IsValidPos(P) ?
 					game.Lighting.LightCol_ZSide(P.X, P.Y, P.Z) : game.Lighting.OutsideZSide;
+			}
+			
+			if (game.BlockInfo.Tinted[block]) {
+				FastColour fogCol = game.BlockInfo.FogColour[block];
+				FastColour newCol = FastColour.Unpack(col);
+				newCol *= fogCol;
+				col = newCol.Pack();
 			}
 			DoRender(game, ref terrainSize, ref rec, col, vertices, ref index);
 		}

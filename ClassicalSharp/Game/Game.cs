@@ -1,4 +1,4 @@
-﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 using System;
 using System.Diagnostics;
 using System.Drawing;
@@ -254,12 +254,13 @@ namespace ClassicalSharp {
 		}
 		
 		public void Disconnect(string title, string reason) {
+			Events.RaiseDisconnected(title, reason);
+			
 			Gui.Reset(this);
 			World.Reset();
 			World.blocks = null;
 			Drawer2D.InitColours();
 			BlockInfo.Reset(this);
-			
 			TexturePack.ExtractDefault(this);
 			Gui.SetNewScreen(new ErrorScreen(this, title, reason));
 			GC.Collect();

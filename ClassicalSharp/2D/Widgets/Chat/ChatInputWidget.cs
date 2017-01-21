@@ -1,4 +1,4 @@
-﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -19,7 +19,7 @@ namespace ClassicalSharp.Gui.Widgets {
 		static FastColour backColour = new FastColour(0, 0, 0, 127);
 		int typingLogPos;
 		string originalText;
-		bool shownWarning;		
+		bool shownWarning;
 		
 		public override int MaxLines { get { return game.ClassicMode ? 1 : 3; } }
 		public override string Prefix { get { return "> "; } }
@@ -27,7 +27,7 @@ namespace ClassicalSharp.Gui.Widgets {
 		public override int MaxCharsPerLine {
 			get {
 				bool allChars = game.ClassicMode || game.Server.SupportsPartialMessages;
-				return allChars ? 64 : 62;
+				return allChars ? 64 : 62; // need 2 chars for colour in multilined chat, when server doesn't support partial messages
 			}
 		}
 		
@@ -36,7 +36,7 @@ namespace ClassicalSharp.Gui.Widgets {
 			bool supports = game.Server.SupportsPartialMessages;
 			
 			if (Text.Length > MaxCharsPerLine && !shownWarning && !supports) {
-				game.Chat.Add("&eNote: Each line will be sent as a separate packet.", MessageType.ClientStatus6);
+				game.Chat.Add("&eNote: On this server, each line will be sent separately.", MessageType.ClientStatus6);
 				shownWarning = true;
 			} else if (Text.Length <= MaxCharsPerLine && shownWarning) {
 				game.Chat.Add(null, MessageType.ClientStatus6);
@@ -60,7 +60,7 @@ namespace ClassicalSharp.Gui.Widgets {
 				y += lineSizes[i].Height;
 			}
 			
-			gfx.Texturing = true;		
+			gfx.Texturing = true;
 			inputTex.Render(gfx);
 			RenderCaret(delta);
 		}

@@ -1,7 +1,5 @@
-﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 using System;
-using System.Collections.Generic;
-using ClassicalSharp.Blocks;
 using OpenTK;
 
 namespace ClassicalSharp {
@@ -11,24 +9,24 @@ namespace ClassicalSharp {
 		
 		public static byte RotateBlock(Game game, byte block) {
 			string name = game.BlockInfo.Name[block];
-			int sepIndex = name.LastIndexOf('-');
-			if (sepIndex == -1) return block; // not a directional block
+			int dirIndex = name.LastIndexOf('-');
+			if (dirIndex == -1) return block; // not a directional block
 			
-			string sep = name.Substring(sepIndex + 1);
-			name = name.Substring(0, sepIndex);
+			string dir = name.Substring(dirIndex + 1);
+			name = name.Substring(0, dirIndex);
 			Vector3 offset = game.SelectedPos.Intersect - (Vector3)game.SelectedPos.TranslatedPos;
 			
-			if (Utils.CaselessEquals(sep, "nw") || Utils.CaselessEquals(sep, "ne") ||
-			    Utils.CaselessEquals(sep, "sw") || Utils.CaselessEquals(sep, "se")) {
+			if (Utils.CaselessEquals(dir, "nw") || Utils.CaselessEquals(dir, "ne") ||
+			    Utils.CaselessEquals(dir, "sw") || Utils.CaselessEquals(dir, "se")) {
 				return RotateCorner(game, block, name, offset);
-			} else if (Utils.CaselessEquals(sep, "u") || Utils.CaselessEquals(sep, "d")) {
+			} else if (Utils.CaselessEquals(dir, "u") || Utils.CaselessEquals(dir, "d")) {
 				return RotateVertical(game, block, name, offset);
-			} else if (Utils.CaselessEquals(sep, "n") || Utils.CaselessEquals(sep, "w") ||
-			           Utils.CaselessEquals(sep, "s") || Utils.CaselessEquals(sep, "e")) {
+			} else if (Utils.CaselessEquals(dir, "n") || Utils.CaselessEquals(dir, "w") ||
+			           Utils.CaselessEquals(dir, "s") || Utils.CaselessEquals(dir, "e")) {
 				return RotateDirection(game, block, name, offset);
-			} else if (Utils.CaselessEquals(sep, "UD") || Utils.CaselessEquals(sep, "WE") ||
-			           Utils.CaselessEquals(sep, "NS")) {
-				return RotatePillar(game, block, name, offset);
+			} else if (Utils.CaselessEquals(dir, "UD") || Utils.CaselessEquals(dir, "WE") ||
+			           Utils.CaselessEquals(dir, "NS")) {
+				return RotateOther(game, block, name, offset);
 			}
 			return block;
 		}
@@ -51,17 +49,30 @@ namespace ClassicalSharp {
 			return Find(game, block, name + height);
 		}
 		
-		static byte RotatePillar(Game game, byte block, string name, Vector3 offset) {
-			BlockFace selectedFace = game.SelectedPos.BlockFace;
-			string face = "-UD";
-			if (selectedFace == BlockFace.YMax || selectedFace == BlockFace.YMin) { face = "-UD"; }
-			else if (selectedFace == BlockFace.XMax || selectedFace == BlockFace.XMin) { face = "-WE"; }
-			else if (selectedFace == BlockFace.ZMax || selectedFace == BlockFace.ZMin) { face = "-NS"; }
-			return Find(game, block, name + face);
+		static byte RotateOther(Game game, byte block, string name, Vector3 offset) {
+			// Fence type blocks
+			if (game.BlockInfo.FindID(name + "-UD") == -1) {
+				float yaw = game.LocalPlayer.HeadYawDegrees;
+				if (yaw < 0) yaw += 360;
+				
+				if (yaw < 45 || (yaw >= 135 && yaw < 225) || yaw > 315)
+					return Find(game, block, name + "-WE");
+				return Find(game, block, name + "-NS");
+			}
+			
+			// Thin pillar type blocks
+			BlockFace face = game.SelectedPos.BlockFace;
+			if (face == BlockFace.YMax || face == BlockFace.YMin)
+				return Find(game, block, name + "-UD");
+			if (face == BlockFace.XMax || face == BlockFace.XMin)
+				return Find(game, block, name + "-WE");
+			if (face == BlockFace.ZMax || face == BlockFace.ZMin)
+				return Find(game, block, name + "-NS");
+			return block;
 		}
 		
 		static byte RotateDirection(Game game, byte block, string name, Vector3 offset) {
-			Vector3 southEast = new Vector3 (1,0,1);
+			Vector3 southEast = new Vector3 (1, 0, 1);
 			Vector3 southWest = new Vector3 (-1, 0, 1);
 			
 			Vector3I pos = game.SelectedPos.TranslatedPos;

@@ -1,4 +1,4 @@
-﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 using System;
 using ClassicalSharp.Events;
 using OpenTK;
@@ -56,9 +56,8 @@ namespace ClassicalSharp.Particles {
 				p.ResetState(worldPos + cell, velocity, life);
 				p.rec = rec;
 				
-				p.flags = (byte)texLoc;
-				if (game.BlockInfo.FullBright[block])
-					p.flags |= 0x100;
+				p.texLoc = (byte)texLoc;
+				p.block = block;
 			}
 		}
 		

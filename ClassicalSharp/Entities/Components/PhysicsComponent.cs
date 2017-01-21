@@ -1,4 +1,4 @@
-﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 using System;
 using ClassicalSharp.Physics;
 using OpenTK;
@@ -85,6 +85,8 @@ namespace ClassicalSharp.Entities {
 		}
 		
 		public void DoNormalJump() {
+			if (jumpVel == 0) return;
+			
 			entity.Velocity.Y = jumpVel;
 			if (hacks.Speeding && hacks.CanSpeed) entity.Velocity.Y += jumpVel;
 			if (hacks.HalfSpeeding && hacks.CanSpeed) entity.Velocity.Y += jumpVel / 2;
@@ -227,7 +229,7 @@ namespace ClassicalSharp.Entities {
 				if (!blockBB.Intersects(bounds)) continue;
 				
 				modifier = Math.Min(modifier, info.SpeedMultiplier[block]);
-				if (block >= Block.CpeCount && type == CollideType.SwimThrough)
+				if (!info.IsLiquid(block) && type == CollideType.SwimThrough)
 					useLiquidGravity = true;
 			}
 			return modifier;
@@ -237,6 +239,8 @@ namespace ClassicalSharp.Entities {
 		/// the jump binding they will be able to jump up to the given height. </summary>
 		internal void CalculateJumpVelocity(bool userVel, float jumpHeight) {
 			jumpVel = 0;
+			if (jumpHeight == 0) return;
+			
 			if (jumpHeight >= 256) jumpVel = 10.0f;
 			if (jumpHeight >= 512) jumpVel = 16.5f;
 			if (jumpHeight >= 768) jumpVel = 22.5f;
@@ -267,7 +271,7 @@ namespace ClassicalSharp.Entities {
 			return;
 			// TODO: Fix
 			
-			for (int id = 0; id < 255; id++) {
+			for (int id = 0; id < EntityList.SelfID; id++) {
 				Entity other = game.Entities[id];
 				if (other == null) continue;
 				

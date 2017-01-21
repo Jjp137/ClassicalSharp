@@ -1,4 +1,4 @@
-﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -22,6 +22,7 @@ namespace ClassicalSharp {
 		public const string EntityShadow = "entityshadow";
 		public const string RenderType = "normal";
 		public const string SmoothLighting = "gfx-smoothlighting";
+		public const string SurvivalMode = "game-survivalmode";
 		
 		public const string HacksEnabled = "hacks-hacksenabled";
 		public const string FieldOfView = "hacks-fov";

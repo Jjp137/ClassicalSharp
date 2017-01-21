@@ -1,4 +1,4 @@
-﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 using System;
 using ClassicalSharp.Entities;
 using ClassicalSharp.Gui.Screens;
@@ -243,9 +243,7 @@ namespace ClassicalSharp {
 				}
 			} else if (key == Keys[KeyBind.PauseOrExit] && !game.World.IsNotLoaded) {
 				game.Gui.SetNewScreen(new PauseScreen(game));
-			} else if (key == Keys[KeyBind.Inventory]) {
-				game.Gui.SetNewScreen(new InventoryScreen(game));
-			} else {
+			} else if (!game.Mode.HandlesKeyDown(key)) {
 				return false;
 			}
 			return true;

@@ -1,4 +1,4 @@
-﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 using System;
 using OpenTK;
 
@@ -6,12 +6,12 @@ namespace ClassicalSharp.Entities {
 	
 	public sealed class NetPlayer : Player {
 		
-		InterpolatedComponent interp;
+		NetInterpComponent interp;
 		public NetPlayer(string displayName, string skinName, Game game, byte id) : base(game) {
 			DisplayName = displayName;
 			SkinName = skinName;
 			SkinIdentifier = "skin_" + id;
-			interp = new InterpolatedComponent(game, this);
+			interp = new NetInterpComponent(game, this);
 		}
 		
 		public override void SetLocation(LocationUpdate update, bool interpolate) {

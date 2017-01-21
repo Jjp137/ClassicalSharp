@@ -1,4 +1,4 @@
-﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 using System;
 using ClassicalSharp.Gui.Screens;
 using ClassicalSharp.Entities;
@@ -247,7 +247,7 @@ namespace ClassicalSharp.Network.Protocols {
 		internal void ReadAbsoluteLocation(byte id, bool interpolate) {
 			float x = reader.ReadInt16() / 32f;
 			float y = (reader.ReadInt16() - 51) / 32f; // We have to do this.
-			if (id == 255) y += 22/32f;
+			if (id == EntityList.SelfID) y += 22/32f;
 			
 			float z = reader.ReadInt16() / 32f;
 			float yaw = (float)Utils.PackedToDegrees(reader.ReadUInt8());

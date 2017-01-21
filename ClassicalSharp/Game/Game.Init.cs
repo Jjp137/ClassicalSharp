@@ -1,4 +1,4 @@
-﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -9,6 +9,7 @@ using ClassicalSharp.Entities;
 using ClassicalSharp.GraphicsAPI;
 using ClassicalSharp.Gui.Screens;
 using ClassicalSharp.Map;
+using ClassicalSharp.Mode;
 using ClassicalSharp.Model;
 using ClassicalSharp.Network;
 using ClassicalSharp.Particles;
@@ -45,8 +46,14 @@ namespace ClassicalSharp {
 			ETags.Load();
 			LastModified.Load();
 			
+			if (Options.GetBool(OptionsKey.SurvivalMode, false)) {
+				Mode = AddComponent(new SurvivalGameMode());
+			} else {
+				Mode = AddComponent(new CreativeGameMode());
+			}
+			
 			Input = new InputHandler(this);
-			defaultIb = Graphics.MakeDefaultIb();
+			defaultIb = Graphics.MakeDefaultIb();				
 			ParticleManager = AddComponent(new ParticleManager());
 			TabList = AddComponent(new TabList());
 			LoadOptions();
@@ -80,7 +87,7 @@ namespace ClassicalSharp {
 			BlockInfo.SetDefaultBlockPerms(Inventory.CanPlace, Inventory.CanDelete);
 			World = new World(this);
 			LocalPlayer = AddComponent(new LocalPlayer(this));
-			Entities[255] = LocalPlayer;
+			Entities[EntityList.SelfID] = LocalPlayer;
 			Width = window.Width; Height = window.Height;
 			
 			MapRenderer = new MapRenderer(this);

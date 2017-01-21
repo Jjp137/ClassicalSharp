@@ -1,4 +1,4 @@
-﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 #if !USE_DX && !ANDROID
 // SDL2 branch note: Keep this file around to make dealing with merge conflicts easier, but don't compile it anymore.
 // This file isn't guaranteed to compile if uncommented.

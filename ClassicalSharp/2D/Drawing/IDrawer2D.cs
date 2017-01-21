@@ -1,4 +1,4 @@
-﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -186,8 +186,8 @@ namespace ClassicalSharp {
 		protected void SplitText(string value) {
 			char code = 'f';
 			for (int i = 0; i < value.Length; i++) {
-				int nextAnd = value.IndexOf('&', i);
-				int partLength = nextAnd == -1 ? value.Length - i : nextAnd - i;
+				int nextCol = value.IndexOf('&', i);
+				int partLength = nextCol == -1 ? value.Length - i : nextCol - i;
 				
 				if (partLength > 0) {
 					string part = value.Substring(i, partLength);
@@ -195,11 +195,11 @@ namespace ClassicalSharp {
 				}
 				i += partLength + 1;
 				
-				if (nextAnd >= 0 && nextAnd + 1 < value.Length) {
-					if (!ValidColour(value[nextAnd + 1])) {
-						i--; // include character that isn't a valid colour code.
+				if (nextCol >= 0 && nextCol + 1 < value.Length) {
+					if (!ValidColour(value[nextCol + 1])) {
+						i--; // include character that isn't a valid colour.
 					} else {
-						code = value[nextAnd + 1];
+						code = value[nextCol + 1];
 					}
 				}
 			}

@@ -1,4 +1,4 @@
-﻿// ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
+﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 using System;
 
 namespace ClassicalSharp {
@@ -73,6 +73,7 @@ namespace ClassicalSharp {
 		public const byte Pillar = 63;
 		public const byte Crate = 64;
 		public const byte StoneBrick = 65;
+		public const byte Invalid = 0xFF;
 		
 		public const string Names = "Air Stone Grass Dirt Cobblestone Wood Sapling Bedrock Water StillWater Lava" +
 			" StillLava Sand Gravel GoldOre IronOre CoalOre Log Leaves Sponge Glass Red Orange Yellow Lime Green" +

@@ -52,16 +52,16 @@ namespace ClassicalSharp {
 		static byte RotateOther(Game game, byte block, string name, Vector3 offset) {
 			// Fence type blocks
 			if (game.BlockInfo.FindID(name + "-UD") == -1) {
-				float yaw = game.LocalPlayer.HeadYawDegrees;
-				if (yaw < 0) yaw += 360;
+				float headY = game.LocalPlayer.HeadY;
+				if (headY < 0) headY += 360;
 				
-				if (yaw < 45 || (yaw >= 135 && yaw < 225) || yaw > 315)
+				if (headY < 45 || (headY >= 135 && headY < 225) || headY > 315)
 					return Find(game, block, name + "-WE");
 				return Find(game, block, name + "-NS");
 			}
 			
 			// Thin pillar type blocks
-			BlockFace face = game.SelectedPos.BlockFace;
+			BlockFace face = game.SelectedPos.Face;
 			if (face == BlockFace.YMax || face == BlockFace.YMin)
 				return Find(game, block, name + "-UD");
 			if (face == BlockFace.XMax || face == BlockFace.XMin)

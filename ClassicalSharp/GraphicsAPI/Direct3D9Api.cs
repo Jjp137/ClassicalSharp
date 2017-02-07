@@ -120,10 +120,13 @@ namespace ClassicalSharp.GraphicsAPI {
 			}
 		}
 
-		int fogCol;
+		int fogCol, lastFogCol = FastColour.BlackPacked;
 		public override void SetFogColour(FastColour col) {
 			fogCol = col.ToArgb();
+			if (fogCol == lastFogCol) return;
+			
 			device.SetRenderState(RenderState.FogColor, fogCol);
+			lastFogCol = fogCol;
 		}
 
 		float fogDensity = -1, fogStart = -1, fogEnd = -1;
@@ -384,7 +387,7 @@ namespace ClassicalSharp.GraphicsAPI {
 			}
 
 			public void MultiplyTop(ref Matrix4 matrix) {
-				stack[stackIndex] = matrix * stack[stackIndex];
+				Matrix4.Mult(ref matrix, ref stack[stackIndex], out stack[stackIndex]); // top = matrix * top
 				device.SetTransform(matrixType, ref stack[stackIndex]);
 			}
 

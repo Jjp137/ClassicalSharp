@@ -39,6 +39,7 @@ namespace ClassicalSharp {
 			return value != 0 && (value & (value - 1)) == 0;
 		}
 		
+		
 		/// <summary> Multiply a value in degrees by this to get its value in radians. </summary>
 		public const float Deg2Rad = (float)(Math.PI / 180);
 		/// <summary> Multiply a value in radians by this to get its value in degrees. </summary>
@@ -56,18 +57,29 @@ namespace ClassicalSharp {
 			return packed * 360.0 / 256.0;
 		}
 		
+		
+		/// <summary> Rotates the given 3D coordinates around the x axis. </summary>
+		public static Vector3 RotateX(Vector3 v, float angle) {
+			float cosA = (float)Math.Cos(angle), sinA = (float)Math.Sin(angle);
+			return new Vector3(v.X, cosA * v.Y + sinA * v.Z, -sinA * v.Y + cosA * v.Z);
+		}
+		
 		/// <summary> Rotates the given 3D coordinates around the y axis. </summary>
 		public static Vector3 RotateY(Vector3 v, float angle) {
-			float cosA = (float)Math.Cos(angle);
-			float sinA = (float)Math.Sin(angle);
+			float cosA = (float)Math.Cos(angle), sinA = (float)Math.Sin(angle);
 			return new Vector3(cosA * v.X - sinA * v.Z, v.Y, sinA * v.X + cosA * v.Z);
 		}
 		
 		/// <summary> Rotates the given 3D coordinates around the y axis. </summary>
 		public static Vector3 RotateY(float x, float y, float z, float angle) {
-			float cosA = (float)Math.Cos(angle);
-			float sinA = (float)Math.Sin(angle);
+			float cosA = (float)Math.Cos(angle),  sinA = (float)Math.Sin(angle);
 			return new Vector3(cosA * x - sinA * z, y, sinA * x + cosA * z);
+		}
+		
+		/// <summary> Rotates the given 3D coordinates around the z axis. </summary>
+		public static Vector3 RotateZ(Vector3 v, float angle) {
+			float cosA = (float)Math.Cos(angle), sinA = (float)Math.Sin(angle);
+			return new Vector3(cosA * v.X + sinA * v.Y, -sinA * v.X + cosA * v.Y, v.Z);
 		}
 		
 		/// <summary> Rotates the given 3D coordinates around the x axis. </summary>
@@ -84,6 +96,7 @@ namespace ClassicalSharp {
 		public static void RotateZ(ref float x, ref float y, float cosA, float sinA) {
 			float x2 = cosA * x + sinA * y; y = -sinA * x + cosA * y; x = x2;
 		}
+		
 		
 		/// <summary> Returns the square of the euclidean distance between two points. </summary>
 		public static float DistanceSquared(Vector3 p1, Vector3 p2) {
@@ -103,6 +116,7 @@ namespace ClassicalSharp {
 			return dx * dx + dy * dy + dz * dz;
 		}
 		
+		
 		/// <summary> Returns a normalised vector that faces in the direction
 		/// described by the given yaw and pitch. </summary>
 		public static Vector3 GetDirVector(double yawRad, double pitchRad) {
@@ -112,9 +126,9 @@ namespace ClassicalSharp {
 			return new Vector3((float)x, (float)y, (float)z);
 		}
 		
-		public static void GetHeading(Vector3 dir, out double yawRad, out double pitchRad) {
-			pitchRad = Math.Asin(-dir.Y);
-			yawRad = Math.Atan2(dir.Z, dir.X);
+		public static void GetHeading(Vector3 dir, out double yaw, out double pitch) {
+			pitch = Math.Asin(-dir.Y);
+			yaw = Math.Atan2(dir.Z, dir.X);
 		}
 		
 		public static int Floor(float value) {
@@ -127,6 +141,7 @@ namespace ClassicalSharp {
 			return a / b + (a % b != 0 ? 1 : 0);
 		}
 		
+		
 		/// <summary> Performs linear interpolation between two values. </summary>
 		public static float Lerp(float a, float b, float t) {
 			return a + (b - a) * t;
@@ -136,13 +151,19 @@ namespace ClassicalSharp {
 		public static void CalcBillboardPoints(Vector2 size, Vector3 position, ref Matrix4 view, out Vector3 p111,
 		                                       out Vector3 p121, out Vector3 p212, out Vector3 p222) {
 			Vector3 centre = position; centre.Y += size.Y / 2;
-			Vector3 a = new Vector3(view.Row0.X * size.X, view.Row1.X * size.X, view.Row2.X * size.X); // right * size.X
+			Vector3 a = new Vector3(view.Row0.X * size.X, view.Row1.X * size.X, view.Row2.X * size.X) * 0.5f; // right * size.X
+			Vector3 b = new Vector3(view.Row0.Y * size.Y, view.Row1.Y * size.Y, view.Row2.Y * size.Y) * 0.5f; // up * size.Y
+			
+			p111 = centre - a - b; p121 = centre - a + b;
+			p212 = centre + a - b; p222 = centre + a + b;
+			
+			/*Vector3 a = new Vector3(view.Row0.X * size.X, view.Row1.X * size.X, view.Row2.X * size.X); // right * size.X
 			Vector3 b = new Vector3(view.Row0.Y * size.Y, view.Row1.Y * size.Y, view.Row2.Y * size.Y); // up * size.Y
 			
 			p111 = centre + a * -0.5f + b * -0.5f;
 			p121 = centre + a * -0.5f + b *  0.5f;
 			p212 = centre + a *  0.5f + b * -0.5f;
-			p222 = centre + a *  0.5f + b *  0.5f;
+			p222 = centre + a *  0.5f + b *  0.5f;*/
 		}	
 		
 		/// <summary> Linearly interpolates between a given angle range, adjusting if necessary. </summary>

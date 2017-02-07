@@ -48,11 +48,9 @@ namespace ClassicalSharp.Renderers {
 			game.Graphics.LoadMatrix(ref heldBlockProj);
 			game.Graphics.SetMatrixMode(MatrixType.Modelview);
 			SetMatrix();
-			
-			bool translucent = game.BlockInfo.Draw[type] == DrawType.Translucent;			
+					
 			game.Graphics.Texturing = true;
-			if (translucent) game.Graphics.AlphaBlending = true;
-			else game.Graphics.AlphaTest = true;
+			game.Graphics.SetupAlphaState(game.BlockInfo.Draw[type]);
 			game.Graphics.DepthTest = false;
 			
 			SetPos();		
@@ -64,8 +62,7 @@ namespace ClassicalSharp.Renderers {
 			game.Graphics.SetMatrixMode(MatrixType.Modelview);			
 			
 			game.Graphics.Texturing = false;
-			if (translucent) game.Graphics.AlphaBlending = false;
-			else game.Graphics.AlphaTest = false;
+			game.Graphics.RestoreAlphaState(game.BlockInfo.Draw[type]);
 			game.Graphics.DepthTest = true;
 		}
 		
@@ -97,9 +94,9 @@ namespace ClassicalSharp.Renderers {
 			held.Position.Y -= game.Camera.bobbingVer;
 			held.Position.Z -= game.Camera.bobbingHor;
 			   
-			held.HeadYawDegrees = -45 + anim.angleY;
-			held.YawDegrees = -45 + anim.angleY;
-			held.PitchDegrees = 0;
+			held.HeadY = -45 + anim.angleY;
+			held.RotY = -45 + anim.angleY;
+			held.HeadX = 0;
 			held.Block = type;
 		}
 		

@@ -26,10 +26,10 @@ namespace ClassicalSharp {
 			Inventory inv = game.Inventory;
 			
 			if (game.Server.UsingPlayerClick && !game.Gui.ActiveScreen.HandlesAllInput) {
-				byte id = game.Entities.GetClosetPlayer(game.LocalPlayer);
-				input.ButtonStateChanged(MouseButton.Left, left, id);
-				input.ButtonStateChanged(MouseButton.Right, right, id);
-				input.ButtonStateChanged(MouseButton.Middle, middle, id);
+				input.pickingId = -1;
+				input.ButtonStateChanged(MouseButton.Left, left);
+				input.ButtonStateChanged(MouseButton.Right, right);
+				input.ButtonStateChanged(MouseButton.Middle, middle);
 			}
 			
 			int buttonsDown = (left ? 1 : 0) + (right ? 1 : 0) + (middle ? 1 : 0);
@@ -84,7 +84,7 @@ namespace ClassicalSharp {
 			// NOTE: We need to also test against nextPos here, because otherwise
 			// we can fall through the block as collision is performed against nextPos
 			AABB localBB = AABB.Make(p.Position, p.Size);
-			localBB.Min.Y = Math.Min(p.interp.nextPos.Y, localBB.Min.Y);
+			localBB.Min.Y = Math.Min(p.interp.next.Pos.Y, localBB.Min.Y);
 			
 			if (p.Hacks.Noclip || !localBB.Intersects(blockBB)) return true;
 			if (p.Hacks.CanPushbackBlocks && p.Hacks.PushbackPlacing && p.Hacks.Enabled)
@@ -94,7 +94,7 @@ namespace ClassicalSharp {
 			if (localBB.Intersects(blockBB)) return false;
 			
 			// Push player up if they are jumping and trying to place a block underneath them.
-			Vector3 next = game.LocalPlayer.interp.nextPos;
+			Vector3 next = game.LocalPlayer.interp.next.Pos;
 			next.Y = pos.Y + game.BlockInfo.MaxBB[block].Y + Entity.Adjustment;
 			LocationUpdate update = LocationUpdate.MakePos(next, false);
 			game.LocalPlayer.SetLocation(update, false);
@@ -107,17 +107,17 @@ namespace ClassicalSharp {
 			
 			// Offset position by the closest face
 			PickedPos selected = game.SelectedPos;
-			if (selected.BlockFace == BlockFace.XMax) {
+			if (selected.Face == BlockFace.XMax) {
 				newP.X = blockBB.Max.X + 0.5f;
-			} else if (selected.BlockFace == BlockFace.ZMax) {
+			} else if (selected.Face == BlockFace.ZMax) {
 				newP.Z = blockBB.Max.Z + 0.5f;
-			} else if (selected.BlockFace == BlockFace.XMin) {
+			} else if (selected.Face == BlockFace.XMin) {
 				newP.X = blockBB.Min.X - 0.5f;
-			} else if (selected.BlockFace == BlockFace.ZMin) {
+			} else if (selected.Face == BlockFace.ZMin) {
 				newP.Z = blockBB.Min.Z - 0.5f;
-			} else if (selected.BlockFace == BlockFace.YMax) {
+			} else if (selected.Face == BlockFace.YMax) {
 				newP.Y = blockBB.Min.Y + 1 + Entity.Adjustment;
-			} else if (selected.BlockFace == BlockFace.YMin) {
+			} else if (selected.Face == BlockFace.YMin) {
 				newP.Y = blockBB.Min.Y - game.LocalPlayer.Size.Y - Entity.Adjustment;
 			}
 			

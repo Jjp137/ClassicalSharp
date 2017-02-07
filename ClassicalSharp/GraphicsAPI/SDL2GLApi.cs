@@ -427,11 +427,10 @@ namespace ClassicalSharp.GraphicsAPI
 
 		FastColour lastFogCol = FastColour.Black;
 		public override void SetFogColour( FastColour col ) {
-			if( col != lastFogCol ) {
-				Vector4 colRGBA = new Vector4( col.R / 255f, col.G / 255f, col.B / 255f, col.A / 255f );
-				GLFuncs.Fogfv( FogParameter.FogColor, &colRGBA.X );
-				lastFogCol = col;
-			}
+			if (col == lastFogCol) return;
+			Vector4 colRGBA = new Vector4(col.R / 255f, col.G / 255f, col.B / 255f, col.A / 255f);
+			GLFuncs.Fogfv(FogParameter.FogColor, &colRGBA.X);
+			lastFogCol = col;
 		}
 
 		float lastFogEnd = -1, lastFogDensity = -1;

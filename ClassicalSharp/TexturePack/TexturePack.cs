@@ -51,57 +51,57 @@ namespace ClassicalSharp.Textures {
 		}
 		
 		
-		internal static void ExtractTerrainPng(Game game, string url, DownloadedItem item) {
-			if (item != null && item.Data != null) {
-				Bitmap bmp = (Bitmap)item.Data;
-				game.World.TextureUrl = item.Url;
+		internal static void ExtractTerrainPng(Game game, DownloadedItem item) {
+			if (item.Data == null) return;
+			Bitmap bmp = (Bitmap)item.Data;
+			game.World.TextureUrl = item.Url;
+			game.Events.RaiseTexturePackChanged();
+			
+			if (!game.ChangeTerrainAtlas(bmp, null)) { bmp.Dispose(); return; }
+			
+			TextureCache.Add(item.Url, bmp);
+			TextureCache.AddETag(item.Url, item.ETag, game.ETags);
+			TextureCache.AdddLastModified(item.Url, item.LastModified, game.LastModified);
+		}
+		
+		internal static void ExtractCachedTerrainPng(Game game, string url) {
+			FileStream data = TextureCache.GetStream(url);
+			if (data == null) { // e.g. 404 errors
+				if (game.World.TextureUrl != null) ExtractDefault(game);
+			} else if (url != game.World.TextureUrl) {
+				Bitmap bmp = GetBitmap(game.Drawer2D, data);
+				if (bmp == null) { data.Dispose(); return; }
+				
+				game.World.TextureUrl = url;
 				game.Events.RaiseTexturePackChanged();
+				if (game.ChangeTerrainAtlas(bmp, data)) return;
 				
-				if (!Platform.Is32Bpp(bmp)) {
-					Utils.LogDebug("Converting terrain atlas to 32bpp image");
-					game.Drawer2D.ConvertTo32Bpp(ref bmp);
-				}
-				if (!game.ChangeTerrainAtlas(bmp, null)) { bmp.Dispose(); return; }
-				
-				TextureCache.Add(item.Url, bmp);
-				TextureCache.AddETag(item.Url, item.ETag, game.ETags);
-				TextureCache.AdddLastModified(item.Url, item.LastModified, game.LastModified);
+				bmp.Dispose();
+				data.Dispose();
 			} else {
-				FileStream data = TextureCache.GetStream(url);
-				if (data == null) { // e.g. 404 errors
-					ExtractDefault(game);
-				} else if (url != game.World.TextureUrl) {
-					Bitmap bmp = GetBitmap(data);
-					if (bmp == null) { data.Dispose(); return; }
-					
-					game.World.TextureUrl = url;
-					game.Events.RaiseTexturePackChanged();
-					if (game.ChangeTerrainAtlas(bmp, data)) return;
-					
-					bmp.Dispose();
-					data.Dispose();
-				} else {
-					data.Dispose();
-				}
+				data.Dispose();
 			}
 		}
 		
-		internal static void ExtractTexturePack(Game game, string url, DownloadedItem item) {
-			if (item != null && item.Data != null) {
-				game.World.TextureUrl = item.Url;
-				byte[] data = (byte[])item.Data;
-				TexturePack extractor = new TexturePack();
-				using (Stream ms = new MemoryStream(data)) {
-					extractor.Extract(ms, game);
-				}
-				
-				TextureCache.Add(item.Url, data);
-				TextureCache.AddETag(item.Url, item.ETag, game.ETags);
-				TextureCache.AdddLastModified(item.Url, item.LastModified, game.LastModified);
-			} else {
-				FileStream data = TextureCache.GetStream(url);
+		internal static void ExtractTexturePack(Game game, DownloadedItem item) {
+			if (item.Data == null) return;
+			game.World.TextureUrl = item.Url;
+			byte[] data = (byte[])item.Data;
+			
+			TexturePack extractor = new TexturePack();
+			using (Stream ms = new MemoryStream(data)) {
+				extractor.Extract(ms, game);
+			}
+			
+			TextureCache.Add(item.Url, data);
+			TextureCache.AddETag(item.Url, item.ETag, game.ETags);
+			TextureCache.AdddLastModified(item.Url, item.LastModified, game.LastModified);
+		}
+		
+		internal static void ExtractCachedTexturePack(Game game, string url) {
+			using (Stream data = TextureCache.GetStream(url)) {
 				if (data == null) { // e.g. 404 errors
-					ExtractDefault(game);
+					if (game.World.TextureUrl != null) ExtractDefault(game);
 				} else if (url != game.World.TextureUrl) {
 					game.World.TextureUrl = url;
 					TexturePack extractor = new TexturePack();
@@ -109,10 +109,11 @@ namespace ClassicalSharp.Textures {
 				}
 			}
 		}
+		
 
-		static Bitmap GetBitmap(FileStream fs) {
+		static Bitmap GetBitmap(IDrawer2D drawer, Stream src) {
 			try {
-				return Platform.ReadBmp(fs);
+				return Platform.ReadBmp32Bpp(drawer, src);
 			} catch (ArgumentException ex) {
 				ErrorHandler.LogError("Cache.GetBitmap", ex);
 				return null;

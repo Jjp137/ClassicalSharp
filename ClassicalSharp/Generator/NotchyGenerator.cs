@@ -129,7 +129,7 @@ namespace ClassicalSharp.Generator {
 					int cenZ = (int)(caveZ + (rnd.Next(4) - 2) * 0.2);
 					double radius = (height - cenY) / (double)height;
 					radius = 1.2 + (radius * 3.5 + 1) * caveRadius;
-					radius = radius + Math.Sin(j * Math.PI / caveLen);
+					radius = radius + Math.Sin(j * Math.PI / caveLen); // TODO: this should be * according to the spec. doesn't seem right though.
 					FillOblateSpheroid(cenX, cenY, cenZ, (float)radius, Block.Air);
 				}
 			}
@@ -166,7 +166,7 @@ namespace ClassicalSharp.Generator {
 		}
 		
 		void FloodFillWaterBorders() {
-			int waterY = waterLevel - 1;
+			int waterY = waterLevel - 1;			
 			int index1 = (waterY * length + 0) * width + 0;
 			int index2 = (waterY * length + (length - 1)) * width + 0;
 			CurrentState = "Flooding edge water";
@@ -224,7 +224,7 @@ namespace ClassicalSharp.Generator {
 					bool sand = n1.Compute(x, z) > 8;
 					bool gravel = n2.Compute(x, z) > 12;
 					int y = heightmap[hMapIndex++];
-					if (y >= height) continue;
+					if (y < 0 || y >= height) continue;
 					
 					int index = (y * length + z) * width + x;
 					byte blockAbove = y >= (height - 1) ? Block.Air : blocks[index + oneY];
@@ -254,6 +254,8 @@ namespace ClassicalSharp.Generator {
 							continue;
 						
 						int flowerY = heightmap[flowerZ * width + flowerX] + 1;
+						if (flowerY <= 0 || flowerY >= height) continue;
+						
 						int index = (flowerY * length + flowerZ) * width + flowerX;
 						if (blocks[index] == Block.Air && blocks[index - oneY] == Block.Grass)
 							blocks[index] = type;
@@ -263,7 +265,7 @@ namespace ClassicalSharp.Generator {
 		}
 		
 		void PlantMushrooms() {
-			int numPatches = width * length / 2000;
+			int numPatches = blocks.Length / 2000;
 			CurrentState = "Planting mushrooms";
 			
 			for (int i = 0; i < numPatches; i++) {
@@ -294,7 +296,7 @@ namespace ClassicalSharp.Generator {
 		
 		void PlantTrees() {
 			int numPatches = width * length / 4000;
-			CurrentState = "Planting tress";
+			CurrentState = "Planting trees";
 			
 			for (int i = 0; i < numPatches; i++) {
 				CurrentProgress = (float)i / numPatches;

@@ -27,6 +27,8 @@ namespace ClassicalSharp.Model {
 		/// the whole model will be moved slightly down. </remarks>
 		public bool Bobbing = true;
 		
+		public bool UsesSkin = true;
+		
 		/// <summary> Vertical offset from the model's feet/base that the name texture should be drawn at. </summary>
 		public abstract float NameYOffset { get; }
 		
@@ -52,7 +54,7 @@ namespace ClassicalSharp.Model {
 		
 		protected Vector3 pos;
 		protected float cosHead, sinHead;
-		protected float uScale, vScale, scale;
+		protected float uScale, vScale;
 		
 		/// <summary> Returns whether the model should be rendered based on the given entity's position. </summary>
 		public virtual bool ShouldRender(Entity p, FrustumCulling culling) {
@@ -91,21 +93,20 @@ namespace ClassicalSharp.Model {
 			Vector3I P = Vector3I.Floor(p.EyePosition);
 			col = game.World.IsValidPos(P) ? game.Lighting.LightCol(P.X, P.Y, P.Z) : game.Lighting.Outside;
 			uScale = 1 / 64f; vScale = 1 / 32f;
-			scale = p.ModelScale;
-			
+
 			cols[0] = col;
 			cols[1] = FastColour.ScalePacked(col, FastColour.ShadeYBottom);
 			cols[2] = FastColour.ScalePacked(col, FastColour.ShadeZ); cols[3] = cols[2];
 			cols[4] = FastColour.ScalePacked(col, FastColour.ShadeX); cols[5] = cols[4];
 			
-			float yawDelta = p.HeadYawDegrees - p.YawDegrees;
+			float yawDelta = p.HeadY - p.RotY;
 			cosHead = (float)Math.Cos(yawDelta * Utils.Deg2Rad);
 			sinHead = (float)Math.Sin(yawDelta * Utils.Deg2Rad);
 
 			game.Graphics.SetBatchFormat(VertexFormat.P3fT2fC4b);
 			game.Graphics.PushMatrix();
-			Matrix4 m = Matrix4.RotateY(-p.YawRadians) * Matrix4.Scale(scale) * Matrix4.Translate(pos.X, pos.Y, pos.Z);
 			
+			Matrix4 m = p.TransformMatrix(p.ModelScale, pos);
 			game.Graphics.MultiplyMatrix(ref m);
 			DrawModel(p);
 			game.Graphics.PopMatrix();
@@ -165,15 +166,7 @@ namespace ClassicalSharp.Model {
 			}
 		}
 		
-		protected void DrawRotate(float angleX, float angleY, float angleZ, ModelPart part) {
-			DrawRotated(angleX, angleY, angleZ, part, false);
-		}
-		
-		protected void DrawHeadRotate(float angleX, float angleY, float angleZ, ModelPart part) {
-			DrawRotated(angleX, angleY, angleZ, part, true);
-		}
-		
-		protected void DrawRotated(float angleX, float angleY, float angleZ, ModelPart part, bool head) {
+		protected void DrawRotate(float angleX, float angleY, float angleZ, ModelPart part, bool head) {
 			float cosX = (float)Math.Cos(-angleX), sinX = (float)Math.Sin(-angleX);
 			float cosY = (float)Math.Cos(-angleY), sinY = (float)Math.Sin(-angleY);
 			float cosZ = (float)Math.Cos(-angleZ), sinZ = (float)Math.Sin(-angleZ);
@@ -189,12 +182,12 @@ namespace ClassicalSharp.Model {
 				// Rotate locally
 				if (Rotate == RotateOrder.ZYX) {
 					t = cosZ * v.X + sinZ * v.Y; v.Y = -sinZ * v.X + cosZ * v.Y; v.X = t; // Inlined RotZ
-					t = cosY * v.X - sinY * v.Z; v.Z = sinY * v.X + cosY * v.Z; v.X = t;  // Inlined RotY
+					t = cosY * v.X - sinY * v.Z; v.Z  = sinY * v.X + cosY * v.Z; v.X = t; // Inlined RotY
 					t = cosX * v.Y + sinX * v.Z; v.Z = -sinX * v.Y + cosX * v.Z; v.Y = t; // Inlined RotX
 				} else if (Rotate == RotateOrder.XZY) {
 					t = cosX * v.Y + sinX * v.Z; v.Z = -sinX * v.Y + cosX * v.Z; v.Y = t; // Inlined RotX
 					t = cosZ * v.X + sinZ * v.Y; v.Y = -sinZ * v.X + cosZ * v.Y; v.X = t; // Inlined RotZ
-					t = cosY * v.X - sinY * v.Z; v.Z = sinY * v.X + cosY * v.Z; v.X = t;  // Inlined RotY
+					t = cosY * v.X - sinY * v.Z; v.Z =  sinY * v.X + cosY * v.Z; v.X = t; // Inlined RotY
 				}
 				
 				// Rotate globally

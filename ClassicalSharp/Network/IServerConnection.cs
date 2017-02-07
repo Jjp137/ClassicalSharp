@@ -25,7 +25,7 @@ namespace ClassicalSharp {
 		public abstract void SendChat(string text, bool partial);
 		
 		/// <summary> Informs the server of the client's current position and orientation. </summary>
-		public abstract void SendPosition(Vector3 pos, float yaw, float pitch);
+		public abstract void SendPosition(Vector3 pos, float rotY, float headX);
 		
 		/// <summary> Informs the server that using the given mouse button,
 		/// the client clicked on a particular block or entity. </summary>
@@ -118,21 +118,24 @@ namespace ClassicalSharp {
 			DateTime lastModified = TextureCache.GetLastModified(url, game.LastModified);
 			string etag = TextureCache.GetETag(url, game.ETags);
 
-			if (url.Contains(".zip"))
+			if (url.Contains(".zip")) {
+				TexturePack.ExtractCachedTexturePack(game, url);
 				game.AsyncDownloader.DownloadData(url, true, "texturePack",
 				                                  lastModified, etag);
-			else
+			} else {
+				TexturePack.ExtractCachedTerrainPng(game, url);
 				game.AsyncDownloader.DownloadImage(url, true, "terrain",
 				                                   lastModified, etag);
+			}
 		}
 		
 		protected void CheckAsyncResources() {
 			DownloadedItem item;
 			if (game.AsyncDownloader.TryGetItem("terrain", out item)) {
-				TexturePack.ExtractTerrainPng(game, item.Url, item);
+				TexturePack.ExtractTerrainPng(game, item);
 			}
 			if (game.AsyncDownloader.TryGetItem("texturePack", out item)) {
-				TexturePack.ExtractTexturePack(game, item.Url, item);
+				TexturePack.ExtractTexturePack(game, item);
 			}
 		}
 		#endregion

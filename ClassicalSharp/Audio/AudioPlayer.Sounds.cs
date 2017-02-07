@@ -20,7 +20,7 @@ namespace ClassicalSharp.Audio {
 		}
 		
 		void InitSound() {
-			if (digBoard == null) InitSoundboards();			
+			if (digBoard == null) InitSoundboards();
 			monoOutputs = new IAudioOutput[maxSounds];
 			stereoOutputs = new IAudioOutput[maxSounds];
 		}

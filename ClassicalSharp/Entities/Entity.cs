@@ -9,7 +9,7 @@ namespace ClassicalSharp.Entities {
 	/// May also contain other fields and properties. </summary>
 	public abstract partial class Entity {
 		
-		public Entity(Game game) { 
+		public Entity(Game game) {
 			this.game = game;
 			SkinType = game.DefaultPlayerSkinType;
 			anim = new AnimatedComponent(game, this);
@@ -25,7 +25,7 @@ namespace ClassicalSharp.Entities {
 		public Vector3 Position;
 		public Vector3 Velocity;
 		public Vector3 OldVelocity;
-		public float HeadYawDegrees, YawDegrees, PitchDegrees;
+		public float HeadX, HeadY, RotX, RotY, RotZ;
 		
 		protected Game game;
 		protected internal bool onGround;
@@ -34,32 +34,24 @@ namespace ClassicalSharp.Entities {
 		
 		public SkinType SkinType;
 		public AnimatedComponent anim;
-		internal float uScale = 1, vScale = 1;		
+		internal float uScale = 1, vScale = 1;
 		protected DateTime lastModelChange = new DateTime(1, 1, 1);
 		
 		
-		/// <summary> Rotation of the entity's head horizontally (i.e. looking north or east) </summary>
-		public float HeadYawRadians {
-			get { return HeadYawDegrees * Utils.Deg2Rad; }
-			set { HeadYawDegrees = value * Utils.Rad2Deg; }
+		/// <summary> Rotation of the entity's head horizontally. (i.e. looking north or east) </summary>
+		public float HeadYRadians {
+			get { return HeadY * Utils.Deg2Rad; }
+			set { HeadY = value * Utils.Rad2Deg; }
 		}
 		
-		/// <summary> Rotation of the entity's body horizontally (i.e. looking north or east) </summary>
-		public float YawRadians {
-			get { return YawDegrees * Utils.Deg2Rad; }
-			set { YawDegrees = value * Utils.Rad2Deg; }
-		}
-		
-		/// <summary> Rotation of the entity vertically. (i.e. looking up or down) </summary>
-		public float PitchRadians {
-			get { return PitchDegrees * Utils.Deg2Rad; }
-			set { PitchDegrees = value * Utils.Rad2Deg; }
+		/// <summary> Rotation of the entity's head vertically. (i.e. looking up or down) </summary>
+		public float HeadXRadians {
+			get { return HeadX * Utils.Deg2Rad; }
+			set { HeadX = value * Utils.Rad2Deg; }
 		}
 		
 		/// <summary> Returns the size of the model that is used for collision detection. </summary>
-		public Vector3 Size {
-			get { UpdateModel(); return Model.CollisionSize * ModelScale; }
-		}
+		public Vector3 Size;
 		
 		void UpdateModel() {
 			BlockModel model = Model as BlockModel;
@@ -82,7 +74,7 @@ namespace ClassicalSharp.Entities {
 		
 		/// <summary> Gets the position of the player's eye in the world. </summary>
 		public Vector3 EyePosition {
-			get { return new Vector3(Position.X, 
+			get { return new Vector3(Position.X,
 			                         Position.Y + Model.GetEyeY(this) * ModelScale, Position.Z); }
 		}
 
@@ -100,12 +92,21 @@ namespace ClassicalSharp.Entities {
 			return game.World.SafeGetBlock(Vector3I.Floor(coords));
 		}
 		
+		internal Matrix4 TransformMatrix(float scale, Vector3 pos) {
+			return 
+				Matrix4.RotateZ(-RotZ * Utils.Deg2Rad) * 
+				Matrix4.RotateX(-RotX * Utils.Deg2Rad) * 
+				Matrix4.RotateY(-RotY * Utils.Deg2Rad) * 
+				Matrix4.Scale(scale)                   * 
+				Matrix4.Translate(pos.X, pos.Y, pos.Z);
+		}
+		
 		
 		public void SetModel(string model) {
 			ModelScale = 1;
 			int sep = model.IndexOf('|');
 			string scale = sep == -1 ? null : model.Substring(sep + 1);
-			ModelName = sep == -1 ? model : model.Substring(0, sep);			
+			ModelName = sep == -1 ? model : model.Substring(0, sep);
 			
 			if (Utils.CaselessEquals(model, "giant")) {
 				ModelName = "humanoid";
@@ -115,7 +116,11 @@ namespace ClassicalSharp.Entities {
 			Model = game.ModelCache.Get(ModelName);
 			ParseScale(scale);
 			lastModelChange = DateTime.UtcNow;
-			MobTextureId = -1;		
+			MobTextureId = -1;
+			
+			UpdateModel();
+			Size = Model.CollisionSize * ModelScale;
+			modelAABB = Model.PickingBounds.Scale(ModelScale);
 		}
 		
 		void ParseScale(string scale) {

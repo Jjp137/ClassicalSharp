@@ -24,18 +24,18 @@ namespace ClassicalSharp {
 		
 		/// <summary> Whether this camera is using a third person perspective. </summary>
 		/// <remarks> This causes the local player to be renderered if true. </remarks>
-		public abstract bool IsThirdPerson { get; }
-		
-		public virtual void Tick(double elapsed) { }
+		public abstract bool IsThirdPerson { get; }		
 		
 		public virtual bool DoZoom(float deltaPrecise) { return false; }
+		
+		public abstract void UpdateMouse();
 		
 		public abstract void RegrabMouse();
 		
 		/// <summary> Calculates the picked block based on the camera's current position. </summary>
 		public virtual void GetPickedBlock(PickedPos pos) { }
 		
-		protected float AdjustPitch(float value) {
+		protected float AdjustHeadX(float value) {
 			if (value >= 90.0f && value <= 90.1f) return 90.1f * Utils.Deg2Rad;
 			if (value >= 89.9f && value <= 90.0f) return 89.9f * Utils.Deg2Rad;
 			if (value >= 270.0f && value <= 270.1f) return 270.1f * Utils.Deg2Rad;
@@ -61,8 +61,8 @@ namespace ClassicalSharp {
 		}
 		
 		public override void GetPickedBlock(PickedPos pos) {
-			Vector3 dir = Utils.GetDirVector(player.HeadYawRadians,
-			                                 AdjustPitch(player.PitchDegrees));
+			Vector3 dir = Utils.GetDirVector(player.HeadYRadians,
+			                                 AdjustHeadX(player.HeadX));
 			Vector3 eyePos = player.EyePosition;
 			float reach = game.LocalPlayer.ReachDistance;
 			Picking.CalculatePickedBlock(game, eyePos, dir, reach, pos);
@@ -94,18 +94,18 @@ namespace ClassicalSharp {
 		static readonly float sensiFactor = 0.0002f / 3 * Utils.Rad2Deg;
 		private void UpdateMouseRotation() {
 			float sensitivity = sensiFactor * game.MouseSensitivity;
-			float yaw = player.interp.nextHeadYaw + delta.X * sensitivity;
-			float yAdj = game.InvertMouse ? -delta.Y * sensitivity : delta.Y * sensitivity;
-			float pitch = player.interp.nextPitch + yAdj;
-			LocationUpdate update = LocationUpdate.MakeOri(yaw, pitch);
+			float rotY =  player.interp.next.HeadY + delta.X * sensitivity;
+			float yAdj =  game.InvertMouse ? -delta.Y * sensitivity : delta.Y * sensitivity;
+			float headX = player.interp.next.HeadX + yAdj;
+			LocationUpdate update = LocationUpdate.MakeOri(rotY, headX);
 			
 			// Need to make sure we don't cross the vertical axes, because that gets weird.
-			if (update.Pitch >= 90 && update.Pitch <= 270)
-				update.Pitch = player.interp.nextPitch < 180 ? 89.9f : 270.1f;
-			game.LocalPlayer.SetLocation(update, true);
+			if (update.HeadX >= 90 && update.HeadX <= 270)
+				update.HeadX = player.interp.next.HeadX < 180 ? 89.9f : 270.1f;
+			game.LocalPlayer.SetLocation(update, false);
 		}
 		
-		public override void Tick(double elapsed) {
+		public override void UpdateMouse() {
 			if (game.Gui.ActiveScreen.HandlesAllInput) return;
 			CentreMousePosition();
 			UpdateMouseRotation();
@@ -126,8 +126,8 @@ namespace ClassicalSharp {
 		}
 		
 		protected Vector3 GetDirVector() {
-			return Utils.GetDirVector(player.HeadYawRadians,
-			                          AdjustPitch(player.PitchDegrees));
+			return Utils.GetDirVector(player.HeadYRadians,
+			                          AdjustHeadX(player.HeadX));
 		}
 	}
 	
@@ -152,8 +152,8 @@ namespace ClassicalSharp {
 		
 		public override Vector2 GetCameraOrientation() {
 			if (!forward)
-				return new Vector2(player.HeadYawRadians, player.PitchRadians);
-			return new Vector2(player.HeadYawRadians + (float)Math.PI, -player.PitchRadians);			
+				return new Vector2(player.HeadYRadians, player.HeadXRadians);
+			return new Vector2(player.HeadYRadians + (float)Math.PI, -player.HeadXRadians);			
 		}
 		
 		public override Vector3 GetCameraPos(float t) {
@@ -179,7 +179,7 @@ namespace ClassicalSharp {
 		}
 		
 		public override Vector2 GetCameraOrientation() {
-			return new Vector2(player.HeadYawRadians, player.PitchRadians);
+			return new Vector2(player.HeadYRadians, player.HeadXRadians);
 		}
 		
 		public override Vector3 GetCameraPos(float t) {
@@ -187,9 +187,9 @@ namespace ClassicalSharp {
 			Vector3 camPos = player.EyePosition;
 			camPos.Y += bobbingVer;
 			
-			double adjYaw = player.HeadYawRadians + Math.PI / 2;
-			camPos.X += bobbingHor * (float)Math.Sin(adjYaw);
-			camPos.Z -= bobbingHor * (float)Math.Cos(adjYaw);
+			double adjHeadY = player.HeadYRadians + Math.PI / 2;
+			camPos.X += bobbingHor * (float)Math.Sin(adjHeadY);
+			camPos.Z -= bobbingHor * (float)Math.Cos(adjHeadY);
 			return camPos;
 		}
 	}

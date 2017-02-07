@@ -78,8 +78,13 @@ namespace Launcher {
 			Window.Keyboard.KeyDown += KeyDown;
 			LoadFont();
 			logoFont = new Font(FontName, 32, FontStyle.Regular);
+			
 			string path = Assembly.GetExecutingAssembly().Location;
-			Window.Icon = Icon.ExtractAssociatedIcon(path);
+			try {
+				Window.Icon = Icon.ExtractAssociatedIcon(path);
+			} catch (Exception ex) {
+				ErrorHandler2.LogError("LauncherWindow.Init() - Icon", ex);
+			}
 			//Minimised = Window.WindowState == WindowState.Minimized;
 			
 			Drawer.Colours['g'] = new FastColour(125, 125, 125);

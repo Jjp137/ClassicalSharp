@@ -40,6 +40,7 @@ namespace ClassicalSharp.Network.Protocols {
 			net.Set(Opcode.CpeSetTextColor, HandleSetTextColor, 6);
 			net.Set(Opcode.CpeSetMapEnvUrl, HandleSetMapEnvUrl, 65);
 			net.Set(Opcode.CpeSetMapEnvProperty, HandleSetMapEnvProperty, 6);
+			net.Set(Opcode.CpeSetEntityProperty, HandleSetEntityProperty, 7);
 		}
 		
 		#region Read
@@ -346,8 +347,34 @@ namespace ClassicalSharp.Network.Protocols {
 				case 7:
 					Utils.Clamp(ref value, byte.MinValue, byte.MaxValue);
 					env.SetWeatherFade(value / 128f); break;
+				case 8:
+					env.SetExpFog(value != 0); break;
 			}
 		}
+		
+		void HandleSetEntityProperty() {
+			byte id = reader.ReadUInt8();
+			byte type = reader.ReadUInt8();
+			int value = reader.ReadInt32();
+			
+			Entity entity = game.Entities[id];
+			if (entity == null) return;
+			LocationUpdate update = LocationUpdate.Empty();
+			
+			switch (type) {
+				case 0:
+					update.RotX = LocationUpdate.Clamp(value); break;
+				case 1:
+					update.RotY = LocationUpdate.Clamp(value); break;
+				case 2:
+					update.RotZ = LocationUpdate.Clamp(value); break;
+				default:
+					return;
+			}
+			entity.SetLocation(update, true);
+		}		
+		
+		
 		#endregion
 		
 		#region Write
@@ -358,14 +385,14 @@ namespace ClassicalSharp.Network.Protocols {
 			writer.WriteUInt8((byte)Opcode.CpePlayerClick);
 			writer.WriteUInt8((byte)button);
 			writer.WriteUInt8(buttonDown ? (byte)0 : (byte)1);
-			writer.WriteInt16((short)Utils.DegreesToPacked(p.HeadYawDegrees, 65536));
-			writer.WriteInt16((short)Utils.DegreesToPacked(p.PitchDegrees, 65536));
+			writer.WriteInt16((short)Utils.DegreesToPacked(p.HeadY, 65536));
+			writer.WriteInt16((short)Utils.DegreesToPacked(p.HeadX, 65536));
 			
 			writer.WriteUInt8(targetId);
 			writer.WriteInt16((short)pos.BlockPos.X);
 			writer.WriteInt16((short)pos.BlockPos.Y);
 			writer.WriteInt16((short)pos.BlockPos.Z);
-			writer.WriteUInt8((byte)pos.BlockFace);
+			writer.WriteUInt8((byte)pos.Face);
 			net.SendPacket();
 		}
 		

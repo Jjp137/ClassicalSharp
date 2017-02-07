@@ -12,7 +12,7 @@ namespace ClassicalSharp.Entities {
 		/// <summary> Position the player's position is set to when the 'respawn' key binding is pressed. </summary>
 		public Vector3 Spawn;
 
-		public float SpawnYaw, SpawnPitch;
+		public float SpawnRotY, SpawnHeadX;
 		
 		/// <summary> The distance (in blocks) that players are allowed to
 		/// reach to and interact/modify blocks in. </summary>
@@ -63,8 +63,8 @@ namespace ClassicalSharp.Entities {
 			physics.UpdateVelocityState(xMoving, zMoving);
 			physics.PhysicsTick(xMoving, zMoving);
 			
-			interp.nextPos = Position; Position = interp.lastPos;
-			anim.UpdateAnimState(interp.lastPos, interp.nextPos, delta);
+			interp.next.Pos = Position; Position = interp.prev.Pos;
+			anim.UpdateAnimState(interp.prev.Pos, interp.next.Pos, delta);
 			
 			CheckSkin();
 			sound.Tick(wasOnGround);
@@ -120,11 +120,8 @@ namespace ClassicalSharp.Entities {
 		/// <summary> Linearly interpolates position and rotation between the previous and next state. </summary>
 		public void SetInterpPosition(float t) {
 			if (!Hacks.WOMStyleHacks || !Hacks.Noclip)
-				Position = Vector3.Lerp(interp.lastPos, interp.nextPos, t);
-			
-			HeadYawDegrees = Utils.LerpAngle(interp.lastHeadYaw, interp.nextHeadYaw, t);
-			YawDegrees = Utils.LerpAngle(interp.lastYaw, interp.nextYaw, t);
-			PitchDegrees = Utils.LerpAngle(interp.lastPitch, interp.nextPitch, t);
+				Position = Vector3.Lerp(interp.prev.Pos, interp.next.Pos, t);			
+			interp.LerpAngles(t);
 		}
 		
 		public void Init(Game game) {

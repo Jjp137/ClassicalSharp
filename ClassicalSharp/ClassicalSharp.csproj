@@ -152,14 +152,13 @@
     <Compile Include="Blocks\BlockInfo.Atlas.cs" />
     <Compile Include="Blocks\DefaultSet.cs" />
     <Compile Include="Commands\SinglePlayerCommands.cs" />
-    <Compile Include="Entities\Components\LocalInterpComponent.cs" />
+    <Compile Include="Entities\Components\IInterpComponent.cs" />
     <Compile Include="Entities\Mobs\AI\AI.cs" />
     <Compile Include="Entities\Mobs\AI\FleeAI.cs" />
     <Compile Include="Entities\Mobs\AI\HostileAI.cs" />
     <Compile Include="Entities\Components\AnimatedComponent.cs" />
     <Compile Include="Entities\Components\HacksComponent.cs" />
     <Compile Include="Entities\Components\InputComponent.cs" />
-    <Compile Include="Entities\Components\NetInterpComponent.cs" />
     <Compile Include="Entities\Components\CollisionsComponent.cs" />
     <Compile Include="Entities\Components\NewCollisionsComponent.cs" />
     <Compile Include="Entities\Components\PhysicsComponent.cs" />
@@ -205,6 +204,7 @@
     <Compile Include="Entities\Model\ModelBuilder.cs" />
     <Compile Include="MeshBuilder\Builder.cs" />
     <Compile Include="MeshBuilder\FloodFill.cs" />
+    <Compile Include="MeshBuilder\CuboidDrawer.cs" />
     <Compile Include="MeshBuilder\NormalBuilder.cs" />
     <Compile Include="MeshBuilder\AdvLightingBuilder.cs" />
     <Compile Include="MeshBuilder\TileDrawer.cs" />
@@ -301,7 +301,7 @@
     <Compile Include="Singleplayer\TNTPhysics.cs" />
     <Compile Include="TexturePack\EntryList.cs" />
     <Compile Include="TexturePack\Animations.cs" />
-    <Compile Include="TexturePack\LavaAnimation.cs" />
+    <Compile Include="TexturePack\LiquidAnimations.cs" />
     <Compile Include="TexturePack\Side.cs" />
     <Compile Include="TexturePack\TextureCache.cs" />
     <Compile Include="TexturePack\TerrainAtlas1D.cs" />

@@ -2,6 +2,7 @@
 using System;
 using System.Drawing;
 using System.IO;
+using ClassicalSharp;
 
 namespace Launcher.Patcher {
 	
@@ -18,7 +19,8 @@ namespace Launcher.Patcher {
 # - Tick delay is the number of ticks a frame doesn't change. For instance, a value of 0
 #     means that the frame would be changed every tick, while a value of 2 would mean 
 #    'replace with frame 1, don't change frame, don't change frame, replace with frame 2'.
-# NOTE: If a file called 'uselavaanim' is in the texture pack, ClassicalSharp 0.99.2 onwards will use its built-in dynamic generation for the lava texture animation.
+# NOTE: If a file called 'uselavaanim' is in the texture pack,  ClassicalSharp 0.99.2 onwards uses its built-in dynamic generation for the lava texture animation.
+# NOTE: If a file called 'usewateranim' is in the texture pack, ClassicalSharp 0.99.5 onwards uses its built-in dynamic generation for the water texture animation.
 
 # still water
 14 0 0 0 16 32 2
@@ -29,7 +31,7 @@ namespace Launcher.Patcher {
 		
 		unsafe void PatchDefault(byte[] data, int y) {
 			// Sadly files in modern are 24 rgb, so we can't use fastbitmap here
-			using (Bitmap bmp = new Bitmap(new MemoryStream(data))) {
+			using (Bitmap bmp = Platform.ReadBmp32Bpp(drawer, data)) {
 				for (int tile = 0; tile < bmp.Height; tile += 16) {
 					CopyTile(tile, tile, y, bmp);
 				}
@@ -37,7 +39,7 @@ namespace Launcher.Patcher {
 		}
 		
 		unsafe void PatchCycle(byte[] data, int y) {
-			using (Bitmap bmp = new Bitmap(new MemoryStream(data))) {
+			using (Bitmap bmp = Platform.ReadBmp32Bpp(drawer, data)) {
 				int dst = 0;
 				for (int tile = 0; tile < bmp.Height; tile += 16, dst += 16) {
 					CopyTile(tile, dst, y, bmp);

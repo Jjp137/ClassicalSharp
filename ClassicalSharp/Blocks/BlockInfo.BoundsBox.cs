@@ -10,6 +10,24 @@ namespace ClassicalSharp {
 		
 		public Vector3[] MinBB = new Vector3[Block.Count];
 		public Vector3[] MaxBB = new Vector3[Block.Count];
+		public Vector3[] RenderMinBB = new Vector3[Block.Count];
+		public Vector3[] RenderMaxBB = new Vector3[Block.Count];
+		
+		internal void CalcRenderBounds(byte id) {
+			Vector3 min = MinBB[id], max = MaxBB[id];
+			
+			if (id >= Block.Water && id <= Block.StillLava) {
+				min.X -= 0.1f/16f; max.X -= 0.1f/16f; 
+				min.Z -= 0.1f/16f; max.Z -= 0.1f/16f;
+				min.Y -= 1.5f/16f; max.Y -= 1.5f/16f;
+			} else if (Draw[id] == DrawType.Translucent && Collide[id] != CollideType.Solid) {
+				min.X += 0.1f/16f; max.X += 0.1f/16f; 
+				min.Z += 0.1f/16f; max.Z += 0.1f/16f;
+				min.Y -= 0.1f/16f; max.Y -= 0.1f/16f;
+			}
+			
+			RenderMinBB[id] = min; RenderMaxBB[id] = max;
+		}
 		
 		internal byte CalcLightOffset(byte block) {
 			int flags = 0xFF;
@@ -30,15 +48,15 @@ namespace ClassicalSharp {
 		public void RecalculateSpriteBB(FastBitmap fastBmp) {
 			for (int i = 0; i < Block.Count; i++) {
 				if (Draw[i] != DrawType.Sprite) continue;
-				RecalculateBB(i, fastBmp);
+				RecalculateBB((byte)i, fastBmp);
 			}
 		}
 		
 		const float angle = 45f * Utils.Deg2Rad;
 		static readonly Vector3 centre = new Vector3(0.5f, 0, 0.5f);
-		internal void RecalculateBB(int block, FastBitmap fastBmp) {
+		internal void RecalculateBB(byte block, FastBitmap fastBmp) {
 			int elemSize = fastBmp.Width / 16;
-			int texId = GetTextureLoc((byte)block, Side.Right);
+			int texId = GetTextureLoc(block, Side.Right);
 			int texX = texId & 0x0F, texY = texId >> 4;
 			
 			float topY = GetSpriteBB_TopY(elemSize, texX, texY, fastBmp);
@@ -48,6 +66,7 @@ namespace ClassicalSharp {
 			
 			MinBB[block] = Utils.RotateY(leftX - 0.5f, bottomY, 0, angle) + centre;
 			MaxBB[block] = Utils.RotateY(rightX - 0.5f, topY, 0, angle) + centre;
+			CalcRenderBounds(block);
 		}
 		
 		unsafe float GetSpriteBB_TopY(int size, int tileX, int tileY, FastBitmap fastBmp) {

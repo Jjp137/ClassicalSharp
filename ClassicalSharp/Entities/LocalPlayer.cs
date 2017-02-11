@@ -59,9 +59,14 @@ namespace ClassicalSharp.Entities {
 			bool wasOnGround = onGround;
 			
 			HandleInput(ref xMoving, ref zMoving);
-			physics.DoEntityPush(ref xMoving, ref zMoving);
-			physics.UpdateVelocityState(xMoving, zMoving);
-			physics.PhysicsTick(xMoving, zMoving);
+			if (game.ClassicMode && !Hacks.Noclip)
+				physics.DoEntityPush();
+			
+			// Immediate stop in noclip mode
+			if (!Hacks.NoclipSlide && (Hacks.Noclip && xMoving == 0 && zMoving == 0))
+				Velocity = Vector3.Zero;
+			physics.UpdateVelocityState();
+			physics.PhysicsTick(GetHeadingVelocity(zMoving, xMoving));
 			
 			interp.next.Pos = Position; Position = interp.prev.Pos;
 			anim.UpdateAnimState(interp.prev.Pos, interp.next.Pos, delta);
@@ -69,6 +74,11 @@ namespace ClassicalSharp.Entities {
 			CheckSkin();
 			sound.Tick(wasOnGround);
 		}
+		
+		Vector3 GetHeadingVelocity(float xMoving, float zMoving) {
+			return Utils.RotateY(xMoving, 0, zMoving, HeadYRadians);
+		}
+		
 
 		public override void RenderModel(double deltaTime, float t) {
 			anim.GetCurrentAnimState(t);
@@ -120,7 +130,7 @@ namespace ClassicalSharp.Entities {
 		/// <summary> Linearly interpolates position and rotation between the previous and next state. </summary>
 		public void SetInterpPosition(float t) {
 			if (!Hacks.WOMStyleHacks || !Hacks.Noclip)
-				Position = Vector3.Lerp(interp.prev.Pos, interp.next.Pos, t);			
+				Position = Vector3.Lerp(interp.prev.Pos, interp.next.Pos, t);
 			interp.LerpAngles(t);
 		}
 		

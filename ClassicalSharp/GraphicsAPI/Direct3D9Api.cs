@@ -171,9 +171,18 @@ namespace ClassicalSharp.GraphicsAPI {
 		}
 
 		protected override int CreateTexture(int width, int height, IntPtr scan0, bool managedPool) {
-			Pool pool = managedPool ? Pool.Managed : Pool.Default;
-			D3D.Texture texture = device.CreateTexture(width, height, 0, Usage.None, Format.A8R8G8B8, pool);
-			texture.SetData(0, LockFlags.None, scan0, width * height * 4);
+			D3D.Texture texture = null;
+			if (managedPool) {
+				texture = device.CreateTexture(width, height, 0, Usage.None, Format.A8R8G8B8, Pool.Managed);
+				texture.SetData(0, LockFlags.None, scan0, width * height * 4);
+			} else {
+				D3D.Texture sys = device.CreateTexture(width, height, 0, Usage.None, Format.A8R8G8B8, Pool.SystemMemory);
+				sys.SetData(0, LockFlags.None, scan0, width * height * 4);
+				
+				texture = device.CreateTexture(width, height, 0, Usage.None, Format.A8R8G8B8, Pool.Default);
+				device.UpdateTexture(sys, texture);				
+				sys.Dispose();
+			}
 			return GetOrExpand(ref textures, texture, texBufferSize);
 		}
 		
@@ -412,7 +421,8 @@ namespace ClassicalSharp.GraphicsAPI {
 				throw new SharpDXException(code);
 			
 			// TODO: Make sure this actually works on all graphics cards.
-			Utils.LogDebug("Lost Direct3D device.");
+			
+			LoseContext(" (Direct3D9 device lost)");
 			LoopUntilRetrieved();
 			RecreateDevice(game);
 		}
@@ -425,9 +435,8 @@ namespace ClassicalSharp.GraphicsAPI {
 			while (true) {
 				Thread.Sleep(50);
 				uint code = (uint)device.TestCooperativeLevel();
-				if ((uint)code == (uint)Direct3DError.DeviceNotReset) {
-					Utils.LogDebug("Retrieved Direct3D device again."); return;
-				}
+				if ((uint)code == (uint)Direct3DError.DeviceNotReset) return;
+				
 				task.Callback(task);
 			}
 		}
@@ -437,29 +446,25 @@ namespace ClassicalSharp.GraphicsAPI {
 		public override void SetVSync(Game game, bool value) {
 			vsync = value;
 			game.VSync = value;
+			
+			LoseContext(" (toggling VSync)");
 			RecreateDevice(game);
 		}
 		
 		public override void OnWindowResize(Game game) {
+			LoseContext(" (resizing window)");
 			RecreateDevice(game);
 		}
 		
 		void RecreateDevice(Game game) {
 			PresentParameters args = GetPresentArgs(game.Width, game.Height);
-			LostContext = true;
-			RaiseContextLost();
-			DeleteVb(ref quadVb);
-			DeleteVb(ref texVb);
 			
 			while ((uint)device.Reset(args) == (uint)Direct3DError.DeviceLost)
 				LoopUntilRetrieved();
 			
 			SetDefaultRenderStates();
 			RestoreRenderStates();
-			
-			LostContext = false;
-			RaiseContextRecreated();
-			InitDynamicBuffers();
+			RecreateContext();
 		}
 		
 		void SetDefaultRenderStates() {
@@ -550,7 +555,7 @@ namespace ClassicalSharp.GraphicsAPI {
 
 		internal override void MakeApiInfo() {
 			string adapter = d3d.Adapters[0].Details.Description;
-			float texMem = (uint)device.AvailableTextureMemory / 1024f / 1024f;
+			float texMem = device.AvailableTextureMemory / 1024f / 1024f;
 			
 			ApiInfo = new string[] {
 				"-- Using Direct3D9 api --",
@@ -565,7 +570,7 @@ namespace ClassicalSharp.GraphicsAPI {
 
 		public override void TakeScreenshot(string output, int width, int height) {
 			using (Surface backbuffer = device.GetBackBuffer(0, 0, BackBufferType.Mono),
-			      tempSurface = device.CreateOffscreenPlainSurface(width, height, Format.X8R8G8B8, Pool.SystemMemory)) {
+			       tempSurface = device.CreateOffscreenPlainSurface(width, height, Format.X8R8G8B8, Pool.SystemMemory)) {
 				// For DX 8 use IDirect3DDevice8::CreateImageSurface
 				device.GetRenderTargetData(backbuffer, tempSurface);
 				LockedRectangle rect = tempSurface.LockRectangle(LockFlags.ReadOnly | LockFlags.NoDirtyUpdate);

@@ -159,7 +159,7 @@ namespace SharpDX.Direct3D9 {
 			for( int yy = 0; yy < height; yy++ ) {
 				MemUtils.memcpy( (IntPtr)src, (IntPtr)dst, width * 4 );
 				src += width * 4;
-				dst += rect.Pitch;			
+				dst += rect.Pitch;
 			}
 			UnlockRectangle( level );
 		}

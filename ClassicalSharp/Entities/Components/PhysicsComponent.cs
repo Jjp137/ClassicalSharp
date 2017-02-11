@@ -25,9 +25,7 @@ namespace ClassicalSharp.Entities {
 			info = game.BlockInfo;
 		}
 		
-		public void UpdateVelocityState(float xMoving, float zMoving) {
-			if (!hacks.NoclipSlide && (hacks.Noclip && xMoving == 0 && zMoving == 0))
-				entity.Velocity = Vector3.Zero;
+		public void UpdateVelocityState() {
 			if (hacks.Flying || hacks.Noclip) {
 				entity.Velocity.Y = 0; // eliminate the effect of gravity
 				int dir = (hacks.FlyingUp || jumping) ? 1 : (hacks.FlyingDown ? -1 : 0);
@@ -65,7 +63,7 @@ namespace ClassicalSharp.Entities {
 					if (hacks.HalfSpeeding && hacks.CanSpeed) entity.Velocity.Y += 0.02f;
 				} else if (pastJumpPoint) {
 					// either A) jump bob in water B) climb up solid on side
-					if (collisions.HorCollision)
+					if (collisions.HorizontalCollision)
 						entity.Velocity.Y += touchLava ? 0.30f : 0.13f;
 					else if (canLiquidJump)
 						entity.Velocity.Y += touchLava ? 0.20f : 0.10f;
@@ -104,7 +102,7 @@ namespace ClassicalSharp.Entities {
 		airDrag = new Vector3(0.6f, 1f, 0.6f);
 		const float liquidGrav = 0.02f, ropeGrav = 0.034f, normalGrav = 0.08f;
 		
-		public void PhysicsTick(float xMoving, float zMoving) {
+		public void PhysicsTick(Vector3 vel) {
 			if (hacks.Noclip) entity.onGround = false;
 			float multiply = GetBaseMultiply(true);
 			float yMultiply = GetBaseMultiply(hacks.CanSpeed);
@@ -118,18 +116,20 @@ namespace ClassicalSharp.Entities {
 			}
 			
 			if (entity.TouchesAnyWater() && !hacks.Flying && !hacks.Noclip) {
-				MoveNormal(xMoving, zMoving, 0.02f * horMul, waterDrag, liquidGrav, yMul);
+				MoveNormal(vel, 0.02f * horMul, waterDrag, liquidGrav, yMul);
 			} else if (entity.TouchesAnyLava() && !hacks.Flying && !hacks.Noclip) {
-				MoveNormal(xMoving, zMoving, 0.02f * horMul, lavaDrag, liquidGrav, yMul);
+				MoveNormal(vel, 0.02f * horMul, lavaDrag, liquidGrav, yMul);
 			} else if (entity.TouchesAnyRope() && !hacks.Flying && !hacks.Noclip) {
-				MoveNormal(xMoving, zMoving, 0.02f * 1.7f, ropeDrag, ropeGrav, yMul);
+				MoveNormal(vel, 0.02f * 1.7f, ropeDrag, ropeGrav, yMul);
 			} else {
 				float factor = !(hacks.Flying || hacks.Noclip) && entity.onGround ? 0.1f : 0.02f;
 				float gravity = useLiquidGravity ? liquidGrav : normalGrav;
-				if (hacks.Flying || hacks.Noclip)
-					MoveFlying(xMoving, zMoving, factor * horMul, normalDrag, gravity, yMul);
-				else
-					MoveNormal(xMoving, zMoving, factor * horMul, normalDrag, gravity, yMul);
+				
+				if (hacks.Flying || hacks.Noclip) {
+					MoveFlying(vel, factor * horMul, normalDrag, gravity, yMul);
+				} else {
+					MoveNormal(vel, factor * horMul, normalDrag, gravity, yMul);
+				}
 
 				if (entity.BlockUnderFeet == Block.Ice && !(hacks.Flying || hacks.Noclip)) {
 					// limit components to +-0.25f by rescaling vector to [-0.25, 0.25]
@@ -147,20 +147,19 @@ namespace ClassicalSharp.Entities {
 			if (entity.onGround) { firstJump = false; secondJump = false; }
 		}
 		
-		void AdjHeadingVelocity(float x, float z, float factor) {
-			float dist = (float)Math.Sqrt(x * x + z * z);
+		void MoveHor(Vector3 vel, float factor) {
+			float dist = (float)Math.Sqrt(vel.X * vel.X + vel.Z * vel.Z);
 			if (dist < 0.00001f) return;
 			if (dist < 1) dist = 1;
-
-			float multiply = factor / dist;
-			entity.Velocity += Utils.RotateY(x * multiply, 0, z * multiply, entity.HeadYRadians);
+			
+			entity.Velocity += vel * (factor / dist);
 		}
 		
-		void MoveFlying(float xMoving, float zMoving, float factor, Vector3 drag, float gravity, float yMul) {
-			AdjHeadingVelocity(zMoving, xMoving, factor);
+		void MoveFlying(Vector3 vel, float factor, Vector3 drag, float gravity, float yMul) {
+			MoveHor(vel, factor);
 			float yVel = (float)Math.Sqrt(entity.Velocity.X * entity.Velocity.X + entity.Velocity.Z * entity.Velocity.Z);
 			// make horizontal speed the same as vertical speed.
-			if ((xMoving != 0 || zMoving != 0) && yVel > 0.001f) {
+			if ((vel.X != 0 || vel.Z != 0) && yVel > 0.001f) {
 				entity.Velocity.Y = 0;
 				yMul = 1;
 				if (hacks.FlyingUp || jumping) entity.Velocity.Y += yVel;
@@ -169,8 +168,8 @@ namespace ClassicalSharp.Entities {
 			Move(drag, gravity, yMul);
 		}
 		
-		void MoveNormal(float xMoving, float zMoving, float factor, Vector3 drag, float gravity, float yMul) {
-			AdjHeadingVelocity(zMoving, xMoving, factor);
+		void MoveNormal(Vector3 vel, float factor, Vector3 drag, float gravity, float yMul) {
+			MoveHor(vel, factor);
 			Move(drag, gravity, yMul);
 		}
 		
@@ -266,28 +265,22 @@ namespace ClassicalSharp.Entities {
 			return a * (-49 * u - 196) - 4 * t + 50 * u + 196;
 		}
 		
-		public void DoEntityPush(ref float xMoving, ref float zMoving) {
-			if (!game.ClassicMode || hacks.Flying || hacks.Noclip) return;
-			return;
-			// TODO: Fix
-			
-			for (int id = 0; id < EntityList.SelfID; id++) {
+		public void DoEntityPush() {
+			for (int id = 0; id < EntityList.MaxCount; id++) {
 				Entity other = game.Entities[id];
-				if (other == null) continue;
+				if (other == null || other == entity) continue;
 				
-				float dx = other.Position.X - entity.Position.X;
-				float dy = other.Position.Y - entity.Position.Y;
-				float dz = other.Position.Z - entity.Position.Z;
-				float dist = dx * dx + dy * dy + dz * dz;
-				if (dist < 0.0001f || dist > 0.5f) continue;
+				bool yIntersects = 
+					entity.Position.Y <= (other.Position.Y + other.Size.Y) && 
+					other.Position.Y  <= (entity.Position.Y + entity.Size.Y);
+				if (!yIntersects) continue;
 				
-				double yaw = Math.Atan2(dz, dx) - Math.PI / 2;
-				Vector3 dir = Utils.GetDirVector(yaw, 0);
-				Console.WriteLine("Yaw: " + yaw * Utils.Rad2Deg);
-				Console.WriteLine(dir);
-				Console.WriteLine(entity.Position);
-				xMoving = -dir.X;
-				zMoving = -dir.Z;
+				Vector3 d = other.Position - entity.Position;
+				float dist = d.X * d.X + d.Z * d.Z;
+				if (dist < 0.0001f || dist > 1f) continue; // TODO: range needs to be lower?
+				
+				Vector3 dir = Vector3.Normalize(d.X, 0, d.Z);
+				entity.Velocity -= dir * (1 - dist) / 32f; // TODO: should be 24/25
 			}
 		}
 	}

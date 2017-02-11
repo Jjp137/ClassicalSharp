@@ -39,7 +39,7 @@ namespace ClassicalSharp.Mode {
 			if (invCount[index] != 0) return;
 			
 			// bypass HeldBlock's normal behaviour
-			game.Inventory.Hotbar[index] = Block.Invalid;
+			game.Inventory.Hotbar[index] = Block.Air;
 			game.Events.RaiseHeldBlockChanged();
 		}
 		
@@ -83,7 +83,7 @@ namespace ClassicalSharp.Mode {
 			}
 			if (index == -1) {
 				for (int i = hotbar.Length - 1; i >= 0; i--) {
-					if (hotbar[i] == Block.Invalid) index = i;
+					if (hotbar[i] == Block.Air) index = i;
 				}
 			}
 			if (index == -1) return; // no free slots
@@ -100,7 +100,7 @@ namespace ClassicalSharp.Mode {
 		public void OnNewMapLoaded(Game game) {
 			game.Chat.Add("&fScore: &e" + score, MessageType.Status1);
 			
-			string[] models = { "sheep", "pig", "skeleton", "zombie", "creeper" };
+			string[] models = { "sheep", "pig", "skeleton", "zombie", "creeper", "spider" };
 			for (int i = 0; i < 254; i++) {
 				MobEntity fail = new MobEntity(game, models[rnd.Next(models.Length)]);
 				float x = rnd.Next(0, game.World.Width) + 0.5f;
@@ -116,8 +116,9 @@ namespace ClassicalSharp.Mode {
 			this.game = game;
 			byte[] hotbar = game.Inventory.Hotbar;
 			for (int i = 0; i < hotbar.Length; i++)
-				hotbar[i] = Block.Invalid;
+				hotbar[i] = Block.Air;
 			hotbar[hotbar.Length - 1] = Block.TNT;
+			game.Server.AppName += " (survival)";
 		}
 		
 		

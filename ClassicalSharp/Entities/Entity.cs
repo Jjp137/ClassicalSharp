@@ -72,6 +72,11 @@ namespace ClassicalSharp.Entities {
 		/// <remarks> Assumes that RenderModel was previously called this frame. </remarks>
 		public abstract void RenderName();
 		
+		public virtual void ContextLost() { }
+		
+		public virtual void ContextRecreated() { }
+		
+		
 		/// <summary> Gets the position of the player's eye in the world. </summary>
 		public Vector3 EyePosition {
 			get { return new Vector3(Position.X,

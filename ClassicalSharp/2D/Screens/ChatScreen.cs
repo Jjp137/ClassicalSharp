@@ -36,17 +36,13 @@ namespace ClassicalSharp.Gui.Screens {
 			fontSize = (int)(14 * game.GuiChatScale);
 			Utils.Clamp(ref fontSize, 8, 60);
 			announcementFont = new Font(game.FontName, fontSize);
-			ConstructWidgets();
-			
-			int[] indices = new int[chatLines];
-			for (int i = 0; i < indices.Length; i++)
-				indices[i] = -1;
-			Metadata = indices;
-			SetInitialMessages();
+			ContextRecreated();
 			
 			game.Events.ChatReceived += ChatReceived;
 			game.Events.ChatFontChanged += ChatFontChanged;
 			game.Events.ColourCodeChanged += ColourCodeChanged;
+			game.Graphics.ContextLost += ContextLost;
+			game.Graphics.ContextRecreated += ContextRecreated;
 		}
 		
 		void ConstructWidgets() {
@@ -207,6 +203,8 @@ namespace ClassicalSharp.Gui.Screens {
 		}
 
 		void ColourCodeChanged(object sender, ColourCodeEventArgs e) {
+			if (gfx.LostContext) return;
+			
 			altText.UpdateColours();
 			Recreate(normalChat, e.Code); Recreate(status, e.Code);
 			Recreate(bottomRight, e.Code); Recreate(clientStatus, e.Code);
@@ -228,6 +226,8 @@ namespace ClassicalSharp.Gui.Screens {
 
 		void ChatReceived(object sender, ChatEventArgs e) {
 			MessageType type = e.Type;
+			if (gfx.LostContext) return;
+			
 			if (type == MessageType.Normal) {
 				chatIndex++;
 				if (game.ChatLines == 0) return;
@@ -251,27 +251,43 @@ namespace ClassicalSharp.Gui.Screens {
 		}
 
 		public override void Dispose() {
+			ContextLost();			
+			chatFont.Dispose();
+			chatUrlFont.Dispose();
+			announcementFont.Dispose();
+			
+			game.Events.ChatReceived -= ChatReceived;
+			game.Events.ChatFontChanged -= ChatFontChanged;
+			game.Events.ColourCodeChanged -= ColourCodeChanged;
+			game.Graphics.ContextLost -= ContextLost;
+			game.Graphics.ContextRecreated -= ContextRecreated;
+		}
+		
+		protected override void ContextLost() {
 			if (HandlesAllInput) {
 				game.chatInInputBuffer = input.Text.ToString();
 				game.CursorVisible = false;
 			} else {
 				game.chatInInputBuffer = null;
 			}
-			chatFont.Dispose();
-			chatUrlFont.Dispose();
-			announcementFont.Dispose();
-			
+
 			normalChat.Dispose();
-			input.DisposeFully();
+			input.Dispose();
 			altText.Dispose();
 			status.Dispose();
 			bottomRight.Dispose();
 			clientStatus.Dispose();
 			announcement.Dispose();
+		}
+		
+		protected override void ContextRecreated() {
+			ConstructWidgets();
 			
-			game.Events.ChatReceived -= ChatReceived;
-			game.Events.ChatFontChanged -= ChatFontChanged;
-			game.Events.ColourCodeChanged -= ColourCodeChanged;
+			int[] indices = new int[chatLines];
+			for (int i = 0; i < indices.Length; i++)
+				indices[i] = -1;
+			Metadata = indices;
+			SetInitialMessages();
 		}
 		
 		void ChatFontChanged(object sender, EventArgs e) {
@@ -321,7 +337,7 @@ namespace ClassicalSharp.Gui.Screens {
 			
 			input.Text.Clear();
 			input.Text.Append(0, initialText);
-			input.Init();
+			input.Recreate();
 		}
 		
 		public void AppendTextToInput(string text) {

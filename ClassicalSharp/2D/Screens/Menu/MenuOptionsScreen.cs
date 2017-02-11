@@ -36,6 +36,7 @@ namespace ClassicalSharp.Gui.Screens {
 		}
 		
 		public override void Init() {
+			base.Init();
 			titleFont = new Font(game.FontName, 16, FontStyle.Bold);
 			regularFont = new Font(game.FontName, 16, FontStyle.Regular);
 			game.Keyboard.KeyRepeat = true;
@@ -74,10 +75,14 @@ namespace ClassicalSharp.Gui.Screens {
 			extendedHelp.CalculatePosition();
 		}
 		
-		public override void Dispose() {
+		protected override void ContextLost() {
+			base.ContextLost();
 			DisposeWidgets();
-			game.Keyboard.KeyRepeat = false;
 			DisposeExtendedHelp();
+		}
+		
+		public override void Dispose() {
+			game.Keyboard.KeyRepeat = false;
 			base.Dispose();
 		}
 		
@@ -219,6 +224,7 @@ namespace ClassicalSharp.Gui.Screens {
 			string value = button.GetValue(game);
 			int enumValue = (int)Enum.Parse(type, value, true);
 			enumValue++;
+			
 			// go back to first value
 			if (!Enum.IsDefined(type, enumValue))
 				enumValue = 0;

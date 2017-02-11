@@ -72,9 +72,11 @@ namespace ClassicalSharp {
 			string address = url;
 			if (url.StartsWith("https://")) address = url.Substring(8);
 			if (url.StartsWith("http://")) address = url.Substring(7);
-			screen.SetText("Do you want to download the server's texture pack?",
+			
+			screen.SetTextData("Do you want to download the server's texture pack?",
 			               "Texture pack url:", address,
 			               "Download size: " + contentLengthMB.ToString("F3") + " MB");
+			screen.RedrawText();
 		}
 		
 		protected internal void RetrieveTexturePack(string url) {
@@ -118,12 +120,11 @@ namespace ClassicalSharp {
 			DateTime lastModified = TextureCache.GetLastModified(url, game.LastModified);
 			string etag = TextureCache.GetETag(url, game.ETags);
 
+			TexturePack.ExtractCurrent(game, url);
 			if (url.Contains(".zip")) {
-				TexturePack.ExtractCachedTexturePack(game, url);
 				game.AsyncDownloader.DownloadData(url, true, "texturePack",
 				                                  lastModified, etag);
 			} else {
-				TexturePack.ExtractCachedTerrainPng(game, url);
 				game.AsyncDownloader.DownloadImage(url, true, "terrain",
 				                                   lastModified, etag);
 			}

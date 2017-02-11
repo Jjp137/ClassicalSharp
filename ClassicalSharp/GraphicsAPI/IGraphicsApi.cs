@@ -30,14 +30,6 @@ namespace ClassicalSharp.GraphicsAPI {
 		
 		/// <summary> Event raised when a context is recreated after having been previously lost. </summary>
 		public event Action ContextRecreated;
-
-		protected void RaiseContextLost() {
-			if (ContextLost != null) ContextLost();
-		}
-		
-		protected void RaiseContextRecreated() {
-			if (ContextRecreated != null) ContextRecreated();
-		}
 		
 		/// <summary> Delegate that is invoked when the current context is lost,
 		/// and is repeatedly invoked until the context can be retrieved. </summary>
@@ -66,6 +58,7 @@ namespace ClassicalSharp.GraphicsAPI {
 			if (!Utils.IsPowerOf2(bmp.Width) || !Utils.IsPowerOf2(bmp.Height)) {
 				throw new ArgumentOutOfRangeException("Bitmap must have power of two dimensions");
 			}
+			if (LostContext) throw new InvalidOperationException("Cannot create texture when context lost");
 			
 			if (!bmp.IsLocked) bmp.LockBits();		
 			int texId = CreateTexture(bmp.Width, bmp.Height, bmp.Scan0, managedPool);

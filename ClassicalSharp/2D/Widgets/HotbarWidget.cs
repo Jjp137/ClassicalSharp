@@ -5,6 +5,12 @@ using ClassicalSharp.GraphicsAPI;
 using ClassicalSharp.Gui.Screens;
 using OpenTK.Input;
 
+#if USE16_BIT
+using BlockID = System.UInt16;
+#else
+using BlockID = System.Byte;
+#endif
+
 namespace ClassicalSharp.Gui.Widgets {
 	public class HotbarWidget : Widget {
 		
@@ -21,7 +27,7 @@ namespace ClassicalSharp.Gui.Widgets {
 		IsometricBlockDrawer drawer = new IsometricBlockDrawer();
 		
 		public override void Init() {
-			float scale = 2 * game.GuiHotbarScale;
+			float scale = game.GuiHotbarScale;
 			selBlockSize = (float)Math.Ceiling(24 * scale);
 			barHeight = (int)(22 * scale);		
 			Width = (int)(182 * scale);
@@ -68,7 +74,7 @@ namespace ClassicalSharp.Gui.Widgets {
 			drawer.BeginBatch(game, cache.vertices, cache.vb);
 			
 			for (int i = 0; i < hotbarCount; i++) {
-				byte block = (byte)game.Inventory.Hotbar[i];
+				BlockID block = game.Inventory.Hotbar[i];
 				int x = (int)(X + barXOffset + (elemSize + borderSize) * i + elemSize / 2);
 				int y = (int)(game.Height - barHeight / 2);
 				
@@ -85,9 +91,12 @@ namespace ClassicalSharp.Gui.Widgets {
 		
 		void MakeSelectionTexture() {
 			int hSize = (int)selBlockSize;
-			int vSize = (int)Math.Floor(23 * 2 * game.GuiHotbarScale);
-			int y = game.Height - vSize;
-			TextureRec rec = new TextureRec(0, 22/256f, 24/256f, 24/256f);
+			
+			float scale = game.GuiHotbarScale;
+			int vSize = (int)(22 * scale);
+			int y = game.Height - (int)(23 * scale);
+			
+			TextureRec rec = new TextureRec(0, 22/256f, 24/256f, 22/256f);
 			selTex = new Texture(0, 0, y, hSize, vSize, rec);
 		}
 		

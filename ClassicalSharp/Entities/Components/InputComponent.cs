@@ -4,6 +4,12 @@ using ClassicalSharp.Physics;
 using OpenTK;
 using OpenTK.Input;
 
+#if USE16_BIT
+using BlockID = System.UInt16;
+#else
+using BlockID = System.Byte;
+#endif
+
 namespace ClassicalSharp.Entities {
 	
 	/// <summary> Entity component that performs input handling. </summary>
@@ -77,7 +83,7 @@ namespace ClassicalSharp.Entities {
 			for (int y = P.Y; y <= game.World.Height; y++) {
 				float spawnY = Respawn.HighestFreeY(game, ref bb);
 				if (spawnY == float.NegativeInfinity) {
-					byte block = game.World.GetPhysicsBlock(P.X, y, P.Z);
+					BlockID block = game.World.GetPhysicsBlock(P.X, y, P.Z);
 					float height = info.Collide[block] == CollideType.Solid ? info.MaxBB[block].Y : 0;
 					spawn.Y = y + height + Entity.Adjustment;
 					return;

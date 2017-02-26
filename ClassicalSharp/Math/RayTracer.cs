@@ -3,6 +3,12 @@ using System;
 using ClassicalSharp.Map;
 using OpenTK;
 
+#if USE16_BIT
+using BlockID = System.UInt16;
+#else
+using BlockID = System.Byte;
+#endif
+
 namespace ClassicalSharp {
 
 	// http://www.xnawiki.com/index.php/Voxel_traversal
@@ -18,7 +24,7 @@ namespace ClassicalSharp {
 		public Vector3 Origin, Dir;
 		// Block data
 		public Vector3 Min, Max;
-		public byte Block;
+		public BlockID Block;
 		
 		Vector3I step, cellBoundary;
 		Vector3 tMax, tDelta;

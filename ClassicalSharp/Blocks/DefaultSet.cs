@@ -2,24 +2,30 @@
 using System;
 using OpenTK;
 
+#if USE16_BIT
+using BlockID = System.UInt16;
+#else
+using BlockID = System.Byte;
+#endif
+
 namespace ClassicalSharp.Blocks {
 	
 	/// <summary> Stores default properties for blocks in Minecraft Classic. </summary>
 	public static class DefaultSet {
 		
-		public static float Height(byte b) {
+		public static float Height(BlockID b) {
 			if (b == Block.Slab) return 8/16f;
 			if (b == Block.CobblestoneSlab) return 8/16f;
 			if (b == Block.Snow) return 2/16f;
 			return 1;
 		}
 		
-		public static bool FullBright(byte b) {
+		public static bool FullBright(BlockID b) {
 			return b == Block.Lava || b == Block.StillLava
 				|| b == Block.Magma || b == Block.Fire;
 		}
 		
-		public static float FogDensity(byte b) {
+		public static float FogDensity(BlockID b) {
 			if (b == Block.Water || b == Block.StillWater)
 				return 0.1f;
 			if (b == Block.Lava || b == Block.StillLava)
@@ -27,7 +33,7 @@ namespace ClassicalSharp.Blocks {
 			return 0;
 		}
 		
-		public static FastColour FogColour(byte b) {
+		public static FastColour FogColour(BlockID b) {
 			if (b == Block.Water || b == Block.StillWater)
 				return new FastColour(5, 5, 51);
 			if (b == Block.Lava || b == Block.StillLava)
@@ -35,7 +41,7 @@ namespace ClassicalSharp.Blocks {
 			return default(FastColour);
 		}
 		
-		public static CollideType Collide(byte b) {
+		public static CollideType Collide(BlockID b) {
 			if (b >= Block.Water && b <= Block.StillLava)
 				return CollideType.SwimThrough;
 			if (b == Block.Snow || b == Block.Air || Draw(b) == DrawType.Sprite)
@@ -43,12 +49,12 @@ namespace ClassicalSharp.Blocks {
 			return CollideType.Solid;
 		}
 		
-		public static bool BlocksLight(byte b) {
+		public static bool BlocksLight(BlockID b) {
 			return !(b == Block.Glass || b == Block.Leaves 
 			         || b == Block.Air || Draw(b) == DrawType.Sprite);
 		}
 
-		public static SoundType StepSound(byte b) {
+		public static SoundType StepSound(BlockID b) {
 			if (b == Block.Glass) return SoundType.Stone;
 			if (b == Block.Rope) return SoundType.Cloth;			
 			if (Draw(b) == DrawType.Sprite) return SoundType.None;
@@ -56,15 +62,13 @@ namespace ClassicalSharp.Blocks {
 		}
 		
 		
-		public static byte Draw(byte b) {
+		public static byte Draw(BlockID b) {
 			if (b == Block.Air || b == Block.Invalid) return DrawType.Gas;
 			if (b == Block.Leaves) return DrawType.TransparentThick;
 
 			if (b == Block.Ice || b == Block.Water || b == Block.StillWater) 
 				return DrawType.Translucent;
-			if (b == Block.Glass || b == Block.Leaves || b == Block.Snow)
-				return DrawType.Transparent;
-			if (b == Block.Slab || b == Block.CobblestoneSlab)
+			if (b == Block.Glass || b == Block.Leaves)
 				return DrawType.Transparent;
 			
 			if (b >= Block.Dandelion && b <= Block.RedMushroom)
@@ -74,11 +78,13 @@ namespace ClassicalSharp.Blocks {
 			return DrawType.Opaque;
 		}		
 
-		public static SoundType DigSound(byte b) {
+		public static SoundType DigSound(BlockID b) {
 			if (b >= Block.Red && b <= Block.White) 
 				return SoundType.Cloth;
 			if (b >= Block.LightPink && b <= Block.Turquoise) 
 				return SoundType.Cloth;
+			if (b == Block.Iron || b == Block.Gold)
+				return SoundType.Metal;
 			
 			if (b == Block.Bookshelf || b == Block.Wood 
 			   || b == Block.Log || b == Block.Crate || b == Block.Fire)

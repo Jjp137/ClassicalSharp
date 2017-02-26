@@ -3,6 +3,12 @@ using System;
 using ClassicalSharp.Physics;
 using OpenTK;
 
+#if USE16_BIT
+using BlockID = System.UInt16;
+#else
+using BlockID = System.Byte;
+#endif
+
 namespace ClassicalSharp.Entities {
 	
 	/// <summary> Entity component that plays block step sounds. </summary>
@@ -10,7 +16,7 @@ namespace ClassicalSharp.Entities {
 
 		LocalPlayer p;
 		Game game;		
-		Predicate<byte> checkSoundNonSolid, checkSoundSolid;
+		Predicate<BlockID> checkSoundNonSolid, checkSoundSolid;
 		
 		public SoundComponent(Game game, Entity entity) {
 			this.game = game;
@@ -67,7 +73,7 @@ namespace ClassicalSharp.Entities {
 			// then check block standing on
 			pos.Y -= 0.01f;
 			Vector3I feetPos = Vector3I.Floor(pos);
-			byte blockUnder = game.World.SafeGetBlock(feetPos);
+			BlockID blockUnder = game.World.SafeGetBlock(feetPos);
 			float maxY = feetPos.Y + game.BlockInfo.MaxBB[blockUnder].Y;
 			
 			SoundType typeUnder = game.BlockInfo.StepSounds[blockUnder];
@@ -81,7 +87,7 @@ namespace ClassicalSharp.Entities {
 			p.TouchesAny(bounds, checkSoundSolid);
 		}
 		
-		bool CheckSoundNonSolid(byte b) {
+		bool CheckSoundNonSolid(BlockID b) {
 			SoundType newType = game.BlockInfo.StepSounds[b];
 			CollideType collide = game.BlockInfo.Collide[b];
 			if (newType != SoundType.None && collide != CollideType.Solid)
@@ -92,7 +98,7 @@ namespace ClassicalSharp.Entities {
 			return false;
 		}
 		
-		bool CheckSoundSolid(byte b) {
+		bool CheckSoundSolid(BlockID b) {
 			SoundType newType = game.BlockInfo.StepSounds[b];
 			if (newType != SoundType.None) sndType = newType;
 			

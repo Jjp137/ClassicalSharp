@@ -9,12 +9,18 @@ using ClassicalSharp.Physics;
 using OpenTK;
 using OpenTK.Input;
 
+#if USE16_BIT
+using BlockID = System.UInt16;
+#else
+using BlockID = System.Byte;
+#endif
+
 namespace ClassicalSharp.Singleplayer {
 
 	public sealed class SinglePlayerServer : IServerConnection {
 		
 		internal PhysicsBase physics;
-		internal byte[] generatedMap;
+		internal BlockID[] generatedMap;
 		IMapGenerator generator;
 		string lastState;
 		

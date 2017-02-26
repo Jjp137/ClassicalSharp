@@ -6,24 +6,32 @@
 using System;
 using System.Collections.Generic;
 
+#if USE16_BIT
+using BlockID = System.UInt16;
+#else
+using BlockID = System.Byte;
+#endif
+
 namespace ClassicalSharp.Generator {
 	
 	public sealed partial class NotchyGenerator : IMapGenerator {
 		
 		int waterLevel, oneY;
-		byte[] blocks;
+		BlockID[] blocks;
 		short[] heightmap;
 		JavaRandom rnd;
+		int minHeight;
 		
 		public override string GeneratorName { get { return "Vanilla classic"; } }
 		
-		public override byte[] Generate(int seed) {
+		public override BlockID[] Generate(int seed) {
 			oneY = Width * Length;
 			waterLevel = Height / 2;
-			blocks = new byte[Width * Height * Length];
+			blocks = new BlockID[Width * Height * Length];
 			rnd = new JavaRandom(seed);
+			minHeight = Height;
 			
-			CreateHeightmap();			
+			CreateHeightmap();
 			CreateStrata();
 			CarveCaves();
 			CarveOreVeins(0.9f, "coal ore", Block.CoalOre);
@@ -42,11 +50,11 @@ namespace ClassicalSharp.Generator {
 		}
 		
 		void CreateHeightmap() {
-			Noise n1 = new CombinedNoise(
+			CombinedNoise n1 = new CombinedNoise(
 				new OctaveNoise(8, rnd), new OctaveNoise(8, rnd));
-			Noise n2 = new CombinedNoise(
+			CombinedNoise n2 = new CombinedNoise(
 				new OctaveNoise(8, rnd), new OctaveNoise(8, rnd));
-			Noise n3 = new OctaveNoise(6, rnd);
+			OctaveNoise n3 = new OctaveNoise(6, rnd);
 			int index = 0;
 			short[] hMap = new short[Width * Length];
 			CurrentState = "Building heightmap";
@@ -60,38 +68,67 @@ namespace ClassicalSharp.Generator {
 					double height = n3.Compute(x, z) > 0 ? hLow : Math.Max(hLow, hHigh);
 					height *= 0.5;
 					if (height < 0) height *= 0.8f;
-					hMap[index++] = (short)(height + waterLevel);
+					
+					short adjHeight = (short)(height + waterLevel);
+					minHeight = adjHeight < minHeight ? adjHeight : minHeight;
+					hMap[index++] = adjHeight;
 				}
 			}
 			heightmap = hMap;
 		}
 		
 		void CreateStrata() {
-			Noise n = new OctaveNoise(8, rnd);
-			CurrentState = "Creating strata";
-			
-			int hMapIndex = 0;
+			OctaveNoise n = new OctaveNoise(8, rnd);
+			CurrentState = "Creating strata";			
+			int hMapIndex = 0, maxY = Height - 1, mapIndex = 0;
+			// Try to bulk fill bottom of the map if possible
+			int minStoneY = CreateStrataFast();
+
 			for (int z = 0; z < Length; z++) {
 				CurrentProgress = (float)z / Length;
 				for (int x = 0; x < Width; x++) {
 					int dirtThickness = (int)(n.Compute(x, z) / 24 - 4);
 					int dirtHeight = heightmap[hMapIndex++];
-
-					int stoneHeight = dirtHeight + dirtThickness;
-					int mapIndex = z * Width + x;
+					int stoneHeight = dirtHeight + dirtThickness;	
 					
-					blocks[mapIndex] = Block.Lava;
-					mapIndex += oneY;
-					for (int y = 1; y < Height; y++) {
-						byte block = 0;
-						if (y <= stoneHeight) block = Block.Stone;
-						else if (y <= dirtHeight) block = Block.Dirt;
-						
-						blocks[mapIndex] = block;
-						mapIndex += oneY;
+					stoneHeight = Math.Min(stoneHeight, maxY);
+					dirtHeight  = Math.Min(dirtHeight,  maxY);
+					
+					mapIndex = minStoneY * oneY + z * Width + x;
+					for (int y = minStoneY; y <= stoneHeight; y++) {
+						blocks[mapIndex] = Block.Stone; mapIndex += oneY;
+					}
+					
+					stoneHeight = Math.Max(stoneHeight, 0);
+					mapIndex = (stoneHeight + 1) * oneY + z * Width + x;
+					for (int y = stoneHeight + 1; y <= dirtHeight; y++) {
+						blocks[mapIndex] = Block.Dirt; mapIndex += oneY;
 					}
 				}
 			}
+		}
+		
+		int CreateStrataFast() {
+			// Make lava layer at bottom
+			int mapIndex = 0;
+			for (int z = 0; z < Length; z++)
+				for (int x = 0; x < Width; x++)
+			{
+				blocks[mapIndex++] = Block.Lava;
+			}
+			
+			// Invariant: the lowest value dirtThickness can possible be is -14
+			int stoneHeight = minHeight - 14;
+			if (stoneHeight <= 0) return 1; // no layer is fully stone
+			
+			// We can quickly fill in bottom solid layers
+			for (int y = 1; y <= stoneHeight; y++)
+				for (int z = 0; z < Length; z++)
+					for (int x = 0; x < Width; x++)
+			{
+				blocks[mapIndex++] = Block.Stone;
+			}
+			return stoneHeight;
 		}
 		
 		void CarveCaves() {
@@ -132,7 +169,7 @@ namespace ClassicalSharp.Generator {
 			}
 		}
 		
-		void CarveOreVeins(float abundance, string blockName, byte block) {
+		void CarveOreVeins(float abundance, string blockName, BlockID block) {
 			int numVeins = (int)(blocks.Length * abundance / 16384);
 			CurrentState = "Carving " + blockName;
 			
@@ -163,7 +200,7 @@ namespace ClassicalSharp.Generator {
 		}
 		
 		void FloodFillWaterBorders() {
-			int waterY = waterLevel - 1;			
+			int waterY = waterLevel - 1;
 			int index1 = (waterY * Length + 0) * Width + 0;
 			int index2 = (waterY * Length + (Length - 1)) * Width + 0;
 			CurrentState = "Flooding edge water";
@@ -210,7 +247,7 @@ namespace ClassicalSharp.Generator {
 		}
 		
 		void CreateSurfaceLayer() {
-			Noise n1 = new OctaveNoise(8, rnd), n2 = new OctaveNoise(8, rnd);
+			OctaveNoise n1 = new OctaveNoise(8, rnd), n2 = new OctaveNoise(8, rnd);
 			CurrentState = "Creating surface";
 			// TODO: update heightmap
 			
@@ -218,17 +255,15 @@ namespace ClassicalSharp.Generator {
 			for (int z = 0; z < Length; z++) {
 				CurrentProgress = (float)z / Length;
 				for (int x = 0; x < Width; x++) {
-					bool sand = n1.Compute(x, z) > 8;
-					bool gravel = n2.Compute(x, z) > 12;
 					int y = heightmap[hMapIndex++];
 					if (y < 0 || y >= Height) continue;
 					
 					int index = (y * Length + z) * Width + x;
-					byte blockAbove = y >= (Height - 1) ? Block.Air : blocks[index + oneY];
-					if (blockAbove == Block.Water && gravel) {
+					BlockID blockAbove = y >= (Height - 1) ? Block.Air : blocks[index + oneY];
+					if (blockAbove == Block.Water && (n2.Compute(x, z) > 12)) {
 						blocks[index] = Block.Gravel;
 					} else if (blockAbove == Block.Air) {
-						blocks[index] = (y <= waterLevel && sand) ? Block.Sand : Block.Grass;
+						blocks[index] = (y <= waterLevel && (n1.Compute(x, z) > 8)) ? Block.Sand : Block.Grass;
 					}
 				}
 			}
@@ -240,7 +275,7 @@ namespace ClassicalSharp.Generator {
 			
 			for (int i = 0; i < numPatches; i++) {
 				CurrentProgress = (float)i / numPatches;
-				byte type = (byte)(Block.Dandelion + rnd.Next(2));
+				BlockID type = (BlockID)(Block.Dandelion + rnd.Next(2));
 				int patchX = rnd.Next(Width), patchZ = rnd.Next(Length);
 				for (int j = 0; j < 10; j++) {
 					int flowerX = patchX, flowerZ = patchZ;
@@ -267,7 +302,7 @@ namespace ClassicalSharp.Generator {
 			
 			for (int i = 0; i < numPatches; i++) {
 				CurrentProgress = (float)i / numPatches;
-				byte type = (byte)(Block.BrownMushroom + rnd.Next(2));
+				BlockID type = (BlockID)(Block.BrownMushroom + rnd.Next(2));
 				int patchX = rnd.Next(Width);
 				int patchY = rnd.Next(Height);
 				int patchZ = rnd.Next(Length);
@@ -305,7 +340,7 @@ namespace ClassicalSharp.Generator {
 						treeX += rnd.Next(6) - rnd.Next(6);
 						treeZ += rnd.Next(6) - rnd.Next(6);
 						if (treeX < 0 || treeZ < 0 || treeX >= Width ||
-						   treeZ >= Length || rnd.NextFloat() >= 0.25)
+						    treeZ >= Length || rnd.NextFloat() >= 0.25)
 							continue;
 						
 						int treeY = heightmap[treeZ * Width + treeX] + 1;

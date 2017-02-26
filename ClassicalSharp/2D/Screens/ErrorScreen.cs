@@ -118,7 +118,7 @@ namespace ClassicalSharp.Gui.Screens {
 				game.Components[i].Reset(game);
 			game.BlockInfo.Reset(game);
 			
-			game.Gui.SetNewScreen(new LoadingMapScreen(game, connectString, "Waiting for handshake"));
+			game.Gui.SetNewScreen(new LoadingMapScreen(game, connectString, ""));
 			game.Server.Connect(game.IPAddress, game.Port);
 		}
 		
@@ -145,7 +145,7 @@ namespace ClassicalSharp.Gui.Screens {
 					.SetLocation(Anchor.Centre, Anchor.Centre, 0, -30),
 				TextWidget.Create(game, message, messageFont)
 					.SetLocation(Anchor.Centre, Anchor.Centre, 0, 10),
-				ButtonWidget.Create(game, 301, 40, msg, titleFont, ReconnectClick)
+				ButtonWidget.Create(game, 300, msg, titleFont, ReconnectClick)
 					.SetLocation(Anchor.Centre, Anchor.Centre, 0, 80),
 			};
 			

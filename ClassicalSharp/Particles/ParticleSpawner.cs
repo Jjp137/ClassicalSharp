@@ -3,6 +3,12 @@ using System;
 using ClassicalSharp.Events;
 using OpenTK;
 
+#if USE16_BIT
+using BlockID = System.UInt16;
+#else
+using BlockID = System.Byte;
+#endif
+
 namespace ClassicalSharp.Particles {
 	
 	public partial class ParticleManager : IDisposable {
@@ -10,7 +16,7 @@ namespace ClassicalSharp.Particles {
 		void BreakBlockEffect(object sender, BlockChangedEventArgs e) {
 			if (e.Block != 0) return;
 			Vector3I position = e.Coords;
-			byte block = e.OldBlock;
+			BlockID block = e.OldBlock;
 			
 			Vector3 worldPos = new Vector3(position.X, position.Y, position.Z);
 			int texLoc = game.BlockInfo.GetTextureLoc(block, Side.Left), texIndex = 0;

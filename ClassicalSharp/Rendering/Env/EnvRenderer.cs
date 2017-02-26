@@ -6,6 +6,12 @@ using ClassicalSharp.Map;
 using ClassicalSharp.Physics;
 using OpenTK;
 
+#if USE16_BIT
+using BlockID = System.UInt16;
+#else
+using BlockID = System.Byte;
+#endif
+
 namespace ClassicalSharp.Renderers {
 	public abstract class EnvRenderer : IGameComponent {
 		
@@ -38,12 +44,12 @@ namespace ClassicalSharp.Renderers {
 		protected abstract void EnvVariableChanged(object sender, EnvVarEventArgs e);
 		
 		
-		protected byte BlockOn(out float fogDensity, out FastColour fogCol) {
+		protected BlockID BlockOn(out float fogDensity, out FastColour fogCol) {
 			BlockInfo info = game.BlockInfo;
 			Vector3 pos = game.CurrentCameraPos;
 			Vector3I coords = Vector3I.Floor(pos);
 			
-			byte block = game.World.SafeGetBlock(coords);
+			BlockID block = game.World.SafeGetBlock(coords);
 			AABB blockBB = new AABB(
 				(Vector3)coords + info.MinBB[block],
 				(Vector3)coords + info.MaxBB[block]);

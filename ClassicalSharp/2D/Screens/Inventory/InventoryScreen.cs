@@ -4,6 +4,12 @@ using System.Drawing;
 using ClassicalSharp.GraphicsAPI;
 using OpenTK.Input;
 
+#if USE16_BIT
+using BlockID = System.UInt16;
+#else
+using BlockID = System.Byte;
+#endif
+
 namespace ClassicalSharp.Gui.Screens {
 	public partial class InventoryScreen : Screen {
 		
@@ -11,7 +17,7 @@ namespace ClassicalSharp.Gui.Screens {
 			font = new Font(game.FontName, 16);
 		}
 		
-		byte[] blocksTable;
+		BlockID[] blocksTable;
 		Texture blockInfoTexture;
 		const int maxRows = 8;
 		int blocksPerRow {
@@ -134,8 +140,8 @@ namespace ClassicalSharp.Gui.Screens {
 			game.Keyboard.KeyRepeat = true;
 		}
 		
-		public void SetBlockTo(byte block) {
-			selIndex = Array.IndexOf<byte>(blocksTable, block);
+		public void SetBlockTo(BlockID block) {
+			selIndex = Array.IndexOf<BlockID>(blocksTable, block);
 			scrollY = (selIndex / blocksPerRow) - (maxRows - 1);
 			ClampScrollY();
 			MoveCursorToSelected();
@@ -157,7 +163,7 @@ namespace ClassicalSharp.Gui.Screens {
 			RecreateBlockInfoTexture();
 		}
 		
-		void UpdateBlockInfoString(byte block) {
+		void UpdateBlockInfoString(BlockID block) {
 			int index = 0;
 			buffer.Clear();
 			buffer.Append(ref index, "&f");
@@ -182,7 +188,7 @@ namespace ClassicalSharp.Gui.Screens {
 			gfx.DeleteTexture(ref blockInfoTexture);
 			if (selIndex == -1) return;
 			
-			byte block = blocksTable[selIndex];
+			BlockID block = blocksTable[selIndex];
 			UpdateBlockInfoString(block);
 			string value = buffer.ToString();
 			
@@ -199,7 +205,7 @@ namespace ClassicalSharp.Gui.Screens {
 			int blocksCount = 0;
 			int count = game.UseCPE ? Block.Count : Block.OriginalCount;
 			for (int i = 1; i < count; i++) {
-				byte block = game.Inventory.MapBlock(i);
+				BlockID block = game.Inventory.MapBlock(i);
 				if (Show(block)) blocksCount++;
 			}
 			
@@ -207,16 +213,16 @@ namespace ClassicalSharp.Gui.Screens {
 			int rowsUsed = Math.Min(maxRows, rows);
 			startX = game.Width / 2 - (blockSize * blocksPerRow) / 2;
 			startY = game.Height / 2 - (rowsUsed * blockSize) / 2;
-			blocksTable = new byte[blocksCount];
+			blocksTable = new BlockID[blocksCount];
 			
 			int index = 0;
 			for (int i = 1; i < count; i++) {
-				byte block = game.Inventory.MapBlock(i);
+				BlockID block = game.Inventory.MapBlock(i);
 				if (Show(block))  blocksTable[index++] = block;
 			}
 		}
 		
-		bool Show(byte block) {
+		bool Show(BlockID block) {
 			if (game.PureClassic && IsHackBlock(block)) return false;
 			if (block < Block.CpeCount) {
 				int count = game.UseCPEBlocks ? Block.CpeCount : Block.OriginalCount;
@@ -225,7 +231,7 @@ namespace ClassicalSharp.Gui.Screens {
 			return game.BlockInfo.Name[block] != "Invalid";
 		}
 		
-		bool IsHackBlock(byte block) {
+		bool IsHackBlock(BlockID block) {
 			return block == Block.DoubleSlab || block == Block.Bedrock ||
 				block == Block.Grass || game.BlockInfo.IsLiquid(block);
 		}

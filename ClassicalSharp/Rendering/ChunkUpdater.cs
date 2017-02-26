@@ -6,6 +6,12 @@ using ClassicalSharp.GraphicsAPI;
 using ClassicalSharp.Map;
 using OpenTK;
 
+#if USE16_BIT
+using BlockID = System.UInt16;
+#else
+using BlockID = System.Byte;
+#endif
+
 namespace ClassicalSharp.Renderers {
 	
 	/// <summary> Manages the process of building/deleting chunk meshes,
@@ -205,7 +211,7 @@ namespace ClassicalSharp.Renderers {
 		}
 		
 		void DeleteChunk(ChunkInfo info, bool decUsed) {
-			info.Empty = false;
+			info.Empty = false; info.AllAir = false;
 			#if OCCLUSION
 			info.OcclusionFlags = 0;
 			info.OccludedFlags = 0;
@@ -231,8 +237,12 @@ namespace ClassicalSharp.Renderers {
 		void ContextRecreated() { Refresh(); }
 		
 		
-		public void RedrawBlock(int x, int y, int z, byte block, int oldHeight, int newHeight) {
+		public void RedrawBlock(int x, int y, int z, BlockID block, int oldHeight, int newHeight) {
 			int cx = x >> 4, cy = y >> 4, cz = z >> 4;
+			
+			// Does this chunk now contain air?
+			ChunkInfo curInfo = renderer.unsortedChunks[cx + chunksX * (cy + cz * chunksY)];
+			curInfo.AllAir &= game.BlockInfo.Draw[block] == DrawType.Gas;
 			
 			// NOTE: It's a lot faster to only update the chunks that are affected by the change in shadows,
 			// rather than the entire column.
@@ -258,11 +268,11 @@ namespace ClassicalSharp.Renderers {
 				ResetNeighbour(x, y, z + 1, block, cx, cy, cz + 1, minCy, maxCy);
 		}
 		
-		bool Needs(byte block, byte other) { 
+		bool Needs(BlockID block, BlockID other) {
 			return info.Draw[block] != DrawType.Opaque || info.Draw[other] != DrawType.Gas;
 		}
 		
-		void ResetNeighbour(int x, int y, int z, byte block,
+		void ResetNeighbour(int x, int y, int z, BlockID block,
 		                    int cx, int cy, int cz, int minCy, int maxCy) {
 			World world = game.World;
 			if (minCy == maxCy) {
@@ -277,14 +287,14 @@ namespace ClassicalSharp.Renderers {
 			}
 		}
 		
-		void ResetNeighourChunk(int cx, int cy, int cz, byte block,
+		void ResetNeighourChunk(int cx, int cy, int cz, BlockID block,
 		                        int y, int index, int nY) {
 			World world = game.World;
 			int minY = cy << 4;
 			
 			// Update if any blocks in the chunk are affected by light change
 			for (; y >= minY; y--) {
-				byte other = world.blocks[index];
+				BlockID other = world.blocks[index];
 				bool affected = y == nY ? Needs(block, other) : info.Draw[other] != DrawType.Gas;
 				if (affected) { ResetChunk(cx, cy, cz); return; }
 				index -= world.Width * world.Length;
@@ -302,17 +312,21 @@ namespace ClassicalSharp.Renderers {
 		
 		void ResetChunk(int cx, int cy, int cz) {
 			if (cx < 0 || cy < 0 || cz < 0 ||
-			   cx >= chunksX || cy >= chunksY || cz >= chunksZ) return;
-			DeleteChunk(renderer.unsortedChunks[cx + chunksX * (cy + cz * chunksY)], true);
+			    cx >= chunksX || cy >= chunksY || cz >= chunksZ) return;
+			
+			ChunkInfo info = renderer.unsortedChunks[cx + chunksX * (cy + cz * chunksY)];
+			if (info.AllAir) return; // do not recreate chunks completely air
+			info.Empty = false;
+			info.PendingDelete = true;
 		}
 		
 
-		int chunksTarget = 4;
+		int chunksTarget = 12;
 		const double targetTime = (1.0 / 30) + 0.01;
 		public void UpdateChunks(double delta) {
 			int chunkUpdates = 0;
 			chunksTarget += delta < targetTime ? 1 : -1; // build more chunks if 30 FPS or over, otherwise slowdown.
-			Utils.Clamp(ref chunksTarget, 4, 16);
+			Utils.Clamp(ref chunksTarget, 4, 20);
 			
 			LocalPlayer p = game.LocalPlayer;
 			Vector3 cameraPos = game.CurrentCameraPos;
@@ -341,11 +355,14 @@ namespace ClassicalSharp.Renderers {
 				int distSqr = distances[i];
 				bool noData = info.NormalParts == null && info.TranslucentParts == null;
 				
+				// Unload chunks beyond visible range
 				if (!noData && distSqr >= userDistSqr + 32 * 16) {
 					DeleteChunk(info, true); continue;
 				}
+				noData |= info.PendingDelete;
 				
 				if (noData && distSqr <= viewDistSqr && chunkUpdates < chunksTarget) {
+					DeleteChunk(info, true);
 					BuildChunk(info, ref chunkUpdates);
 				}
 				info.Visible = distSqr <= viewDistSqr &&
@@ -370,15 +387,16 @@ namespace ClassicalSharp.Renderers {
 				if (!noData && distSqr >= userDistSqr + 32 * 16) {
 					DeleteChunk(info, true); continue;
 				}
+				noData |= info.PendingDelete;
 				
-				if (noData) {
-					if (distSqr <= userDistSqr && chunkUpdates < chunksTarget) {
-						BuildChunk(info, ref chunkUpdates);
-						// only need to update the visibility of chunks in range.
-						info.Visible = distSqr <= viewDistSqr &&
-							game.Culling.SphereInFrustum(info.CentreX, info.CentreY, info.CentreZ, 14); // 14 ~ sqrt(3 * 8^2)
-						if (info.Visible && !info.Empty) { render[j] = info; j++; }
-					}
+				if (noData && distSqr <= userDistSqr && chunkUpdates < chunksTarget) {
+					DeleteChunk(info, true);
+					BuildChunk(info, ref chunkUpdates);
+					
+					// only need to update the visibility of chunks in range.
+					info.Visible = distSqr <= viewDistSqr &&
+						game.Culling.SphereInFrustum(info.CentreX, info.CentreY, info.CentreZ, 14); // 14 ~ sqrt(3 * 8^2)
+					if (info.Visible && !info.Empty) { render[j] = info; j++; }
 				} else if (info.Visible) {
 					render[j] = info; j++;
 				}
@@ -392,11 +410,13 @@ namespace ClassicalSharp.Renderers {
 			return (viewDist + 24) * (viewDist + 24);
 		}
 		
+		
 		void BuildChunk(ChunkInfo info, ref int chunkUpdates) {
 			game.ChunkUpdates++;
 			builder.GetDrawInfo(info.CentreX - 8, info.CentreY - 8, info.CentreZ - 8,
-			                    ref info.NormalParts, ref info.TranslucentParts);
+			                    ref info.NormalParts, ref info.TranslucentParts, ref info.AllAir);
 			
+			info.PendingDelete = false;
 			if (info.NormalParts == null && info.TranslucentParts == null) {
 				info.Empty = true;
 			} else {

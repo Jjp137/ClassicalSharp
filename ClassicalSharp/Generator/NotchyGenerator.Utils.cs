@@ -6,11 +6,17 @@
 using System;
 using System.Collections.Generic;
 
+#if USE16_BIT
+using BlockID = System.UInt16;
+#else
+using BlockID = System.Byte;
+#endif
+
 namespace ClassicalSharp.Generator {
 	
 	public sealed partial class NotchyGenerator {
 		
-		void FillOblateSpheroid(int x, int y, int z, float radius, byte block) {
+		void FillOblateSpheroid(int x, int y, int z, float radius, BlockID block) {
 			int xStart = Utils.Floor(Math.Max(x - radius, 0));
 			int xEnd = Utils.Floor(Math.Min(x + radius, Width - 1));
 			int yStart = Utils.Floor(Math.Max(y - radius, 0));
@@ -32,7 +38,7 @@ namespace ClassicalSharp.Generator {
 			}
 		}
 		
-		void FloodFill(int startIndex, byte block) {
+		void FloodFill(int startIndex, BlockID block) {
 			if (startIndex < 0) return; // y below map, immediately ignore
 			FastIntStack stack = new FastIntStack(4);
 			stack.Push(startIndex);			
@@ -45,6 +51,7 @@ namespace ClassicalSharp.Generator {
 				int x = index % Width;
 				int y = index / oneY;
 				int z = (index / Width) % Length;
+				
 				if (x > 0) stack.Push(index - 1);
 				if (x < Width - 1) stack.Push(index + 1);
 				if (z > 0) stack.Push(index - Width);

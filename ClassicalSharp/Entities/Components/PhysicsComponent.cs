@@ -3,6 +3,12 @@ using System;
 using ClassicalSharp.Physics;
 using OpenTK;
 
+#if USE16_BIT
+using BlockID = System.UInt16;
+#else
+using BlockID = System.Byte;
+#endif
+
 namespace ClassicalSharp.Entities {
 	
 	/// <summary> Entity component that performs collision detection. </summary>
@@ -91,7 +97,7 @@ namespace ClassicalSharp.Entities {
 			canLiquidJump = false;
 		}
 		
-		bool StandardLiquid(byte block) {
+		bool StandardLiquid(BlockID block) {
 			return info.Collide[block] == CollideType.SwimThrough;
 		}
 		
@@ -216,7 +222,7 @@ namespace ClassicalSharp.Entities {
 				for (int z = bbMin.Z; z <= bbMax.Z; z++)
 					for (int x = bbMin.X; x <= bbMax.X; x++)
 			{
-				byte block = game.World.SafeGetBlock(x, y, z);
+				BlockID block = game.World.SafeGetBlock(x, y, z);
 				if (block == 0) continue;
 				CollideType type = info.Collide[block];
 				if (type == CollideType.Solid && !checkSolid)

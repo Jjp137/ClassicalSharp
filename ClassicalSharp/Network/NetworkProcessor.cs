@@ -11,6 +11,12 @@ using ClassicalSharp.Network;
 using ClassicalSharp.Textures;
 using ClassicalSharp.Network.Protocols;
 
+#if USE16_BIT
+using BlockID = System.UInt16;
+#else
+using BlockID = System.Byte;
+#endif
+
 namespace ClassicalSharp.Network {
 
 	public partial class NetworkProcessor : IServerConnection {
@@ -44,8 +50,8 @@ namespace ClassicalSharp.Network {
 				socket.Connect(address, port);
 			} catch (SocketException ex) {
 				ErrorHandler.LogError("connecting to server", ex);
-				game.Disconnect("&eUnable to reach " + address + ":" + port,
-				                "Unable to establish an underlying connection");
+				game.Disconnect("Failed to connect to " + address + ":" + port,
+				                "You failed to connect to the server. It's probably down!");
 				Dispose();
 				return;
 			}
@@ -163,11 +169,12 @@ namespace ClassicalSharp.Network {
 			reader.Skip(packetSizes[(byte)opcode] - 1);
 		}
 		
-		internal void ResetProtocols() {
+		internal void Reset() {
 			UsingExtPlayerList = false;
 			UsingPlayerClick = false;
 			SupportsPartialMessages = false;
 			SupportsFullCP437 = false;
+			addEntityHack = true;
 			
 			for (int i = 0; i < handlers.Length; i++)
 				handlers[i] = null;
@@ -182,7 +189,7 @@ namespace ClassicalSharp.Network {
 		
 		void BlockChanged(object sender, BlockChangedEventArgs e) {
 			Vector3I p = e.Coords;
-			byte block = game.Inventory.HeldBlock;
+			BlockID block = game.Inventory.HeldBlock;
 			
 			if (e.Block == 0) {
 				classic.SendSetBlock(p.X, p.Y, p.Z, false, block);
@@ -204,7 +211,7 @@ namespace ClassicalSharp.Network {
 			testAcc = 0;
 			
 			if (!socket.Connected || (socket.Poll(1000, SelectMode.SelectRead) && socket.Available == 0)) {
-				game.Disconnect("&eDisconnected from the server", "Connection timed out");
+				game.Disconnect("Disconnected!", "You've lost connection to the server");
 				Dispose();
 			}
 		}

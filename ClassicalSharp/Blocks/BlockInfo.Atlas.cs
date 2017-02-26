@@ -2,6 +2,12 @@
 using System;
 using OpenTK;
 
+#if USE16_BIT
+using BlockID = System.UInt16;
+#else
+using BlockID = System.Byte;
+#endif
+
 namespace ClassicalSharp {
 	
 	/// <summary> Stores various properties about the blocks in Minecraft Classic. </summary>
@@ -9,23 +15,23 @@ namespace ClassicalSharp {
 		
 		public byte[] textures = new byte[Block.Count * Side.Sides];
 		
-		internal void SetSide(int textureId, byte blockId) {
+		internal void SetSide(int textureId, BlockID blockId) {
 			int index = blockId * Side.Sides;
 			for (int i = index; i < index + Side.Bottom; i++)
 				textures[i] = (byte)textureId;
 		}
 		
-		internal void SetTex(int textureId, int face, byte blockId) {
+		internal void SetTex(int textureId, int face, BlockID blockId) {
 			textures[blockId * Side.Sides + face] = (byte)textureId;
 		}
 		
 		/// <summary> Gets the index in the terrain atlas for the texture of the face of the given block. </summary>
 		/// <param name="face"> Face of the given block, see TileSide constants. </param>
-		public int GetTextureLoc(byte block, int face) {
+		public int GetTextureLoc(BlockID block, int face) {
 			return textures[block * Side.Sides + face];
 		}
 		
-		void GetTextureRegion(byte block, int side, out Vector2 min, out Vector2 max) {
+		void GetTextureRegion(BlockID block, int side, out Vector2 min, out Vector2 max) {
 			min = Vector2.Zero; max = Vector2.One;
 			Vector3 bbMin = MinBB[block], bbMax = MaxBB[block];		
 			switch (side) {
@@ -33,13 +39,13 @@ namespace ClassicalSharp {
 				case Side.Right:
 					min = new Vector2(bbMin.Z, bbMin.Y);
 					max = new Vector2(bbMax.Z, bbMax.Y);
-					if (IsLiquid(block)) { min.Y -= 1.5f/16; max.Y -= 1.5f/16; }
+					if (IsLiquid(block)) max.Y -= 1.5f/16;
 					break;
 				case Side.Front:
 				case Side.Back: 
 					min = new Vector2(bbMin.X, bbMin.Y);
 					max = new Vector2(bbMax.X, bbMax.Y);
-					if (IsLiquid(block)) { min.Y -= 1.5f/16; max.Y -= 1.5f/16; }
+					if (IsLiquid(block)) max.Y -= 1.5f/16;
 					break;
 				case Side.Top:
 				case Side.Bottom:
@@ -49,7 +55,7 @@ namespace ClassicalSharp {
 			}
 		}
 		
-		bool FaceOccluded(byte block, byte other, int side) {
+		bool FaceOccluded(BlockID block, BlockID other, int side) {
 			Vector2 bMin, bMax, oMin, oMax;
 			GetTextureRegion(block, side, out bMin, out bMax);
 			GetTextureRegion(other, side, out oMin, out oMax);

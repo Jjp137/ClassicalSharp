@@ -6,12 +6,19 @@ using ClassicalSharp.Map;
 using ClassicalSharp.GraphicsAPI;
 using OpenTK;
 
+#if USE16_BIT
+using BlockID = System.UInt16;
+#else
+using BlockID = System.Byte;
+#endif
+
 namespace ClassicalSharp.Renderers {
 	
 	public class ChunkInfo {
 		
 		public ushort CentreX, CentreY, CentreZ;
-		public bool Visible = true, Empty = false;
+		public bool Visible, Empty, PendingDelete, AllAir;
+		
 		public bool DrawLeft, DrawRight, DrawFront, DrawBack, DrawBottom, DrawTop;
 		#if OCCLUSION
 		public bool Visited = false, Occluded = false;
@@ -21,18 +28,14 @@ namespace ClassicalSharp.Renderers {
 		public ChunkPartInfo[] NormalParts;
 		public ChunkPartInfo[] TranslucentParts;
 		
-		public ChunkInfo(int x, int y, int z) {
-			CentreX = (ushort)(x + 8);
-			CentreY = (ushort)(y + 8);
-			CentreZ = (ushort)(z + 8);
-		}
+		public ChunkInfo(int x, int y, int z) { Reset(x, y, z); }
 		
 		public void Reset(int x, int y, int z) {
 			CentreX = (ushort)(x + 8);
 			CentreY = (ushort)(y + 8);
 			CentreZ = (ushort)(z + 8);
 			
-			Visible = true; Empty = false;
+			Visible = true; Empty = false; PendingDelete = false; AllAir = false;
 			DrawLeft = false; DrawRight = false; DrawFront = false;
 			DrawBack = false; DrawBottom = false; DrawTop = false;
 		}
@@ -63,7 +66,7 @@ namespace ClassicalSharp.Renderers {
 		
 		public void Refresh() { updater.Refresh(); }
 		
-		public void RedrawBlock(int x, int y, int z, byte block, int oldHeight, int newHeight) {
+		public void RedrawBlock(int x, int y, int z, BlockID block, int oldHeight, int newHeight) {
 			updater.RedrawBlock(x, y, z, block, oldHeight, newHeight);
 		}
 		
@@ -124,7 +127,7 @@ namespace ClassicalSharp.Renderers {
 			Vector3 pos = game.CurrentCameraPos;
 			Vector3I coords = Vector3I.Floor(pos);
 			
-			byte block = game.World.SafeGetBlock(coords);
+			BlockID block = game.World.SafeGetBlock(coords);
 			bool outside = !game.World.IsValidPos(Vector3I.Floor(pos));
 			inTranslucent = game.BlockInfo.Draw[block] == DrawType.Translucent
 				|| (pos.Y < env.EdgeHeight && outside);

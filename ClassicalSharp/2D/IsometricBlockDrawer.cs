@@ -5,6 +5,12 @@ using ClassicalSharp.Model;
 using ClassicalSharp.Textures;
 using OpenTK;
 
+#if USE16_BIT
+using BlockID = System.UInt16;
+#else
+using BlockID = System.Byte;
+#endif
+
 namespace ClassicalSharp {
 
 	public sealed class IsometricBlockDrawer {
@@ -38,15 +44,15 @@ namespace ClassicalSharp {
 		
 		static IsometricBlockDrawer() {
 			FastColour.GetShaded(FastColour.White, out colXSide, out colZSide, out colYBottom);
-			transform = Matrix4.RotateY(45 * Utils.Deg2Rad) * Matrix4.RotateX(-26.565f * Utils.Deg2Rad);
+			transform = Matrix4.RotateY(45 * Utils.Deg2Rad) * Matrix4.RotateX(-30f * Utils.Deg2Rad);
 			
-			cosX = (float)Math.Cos(26.565f * Utils.Deg2Rad);
-			sinX = (float)Math.Sin(26.565f * Utils.Deg2Rad);
+			cosX = (float)Math.Cos(30f * Utils.Deg2Rad);
+			sinX = (float)Math.Sin(30f * Utils.Deg2Rad);
 			cosY = (float)Math.Cos(-45f * Utils.Deg2Rad);
 			sinY = (float)Math.Sin(-45f * Utils.Deg2Rad);
 		}
 		
-		public void DrawBatch(byte block, float size, float x, float y) {
+		public void DrawBatch(BlockID block, float size, float x, float y) {
 			BlockInfo info = game.BlockInfo;
 			atlas = game.TerrainAtlas1D;
 			drawer.elementsPerAtlas1D = atlas.elementsPerAtlas1D;
@@ -100,7 +106,7 @@ namespace ClassicalSharp {
 			game.Graphics.PopMatrix();
 		}
 		
-		int GetTex(byte block, int side) {
+		int GetTex(BlockID block, int side) {
 			int texId = game.BlockInfo.GetTextureLoc(block, side);
 			texIndex = texId / atlas.elementsPerAtlas1D;
 			
@@ -109,7 +115,7 @@ namespace ClassicalSharp {
 		}
 
 		static Vector3 pos = Vector3.Zero;
-		void SpriteZQuad(byte block, bool firstPart) {
+		void SpriteZQuad(BlockID block, bool firstPart) {
 			int texLoc = game.BlockInfo.GetTextureLoc(block, Side.Right);
 			TextureRec rec = atlas.GetTexRec(texLoc, 1, out texIndex);
 			if (lastIndex != texIndex) Flush();
@@ -118,11 +124,8 @@ namespace ClassicalSharp {
 			v.Colour = colNormal;
 			
 			if (game.BlockInfo.Tinted[block]) {
-				FastColour fogCol = game.BlockInfo.FogColour[block];
-				FastColour newCol = FastColour.Unpack(v.Colour);
-				newCol *= fogCol;
-				v.Colour = newCol.Pack();
-			}
+				v.Colour = Utils.Tint(v.Colour, game.BlockInfo.FogColour[block]);
+			}			
 			
 			float x1 = firstPart ? 0.5f : -0.1f, x2 = firstPart ? 1.1f : 0.5f;
 			rec.U1 = firstPart ? 0.0f : 0.5f; rec.U2 = (firstPart ? 0.5f : 1.0f) * (15.99f/16f);
@@ -135,7 +138,7 @@ namespace ClassicalSharp {
 			v.X = maxX; v.Y = minY; v.Z = pos.Z; v.U = rec.U1; v.V = rec.V2; vertices[index++] = v;
 		}
 
-		void SpriteXQuad(byte block, bool firstPart) {
+		void SpriteXQuad(BlockID block, bool firstPart) {
 			int texLoc = game.BlockInfo.GetTextureLoc(block, Side.Right);
 			TextureRec rec = atlas.GetTexRec(texLoc, 1, out texIndex);
 			if (lastIndex != texIndex) Flush();
@@ -144,10 +147,7 @@ namespace ClassicalSharp {
 			v.Colour = colNormal;
 			
 			if (game.BlockInfo.Tinted[block]) {
-				FastColour fogCol = game.BlockInfo.FogColour[block];
-				FastColour newCol = FastColour.Unpack(v.Colour);
-				newCol *= fogCol;
-				v.Colour = newCol.Pack();
+				v.Colour = Utils.Tint(v.Colour, game.BlockInfo.FogColour[block]);
 			}
 			
 			float z1 = firstPart ? 0.5f : -0.1f, z2 = firstPart ? 1.1f : 0.5f;

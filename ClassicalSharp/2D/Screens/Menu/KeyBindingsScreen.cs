@@ -9,19 +9,17 @@ namespace ClassicalSharp.Gui.Screens {
 		
 		public KeyBindingsScreen(Game game) : base(game) { }
 		
-		Font keyFont;
 		static string[] keyNames;
 		protected string[] leftDesc, rightDesc;
 		protected KeyBind[] left, right;
 		
-		protected int btnDistance = 45, btnWidth = 260, btnHeight = 35;
+		protected int btnDistance = 50, btnWidth = 260;
 		protected string title = "Controls";
 		protected int index;
 		protected Action<Game, Widget> leftPage, rightPage;
 		
 		public override void Init() {
 			titleFont = new Font(game.FontName, 16, FontStyle.Bold);
-			keyFont = new Font(game.FontName, 16, FontStyle.Bold);
 			regularFont = new Font(game.FontName, 16, FontStyle.Italic);
 			base.Init();
 			
@@ -49,7 +47,7 @@ namespace ClassicalSharp.Gui.Screens {
 		}
 		
 		void MakeOthers() {
-			widgets[index++] = TextWidget.Create(game, title, keyFont)
+			widgets[index++] = TextWidget.Create(game, title, titleFont)
 				.SetLocation(Anchor.Centre, Anchor.Centre, 0, -180);
 			if (game.ClassicMode) {
 				widgets[index++] = MakeBack(false, titleFont,
@@ -63,9 +61,10 @@ namespace ClassicalSharp.Gui.Screens {
 		void MakePages(int origin) {
 			if (leftPage == null && rightPage == null) return;
 			int btnY = origin + btnDistance * (left.Length / 2);
-			widgets[index++] = ButtonWidget.Create(game, btnHeight, btnHeight, "<", keyFont, LeftOnly(leftPage))
+			
+			widgets[index++] = ButtonWidget.Create(game, 40, "<", titleFont, LeftOnly(leftPage))
 				.SetLocation(Anchor.Centre, Anchor.Centre, -btnWidth - 35, btnY);
-			widgets[index++] = ButtonWidget.Create(game, btnHeight, btnHeight, ">", keyFont, LeftOnly(rightPage))
+			widgets[index++] = ButtonWidget.Create(game, 40, ">", titleFont, LeftOnly(rightPage))
 				.SetLocation(Anchor.Centre, Anchor.Centre, btnWidth + 35, btnY);
 			if (leftPage == null) widgets[index - 2].Disabled = true;
 			if (rightPage == null) widgets[index - 1].Disabled = true;
@@ -73,7 +72,7 @@ namespace ClassicalSharp.Gui.Screens {
 		
 		void Make(int i, int x, ref int y) {
 			string text = ButtonText(i);
-			widgets[index++] = ButtonWidget.Create(game, btnWidth, btnHeight, text, keyFont, OnBindingClick)				
+			widgets[index++] = ButtonWidget.Create(game, btnWidth, text, titleFont, OnBindingClick)				
 				.SetLocation(Anchor.Centre, Anchor.Centre, x, y);
 			y += btnDistance;
 		}
@@ -124,11 +123,6 @@ namespace ClassicalSharp.Gui.Screens {
 		
 		T Get<T>(int index, T[] a, T[] b) {
 			return index < a.Length ? a[index] : b[index - a.Length];
-		}
-		
-		public override void Dispose() {
-			keyFont.Dispose();
-			base.Dispose();
 		}
 	}
 }

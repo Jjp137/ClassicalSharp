@@ -68,7 +68,7 @@ namespace ClassicalSharp.Network.Protocols {
 			BlockInfo info = game.BlockInfo;
 			info.ResetBlockProps(id);
 			
-			info.Name[id] = reader.ReadCp437String();
+			info.Name[id] = reader.ReadString();
 			info.Collide[id] = (CollideType)reader.ReadUInt8();
 			
 			info.SpeedMultiplier[id] = (float)Math.Pow(2, (reader.ReadUInt8() - 128) / 64f);
@@ -96,9 +96,7 @@ namespace ClassicalSharp.Network.Protocols {
 		void HandleDefineBlockCommonEnd(NetReader reader, byte shape, byte id) {
 			BlockInfo info = game.BlockInfo;
 			byte blockDraw = reader.ReadUInt8();
-			if (shape == 0)
-				blockDraw = DrawType.Sprite;
-			info.SetBlockDraw(id, blockDraw);
+			if (shape == 0) blockDraw = DrawType.Sprite;
 			info.LightOffset[id] = info.CalcLightOffset(id);
 			
 			byte fogDensity = reader.ReadUInt8();
@@ -107,8 +105,10 @@ namespace ClassicalSharp.Network.Protocols {
 				reader.ReadUInt8(), reader.ReadUInt8(), reader.ReadUInt8());
 			info.Tinted[id] = info.FogColour[id] != FastColour.Black && info.Name[id].IndexOf('#') >= 0;
 			
+			info.SetBlockDraw(id, blockDraw);
 			info.CalcRenderBounds(id);
 			info.UpdateCulling(id);
+			
 			game.Events.RaiseBlockDefinitionChanged();
 			info.DefinedCustomBlocks[id >> 5] |= (1u << (id & 0x1F));
 		}
@@ -152,8 +152,7 @@ namespace ClassicalSharp.Network.Protocols {
 			stepSnds[2] = SoundType.Gravel; breakSnds[2] = SoundType.Gravel;
 			stepSnds[3] = SoundType.Grass; breakSnds[3] = SoundType.Grass;
 			stepSnds[4] = SoundType.Stone; breakSnds[4] = SoundType.Stone;
-			// TODO: metal sound type, just use stone for now.
-			stepSnds[5] = SoundType.Stone; breakSnds[5] = SoundType.Stone;
+			stepSnds[5] = SoundType.Metal; breakSnds[5] = SoundType.Metal;
 			stepSnds[6] = SoundType.Stone; breakSnds[6] = SoundType.Glass;
 			stepSnds[7] = SoundType.Cloth; breakSnds[7] = SoundType.Cloth;
 			stepSnds[8] = SoundType.Sand; breakSnds[8] = SoundType.Sand;

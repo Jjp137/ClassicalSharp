@@ -7,11 +7,17 @@ using ClassicalSharp.Renderers;
 using ClassicalSharp.Textures;
 using OpenTK;
 
+#if USE16_BIT
+using BlockID = System.UInt16;
+#else
+using BlockID = System.Byte;
+#endif
+
 namespace ClassicalSharp.Model {
 
 	public class BlockModel : IModel {
 		
-		byte block = (byte)Block.Air;
+		BlockID block = Block.Air;
 		float height;
 		TerrainAtlas1D atlas;
 		bool bright;
@@ -31,7 +37,7 @@ namespace ClassicalSharp.Model {
 		public override float NameYOffset { get { return height + 0.075f; } }
 		
 		public override float GetEyeY(Entity entity) {
-			byte block = Byte.Parse(entity.ModelName);
+			BlockID block = Byte.Parse(entity.ModelName);
 			float minY = game.BlockInfo.MinBB[block].Y;
 			float maxY = game.BlockInfo.MaxBB[block].Y;
 			return block == 0 ? 1 : (minY + maxY) / 2;
@@ -42,12 +48,12 @@ namespace ClassicalSharp.Model {
 			get { return (maxBB - minBB) - colShrink; } // to fit slightly inside
 		}
 		
-		static Vector3 offset = new Vector3(-0.5f, -0.5f, -0.5f);
+		static Vector3 offset = new Vector3(-0.5f, 0.0f, -0.5f);
 		public override AABB PickingBounds {
 			get { return new AABB(minBB, maxBB).Offset(offset); }
 		}
 		
-		public void CalcState(byte block) {
+		public void CalcState(BlockID block) {
 			if (game.BlockInfo.Draw[block] == DrawType.Gas) {
 				bright = false;
 				minBB = Vector3.Zero;
@@ -61,12 +67,6 @@ namespace ClassicalSharp.Model {
 				if (game.BlockInfo.Draw[block] == DrawType.Sprite)
 					height = 1;
 			}
-		}
-		
-		public override bool ShouldRender(Entity p, FrustumCulling culling) {
-			block = Utils.FastByte(p.ModelName);
-			CalcState(block);
-			return base.ShouldRender(p, culling);
 		}
 		
 		public override float RenderDistance(Entity p) {
@@ -94,12 +94,12 @@ namespace ClassicalSharp.Model {
 				col = FastColour.ScalePacked(col, colScale);
 				block = ((FakePlayer)p).Block;
 			} else {
-				NoShade = bright;
 				block = Utils.FastByte(p.ModelName);
 			}
-			if (bright) col = FastColour.WhitePacked;
 			
 			CalcState(block);
+			if (!(p is FakePlayer)) NoShade = bright;
+			if (bright) col = FastColour.WhitePacked;
 			if (game.BlockInfo.Draw[block] == DrawType.Gas) return;
 			
 			lastTexId = -1;

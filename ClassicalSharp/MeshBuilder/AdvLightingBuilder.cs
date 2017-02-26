@@ -4,6 +4,12 @@ using ClassicalSharp.GraphicsAPI;
 using ClassicalSharp.Map;
 using OpenTK;
 
+#if USE16_BIT
+using BlockID = System.UInt16;
+#else
+using BlockID = System.Byte;
+#endif
+
 namespace ClassicalSharp {
 
 	public unsafe sealed class AdvLightingMeshBuilder : ChunkMeshBuilder {
@@ -13,7 +19,7 @@ namespace ClassicalSharp {
 		int initBitFlags, lightFlags;
 		float x1, y1, z1, x2, y2, z2;
 		
-		protected override int StretchXLiquid(int xx, int countIndex, int x, int y, int z, int chunkIndex, byte block) {
+		protected override int StretchXLiquid(int countIndex, int x, int y, int z, int chunkIndex, BlockID block) {
 			if (OccludedLiquid(chunkIndex)) return 0;
 			initBitFlags = ComputeLightFlags(x, y, z, chunkIndex);
 			bitFlags[chunkIndex] = initBitFlags;
@@ -22,10 +28,8 @@ namespace ClassicalSharp {
 			x++;
 			chunkIndex++;
 			countIndex += Side.Sides;
-			int max = chunkSize - xx;
 			
-			while (count < max && x < width && CanStretch(block, chunkIndex, x, y, z, Side.Top)
-			       && !OccludedLiquid(chunkIndex)) {
+			while (x < chunkEndX && CanStretch(block, chunkIndex, x, y, z, Side.Top) && !OccludedLiquid(chunkIndex)) {
 				counts[countIndex] = 0;
 				count++;
 				x++;
@@ -35,7 +39,7 @@ namespace ClassicalSharp {
 			return count;
 		}
 		
-		protected override int StretchX(int xx, int countIndex, int x, int y, int z, int chunkIndex, byte block, int face) {
+		protected override int StretchX(int countIndex, int x, int y, int z, int chunkIndex, BlockID block, int face) {
 			initBitFlags = ComputeLightFlags(x, y, z, chunkIndex);
 			bitFlags[chunkIndex] = initBitFlags;
 			
@@ -43,10 +47,9 @@ namespace ClassicalSharp {
 			x++;
 			chunkIndex++;
 			countIndex += Side.Sides;
-			int max = chunkSize - xx;
 			bool stretchTile = (info.CanStretch[block] & (1 << face)) != 0;
 			
-			while (count < max && x < width && stretchTile && CanStretch(block, chunkIndex, x, y, z, face)) {
+			while (x < chunkEndX && stretchTile && CanStretch(block, chunkIndex, x, y, z, face)) {
 				counts[countIndex] = 0;
 				count++;
 				x++;
@@ -56,7 +59,7 @@ namespace ClassicalSharp {
 			return count;
 		}
 		
-		protected override int StretchZ(int zz, int countIndex, int x, int y, int z, int chunkIndex, byte block, int face) {
+		protected override int StretchZ(int countIndex, int x, int y, int z, int chunkIndex, BlockID block, int face) {
 			initBitFlags = ComputeLightFlags(x, y, z, chunkIndex);
 			bitFlags[chunkIndex] = initBitFlags;
 			
@@ -64,10 +67,9 @@ namespace ClassicalSharp {
 			z++;
 			chunkIndex += extChunkSize;
 			countIndex += chunkSize * Side.Sides;
-			int max = chunkSize - zz;
 			bool stretchTile = (info.CanStretch[block] & (1 << face)) != 0;
 			
-			while (count < max && z < length && stretchTile && CanStretch(block, chunkIndex, x, y, z, face)) {
+			while (z < chunkEndZ && stretchTile && CanStretch(block, chunkIndex, x, y, z, face)) {
 				counts[countIndex] = 0;
 				count++;
 				z++;
@@ -77,10 +79,10 @@ namespace ClassicalSharp {
 			return count;
 		}
 		
-		bool CanStretch(byte initialTile, int chunkIndex, int x, int y, int z, int face) {
-			byte rawBlock = chunk[chunkIndex];
+		bool CanStretch(BlockID initialBlock, int chunkIndex, int x, int y, int z, int face) {
+			BlockID rawBlock = chunk[chunkIndex];
 			bitFlags[chunkIndex] = ComputeLightFlags(x, y, z, chunkIndex);
-			return rawBlock == initialTile
+			return rawBlock == initialBlock
 				&& !info.IsFaceHidden(rawBlock, chunk[chunkIndex + offsets[face]], face)
 				&& (initBitFlags == bitFlags[chunkIndex]
 				    // Check that this face is either fully bright or fully in shadow
@@ -144,10 +146,11 @@ namespace ClassicalSharp {
 			int col0_0 = fullBright ? FastColour.WhitePacked : lerpX[aY0_Z0], col1_0 = fullBright ? FastColour.WhitePacked : lerpX[aY1_Z0];
 			int col1_1 = fullBright ? FastColour.WhitePacked : lerpX[aY1_Z1], col0_1 = fullBright ? FastColour.WhitePacked : lerpX[aY0_Z1];
 			if (tinted) {
-				col0_0 = TintBlock(curBlock, col0_0);
-				col1_0 = TintBlock(curBlock, col1_0);
-				col1_1 = TintBlock(curBlock, col1_1);
-				col0_1 = TintBlock(curBlock, col0_1);
+				FastColour tint = info.FogColour[curBlock];
+				col0_0 = Utils.Tint(col0_0, tint);
+				col1_0 = Utils.Tint(col1_0, tint);
+				col1_1 = Utils.Tint(col1_1, tint);
+				col0_1 = Utils.Tint(col0_1, tint);
 			}
 			
 			if (aY0_Z0 + aY1_Z1 > aY0_Z1 + aY1_Z0) {
@@ -183,10 +186,11 @@ namespace ClassicalSharp {
 			int col0_0 = fullBright ? FastColour.WhitePacked : lerpX[aY0_Z0], col1_0 = fullBright ? FastColour.WhitePacked : lerpX[aY1_Z0];
 			int col1_1 = fullBright ? FastColour.WhitePacked : lerpX[aY1_Z1], col0_1 = fullBright ? FastColour.WhitePacked : lerpX[aY0_Z1];
 			if (tinted) {
-				col0_0 = TintBlock(curBlock, col0_0);
-				col1_0 = TintBlock(curBlock, col1_0);
-				col1_1 = TintBlock(curBlock, col1_1);
-				col0_1 = TintBlock(curBlock, col0_1);
+				FastColour tint = info.FogColour[curBlock];
+				col0_0 = Utils.Tint(col0_0, tint);
+				col1_0 = Utils.Tint(col1_0, tint);
+				col1_1 = Utils.Tint(col1_1, tint);
+				col0_1 = Utils.Tint(col0_1, tint);
 			}
 			
 			if (aY0_Z0 + aY1_Z1 > aY0_Z1 + aY1_Z0) {
@@ -222,10 +226,11 @@ namespace ClassicalSharp {
 			int col0_0 = fullBright ? FastColour.WhitePacked : lerpZ[aX0_Y0], col1_0 = fullBright ? FastColour.WhitePacked : lerpZ[aX1_Y0];
 			int col1_1 = fullBright ? FastColour.WhitePacked : lerpZ[aX1_Y1], col0_1 = fullBright ? FastColour.WhitePacked : lerpZ[aX0_Y1];
 			if (tinted) {
-				col0_0 = TintBlock(curBlock, col0_0);
-				col1_0 = TintBlock(curBlock, col1_0);
-				col1_1 = TintBlock(curBlock, col1_1);
-				col0_1 = TintBlock(curBlock, col0_1);
+				FastColour tint = info.FogColour[curBlock];
+				col0_0 = Utils.Tint(col0_0, tint);
+				col1_0 = Utils.Tint(col1_0, tint);
+				col1_1 = Utils.Tint(col1_1, tint);
+				col0_1 = Utils.Tint(col0_1, tint);
 			}
 			
 			if (aX1_Y1 + aX0_Y0 > aX0_Y1 + aX1_Y0) {
@@ -261,10 +266,11 @@ namespace ClassicalSharp {
 			int col1_1 = fullBright ? FastColour.WhitePacked : lerpZ[aX1_Y1], col1_0 = fullBright ? FastColour.WhitePacked : lerpZ[aX1_Y0];
 			int col0_0 = fullBright ? FastColour.WhitePacked : lerpZ[aX0_Y0], col0_1 = fullBright ? FastColour.WhitePacked : lerpZ[aX0_Y1];
 			if (tinted) {
-				col0_0 = TintBlock(curBlock, col0_0);
-				col1_0 = TintBlock(curBlock, col1_0);
-				col1_1 = TintBlock(curBlock, col1_1);
-				col0_1 = TintBlock(curBlock, col0_1);
+				FastColour tint = info.FogColour[curBlock];
+				col0_0 = Utils.Tint(col0_0, tint);
+				col1_0 = Utils.Tint(col1_0, tint);
+				col1_1 = Utils.Tint(col1_1, tint);
+				col0_1 = Utils.Tint(col0_1, tint);
 			}
 			
 			if (aX1_Y1 + aX0_Y0 > aX0_Y1 + aX1_Y0) {
@@ -300,10 +306,11 @@ namespace ClassicalSharp {
 			int col0_1 = fullBright ? FastColour.WhitePacked : lerpY[aX0_Z1], col1_1 = fullBright ? FastColour.WhitePacked : lerpY[aX1_Z1];
 			int col1_0 = fullBright ? FastColour.WhitePacked : lerpY[aX1_Z0], col0_0 = fullBright ? FastColour.WhitePacked : lerpY[aX0_Z0];
 			if (tinted) {
-				col0_0 = TintBlock(curBlock, col0_0);
-				col1_0 = TintBlock(curBlock, col1_0);
-				col1_1 = TintBlock(curBlock, col1_1);
-				col0_1 = TintBlock(curBlock, col0_1);
+				FastColour tint = info.FogColour[curBlock];
+				col0_0 = Utils.Tint(col0_0, tint);
+				col1_0 = Utils.Tint(col1_0, tint);
+				col1_1 = Utils.Tint(col1_1, tint);
+				col0_1 = Utils.Tint(col0_1, tint);
 			}
 			
 			if (aX0_Z1 + aX1_Z0 > aX0_Z0 + aX1_Z1) {
@@ -339,10 +346,11 @@ namespace ClassicalSharp {
 			int col0_0 = fullBright ? FastColour.WhitePacked : lerp[aX0_Z0], col1_0 = fullBright ? FastColour.WhitePacked : lerp[aX1_Z0];
 			int col1_1 = fullBright ? FastColour.WhitePacked : lerp[aX1_Z1], col0_1 = fullBright ? FastColour.WhitePacked : lerp[aX0_Z1];
 			if (tinted) {
-				col0_0 = TintBlock(curBlock, col0_0);
-				col1_0 = TintBlock(curBlock, col1_0);
-				col1_1 = TintBlock(curBlock, col1_1);
-				col0_1 = TintBlock(curBlock, col0_1);
+				FastColour tint = info.FogColour[curBlock];
+				col0_0 = Utils.Tint(col0_0, tint);
+				col1_0 = Utils.Tint(col1_0, tint);
+				col1_1 = Utils.Tint(col1_1, tint);
+				col0_1 = Utils.Tint(col0_1, tint);
 			}
 			
 			if (aX0_Z0 + aX1_Z1 > aX0_Z1 + aX1_Z0) {
@@ -409,17 +417,20 @@ namespace ClassicalSharp {
 		
 		int Lit(int x, int y, int z, int cIndex) {
 			if (x < 0 || y < 0 || z < 0
-			    || x >= width || y >= height || z >= length) return 7;
+			    || x >= width || y >= height || z >= length) return 7; // all faces lit
+			
 			int flags = 0;
-			byte block = chunk[cIndex];
-			int lightHeight = lighting.heightmap[(z * width) + x];
+			BlockID block = chunk[cIndex];
+			int lightHeight = light.heightmap[(z * width) + x];
 			lightFlags = info.LightOffset[block];
 
 			// Use fact Light(Y.Bottom) == Light((Y - 1).Top)
 			int offset = (lightFlags >> Side.Bottom) & 1;
 			flags |= ((y - offset) > lightHeight ? 1 : 0);
+			
 			// Light is same for all the horizontal faces
 			flags |= (y > lightHeight ? 2 : 0);
+			
 			// Use fact Light((Y + 1).Bottom) == Light(Y.Top)
 			offset = (lightFlags >> Side.Top) & 1;
 			flags |= ((y - offset) >= lightHeight ? 4 : 0);

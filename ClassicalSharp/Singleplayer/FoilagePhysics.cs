@@ -2,6 +2,12 @@
 using System;
 using ClassicalSharp.Map;
 
+#if USE16_BIT
+using BlockID = System.UInt16;
+#else
+using BlockID = System.Byte;
+#endif
+
 namespace ClassicalSharp.Singleplayer {
 
 	public class FoilagePhysics {
@@ -26,14 +32,14 @@ namespace ClassicalSharp.Singleplayer {
 			physics.OnRandomTick[Block.BrownMushroom] = HandleMushroom;
 		}
 		
-		void HandleSapling(int index, byte block) {
+		void HandleSapling(int index, BlockID block) {
 			int x = index % map.Width;
 			int y = (index / map.Width) / map.Length;
 			int z = (index / map.Width) % map.Length;
 			GrowTree(x, y, z);
 		}
 		
-		void HandleDirt(int index, byte block) {
+		void HandleDirt(int index, BlockID block) {
 			int x = index % map.Width;
 			int y = (index / map.Width) / map.Length;
 			int z = (index / map.Width) % map.Length;
@@ -42,7 +48,7 @@ namespace ClassicalSharp.Singleplayer {
 				game.UpdateBlock(x, y, z, Block.Grass);
 		}
 		
-		void HandleGrass(int index, byte block) {
+		void HandleGrass(int index, BlockID block) {
 			int x = index % map.Width;
 			int y = (index / map.Width) / map.Length;
 			int z = (index / map.Width) % map.Length;
@@ -51,7 +57,7 @@ namespace ClassicalSharp.Singleplayer {
 				game.UpdateBlock(x, y, z, Block.Dirt);
 		}
 		
-		void HandleFlower(int index, byte block) {
+		void HandleFlower(int index, BlockID block) {
 			int x = index % map.Width;
 			int y = (index / map.Width) / map.Length;
 			int z = (index / map.Width) % map.Length;
@@ -62,7 +68,7 @@ namespace ClassicalSharp.Singleplayer {
 				return;
 			}
 			
-			byte below = Block.Dirt;
+			BlockID below = Block.Dirt;
 			if (y > 0) below = map.blocks[index - map.Width * map.Length];
 			if (!(below == Block.Dirt || below == Block.Grass)) {
 				game.UpdateBlock(x, y, z, Block.Air);
@@ -70,7 +76,7 @@ namespace ClassicalSharp.Singleplayer {
 			}
 		}
 		
-		void HandleMushroom(int index, byte block) {
+		void HandleMushroom(int index, BlockID block) {
 			int x = index % map.Width;
 			int y = (index / map.Width) / map.Length;
 			int z = (index / map.Width) % map.Length;
@@ -81,7 +87,7 @@ namespace ClassicalSharp.Singleplayer {
 				return;
 			}
 			
-			byte below = Block.Stone;
+			BlockID below = Block.Stone;
 			if (y > 0) below = map.blocks[index - map.Width * map.Length];
 			if (!(below == Block.Stone || below == Block.Cobblestone)) {
 				game.UpdateBlock(x, y, z, Block.Air);
@@ -143,7 +149,7 @@ namespace ClassicalSharp.Singleplayer {
 			{
 				if (!map.IsValidPos(x, y, z)) return false;
 				
-				byte block = map.GetBlock(x, y, z);
+				BlockID block = map.GetBlock(x, y, z);
 				if (!(block == 0 || block == Block.Leaves)) return false;
 			}
 			return true;

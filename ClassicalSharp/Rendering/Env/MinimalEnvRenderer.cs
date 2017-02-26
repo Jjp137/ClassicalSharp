@@ -2,6 +2,12 @@
 using ClassicalSharp.Events;
 using System;
 
+#if USE16_BIT
+using BlockID = System.UInt16;
+#else
+using BlockID = System.Byte;
+#endif
+
 namespace ClassicalSharp.Renderers {
 	/// <summary> Minimialistic environment renderer 
 	/// - only sets the background/clear colour to blended fog colour.
@@ -18,7 +24,7 @@ namespace ClassicalSharp.Renderers {
 			if (map.IsNotLoaded) return;
 			FastColour fogCol = FastColour.White;
 			float fogDensity = 0;
-			byte block = BlockOn(out fogDensity, out fogCol);
+			BlockID block = BlockOn(out fogDensity, out fogCol);
 			gfx.ClearColour(fogCol);
 			
 			// TODO: rewrite this to avoid raising the event? want to avoid recreating vbos too many times often

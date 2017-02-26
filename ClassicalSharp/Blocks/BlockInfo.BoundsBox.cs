@@ -3,6 +3,12 @@ using System;
 using OpenTK;
 using ClassicalSharp;
 
+#if USE16_BIT
+using BlockID = System.UInt16;
+#else
+using BlockID = System.Byte;
+#endif
+
 namespace ClassicalSharp {
 	
 	/// <summary> Stores various properties about the blocks in Minecraft Classic. </summary>
@@ -13,7 +19,7 @@ namespace ClassicalSharp {
 		public Vector3[] RenderMinBB = new Vector3[Block.Count];
 		public Vector3[] RenderMaxBB = new Vector3[Block.Count];
 		
-		internal void CalcRenderBounds(byte id) {
+		internal void CalcRenderBounds(BlockID id) {
 			Vector3 min = MinBB[id], max = MaxBB[id];
 			
 			if (id >= Block.Water && id <= Block.StillLava) {
@@ -29,7 +35,7 @@ namespace ClassicalSharp {
 			RenderMinBB[id] = min; RenderMaxBB[id] = max;
 		}
 		
-		internal byte CalcLightOffset(byte block) {
+		internal byte CalcLightOffset(BlockID block) {
 			int flags = 0xFF;
 			Vector3 min = MinBB[block], max = MaxBB[block];
 			
@@ -48,13 +54,13 @@ namespace ClassicalSharp {
 		public void RecalculateSpriteBB(FastBitmap fastBmp) {
 			for (int i = 0; i < Block.Count; i++) {
 				if (Draw[i] != DrawType.Sprite) continue;
-				RecalculateBB((byte)i, fastBmp);
+				RecalculateBB((BlockID)i, fastBmp);
 			}
 		}
 		
 		const float angle = 45f * Utils.Deg2Rad;
 		static readonly Vector3 centre = new Vector3(0.5f, 0, 0.5f);
-		internal void RecalculateBB(byte block, FastBitmap fastBmp) {
+		internal void RecalculateBB(BlockID block, FastBitmap fastBmp) {
 			int elemSize = fastBmp.Width / 16;
 			int texId = GetTextureLoc(block, Side.Right);
 			int texX = texId & 0x0F, texY = texId >> 4;

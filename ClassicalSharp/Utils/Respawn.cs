@@ -4,6 +4,12 @@ using ClassicalSharp.Entities;
 using ClassicalSharp.Physics;
 using OpenTK;
 
+#if USE16_BIT
+using BlockID = System.UInt16;
+#else
+using BlockID = System.Byte;
+#endif
+
 namespace ClassicalSharp {
 	
 	/// <summary> Shared helper class for respawning an entity. </summary>
@@ -22,7 +28,7 @@ namespace ClassicalSharp {
 				for (int z = minZ; z <= maxZ; z++)
 					for (int x = minX; x <= maxX; x++)
 			{
-				byte block = game.World.GetPhysicsBlock(x, y, z);
+				BlockID block = game.World.GetPhysicsBlock(x, y, z);
 				blockBB.Min = new Vector3(x, y, z) + info.MinBB[block];
 				blockBB.Max = new Vector3(x, y, z) + info.MaxBB[block];
 				

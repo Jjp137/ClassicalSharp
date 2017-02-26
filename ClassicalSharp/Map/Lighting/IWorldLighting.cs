@@ -2,6 +2,12 @@
 using System;
 using OpenTK;
 
+#if USE16_BIT
+using BlockID = System.UInt16;
+#else
+using BlockID = System.Byte;
+#endif
+
 namespace ClassicalSharp.Map {
 	
 	/// <summary> Manages lighting for each block in the world.  </summary>
@@ -16,7 +22,7 @@ namespace ClassicalSharp.Map {
 		//    for z = startZ; z < startZ + 18; z++
 		//       CalcHeightAt(x, maxY, z) if height == short.MaxValue
 		// Except this function is a lot more optimised and minimises cache misses.
-		public unsafe abstract void LightHint(int startX, int startZ, byte* mapPtr);
+		public unsafe abstract void LightHint(int startX, int startZ, BlockID* mapPtr);
 		
 		/// <summary> Returns the y coordinate of the highest block that is fully not in sunlight. </summary>
 		/// <remarks> *** Does NOT check that the coordinates are inside the map. *** <br/>
@@ -24,7 +30,7 @@ namespace ClassicalSharp.Map {
 		public abstract int GetLightHeight(int x, int z);
 		
 		/// <summary> Updates the lighting for the block at that position, which may in turn affect other blocks. </summary>
-		public abstract void UpdateLight(int x, int y, int z, byte oldBlock, byte newBlock);
+		public abstract void UpdateLight(int x, int y, int z, BlockID oldBlock, BlockID newBlock);
 		
 		
 		/// <summary> Returns whether the block at the given coordinates is fully in sunlight. </summary>

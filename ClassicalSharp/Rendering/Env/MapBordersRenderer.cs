@@ -7,6 +7,12 @@ using ClassicalSharp.GraphicsAPI;
 using ClassicalSharp.Map;
 using OpenTK;
 
+#if USE16_BIT
+using BlockID = System.UInt16;
+#else
+using BlockID = System.Byte;
+#endif
+
 namespace ClassicalSharp.Renderers {
 	
 	public unsafe sealed class MapBordersRenderer : IGameComponent {
@@ -40,7 +46,7 @@ namespace ClassicalSharp.Renderers {
 		
 		public void RenderSides(double delta) {
 			if (sidesVb == -1) return;
-			byte block = game.World.Env.SidesBlock;
+			BlockID block = game.World.Env.SidesBlock;
 			if (game.BlockInfo.Draw[block] == DrawType.Gas) return;
 			
 			gfx.SetupAlphaState(game.BlockInfo.Draw[block]);
@@ -57,7 +63,7 @@ namespace ClassicalSharp.Renderers {
 		
 		public void RenderEdges(double delta) {
 			if (edgesVb == -1) return;
-			byte block = game.World.Env.EdgeBlock;
+			BlockID block = game.World.Env.EdgeBlock;
 			if (game.BlockInfo.Draw[block] == DrawType.Gas) return;
 			
 			Vector3 camPos = game.CurrentCameraPos;
@@ -155,7 +161,7 @@ namespace ClassicalSharp.Renderers {
 
 		
 		void RebuildSides(int y, int axisSize) {
-			byte block = game.World.Env.SidesBlock;
+			BlockID block = game.World.Env.SidesBlock;
 			sidesVertices = 0;
 			for (int i = 0; i < rects.Length; i++) {
 				Rectangle r = rects[i];
@@ -169,6 +175,10 @@ namespace ClassicalSharp.Renderers {
 			
 			fullColSides = game.BlockInfo.FullBright[block];
 			int col = fullColSides ? FastColour.WhitePacked : map.Env.Shadow;
+			if (game.BlockInfo.Tinted[block]) {
+				col = Utils.Tint(col, game.BlockInfo.FogColour[block]);
+			}
+			
 			for (int i = 0; i < rects.Length; i++) {
 				Rectangle r = rects[i];
 				DrawY(r.X, r.Y, r.X + r.Width, r.Y + r.Height, y, axisSize, col, 0, YOffset(block), ref v);
@@ -186,7 +196,7 @@ namespace ClassicalSharp.Renderers {
 		}
 		
 		void RebuildEdges(int y, int axisSize) {
-			byte block = game.World.Env.EdgeBlock;
+			BlockID block = game.World.Env.EdgeBlock;
 			edgesVertices = 0;
 			for (int i = 0; i < rects.Length; i++) {
 				Rectangle r = rects[i];
@@ -197,6 +207,10 @@ namespace ClassicalSharp.Renderers {
 			
 			fullColEdge = game.BlockInfo.FullBright[block];
 			int col = fullColEdge ? FastColour.WhitePacked : map.Env.Sun;
+			if (game.BlockInfo.Tinted[block]) {
+				col = Utils.Tint(col, game.BlockInfo.FogColour[block]);
+			}
+			
 			for (int i = 0; i < rects.Length; i++) {
 				Rectangle r = rects[i];
 				DrawY(r.X, r.Y, r.X + r.Width, r.Y + r.Height, y, axisSize, col,
@@ -205,12 +219,12 @@ namespace ClassicalSharp.Renderers {
 			edgesVb = gfx.CreateVb(ptr, VertexFormat.P3fT2fC4b, edgesVertices);
 		}
 
-		float HorOffset(byte block) {
+		float HorOffset(BlockID block) {
 			BlockInfo info = game.BlockInfo;
 			return info.RenderMinBB[block].X - info.MinBB[block].X;
 		}
 		
-		float YOffset(byte block) {
+		float YOffset(BlockID block) {
 			BlockInfo info = game.BlockInfo;
 			return info.RenderMinBB[block].Y - info.MinBB[block].Y;
 		}
@@ -286,7 +300,7 @@ namespace ClassicalSharp.Renderers {
 		}
 		
 		int lastEdgeTexLoc, lastSideTexLoc;
-		void MakeTexture(ref int id, ref int lastTexLoc, byte block) {
+		void MakeTexture(ref int id, ref int lastTexLoc, BlockID block) {
 			int texLoc = game.BlockInfo.GetTextureLoc(block, Side.Top);
 			if (texLoc == lastTexLoc || gfx.LostContext) return;
 			lastTexLoc = texLoc;

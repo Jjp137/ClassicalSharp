@@ -3,14 +3,20 @@ using System;
 using ClassicalSharp.Gui.Widgets;
 using OpenTK.Input;
 
+#if USE16_BIT
+using BlockID = System.UInt16;
+#else
+using BlockID = System.Byte;
+#endif
+
 namespace ClassicalSharp.Mode {
 
 	public interface IGameMode : IGameComponent {
 		
 		bool HandlesKeyDown(Key key);
-		void PickLeft(byte old);
-		void PickMiddle(byte old);
-		void PickRight(byte old, byte block);
+		void PickLeft(BlockID old);
+		void PickMiddle(BlockID old);
+		void PickRight(BlockID old, BlockID block);
 		bool PickEntity(byte id);
 		Widget MakeHotbar();
 	}

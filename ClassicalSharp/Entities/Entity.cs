@@ -3,6 +3,12 @@ using System;
 using ClassicalSharp.Model;
 using OpenTK;
 
+#if USE16_BIT
+using BlockID = System.UInt16;
+#else
+using BlockID = System.Byte;
+#endif
+
 namespace ClassicalSharp.Entities {
 	
 	/// <summary> Contains a model, along with position, velocity, and rotation.
@@ -15,9 +21,15 @@ namespace ClassicalSharp.Entities {
 			anim = new AnimatedComponent(game, this);
 		}
 		
+		/// <summary> The model of this entity. (used for collision detection and rendering) </summary>
 		public IModel Model;
+		
+		/// <summary> The name of the model of this entity. </summary>
 		public string ModelName;
+		
+		/// <summary> Scale applied to the model for collision detection and rendering. </summary>
 		public float ModelScale = 1;
+		
 		public byte ID;
 		public int TextureId = -1, MobTextureId = -1;
 		public short Health = 20;
@@ -84,16 +96,16 @@ namespace ClassicalSharp.Entities {
 		}
 
 		/// <summary> Gets the block just underneath the player's feet position. </summary>
-		public byte BlockUnderFeet {
+		public BlockID BlockUnderFeet {
 			get { return GetBlock(new Vector3(Position.X, Position.Y - 0.01f, Position.Z)); }
 		}
 		
 		/// <summary> Gets the block at player's eye position. </summary>
-		public byte BlockAtHead {
+		public BlockID BlockAtHead {
 			get { return GetBlock(EyePosition); }
 		}
 		
-		protected byte GetBlock(Vector3 coords) {
+		protected BlockID GetBlock(Vector3 coords) {
 			return game.World.SafeGetBlock(Vector3I.Floor(coords));
 		}
 		
@@ -107,6 +119,8 @@ namespace ClassicalSharp.Entities {
 		}
 		
 		
+		/// <summary> Sets the model associated with this entity. </summary>
+		/// <param name="model"> Can be either 'name' or 'name'|'scale'. </param>
 		public void SetModel(string model) {
 			ModelScale = 1;
 			int sep = model.IndexOf('|');

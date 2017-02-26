@@ -2,6 +2,12 @@
 using System;
 using ClassicalSharp.Events;
 
+#if USE16_BIT
+using BlockID = System.UInt16;
+#else
+using BlockID = System.Byte;
+#endif
+
 namespace ClassicalSharp.Map {
 	
 	/// <summary> Manages lighting through a simple heightmap, where each block is either in sun or shadow. </summary>
@@ -63,7 +69,7 @@ namespace ClassicalSharp.Map {
 		}
 		
 		
-		public unsafe override void LightHint(int startX, int startZ, byte* mapPtr) {
+		public unsafe override void LightHint(int startX, int startZ, BlockID* mapPtr) {
 			int x1 = Math.Max(startX, 0), x2 = Math.Min(width, startX + 18);
 			int z1 = Math.Max(startZ, 0), z2 = Math.Min(length, startZ + 18);
 			int xCount = x2 - x1, zCount = z2 - z1;
@@ -117,12 +123,17 @@ namespace ClassicalSharp.Map {
 		}
 		
 		
-		public override void UpdateLight(int x, int y, int z, byte oldBlock, byte newBlock) {
+		public override void UpdateLight(int x, int y, int z, BlockID oldBlock, BlockID newBlock) {
 			bool didBlock = info.BlocksLight[oldBlock];
 			bool nowBlocks = info.BlocksLight[newBlock];
-			if (didBlock == nowBlocks) return;
 			int oldOffset = (info.LightOffset[oldBlock] >> Side.Top) & 1;
 			int newOffset = (info.LightOffset[newBlock] >> Side.Top) & 1;
+			
+			// Two cases we need to handle here:
+			if (didBlock == nowBlocks) {
+				if (!didBlock) return;              // a) both old and new block do not block light			
+				if (oldOffset == newOffset) return; // b) both blocks blocked light at the same Y coordinate
+			}
 			
 			int index = (z * width) + x;
 			int lightH = heightmap[index];
@@ -141,7 +152,7 @@ namespace ClassicalSharp.Map {
 			} else if (y == lightH && oldOffset == 0) {
 				// For a solid block on top of an upside down slab, they will both have the same light height.
 				// So we need to account for this particular case.
-				byte above = y == (height - 1) ? Block.Air : game.World.GetBlock(x, y + 1, z);
+				BlockID above = y == (height - 1) ? Block.Air : game.World.GetBlock(x, y + 1, z);
 				if (info.BlocksLight[above]) return;
 				
 				if (nowBlocks) {

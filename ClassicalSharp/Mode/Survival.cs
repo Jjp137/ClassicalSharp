@@ -6,6 +6,12 @@ using ClassicalSharp.Gui.Widgets;
 using OpenTK;
 using OpenTK.Input;
 
+#if USE16_BIT
+using BlockID = System.UInt16;
+#else
+using BlockID = System.Byte;
+#endif
+
 namespace ClassicalSharp.Mode {
 	
 	public sealed class SurvivalGameMode : IGameMode {
@@ -17,17 +23,17 @@ namespace ClassicalSharp.Mode {
 		
 		public bool HandlesKeyDown(Key key) { return false; }
 
-		public void PickLeft(byte old) {
+		public void PickLeft(BlockID old) {
 			Vector3I pos = game.SelectedPos.BlockPos;
 			game.UpdateBlock(pos.X, pos.Y, pos.Z, 0);
 			game.UserEvents.RaiseBlockChanged(pos, old, 0);
 			HandleDelete(old);
 		}
 		
-		public void PickMiddle(byte old) {
+		public void PickMiddle(BlockID old) {
 		}
 		
-		public void PickRight(byte old, byte block) {
+		public void PickRight(BlockID old, BlockID block) {
 			int index = game.Inventory.HeldBlockIndex;
 			if (invCount[index] == 0) return;
 			
@@ -51,7 +57,7 @@ namespace ClassicalSharp.Mode {
 		public Widget MakeHotbar() { return new SurvivalHotbarWidget(game); }
 		
 		
-		void HandleDelete(byte old) {
+		void HandleDelete(BlockID old) {
 			if (old == Block.Log) {
 				AddToHotbar(Block.Wood, rnd.Next(3, 6));
 			} else if (old == Block.CoalOre) {
@@ -73,9 +79,9 @@ namespace ClassicalSharp.Mode {
 			}
 		}
 		
-		void AddToHotbar(byte block, int count) {
+		void AddToHotbar(BlockID block, int count) {
 			int index = -1;
-			byte[] hotbar = game.Inventory.Hotbar;
+			BlockID[] hotbar = game.Inventory.Hotbar;
 			
 			// Try searching for same block, then try invalid block
 			for (int i = 0; i < hotbar.Length; i++) {
@@ -114,7 +120,7 @@ namespace ClassicalSharp.Mode {
 		
 		public void Init(Game game) {
 			this.game = game;
-			byte[] hotbar = game.Inventory.Hotbar;
+			BlockID[] hotbar = game.Inventory.Hotbar;
 			for (int i = 0; i < hotbar.Length; i++)
 				hotbar[i] = Block.Air;
 			hotbar[hotbar.Length - 1] = Block.TNT;

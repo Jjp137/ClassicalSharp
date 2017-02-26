@@ -4,6 +4,12 @@ using ClassicalSharp.Events;
 using ClassicalSharp.GraphicsAPI;
 using OpenTK;
 
+#if USE16_BIT
+using BlockID = System.UInt16;
+#else
+using BlockID = System.Byte;
+#endif
+
 namespace ClassicalSharp.Renderers {
 
 	public unsafe class StandardEnvRenderer : EnvRenderer {
@@ -121,7 +127,7 @@ namespace ClassicalSharp.Renderers {
 			if (map.IsNotLoaded) return;
 			FastColour fogCol = FastColour.White;
 			float fogDensity = 0;
-			byte block = BlockOn(out fogDensity, out fogCol);
+			BlockID block = BlockOn(out fogDensity, out fogCol);
 			
 			if (fogDensity != 0) {
 				gfx.SetFogMode(Fog.Exp);

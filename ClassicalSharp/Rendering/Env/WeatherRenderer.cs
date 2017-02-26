@@ -5,6 +5,12 @@ using ClassicalSharp.GraphicsAPI;
 using ClassicalSharp.Map;
 using OpenTK;
 
+#if USE16_BIT
+using BlockID = System.UInt16;
+#else
+using BlockID = System.Byte;
+#endif
+
 namespace ClassicalSharp.Renderers {
 
 	public class WeatherRenderer : IGameComponent {
@@ -178,7 +184,7 @@ namespace ClassicalSharp.Renderers {
 			return -1;
 		}
 		
-		internal void UpdateHeight(int x, int y, int z, byte oldBlock, byte newBlock) {
+		internal void UpdateHeight(int x, int y, int z, BlockID oldBlock, BlockID newBlock) {
 			bool didBlock = !(info.Draw[oldBlock] == DrawType.Gas || info.Draw[oldBlock] == DrawType.Sprite);
 			bool nowBlock =  !(info.Draw[newBlock] == DrawType.Gas || info.Draw[newBlock] == DrawType.Sprite);
 			if (didBlock == nowBlock) return;

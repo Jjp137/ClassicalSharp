@@ -135,6 +135,12 @@ namespace ClassicalSharp {
 			return CeilDiv(axis1Len, axisSize) * CeilDiv(axis2Len, axisSize) * 4;
 		}
 		
+		public static int Tint(int col, FastColour tint) {
+			FastColour adjCol = FastColour.Unpack(col);
+			adjCol *= tint;
+			return adjCol.Pack();
+		}
+		
 		public static byte FastByte(string s) {
 			int sum = 0;
 			switch (s.Length) {
@@ -219,5 +225,22 @@ namespace ClassicalSharp {
 		
 		const NumberStyles style = NumberStyles.AllowLeadingWhite | NumberStyles.AllowTrailingWhite
 			| NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint;
+		
+		
+		#if USE16_BIT
+		public static ushort[] UInt8sToUInt16s(byte[] src) {
+			ushort[] dst = new ushort[src.Length];
+			for (int i = 0; i < dst.Length; i++)
+				dst[i] = src[i];
+			return dst;
+		}
+		
+		public static byte[] UInt16sToUInt8s(ushort[] src) {
+			byte[] dst = new byte[src.Length];
+			for (int i = 0; i < dst.Length; i++)
+				dst[i] = (byte)src[i];
+			return dst;
+		}
+		#endif
 	}
 }

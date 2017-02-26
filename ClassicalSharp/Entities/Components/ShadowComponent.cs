@@ -7,6 +7,12 @@ using OpenTK;
 using Android.Graphics;
 #endif
 
+#if USE16_BIT
+using BlockID = System.UInt16;
+#else
+using BlockID = System.Byte;
+#endif
+
 namespace ClassicalSharp.Entities {
 
 	/// <summary> Entity component that draws square and circle shadows beneath entities. </summary>
@@ -140,7 +146,7 @@ namespace ClassicalSharp.Entities {
 			coords[posCount] = p; posCount++;
 			
 			while (posY >= 0 && index < 4) {
-				byte block = GetShadowBlock(blockX, posY, blockZ);
+				BlockID block = GetShadowBlock(blockX, posY, blockZ);
 				posY--;
 				
 				byte draw = info.Draw[block];
@@ -157,14 +163,14 @@ namespace ClassicalSharp.Entities {
 			}
 			
 			if (index < 4) {
-				data[index].Block = (byte)game.World.Env.EdgeBlock; data[index].Y = 0;
+				data[index].Block = game.World.Env.EdgeBlock; data[index].Y = 0;
 				CalcAlpha(Position.Y, ref data[index]);
 				index++;
 			}
 			return true;
 		}
 		
-		byte GetShadowBlock(int x, int y, int z) {
+		BlockID GetShadowBlock(int x, int y, int z) {
 			if (x < 0 || z < 0 || x >= game.World.Width || z >= game.World.Length) {
 				if (y == game.World.Env.EdgeHeight - 1)
 					return game.BlockInfo.Draw[game.World.Env.EdgeBlock] == DrawType.Gas ? Block.Air : Block.Bedrock;
@@ -176,7 +182,7 @@ namespace ClassicalSharp.Entities {
 		}
 		
 		struct ShadowData {
-			public byte Block;
+			public BlockID Block;
 			public float Y;
 			public byte A;
 		}

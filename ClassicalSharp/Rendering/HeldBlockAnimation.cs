@@ -4,6 +4,12 @@ using ClassicalSharp.Events;
 using ClassicalSharp.Model;
 using OpenTK;
 
+#if USE16_BIT
+using BlockID = System.UInt16;
+#else
+using BlockID = System.Byte;
+#endif
+
 namespace ClassicalSharp.Renderers {
 	
 	internal class HeldBlockAnimation {
@@ -13,7 +19,7 @@ namespace ClassicalSharp.Renderers {
 		internal Vector3 pos;
 		
 		double time, period = 0.25, speed = Math.PI / 0.25;
-		byte lastType;
+		BlockID lastType;
 		Game game;
 		HeldBlockRenderer held;
 		

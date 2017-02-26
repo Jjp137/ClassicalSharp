@@ -6,6 +6,12 @@ using ClassicalSharp.Events;
 using ClassicalSharp.Renderers;
 using OpenTK.Input;
 
+#if USE16_BIT
+using BlockID = System.UInt16;
+#else
+using BlockID = System.Byte;
+#endif
+
 namespace ClassicalSharp.Commands {
 	
 	public sealed class ModelCommand : Command {
@@ -46,7 +52,7 @@ namespace ClassicalSharp.Commands {
 				"&e  will repeatedly cuboid, without needing to be typed in again.",
 			};
 		}
-		byte block = 0xFF;
+		BlockID block = Block.Invalid;
 		Vector3I mark1, mark2;
 		bool persist = false;
 		
@@ -70,10 +76,10 @@ namespace ClassicalSharp.Commands {
 			if (Utils.CaselessEquals(args[1], "yes")) { persist = true; return true; }
 			
 			int temp = -1;
-			byte block = 0;
+			BlockID block = 0;
 			if ((temp = game.BlockInfo.FindID(args[1])) != -1) {
-				block = (byte)temp;
-			} else if (!byte.TryParse(args[1], out block)) {
+				block = (BlockID)temp;
+			} else if (!BlockID.TryParse(args[1], out block)) {
 				game.Chat.Add("&eCuboid: &c\"" + args[1] + "\" is not a valid block name or id."); return false;
 			}
 			
@@ -109,7 +115,7 @@ namespace ClassicalSharp.Commands {
 			Vector3I max = Vector3I.Max(mark1, mark2);
 			if (!game.World.IsValidPos(min) || !game.World.IsValidPos(max)) return;
 			
-			byte toPlace = block;			
+			BlockID toPlace = block;
 			if (toPlace == Block.Invalid) toPlace = game.Inventory.HeldBlock;
 			
 			for (int y = min.Y; y <= max.Y; y++)

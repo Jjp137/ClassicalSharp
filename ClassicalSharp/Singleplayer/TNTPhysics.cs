@@ -3,6 +3,12 @@ using System;
 using ClassicalSharp.Map;
 using OpenTK;
 
+#if USE16_BIT
+using BlockID = System.UInt16;
+#else
+using BlockID = System.Byte;
+#endif
+
 namespace ClassicalSharp.Singleplayer {
 
 	public class TNTPhysics {
@@ -22,7 +28,7 @@ namespace ClassicalSharp.Singleplayer {
 		const float stepLen = 0.3f;
 		float[] hardness;
 		
-		void HandleTnt(int index, byte block) {
+		void HandleTnt(int index, BlockID block) {
 			int x = index % map.Width;
 			int z = (index / map.Width) % map.Length;
 			int y = (index / map.Width) / map.Length;
@@ -49,7 +55,7 @@ namespace ClassicalSharp.Singleplayer {
 					Vector3I P = Vector3I.Floor(position);
 					if (!map.IsValidPos(P)) break;
 					
-					byte block = map.GetBlock(P);
+					BlockID block = map.GetBlock(P);
 					intensity -= (hardness[block] / 5 + 0.3f) * stepLen;
 					if (intensity > 0 && block != 0) {
 						game.UpdateBlock(P.X, P.Y, P.Z, Block.Air);

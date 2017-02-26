@@ -18,8 +18,8 @@ namespace ClassicalSharp.Gui.Screens {
 			}
 			
 			selIndex = -1;
-			if (Contains(startX, startY, blocksPerRow * blockSize,
-			             maxRows * blockSize, mouseX, mouseY)) {
+			if (Contains(startX, startY + 3, blocksPerRow * blockSize,
+			             maxRows * blockSize - 3 * 2, mouseX, mouseY)) {
 				for (int i = 0; i < blocksTable.Length; i++) {
 					int x, y;
 					GetCoords(i, out x, out y);
@@ -37,7 +37,9 @@ namespace ClassicalSharp.Gui.Screens {
 		public override bool HandlesMouseClick(int mouseX, int mouseY, MouseButton button) {
 			if (draggingMouse || game.Gui.hudScreen.hotbar.HandlesMouseClick(mouseX, mouseY, button))
 				return true;
-			if (button == MouseButton.Left && mouseX >= TableX - scrollbarWidth && mouseX < TableX) {
+			
+			int scrollX = TableX + TableWidth;
+			if (button == MouseButton.Left && mouseX >= scrollX && mouseX < scrollX + scrollWidth) {
 				ScrollbarClick(mouseY);
 			} else if (button == MouseButton.Left) {
 				if (selIndex != -1) {

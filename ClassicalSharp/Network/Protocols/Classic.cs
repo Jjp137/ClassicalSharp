@@ -9,6 +9,12 @@ using Ionic.Zlib;
 using System.IO.Compression;
 #endif
 
+#if USE16_BIT
+using BlockID = System.UInt16;
+#else
+using BlockID = System.Byte;
+#endif
+
 namespace ClassicalSharp.Network.Protocols {
 
 	/// <summary> Implements the packets for the original classic. </summary>
@@ -50,8 +56,8 @@ namespace ClassicalSharp.Network.Protocols {
 
 		void HandleHandshake() {
 			byte protocolVer = reader.ReadUInt8();
-			net.ServerName = reader.ReadCp437String();
-			net.ServerMotd = reader.ReadCp437String();
+			net.ServerName = reader.ReadString();
+			net.ServerMotd = reader.ReadString();
 			game.Chat.SetLogName(net.ServerName);
 			
 			game.LocalPlayer.Hacks.SetUserType(reader.ReadUInt8());
@@ -136,7 +142,12 @@ namespace ClassicalSharp.Network.Protocols {
 			
 			double loadingMs = (DateTime.UtcNow - mapReceiveStart).TotalMilliseconds;
 			Utils.LogDebug("map loading took: " + loadingMs);
+			
+			#if USE16_BIT
+			game.World.SetNewMap(Utils.UInt8sToUInt16s(map), mapWidth, mapHeight, mapLength);
+			#else
 			game.World.SetNewMap(map, mapWidth, mapHeight, mapLength);
+			#endif
 			game.WorldEvents.RaiseOnNewMapLoaded();
 			
 			map = null;
@@ -169,13 +180,14 @@ namespace ClassicalSharp.Network.Protocols {
 		
 		void HandleAddEntity() {
 			byte id = reader.ReadUInt8();
-			string name = reader.ReadAsciiString();
+			string name = reader.ReadString();
 			string skin = name;
-			net.CheckName(id, ref name, ref skin);
-			
+			net.CheckName(id, ref name, ref skin);			
 			net.AddEntity(id, name, skin, true);
-			// Also workaround for LegendCraft as it declares it supports ExtPlayerList but
-			// doesn't send ExtAddPlayerName packets.
+			
+			if (!net.addEntityHack) return;
+			// Workaround for some servers that declare they support ExtPlayerList,
+			// but doesn't send ExtAddPlayerName packets.
 			net.AddTablistEntry(id, name, name, "Players", 0);
 			net.needRemoveNames[id >> 3] |= (byte)(1 << (id & 0x7));
 		}
@@ -235,7 +247,7 @@ namespace ClassicalSharp.Network.Protocols {
 		}
 		
 		void HandleKick() {
-			string reason = reader.ReadCp437String();
+			string reason = reader.ReadString();
 			game.Disconnect("&eLost connection to the server", reason);
 			net.Dispose();
 		}
@@ -271,10 +283,10 @@ namespace ClassicalSharp.Network.Protocols {
 		}
 		
 		internal void SendPosition(Vector3 pos, float rotY, float headX) {
-			byte payload = net.cpeData.sendHeldBlock ? game.Inventory.HeldBlock : (byte)0xFF;
+			int payload = net.cpeData.sendHeldBlock ? game.Inventory.HeldBlock : 0xFF;
 			writer.WriteUInt8((byte)Opcode.EntityTeleport);
 			
-			writer.WriteUInt8(payload); // held block when using HeldBlock, otherwise just 255
+			writer.WriteUInt8((byte)payload); // held block when using HeldBlock, otherwise just 255
 			writer.WriteInt16((short)(pos.X * 32));
 			writer.WriteInt16((short)((int)(pos.Y * 32) + 51));
 			writer.WriteInt16((short)(pos.Z * 32));
@@ -283,14 +295,19 @@ namespace ClassicalSharp.Network.Protocols {
 			net.SendPacket();
 		}
 		
-		internal void SendSetBlock(int x, int y, int z, bool place, byte block) {
+		internal void SendSetBlock(int x, int y, int z, bool place, BlockID block) {
 			writer.WriteUInt8((byte)Opcode.SetBlockClient);
 			
 			writer.WriteInt16((short)x);
 			writer.WriteInt16((short)y);
 			writer.WriteInt16((short)z);
 			writer.WriteUInt8(place ? (byte)1 : (byte)0);
+			
+			#if USE16_BIT
+			writer.WriteUInt8((byte)block);
+			#else
 			writer.WriteUInt8(block);
+			#endif
 			net.SendPacket();
 		}
 		

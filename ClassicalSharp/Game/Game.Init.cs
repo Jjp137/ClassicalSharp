@@ -85,7 +85,7 @@ namespace ClassicalSharp {
 			Animations = AddComponent(new Animations());
 			Inventory = AddComponent(new Inventory());
 			
-			BlockInfo.SetDefaultBlockPerms(Inventory.CanPlace, Inventory.CanDelete);
+			BlockInfo.SetDefaultPerms(Inventory.CanPlace, Inventory.CanDelete);
 			World = new World(this);
 			LocalPlayer = AddComponent(new LocalPlayer(this));
 			Entities[EntityList.SelfID] = LocalPlayer;
@@ -148,7 +148,7 @@ namespace ClassicalSharp {
 				MapBordersRenderer.UseLegacyMode(true);
 				EnvRenderer.UseLegacyMode(true);
 			}
-			Gui.SetNewScreen(new LoadingMapScreen(this, connectString, "Waiting for handshake"));
+			Gui.SetNewScreen(new LoadingMapScreen(this, connectString, ""));
 			Server.Connect(IPAddress, Port);
 		}
 		

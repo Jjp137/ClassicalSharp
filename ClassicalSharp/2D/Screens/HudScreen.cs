@@ -173,7 +173,9 @@ namespace ClassicalSharp.Gui.Screens {
 					return true;
 				}
 			}
-			return false;
+			
+			if (chat.HandlesAllInput) return true;
+			return hotbar.HandlesKeyUp(key);
 		}
 		
 		public void OpenTextInputBar(string text) {

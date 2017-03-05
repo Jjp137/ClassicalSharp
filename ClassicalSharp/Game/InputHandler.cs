@@ -26,7 +26,7 @@ namespace ClassicalSharp {
 			#if !ANDROID
 			Hotkeys = new HotkeyList();
 			Hotkeys.LoadSavedHotkeys();
-			#endif			
+			#endif
 		}
 		
 		void RegisterInputHandlers() {
@@ -143,18 +143,29 @@ namespace ClassicalSharp {
 		}
 		
 		void ScrollHotbar(float deltaPrecise) {
+			Inventory inv = game.Inventory;
+			if (AltDown) {
+				int index = inv.Offset / Inventory.BlocksPerRow;
+				inv.Offset = ScrolledIndex(deltaPrecise, index) * Inventory.BlocksPerRow;
+			} else {
+				inv.SelectedIndex = ScrolledIndex(deltaPrecise, inv.SelectedIndex);
+			}
+		}
+		
+		int ScrolledIndex(float deltaPrecise, int currentIndex) {
 			// Some mice may use deltas of say (0.2, 0.2, 0.2, 0.2, 0.2)
 			// We must use rounding at final step, not at every intermediate step.
-			Inventory inv = game.Inventory;
 			deltaAcc += deltaPrecise;
 			int delta = (int)deltaAcc;
 			deltaAcc -= delta;
 			
-			int diff = -delta % inv.Hotbar.Length;
-			int newIndex = inv.HeldBlockIndex + diff;
-			if (newIndex < 0) newIndex += inv.Hotbar.Length;
-			if (newIndex >= inv.Hotbar.Length) newIndex -= inv.Hotbar.Length;
-			inv.HeldBlockIndex = newIndex;
+			const int blocksPerRow = Inventory.BlocksPerRow;
+			int diff = -delta % blocksPerRow;
+			int index = currentIndex + diff;
+			
+			if (index < 0) index += blocksPerRow;
+			if (index >= blocksPerRow) index -= blocksPerRow;
+			return index;
 		}
 
 		void KeyPressHandler(object sender, KeyPressEventArgs e) {
@@ -274,9 +285,9 @@ namespace ClassicalSharp {
 			game.autoRotate = !game.autoRotate;
 			Key key = Keys[KeyBind.Autorotate];
 			if (game.autoRotate) {
-				game.Chat.Add("  &eAuto rotate is &aenabled. &aPress " + key + " &eto disable.");
+				game.Chat.Add("  &eAuto rotate is &aenabled. &ePress &a" + key + " &eto disable.");
 			} else {
-				game.Chat.Add("  &eAuto rotate is &cdisabled. &aPress " + key + " &eto re-enable.");
+				game.Chat.Add("  &eAuto rotate is &cdisabled. &ePress &a" + key + " &eto re-enable.");
 			}
 		}
 		

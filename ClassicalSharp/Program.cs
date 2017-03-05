@@ -10,7 +10,7 @@ namespace ClassicalSharp {
 	
 	internal static class Program {
 		
-		public const string AppName = "ClassicalSharp 0.99.5";
+		public const string AppName = "ClassicalSharp 0.99.6";
 		
 		public static string AppDirectory;
 		
@@ -20,6 +20,7 @@ namespace ClassicalSharp {
 			string logPath = Path.Combine(AppDirectory, "client.log");
 			ErrorHandler.InstallHandler(logPath);
 			CleanupMainDirectory();
+			Configuration.SkipPerfCountersHack();
 			
 			Utils.LogDebug("Starting " + AppName + "..");
 			string path = Path.Combine(Program.AppDirectory, TexturePack.Dir);

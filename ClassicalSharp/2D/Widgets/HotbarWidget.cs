@@ -17,10 +17,8 @@ namespace ClassicalSharp.Gui.Widgets {
 		public HotbarWidget(Game game) : base(game) {
 			HorizontalAnchor = Anchor.Centre;
 			VerticalAnchor = Anchor.BottomOrRight;
-			hotbarCount = game.Inventory.Hotbar.Length;
 		}
 		
-		protected int hotbarCount;
 		Texture selTex, backTex;
 		protected float barHeight, selBlockSize, elemSize;
 		protected float barXOffset, borderSize;
@@ -29,7 +27,7 @@ namespace ClassicalSharp.Gui.Widgets {
 		public override void Init() {
 			float scale = game.GuiHotbarScale;
 			selBlockSize = (float)Math.Ceiling(24 * scale);
-			barHeight = (int)(22 * scale);		
+			barHeight = (int)(22 * scale);
 			Width = (int)(182 * scale);
 			Height = (int)barHeight;
 			
@@ -61,7 +59,7 @@ namespace ClassicalSharp.Gui.Widgets {
 			backTex.ID = texId;
 			backTex.Render(gfx);
 			
-			int i = game.Inventory.HeldBlockIndex;
+			int i = game.Inventory.SelectedIndex;
 			int x = (int)(X + barXOffset + (elemSize + borderSize) * i + elemSize / 2);
 			
 			selTex.ID = texId;
@@ -73,8 +71,8 @@ namespace ClassicalSharp.Gui.Widgets {
 			Model.ModelCache cache = game.ModelCache;
 			drawer.BeginBatch(game, cache.vertices, cache.vb);
 			
-			for (int i = 0; i < hotbarCount; i++) {
-				BlockID block = game.Inventory.Hotbar[i];
+			for (int i = 0; i < Inventory.BlocksPerRow; i++) {
+				BlockID block = game.Inventory[i];
 				int x = (int)(X + barXOffset + (elemSize + borderSize) * i + elemSize / 2);
 				int y = (int)(game.Height - barHeight / 2);
 				
@@ -100,28 +98,50 @@ namespace ClassicalSharp.Gui.Widgets {
 			selTex = new Texture(0, 0, y, hSize, vSize, rec);
 		}
 		
-		
+		bool altHandled;
 		public override bool HandlesKeyDown(Key key) {
 			if (key >= Key.Number1 && key <= Key.Number9) {
-				game.Inventory.HeldBlockIndex = (int)key - (int)Key.Number1;
+				int index = (int)key - (int)Key.Number1;
+				
+				if (game.Input.AltDown) {
+					// Pick from first to ninth row
+					game.Inventory.Offset = index * Inventory.BlocksPerRow;
+					altHandled = true;
+				} else {
+					game.Inventory.SelectedIndex = index;
+				}
 				return true;
 			}
 			return false;
 		}
 		
+		public override bool HandlesKeyUp(Key key) {
+			// We need to handle these cases:
+			// a) user presses alt then number
+			// b) user presses alt
+			// thus we only do case b) if case a) did not happen
+			if (!(key == Key.AltLeft || key == Key.AltRight)) return false;			
+			if (altHandled) { altHandled = false; return true; } // handled already
+			
+			// Alternate between first and second row
+			int index = game.Inventory.Offset == 0 ? 1 : 0;
+			game.Inventory.Offset = index * Inventory.BlocksPerRow;
+			return true;
+		}
+		
 		public override bool HandlesMouseClick(int mouseX, int mouseY, MouseButton button) {
 			if (button != MouseButton.Left || !Bounds.Contains(mouseX, mouseY))
-			   return false;
+				return false;
 			InventoryScreen screen = game.Gui.ActiveScreen as InventoryScreen;
 			if (screen == null) return false;
 			
-			for (int i = 0; i < hotbarCount; i++) {
+			for (int i = 0; i < Inventory.BlocksPerRow; i++) {
 				int x = (int)(X + (elemSize + borderSize) * i);
 				int y = (int)(game.Height - barHeight);
 				Rectangle bounds = new Rectangle(x, y, (int)(elemSize + borderSize), (int)barHeight);
-					
+				
 				if (bounds.Contains(mouseX, mouseY)) {
-					game.Inventory.HeldBlockIndex = i;
+					game.Inventory.SelectedIndex = i;
 					return true;
 				}
 			}

@@ -136,7 +136,7 @@ namespace ClassicalSharp.Gui.Screens {
 			game.Graphics.ContextRecreated += ContextRecreated;
 			
 			RecreateBlockTable();
-			SetBlockTo(game.Inventory.HeldBlock);
+			SetBlockTo(game.Inventory.Selected);
 			game.Keyboard.KeyRepeat = true;
 		}
 		
@@ -193,12 +193,12 @@ namespace ClassicalSharp.Gui.Screens {
 			string value = buffer.ToString();
 			
 			DrawTextArgs args = new DrawTextArgs(value, font, true);
-			Size size = game.Drawer2D.MeasureChatSize(ref args);
+			Size size = game.Drawer2D.MeasureSize(ref args);
 			int x = startX + (blockSize * blocksPerRow) / 2 - size.Width / 2;
 			int y = startY - size.Height - 5;
 			
 			args.SkipPartsCheck = true;
-			blockInfoTexture = game.Drawer2D.MakeChatTextTexture(ref args, x, y);
+			blockInfoTexture = game.Drawer2D.MakeTextTexture(ref args, x, y);
 		}
 		
 		void RecreateBlockTable() {
@@ -226,7 +226,7 @@ namespace ClassicalSharp.Gui.Screens {
 			if (game.PureClassic && IsHackBlock(block)) return false;
 			if (block < Block.CpeCount) {
 				int count = game.UseCPEBlocks ? Block.CpeCount : Block.OriginalCount;
-				return block < count;
+				return block < count && game.BlockInfo.Name[block] != "Invalid";
 			}
 			return game.BlockInfo.Name[block] != "Invalid";
 		}

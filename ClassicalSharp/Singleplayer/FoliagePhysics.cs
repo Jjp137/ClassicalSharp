@@ -10,13 +10,13 @@ using BlockID = System.Byte;
 
 namespace ClassicalSharp.Singleplayer {
 
-	public class FoilagePhysics {
+	public class FoliagePhysics {
 		Game game;
 		PhysicsBase physics;
 		World map;
 		Random rnd = new Random();
 		
-		public FoilagePhysics(Game game, PhysicsBase physics) {
+		public FoliagePhysics(Game game, PhysicsBase physics) {
 			this.game = game;
 			this.physics = physics;
 			map = game.World;
@@ -36,7 +36,10 @@ namespace ClassicalSharp.Singleplayer {
 			int x = index % map.Width;
 			int y = (index / map.Width) / map.Length;
 			int z = (index / map.Width) % map.Length;
-			GrowTree(x, y, z);
+			
+			BlockID below = Block.Air;
+			if (y > 0) below = map.blocks[index - map.Width * map.Length];
+			if (below == Block.Grass) GrowTree(x, y, z);
 		}
 		
 		void HandleDirt(int index, BlockID block) {

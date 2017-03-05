@@ -168,7 +168,7 @@ namespace ClassicalSharp {
 			UseCPE = Options.GetBool(OptionsKey.UseCPE, true);
 			SimpleArmsAnim = Options.GetBool(OptionsKey.SimpleArmsAnim, false);
 			
-			ViewBobbing = Options.GetBool(OptionsKey.ViewBobbing, false);
+			ViewBobbing = Options.GetBool(OptionsKey.ViewBobbing, true);
 			FpsLimitMethod method = Options.GetEnum(OptionsKey.FpsLimit, FpsLimitMethod.LimitVSync);
 			SetFpsLimitMethod(method);
 			ViewDistance = Options.GetInt(OptionsKey.ViewDist, 16, 4096, 512);
@@ -201,9 +201,9 @@ namespace ClassicalSharp {
 			ChatScale = Options.GetFloat(OptionsKey.ChatScale, 0.35f, 5f, 1f);
 			ShowFPS = Options.GetBool(OptionsKey.ShowFPS, true);
 
-			UseClassicGui = Options.GetBool(OptionsKey.UseClassicGui, true) || ClassicMode;
-			UseClassicTabList = Options.GetBool(OptionsKey.UseClassicTabList, false);
-			UseClassicOptions = Options.GetBool(OptionsKey.UseClassicOptions, false);
+			UseClassicGui = Options.GetBool(OptionsKey.UseClassicGui, true)          || ClassicMode;
+			UseClassicTabList = Options.GetBool(OptionsKey.UseClassicTabList, false) || ClassicMode;
+			UseClassicOptions = Options.GetBool(OptionsKey.UseClassicOptions, false) || ClassicMode;
 			
 			TabAutocomplete = Options.GetBool(OptionsKey.TabAutocomplete, false);
 			FontName = Options.Get(OptionsKey.FontName) ?? "Arial";

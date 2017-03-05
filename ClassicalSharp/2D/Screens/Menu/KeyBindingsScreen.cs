@@ -20,7 +20,7 @@ namespace ClassicalSharp.Gui.Screens {
 		
 		public override void Init() {
 			titleFont = new Font(game.FontName, 16, FontStyle.Bold);
-			regularFont = new Font(game.FontName, 16, FontStyle.Italic);
+			regularFont = new Font(game.FontName, 16, FontStyle.Regular);
 			base.Init();
 			
 			if (keyNames == null)
@@ -49,11 +49,12 @@ namespace ClassicalSharp.Gui.Screens {
 		void MakeOthers() {
 			widgets[index++] = TextWidget.Create(game, title, titleFont)
 				.SetLocation(Anchor.Centre, Anchor.Centre, 0, -180);
-			if (game.ClassicMode) {
+			
+			if (game.UseClassicOptions) {
 				widgets[index++] = MakeBack(false, titleFont,
 				                            (g, w) => g.Gui.SetNewScreen(new ClassicOptionsScreen(g)));
 			} else {
-				widgets[index++] = MakeBack("Back to menu", 5, titleFont,
+				widgets[index++] = MakeBack(false, titleFont,
 				                            (g, w) => g.Gui.SetNewScreen(new OptionsGroupScreen(g)));
 			}
 		}
@@ -66,8 +67,9 @@ namespace ClassicalSharp.Gui.Screens {
 				.SetLocation(Anchor.Centre, Anchor.Centre, -btnWidth - 35, btnY);
 			widgets[index++] = ButtonWidget.Create(game, 40, ">", titleFont, LeftOnly(rightPage))
 				.SetLocation(Anchor.Centre, Anchor.Centre, btnWidth + 35, btnY);
-			if (leftPage == null) widgets[index - 2].Disabled = true;
-			if (rightPage == null) widgets[index - 1].Disabled = true;
+			
+			widgets[index - 2].Disabled = leftPage == null;
+			widgets[index - 1].Disabled = rightPage == null;
 		}
 		
 		void Make(int i, int x, ref int y) {

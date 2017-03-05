@@ -43,7 +43,7 @@ namespace ClassicalSharp.Gui.Screens {
 				ScrollbarClick(mouseY);
 			} else if (button == MouseButton.Left) {
 				if (selIndex != -1) {
-					game.Inventory.HeldBlock = blocksTable[selIndex];
+					game.Inventory.Selected = blocksTable[selIndex];
 				} else if (Contains(TableX, TableY, TableWidth, TableHeight, mouseX, mouseY)) {
 					return true;
 				}
@@ -55,12 +55,17 @@ namespace ClassicalSharp.Gui.Screens {
 			return true;
 		}
 		
+		// We want the user to be able to press B to exit the inventory menu
+		// however since we use KeyRepeat = true, we must wait until the first time they released B
+		// before marking the next press as closing the menu
+		bool releasedInv;
 		public override bool HandlesKeyDown(Key key) {
-			if (key == game.Mapping(KeyBind.PauseOrExit) ||
-			   key == game.Mapping(KeyBind.Inventory)) {
+			if (key == game.Mapping(KeyBind.PauseOrExit)) {
+				game.Gui.SetNewScreen(null);
+			} else if (key == game.Mapping(KeyBind.Inventory) && releasedInv) {
 				game.Gui.SetNewScreen(null);
 			} else if (key == Key.Enter && selIndex != -1) {
-				game.Inventory.HeldBlock = blocksTable[selIndex];
+				game.Inventory.Selected = blocksTable[selIndex];
 				game.Gui.SetNewScreen(null);
 			} else if ((key == Key.Left || key == Key.Keypad4) && selIndex != -1) {
 				ArrowKeyMove(-1);
@@ -70,10 +75,16 @@ namespace ClassicalSharp.Gui.Screens {
 				ArrowKeyMove(-blocksPerRow);
 			} else if ((key == Key.Down || key == Key.Keypad2) && selIndex != -1) {
 				ArrowKeyMove(blocksPerRow);
-			} else if (key >= Key.Number1 && key <= Key.Number9) {
-				game.Inventory.HeldBlockIndex = (int)key - (int)Key.Number1;
+			} else if (game.Gui.hudScreen.hotbar.HandlesKeyDown(key)) {
 			}
 			return true;
+		}
+		
+		public override bool HandlesKeyUp(Key key) {
+			if (key == game.Mapping(KeyBind.Inventory)) {
+				releasedInv = true; return true;
+			}
+			return game.Gui.hudScreen.hotbar.HandlesKeyUp(key);
 		}
 		
 		void ArrowKeyMove(int delta) {

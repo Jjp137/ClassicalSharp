@@ -32,7 +32,7 @@ namespace ClassicalSharp.Entities {
 		
 		public byte ID;
 		public int TextureId = -1, MobTextureId = -1;
-		public short Health = 20;
+		public short Health = 10;
 		
 		public Vector3 Position;
 		public Vector3 Velocity;
@@ -43,11 +43,13 @@ namespace ClassicalSharp.Entities {
 		protected internal bool onGround;
 		internal float StepSize;
 		internal int tickCount;
+		internal Matrix4 transform;
 		
 		public SkinType SkinType;
 		public AnimatedComponent anim;
-		internal float uScale = 1, vScale = 1;
+		public float uScale = 1, vScale = 1;
 		protected DateTime lastModelChange = new DateTime(1, 1, 1);
+		public bool NoShade = false;
 		
 		
 		/// <summary> Rotation of the entity's head horizontally. (i.e. looking north or east) </summary>
@@ -65,7 +67,7 @@ namespace ClassicalSharp.Entities {
 		/// <summary> Returns the size of the model that is used for collision detection. </summary>
 		public Vector3 Size;
 		
-		void UpdateModel() {
+		protected void UpdateModel() {
 			BlockModel model = Model as BlockModel;
 			if (model != null)
 				model.CalcState(Utils.FastByte(ModelName));
@@ -109,13 +111,21 @@ namespace ClassicalSharp.Entities {
 			return game.World.SafeGetBlock(Vector3I.Floor(coords));
 		}
 		
-		internal Matrix4 TransformMatrix(float scale, Vector3 pos) {
-			return 
-				Matrix4.RotateZ(-RotZ * Utils.Deg2Rad) * 
-				Matrix4.RotateX(-RotX * Utils.Deg2Rad) * 
-				Matrix4.RotateY(-RotY * Utils.Deg2Rad) * 
-				Matrix4.Scale(scale)                   * 
-				Matrix4.Translate(pos.X, pos.Y, pos.Z);
+		public Matrix4 TransformMatrix(float scale, Vector3 pos) {
+			Matrix4 rotZ, rotX, rotY, translate, scaleM;
+			Matrix4.RotateX(out rotX, -RotX * Utils.Deg2Rad);
+			Matrix4.RotateY(out rotY, -RotY * Utils.Deg2Rad);
+			Matrix4.RotateZ(out rotZ, -RotZ * Utils.Deg2Rad);
+			Matrix4.Scale(out scaleM, scale, scale, scale);
+			Matrix4.Translate(out translate, pos.X, pos.Y, pos.Z);
+			
+			return rotZ * rotX * rotY * scaleM * translate;
+		}
+		
+		/// <summary> Gets the brightness colour of this entity. </summary>
+		public virtual int Colour() {
+			Vector3I P = Vector3I.Floor(EyePosition);
+			return game.World.IsValidPos(P) ? game.Lighting.LightCol(P.X, P.Y, P.Z) : game.Lighting.Outside;
 		}
 		
 		
@@ -139,7 +149,8 @@ namespace ClassicalSharp.Entities {
 			
 			UpdateModel();
 			Size = Model.CollisionSize * ModelScale;
-			modelAABB = Model.PickingBounds.Scale(ModelScale);
+			modelAABB = Model.PickingBounds;
+			modelAABB.Min *= ModelScale; modelAABB.Max *= ModelScale;
 		}
 		
 		void ParseScale(string scale) {

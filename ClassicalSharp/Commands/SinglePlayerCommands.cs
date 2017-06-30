@@ -6,6 +6,7 @@ using ClassicalSharp.Entities;
 using ClassicalSharp.Events;
 using ClassicalSharp.Renderers;
 using OpenTK.Input;
+using OpenTK;
 
 #if USE16_BIT
 using BlockID = System.UInt16;
@@ -22,7 +23,7 @@ namespace ClassicalSharp.Commands {
 			Help = new string[] {
 				"&a/client model [name]",
 				"&bnames: &echibi, chicken, creeper, human, pig, sheep",
-				"&e       skeleton, spider, zombie, <numerical block id>",
+				"&e       skeleton, spider, zombie, sitting, <numerical block id>",
 			};
 		}
 		
@@ -31,12 +32,6 @@ namespace ClassicalSharp.Commands {
 				game.Chat.Add("&e/client model: &cYou didn't specify a model name.");
 			} else {
 				game.LocalPlayer.SetModel(Utils.ToLower(args[1]));
-				if (args.Length >= 4) {
-					ClassicalSharp.Entities.LocationUpdate update = ClassicalSharp.Entities.LocationUpdate.Empty();
-					if (args[2] == "x") update.RotX = float.Parse(args[3]);
-					if (args[2] == "z") update.RotZ = float.Parse(args[3]);
-					game.LocalPlayer.SetLocation(update, true);
-				}
 			}
 		}
 	}
@@ -53,13 +48,13 @@ namespace ClassicalSharp.Commands {
 				"&e  will repeatedly cuboid, without needing to be typed in again.",
 			};
 		}
-		BlockID block = Block.Invalid;
+		int block = -1;
 		Vector3I mark1, mark2;
 		bool persist = false;
 		
 		public override void Execute(string[] args) {
 			game.UserEvents.BlockChanged -= BlockChanged;
-			block = Block.Invalid;
+			block = -1;
 			mark1 = new Vector3I(int.MaxValue);
 			mark2 = new Vector3I(int.MaxValue);
 			persist = false;
@@ -116,8 +111,8 @@ namespace ClassicalSharp.Commands {
 			Vector3I max = Vector3I.Max(mark1, mark2);
 			if (!game.World.IsValidPos(min) || !game.World.IsValidPos(max)) return;
 			
-			BlockID toPlace = block;
-			if (toPlace == Block.Invalid) toPlace = game.Inventory.Selected;
+			BlockID toPlace = (BlockID)block;
+			if (block == -1) toPlace = game.Inventory.Selected;
 			
 			for (int y = min.Y; y <= max.Y; y++)
 				for (int z = min.Z; z <= max.Z; z++)
@@ -149,7 +144,8 @@ namespace ClassicalSharp.Commands {
 					game.Chat.Add("&e/client teleport: &cCoordinates must be decimals");
 				}
 				
-				LocationUpdate update = LocationUpdate.MakePos(x, y, z, false);
+				Vector3 v = new Vector3(x, y, z);
+				LocationUpdate update = LocationUpdate.MakePos(v, false);
 				game.LocalPlayer.SetLocation(update, false);
 			}
 		}

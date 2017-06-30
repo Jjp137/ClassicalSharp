@@ -11,24 +11,23 @@ namespace ClassicalSharp.Gui.Screens {
 		public Screen(Game game) : base(game) {
 		}
 		
-		bool handlesAll;
 		/// <summary> Whether this screen handles all mouse and keyboard input. </summary>
 		/// <remarks> This prevents the client from interacting with the world. </remarks>
-		public virtual bool HandlesAllInput { get { return handlesAll; } protected set { handlesAll = value; } }
+		public bool HandlesAllInput;
 		
 		/// <summary> Whether this screen completely and opaquely covers the game world behind it. </summary>
-		public virtual bool BlocksWorld { get { return false; } }
+		public bool BlocksWorld;
 		
 		/// <summary> Whether this screen hides the normal in-game hud. </summary>
-		public virtual bool HidesHud { get { return false; } }
+		public bool HidesHud;
 		
 		/// <summary> Whether the normal in-game hud should be drawn over the top of this screen. </summary>
-		public virtual bool RenderHudAfter { get { return false; } }
+		public bool RenderHudOver;
 
 		/// <summary> Called when the game window is resized. </summary>
 		public abstract void OnResize(int width, int height);		
 		
-		protected ClickHandler LeftOnly(Action<Game, Widget> action) {
+		protected ClickHandler LeftOnly(SimpleClickHandler action) {
 			if (action == null) return (g, w, btn, x, y) => {};
 			return (g, w, btn, x, y) => {
 				if (btn != MouseButton.Left) return;

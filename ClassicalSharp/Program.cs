@@ -2,6 +2,7 @@
 using System;
 using System.IO;
 using System.Net;
+using System.Windows.Forms;
 using ClassicalSharp.Textures;
 using OpenTK;
 using SDL2;
@@ -10,10 +11,11 @@ namespace ClassicalSharp {
 	
 	internal static class Program {
 		
-		public const string AppName = "ClassicalSharp 0.99.6";
+		public const string AppName = "ClassicalSharp 0.99.9.1";
 		
 		public static string AppDirectory;
 		
+#if !LAUNCHER
 		[STAThread]
 		static void Main(string[] args) {
 			AppDirectory = AppDomain.CurrentDomain.BaseDirectory;
@@ -23,10 +25,9 @@ namespace ClassicalSharp {
 			Configuration.SkipPerfCountersHack();
 			
 			Utils.LogDebug("Starting " + AppName + "..");
-			string path = Path.Combine(Program.AppDirectory, TexturePack.Dir);
+			string path = Path.Combine(Program.AppDirectory, "texpacks");
 			if (!File.Exists(Path.Combine(path, "default.zip"))) {
-				Utils.LogDebug("default.zip not found. Cannot start.");
-				return;
+				MessageDefaultZipMissing(); return;
 			}
 			
 			bool nullContext = true;
@@ -48,6 +49,11 @@ namespace ClassicalSharp {
 			} else {
 				RunMultiplayer(args, nullContext, width, height);
 			}
+		}
+		
+		// put in separate function, because we don't want to load winforms assembly if possible
+		static void MessageDefaultZipMissing() {
+			MessageBox.Show("default.zip not found, try running the launcher first.", "Missing file");
 		}
 		
 		static void SelectResolutionSDL(out int width, out int height) {
@@ -102,34 +108,16 @@ namespace ClassicalSharp {
 				game.Run();
 			}
 		}
+#endif
 		
 		internal static void CleanupMainDirectory() {
 			string mapPath = Path.Combine(Program.AppDirectory, "maps");
 			if (!Directory.Exists(mapPath))
 				Directory.CreateDirectory(mapPath);
-			string texPath = Path.Combine(Program.AppDirectory, TexturePack.Dir);
+			
+			string texPath = Path.Combine(Program.AppDirectory, "texpacks");
 			if (!Directory.Exists(texPath))
 				Directory.CreateDirectory(texPath);
-			
-			CopyFiles("*.cw", mapPath);
-			CopyFiles("*.dat", mapPath);
-			CopyFiles("*.zip", texPath);
-		}
-		
-		static void CopyFiles(string filter, string folder) {
-			string[] files = Directory.GetFiles(AppDirectory, filter);
-			for (int i = 0; i < files.Length; i++) {
-				string name = Path.GetFileName(files[i]);
-				string dst = Path.Combine(folder, name);
-				if (File.Exists(dst))  continue;
-				
-				try {
-					File.Copy(files[i], dst);
-					File.Delete(files[i]);
-				} catch (IOException ex) {
-					ErrorHandler.LogError("Program.CopyFiles()", ex);
-				}
-			}
 		}
 	}
 }

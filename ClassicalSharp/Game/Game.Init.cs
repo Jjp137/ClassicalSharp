@@ -60,7 +60,7 @@ namespace ClassicalSharp {
 			}
 			
 			Input = new InputHandler(this);
-			defaultIb = Graphics.MakeDefaultIb();				
+			defaultIb = Graphics.MakeDefaultIb();
 			ParticleManager = AddComponent(new ParticleManager());
 			TabList = AddComponent(new TabList());
 			LoadOptions();
@@ -81,7 +81,7 @@ namespace ClassicalSharp {
 			Drawer2D.BlackTextShadows = Options.GetBool(OptionsKey.BlackTextShadows, false);
 			
 			TerrainAtlas1D = new TerrainAtlas1D(Graphics);
-			TerrainAtlas = new TerrainAtlas2D(Graphics, Drawer2D);
+			TerrainAtlas = new TerrainAtlas2D();
 			Animations = AddComponent(new Animations());
 			Inventory = AddComponent(new Inventory());
 			
@@ -167,6 +167,7 @@ namespace ClassicalSharp {
 			AllowCustomBlocks = Options.GetBool(OptionsKey.AllowCustomBlocks, true);
 			UseCPE = Options.GetBool(OptionsKey.UseCPE, true);
 			SimpleArmsAnim = Options.GetBool(OptionsKey.SimpleArmsAnim, false);
+			ChatLogging = Options.GetBool(OptionsKey.ChatLogging, true);
 			
 			ViewBobbing = Options.GetBool(OptionsKey.ViewBobbing, true);
 			FpsLimitMethod method = Options.GetEnum(OptionsKey.FpsLimit, FpsLimitMethod.LimitVSync);
@@ -220,8 +221,10 @@ namespace ClassicalSharp {
 		ScheduledTask entTask;
 		void InitScheduledTasks() {
 			const double defTicks = 1.0 / 20;
+			double netTicks = Server.IsSinglePlayer ? (1.0 / 20) : (1.0 / 60);
+			
 			AddScheduledTask(30, AsyncDownloader.PurgeOldEntriesTask);
-			AddScheduledTask(defTicks, Server.Tick);
+			AddScheduledTask(netTicks, Server.Tick);
 			entTask = AddScheduledTask(defTicks, Entities.Tick);
 			
 			AddScheduledTask(defTicks, ParticleManager.Tick);

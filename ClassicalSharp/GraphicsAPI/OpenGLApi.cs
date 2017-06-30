@@ -193,21 +193,6 @@ namespace ClassicalSharp.GraphicsAPI {
 			return id;
 		}
 		
-		public override int CreateVb(VertexP3fC4b[] vertices, VertexFormat format, int count) {
-			return CreateVb<VertexP3fC4b>(vertices, format, count);
-		}
-		
-		public override int CreateVb(VertexP3fT2fC4b[] vertices, VertexFormat format, int count) {
-			return CreateVb<VertexP3fT2fC4b>(vertices, format, count);
-		}
-		
-		public int CreateVb<T>(T[] vertices, VertexFormat format, int count) where T : struct {
-			int id = GenAndBind( BufferTarget.ArrayBuffer );
-			int sizeInBytes = count * strideSizes[(int)format];
-			GL.BufferData(BufferTarget.ArrayBuffer, new IntPtr(sizeInBytes), vertices, BufferUsage.StaticDraw);
-			return id;
-		}
-		
 		public override int CreateVb(IntPtr vertices, VertexFormat format, int count) {
 			int id = GenAndBind(BufferTarget.ArrayBuffer);
 			int sizeInBytes = count * strideSizes[(int)format];

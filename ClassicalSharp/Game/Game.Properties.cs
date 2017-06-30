@@ -180,7 +180,11 @@ namespace ClassicalSharp {
 		
 		public bool SmoothLighting;
 		
-		public bool autoRotate = true;
+		public bool ChatLogging = true;
+		
+		public bool AutoRotate = true;
+		
+		public bool SmoothCamera = false;
 		
 		public string FontName = "Arial";
 		
@@ -188,7 +192,8 @@ namespace ClassicalSharp {
 		public bool ClickableChat = false, HideGui = false, ShowFPS = true;
 		internal float HotbarScale = 1, ChatScale = 1, InventoryScale = 1;
 		public bool ViewBobbing, ShowBlockInHand;
-		public bool UseSound, UseMusic, ModifiableLiquids;
+		public bool ModifiableLiquids;
+		public int SoundsVolume, MusicVolume;
 		
 		public Vector3 CurrentCameraPos;
 		
@@ -230,7 +235,7 @@ namespace ClassicalSharp {
 		/// this method returns "default.zip". </remarks>
 		public string DefaultTexturePack {
 			get {
-				string path = Path.Combine(Program.AppDirectory, TexturePack.Dir);
+				string path = Path.Combine(Program.AppDirectory, "texpacks");
 				path = Path.Combine(path, defTexturePack);
 				return File.Exists(path) && !ClassicMode ? defTexturePack : "default.zip"; 
 			}

@@ -19,7 +19,9 @@ namespace ClassicalSharp.Network.Protocols {
 		
 		public CPEProtocol(Game game) : base(game) { }
 		
-		public override void Init() {
+		public override void Init() { Reset(); }
+		
+		public override void Reset() {
 			if (!game.UseCPE) return;
 			net.Set(Opcode.CpeExtInfo, HandleExtInfo, 67);
 			net.Set(Opcode.CpeExtEntry, HandleExtEntry, 69);
@@ -47,6 +49,7 @@ namespace ClassicalSharp.Network.Protocols {
 			net.Set(Opcode.CpeSetMapEnvUrl, HandleSetMapEnvUrl, 65);
 			net.Set(Opcode.CpeSetMapEnvProperty, HandleSetMapEnvProperty, 6);
 			net.Set(Opcode.CpeSetEntityProperty, HandleSetEntityProperty, 7);
+			net.Set(Opcode.TwoWayPing, HandleTwoWayPing, 4);
 		}
 		
 		#region Read
@@ -72,12 +75,13 @@ namespace ClassicalSharp.Network.Protocols {
 		}
 		
 		void HandleSetClickDistance() {
-			game.LocalPlayer.ReachDistance = reader.ReadInt16() / 32f;
+			game.LocalPlayer.ReachDistance = reader.ReadUInt16() / 32f;
 		}
 		
 		void HandleCustomBlockSupportLevel() {
 			byte supportLevel = reader.ReadUInt8();
-			SendCustomBlockSupportLevel(1);
+			WriteCustomBlockSupportLevel(1);
+			net.SendPacket();
 			game.UseCPEBlocks = true;
 
 			if (supportLevel == 1) {
@@ -122,7 +126,7 @@ namespace ClassicalSharp.Network.Protocols {
 		}
 		
 		void HandleExtAddPlayerName() {
-			short id = reader.ReadInt16();
+			int id = reader.ReadInt16() & 0xFF;
 			string playerName = Utils.StripColours(reader.ReadString());
 			playerName = Utils.RemoveEndPlus(playerName);
 			string listName = reader.ReadString();
@@ -133,11 +137,7 @@ namespace ClassicalSharp.Network.Protocols {
 			// Some server software will declare they support ExtPlayerList, but send AddEntity then AddPlayerName
 			// we need to workaround this case by removing all the tab names we added for the AddEntity packets
 			net.DisableAddEntityHack();
-			
-			// Workaround for some servers that don't cast signed bytes to unsigned, before converting them to shorts.
-			if (id < 0) id += 256;
-			if (id >= 0 && id <= 255)
-				net.AddTablistEntry((byte)id, playerName, listName, groupName, groupRank);
+			net.AddTablistEntry((byte)id, playerName, listName, groupName, groupRank);
 		}
 		
 		void HandleExtAddEntity() {
@@ -149,31 +149,29 @@ namespace ClassicalSharp.Network.Protocols {
 		}
 		
 		void HandleExtRemovePlayerName() {
-			short id = reader.ReadInt16();
-			
-			// Workaround for some servers that don't cast signed bytes to unsigned, before converting them to shorts.
-			if (id < 0) id += 256;			
-			if (id >= 0 && id <= 255)
-				net.RemoveTablistEntry((byte)id);
+			int id = reader.ReadInt16() & 0xFF;
+			net.RemoveTablistEntry((byte)id);
 		}
 		
 		void HandleMakeSelection() {
 			byte selectionId = reader.ReadUInt8();
 			string label = reader.ReadString();
-			short startX = reader.ReadInt16();
-			short startY = reader.ReadInt16();
-			short startZ = reader.ReadInt16();
-			short endX = reader.ReadInt16();
-			short endY = reader.ReadInt16();
-			short endZ = reader.ReadInt16();
+			Vector3I start, end;
+			
+			start.X = reader.ReadInt16();
+			start.Y = reader.ReadInt16();
+			start.Z = reader.ReadInt16();
+			
+			end.X = reader.ReadInt16();
+			end.Y = reader.ReadInt16();
+			end.Z = reader.ReadInt16();
 			
 			byte r = (byte)reader.ReadInt16();
 			byte g = (byte)reader.ReadInt16();
 			byte b = (byte)reader.ReadInt16();
 			byte a = (byte)reader.ReadInt16();
 			
-			Vector3I p1 = Vector3I.Min(startX, startY, startZ, endX, endY, endZ);
-			Vector3I p2 = Vector3I.Max(startX, startY, startZ, endX, endY, endZ);
+			Vector3I p1 = Vector3I.Min(start, end), p2 = Vector3I.Max(start, end);
 			FastColour col = new FastColour(r, g, b, a);
 			game.SelectionManager.AddSelection(selectionId, p1, p2, col);
 		}
@@ -277,7 +275,7 @@ namespace ClassicalSharp.Network.Protocols {
 		const int bulkCount = 256;
 		unsafe void HandleBulkBlockUpdate() {
 			int count = reader.ReadUInt8() + 1;
-			if (game.World.IsNotLoaded) {
+			if (game.World.blocks == null) {
 				#if DEBUG_BLOCKS
 				Utils.LogDebug("Server tried to update a block while still sending us the map!");
 				#endif
@@ -357,6 +355,8 @@ namespace ClassicalSharp.Network.Protocols {
 					env.SetWeatherFade(value / 128f); break;
 				case 8:
 					env.SetExpFog(value != 0); break;
+				case 9:
+					env.SetSidesOffset(value); break;
 			}
 		}
 		
@@ -380,14 +380,23 @@ namespace ClassicalSharp.Network.Protocols {
 					return;
 			}
 			entity.SetLocation(update, true);
-		}		
+		}
 		
+		void HandleTwoWayPing() {
+			bool serverToClient = reader.ReadUInt8() != 0;
+			ushort data = reader.ReadUInt16();
+			if (!serverToClient) { PingList.Update(data); return; }
+			
+			WriteTwoWayPing(true, data); // server to client reply
+			net.SendPacket();
+		}		
+				
 		
 		#endregion
 		
 		#region Write
 		
-		internal void SendPlayerClick(MouseButton button, bool buttonDown,
+		internal void WritePlayerClick(MouseButton button, bool buttonDown,
 		                              byte targetId, PickedPos pos) {
 			Player p = game.LocalPlayer;
 			writer.WriteUInt8((byte)Opcode.CpePlayerClick);
@@ -401,27 +410,29 @@ namespace ClassicalSharp.Network.Protocols {
 			writer.WriteInt16((short)pos.BlockPos.Y);
 			writer.WriteInt16((short)pos.BlockPos.Z);
 			writer.WriteUInt8((byte)pos.Face);
-			net.SendPacket();
 		}
 		
-		internal void SendExtInfo(string appName, int extensionsCount) {
+		internal void WriteExtInfo(string appName, int extensionsCount) {
 			writer.WriteUInt8((byte)Opcode.CpeExtInfo);
 			writer.WriteString(appName);
 			writer.WriteInt16((short)extensionsCount);
-			net.SendPacket();
 		}
 		
-		internal void SendExtEntry(string extensionName, int extensionVersion) {
+		internal void WriteExtEntry(string extensionName, int extensionVersion) {
 			writer.WriteUInt8((byte)Opcode.CpeExtEntry);
 			writer.WriteString(extensionName);
 			writer.WriteInt32(extensionVersion);
-			net.SendPacket();
 		}
 		
-		internal void SendCustomBlockSupportLevel(byte version) {
+		internal void WriteCustomBlockSupportLevel(byte version) {
 			writer.WriteUInt8((byte)Opcode.CpeCustomBlockSupportLevel);
 			writer.WriteUInt8(version);
-			net.SendPacket();
+		}
+		
+		internal void WriteTwoWayPing(bool serverToClient, ushort data) {
+			writer.WriteUInt8((byte)Opcode.TwoWayPing);
+			writer.WriteUInt8((byte)(serverToClient ? 1 : 0));
+			writer.WriteInt16((short)data);			
 		}
 		
 		void SendCpeExtInfoReply() {
@@ -430,7 +441,8 @@ namespace ClassicalSharp.Network.Protocols {
 			int count = clientExts.Length;
 			if (!game.AllowCustomBlocks) count -= 2;
 			
-			SendExtInfo(net.AppName, count);
+			WriteExtInfo(net.AppName, count);
+			net.SendPacket();
 			for (int i = 0; i < clientExts.Length; i++) {
 				string name = clientExts[i];
 				int ver = 1;
@@ -438,9 +450,10 @@ namespace ClassicalSharp.Network.Protocols {
 				if (name == "EnvMapAppearance") ver = net.cpeData.envMapVer;
 				if (name == "BlockDefinitionsExt") ver = net.cpeData.blockDefsExtVer;
 				
-				if (!game.AllowCustomBlocks && name.StartsWith("BlockDefinitions"))
-					continue;
-				SendExtEntry(name, ver);
+				if (!game.AllowCustomBlocks && name.StartsWith("BlockDefinitions")) continue;
+				
+				WriteExtEntry(name, ver);
+				net.SendPacket();
 			}
 		}
 		#endregion

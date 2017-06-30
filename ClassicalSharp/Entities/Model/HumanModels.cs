@@ -9,7 +9,10 @@ namespace ClassicalSharp.Model {
 
 	public class ChibiModel : HumanoidModel {
 		
-		public ChibiModel(Game window) : base(window) { }
+		public ChibiModel(Game window) : base(window) {
+			MaxScale = 3.0f;
+			ShadowScale = 0.5f;
+		}
 		
 		const float size = 0.5f;
 		protected override void MakeDescriptions() {
@@ -20,10 +23,6 @@ namespace ClassicalSharp.Model {
 			lArm = lArm.Scale(size); rArm = rArm.Scale(size);
 			offset = 0.5f * size;
 		}
-
-		public override float MaxScale { get { return 3; } }
-		
-		public override float ShadowScale { get { return 0.5f; } }
 		
 		public override float NameYOffset { get { return 20.2f/16; } }
 		
@@ -37,6 +36,43 @@ namespace ClassicalSharp.Model {
 			get { return new AABB(-4/16f, 0, -4/16f, 4/16f, 16/16f, 4/16f); }
 		}
 	}	
+    
+	public class SittingModel : IModel {
+		
+		public SittingModel(Game window) : base(window) {
+			CalcHumanAnims = true;
+			ShadowScale = 0.5f;
+		}
+		
+		const int sitOffset = 10;
+		public override void CreateParts() { }
+		
+		public override float NameYOffset { get { return 32/16f + 0.5f/16f; } }
+		
+		public override float GetEyeY(Entity entity) { return (26 - sitOffset)/16f; }
+		
+		public override Vector3 CollisionSize {
+		    get { return new Vector3(8/16f + 0.6f/16f, (28.1f - sitOffset)/16f, 8/16f + 0.6f/16f); }
+		}
+		
+		public override AABB PickingBounds {
+		    get { return new AABB(-8/16f, 0, -4/16f, 8/16f, (32 - sitOffset)/16f, 4/16f); }
+		}
+		
+		protected internal override Matrix4 TransformMatrix(Entity p, Vector3 pos) {
+			pos.Y -= (sitOffset / 16f) * p.ModelScale;
+			return p.TransformMatrix(p.ModelScale, pos);
+		}
+		
+		public override void DrawModel(Entity p) {
+			p.anim.leftLegX = 1.5f; p.anim.rightLegX = 1.5f;
+			p.anim.leftLegZ = -0.1f; p.anim.rightLegZ = 0.1f;
+			
+			IModel model = game.ModelCache.Models[0].Instance;
+			model.SetupState(p);
+			model.DrawModel(p);
+		}		
+	}
 
 	public class HumanoidHeadModel : HumanoidModel {
 		

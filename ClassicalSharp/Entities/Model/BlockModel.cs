@@ -20,10 +20,7 @@ namespace ClassicalSharp.Model {
 		BlockID block = Block.Air;
 		float height;
 		TerrainAtlas1D atlas;
-		bool bright;
 		Vector3 minBB, maxBB;
-		public bool NoShade = false, SwitchOrder = false;
-		public float CosX = 1, SinX = 0;
 		ModelCache cache;
 		
 		public BlockModel(Game game) : base(game) {
@@ -55,12 +52,10 @@ namespace ClassicalSharp.Model {
 		
 		public void CalcState(BlockID block) {
 			if (game.BlockInfo.Draw[block] == DrawType.Gas) {
-				bright = false;
 				minBB = Vector3.Zero;
 				maxBB = Vector3.One;
 				height = 1;
 			} else {
-				bright = game.BlockInfo.FullBright[block];
 				minBB = game.BlockInfo.MinBB[block];
 				maxBB = game.BlockInfo.MaxBB[block];
 				height = maxBB.Y - minBB.Y;
@@ -68,38 +63,22 @@ namespace ClassicalSharp.Model {
 					height = 1;
 			}
 		}
-		
-		public override float RenderDistance(Entity p) {
-			block = Utils.FastByte(p.ModelName);
-			CalcState(block);
-			return base.RenderDistance(p);
-		}
-		
+
 		int lastTexId = -1;
-		protected override void DrawModel(Entity p) {
+		public override void DrawModel(Entity p) {
 			// TODO: using 'is' is ugly, but means we can avoid creating
 			// a string every single time held block changes.
 			if (p is FakePlayer) {
-				Player realP = game.LocalPlayer;
-				Vector3I P = Vector3I.Floor(realP.EyePosition);
-				col = game.World.IsValidPos(P) ? game.Lighting.LightCol(P.X, P.Y, P.Z) : game.Lighting.Outside;
-				
-				// Adjust pitch so angle when looking straight down is 0.
-				float adjHeadX = realP.HeadX - 90;
-				if (adjHeadX < 0) adjHeadX += 360;
-				
-				// Adjust colour so held block is brighter when looking straght up
-				float t = Math.Abs(adjHeadX - 180) / 180;
-				float colScale = Utils.Lerp(0.9f, 0.7f, t);
-				col = FastColour.ScalePacked(col, colScale);
 				block = ((FakePlayer)p).Block;
 			} else {
 				block = Utils.FastByte(p.ModelName);
 			}
 			
 			CalcState(block);
-			if (!(p is FakePlayer)) NoShade = bright;
-			if (bright) col = FastColour.WhitePacked;
+			if (game.BlockInfo.FullBright[block]) {
+				for (int i = 0; i < cols.Length; i++)
+					cols[i] = FastColour.WhitePacked;
+			}
 			if (game.BlockInfo.Draw[block] == DrawType.Gas) return;
 			
 			lastTexId = -1;
@@ -110,7 +89,6 @@ namespace ClassicalSharp.Model {
 			
 			IGraphicsApi gfx = game.Graphics;
 			gfx.BindTexture(lastTexId);
-			TransformVertices();
 			
 			if (sprite) gfx.FaceCulling = true;
 			UpdateVB();
@@ -123,41 +101,20 @@ namespace ClassicalSharp.Model {
 			
 			if (lastTexId != -1) {
 				game.Graphics.BindTexture(lastTexId);
-				TransformVertices();
 				UpdateVB();
 			}
 			lastTexId = texId;
 			index = 0;
 		}
 		
-		void TransformVertices() {
-			for (int i = 0; i < index; i++) {
-				VertexP3fT2fC4b v = cache.vertices[i];
-				float t = 0;
-				t = CosX * v.Y + SinX * v.Z; v.Z = -SinX * v.Y + CosX * v.Z; v.Y = t;        // Inlined RotX
-				cache.vertices[i] = v;
-			}
-		}
-		
 		CuboidDrawer drawer = new CuboidDrawer();
 		void DrawParts(bool sprite) {
 			// SwitchOrder is needed for held block, which renders without depth testing
 			if (sprite) {
-				if (SwitchOrder) {
-					SpriteZQuad(Side.Back, false);
-					SpriteXQuad(Side.Right, false);
-				} else {
-					SpriteXQuad(Side.Right, false);
-					SpriteZQuad(Side.Back, false);
-				}
-				
-				if (SwitchOrder) {
-					SpriteXQuad(Side.Right, true);
-					SpriteZQuad(Side.Back, true);
-				} else {
-					SpriteZQuad(Side.Back, true);
-					SpriteXQuad(Side.Right, true);
-				}
+				SpriteXQuad(Side.Right, false);
+				SpriteZQuad(Side.Back, false);
+				SpriteZQuad(Side.Back, true);
+				SpriteXQuad(Side.Right, true);
 			} else {
 				drawer.elementsPerAtlas1D = atlas.elementsPerAtlas1D;
 				drawer.invVerElementSize = atlas.invElementSize;
@@ -173,19 +130,12 @@ namespace ClassicalSharp.Model {
 				drawer.Tinted = game.BlockInfo.Tinted[block];
 				drawer.TintColour = game.BlockInfo.FogColour[block];
 				
-				drawer.Bottom(1, Colour(FastColour.ShadeYBottom), GetTex(Side.Bottom), cache.vertices, ref index);
-				if (SwitchOrder) {
-					drawer.Right(1, Colour(FastColour.ShadeX), GetTex(Side.Right), cache.vertices, ref index);
-					drawer.Back(1,  Colour(FastColour.ShadeZ), GetTex(Side.Back),  cache.vertices, ref index);
-					drawer.Left(1,  Colour(FastColour.ShadeX), GetTex(Side.Left),  cache.vertices, ref index);
-					drawer.Front(1, Colour(FastColour.ShadeZ), GetTex(Side.Front), cache.vertices, ref index);
-				} else {
-					drawer.Front(1, Colour(FastColour.ShadeZ), GetTex(Side.Front), cache.vertices, ref index);
-					drawer.Right(1, Colour(FastColour.ShadeX), GetTex(Side.Right), cache.vertices, ref index);
-					drawer.Back(1,  Colour(FastColour.ShadeZ), GetTex(Side.Back),  cache.vertices, ref index);
-					drawer.Left(1,  Colour(FastColour.ShadeX), GetTex(Side.Left),  cache.vertices, ref index);
-				}
-				drawer.Top(1, Colour(1.0f), GetTex(Side.Top), cache.vertices, ref index);
+				drawer.Bottom(1, cols[1], GetTex(Side.Bottom), cache.vertices, ref index);
+				drawer.Front(1, cols[3], GetTex(Side.Front), cache.vertices, ref index);
+				drawer.Right(1, cols[5], GetTex(Side.Right), cache.vertices, ref index);
+				drawer.Back(1,  cols[2], GetTex(Side.Back),  cache.vertices, ref index);
+				drawer.Left(1,  cols[4], GetTex(Side.Left),  cache.vertices, ref index);
+				drawer.Top(1, cols[0], GetTex(Side.Top), cache.vertices, ref index);
 			}
 		}
 		
@@ -195,10 +145,6 @@ namespace ClassicalSharp.Model {
 			
 			FlushIfNotSame(texIndex);
 			return texId;
-		}
-		
-		int Colour(float shade) {
-			return NoShade ? col : FastColour.ScalePacked(col, shade); 
 		}
 		
 		void SpriteZQuad(int side, bool firstPart) {
@@ -212,7 +158,7 @@ namespace ClassicalSharp.Model {
 			FlushIfNotSame(texIndex);
 			if (height != 1)
 				rec.V2 = rec.V1 + height * atlas.invElementSize * (15.99f/16f);
-			int col = this.col;
+			int col = cols[0];
 
 			float p1 = 0, p2 = 0;
 			if (firstPart) { // Need to break into two quads for when drawing a sprite model in hand.
@@ -240,7 +186,7 @@ namespace ClassicalSharp.Model {
 			FlushIfNotSame(texIndex);
 			if (height != 1)
 				rec.V2 = rec.V1 + height * atlas.invElementSize * (15.99f/16f);
-			int col = this.col;
+			int col = cols[0];
 			
 			float x1 = 0, x2 = 0, z1 = 0, z2 = 0;
 			if (firstPart) {

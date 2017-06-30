@@ -91,8 +91,8 @@
     <Compile Include="2D\Screens\ChatScreen.cs" />
     <Compile Include="2D\Screens\ClickableScreen.cs" />
     <Compile Include="2D\Screens\DeathScreen.cs" />
-    <Compile Include="2D\Screens\ErrorScreen.cs" />
-    <Compile Include="2D\Screens\FpsScreen.cs" />
+    <Compile Include="2D\Screens\DisconnectScreen.cs" />
+    <Compile Include="2D\Screens\StatusScreen.cs" />
     <Compile Include="2D\Screens\Inventory\InventoryScreen.cs" />
     <Compile Include="2D\Screens\Inventory\InventoryScreen.Input.cs" />
     <Compile Include="2D\Screens\Inventory\InventoryScreen.Scrolling.cs" />
@@ -189,6 +189,7 @@
     <Compile Include="Map\Formats\MapSchematic.Exporter.cs" />
     <Compile Include="Map\Formats\MapLvl.Importer.cs" />
     <Compile Include="Map\Formats\NbtFile.cs" />
+    <Compile Include="Map\Lighting\BasicLighting.Updater.cs" />
     <Compile Include="Map\Lighting\IWorldLighting.cs" />
     <Compile Include="Map\Lighting\BasicLighting.cs" />
     <Compile Include="Map\Lighting\BasicLighting.Heightmap.cs" />
@@ -215,6 +216,7 @@
     <Compile Include="Network\Protocols\CPE.cs" />
     <Compile Include="Network\Protocols\IProtocol.cs" />
     <Compile Include="Network\Protocols\WoM.cs" />
+    <Compile Include="Network\Utils\PingList.cs" />
     <Compile Include="Particles\CollidableParticle.cs" />
     <Compile Include="Particles\Particle.cs" />
     <Compile Include="Particles\ParticleManager.cs" />

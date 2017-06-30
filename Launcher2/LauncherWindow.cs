@@ -43,10 +43,10 @@ namespace Launcher {
 		public AsyncDownloader Downloader;
 		
 		/// <summary> Returns the width of the client drawing area. </summary>
-		public int Width { get { return Window.Width; } }
+		public int Width { get { return Window.ClientSize.Width; } }
 		
 		/// <summary> Returns the height of the client drawing area. </summary>
-		public int Height { get { return Window.Height; } }
+		public int Height { get { return Window.ClientSize.Height; } }
 		
 		/// <summary> Bitmap that contains the entire array of pixels that describe the client drawing area. </summary>
 		public Bitmap Framebuffer;
@@ -83,7 +83,7 @@ namespace Launcher {
 			try {
 				Window.Icon = Icon.ExtractAssociatedIcon(path);
 			} catch (Exception ex) {
-				ErrorHandler2.LogError("LauncherWindow.Init() - Icon", ex);
+				ErrorHandler.LogError("LauncherWindow.Init() - Icon", ex);
 			}
 			//Minimised = Window.WindowState == WindowState.Minimized;
 			
@@ -126,20 +126,21 @@ namespace Launcher {
 			if (String.IsNullOrEmpty(hash)) return false;
 			
 			ClientStartData data = null;
-			foreach (ServerListEntry entry in publicServers) {
-				if (entry.Hash == hash) {
-					data = new ClientStartData(Session.Username, entry.Mppass,
-					                           entry.IPAddress, entry.Port);
-					Client.Start(data, true, ref ShouldExit);
-					return true;
-				}
+			for (int i = 0; i < publicServers.Count; i++) {
+				ServerListEntry entry = publicServers[i];
+				if (entry.Hash != hash) continue;
+				
+				data = new ClientStartData(Session.Username, entry.Mppass,
+				                           entry.IPAddress, entry.Port);
+				Client.Start(data, true, ref ShouldExit);
+				return true;
 			}
 			
 			// Fallback to private server handling
 			try {
 				data = Session.GetConnectInfo(hash);
 			} catch (WebException ex) {
-				ErrorHandler2.LogError("retrieving server information", ex);
+				ErrorHandler.LogError("retrieving server information", ex);
 				return false;
 			} catch (ArgumentOutOfRangeException) {
 				return false;
@@ -152,13 +153,9 @@ namespace Launcher {
 			Window = new SDL2Window(640, 400, Program.AppName, SDL.SDL_WindowFlags.SDL_WINDOW_RESIZABLE);
 
 			Window.Visible = true;
-			Drawer = new GdiPlusDrawer2D(null);
+			Drawer = new GdiPlusDrawer2D();
 			Init();
 			TryLoadTexturePack();
-			
-			string audioPath = Path.Combine(Program.AppDirectory, "audio");
-			BinUnpacker.Unpack(audioPath, "dig");
-			BinUnpacker.Unpack(audioPath, "step");
 			
 			fetcher = new ResourceFetcher();
 			fetcher.CheckResourceExistence();

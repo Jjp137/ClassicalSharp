@@ -16,8 +16,6 @@ namespace ClassicalSharp.Map {
 	/// heightmap, dimensions and various metadata such as environment settings. </summary>
 	public sealed partial class World {
 
-		Game game;
-		BlockInfo info;
 		public BlockID[] blocks;
 		public int Width, Height, Length;
 		
@@ -27,35 +25,29 @@ namespace ClassicalSharp.Map {
 		/// <summary> Unique uuid/guid of this particular world. </summary>
 		public Guid Uuid;
 		
-		/// <summary> Whether this map is empty. </summary>
-		public bool IsNotLoaded = true;
-		
 		/// <summary> Current terrain.png or texture pack url of this map. </summary>
 		public string TextureUrl = null;
 		
 		public World(Game game) {
 			Env = new WorldEnv(game);
-			this.game = game;
-			info = game.BlockInfo;
 		}
 
 		/// <summary> Resets all of the properties to their defaults and raises the 'OnNewMap' event. </summary>
 		public void Reset() {
 			Env.Reset();
 			Width = Height = Length = 0;
-			IsNotLoaded = true;
-			
+			blocks = null;
 			Uuid = Guid.NewGuid();
-			game.WorldEvents.RaiseOnNewMap();
 		}
 		
-		/// <summary> Updates the underlying block array, heightmap, and dimensions of this map. </summary>
+		/// <summary> Updates the underlying block array, and dimensions of this map. </summary>
 		public void SetNewMap(BlockID[] blocks, int width, int height, int length) {
 			this.blocks = blocks;
 			this.Width = width;
 			this.Height = height;
 			this.Length = length;
-			IsNotLoaded = width == 0 || length == 0 || height == 0;
+			if (blocks.Length == 0) this.blocks = null;
+			
 			if (blocks.Length != (width * height * length))
 				throw new InvalidOperationException("Blocks array length does not match volume of map.");
 			
@@ -63,23 +55,15 @@ namespace ClassicalSharp.Map {
 			if (Env.CloudHeight == -1) Env.CloudHeight = height + 2;
 		}
 		
-		/// <summary> Sets the block at the given world coordinates without bounds checking,
-		/// and also recalculates the heightmap for the given (x,z) column.	</summary>
+		/// <summary> Sets the block at the given world coordinates without bounds checking. </summary>
 		public void SetBlock(int x, int y, int z, BlockID blockId) {
-			int index = (y * Length + z) * Width + x;
-			BlockID oldBlock = blocks[index];
-			blocks[index] = blockId;
-			game.Lighting.UpdateLight(x, y, z, oldBlock, blockId);
-			
-			WeatherRenderer weather = game.WeatherRenderer;
-			if (weather.heightmap != null && !IsNotLoaded)
-				weather.UpdateHeight(x, y, z, oldBlock, blockId);
+			blocks[(y * Length + z) * Width + x] = blockId;
 		}
 		
 		/// <summary> Sets the block at the given world coordinates without bounds checking,
 		/// and also recalculates the heightmap for the given (x,z) column.	</summary>
 		public void SetBlock(Vector3I p, BlockID blockId) {
-			SetBlock(p.X, p.Y, p.Z, blockId);
+			blocks[(p.Y * Length + p.Z) * Width + p.X] = blockId;
 		}
 		
 		/// <summary> Returns the block at the given world coordinates without bounds checking. </summary>

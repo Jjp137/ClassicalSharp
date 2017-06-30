@@ -124,13 +124,12 @@ namespace ClassicalSharp {
 			float t = (float)(entTask.Accumulator / entTask.Interval);
 			LocalPlayer.SetInterpPosition(t);
 			
-			if (!SkipClear || SkyboxRenderer.ShouldRender)
-				Graphics.Clear();
+			if (!SkipClear) Graphics.Clear();
 			CurrentCameraPos = Camera.GetCameraPos(t);
 			UpdateViewMatrix();
 			
 			bool visible = Gui.activeScreen == null || !Gui.activeScreen.BlocksWorld;
-			if (World.IsNotLoaded) visible = false;
+			if (World.blocks == null) visible = false;
 			if (visible) {
 				Render3D(delta, t);
 			} else {
@@ -168,7 +167,8 @@ namespace ClassicalSharp {
 			ParticleManager.Render(delta, t);
 			Camera.GetPickedBlock(SelectedPos); // TODO: only pick when necessary
 			EnvRenderer.Render(delta);
-			MapRenderer.Render(delta);
+			MapRenderer.Update(delta);
+			MapRenderer.RenderNormal(delta);
 			MapBordersRenderer.RenderSides(delta);
 			
 			if (SelectedPos.Valid && !HideGui) {
@@ -262,11 +262,13 @@ namespace ClassicalSharp {
 			
 			Gui.Reset(this);
 			World.Reset();
+			WorldEvents.RaiseOnNewMap();
+			
 			World.blocks = null;
 			Drawer2D.InitColours();
 			BlockInfo.Reset(this);
 			TexturePack.ExtractDefault(this);
-			Gui.SetNewScreen(new ErrorScreen(this, title, reason));
+			Gui.SetNewScreen(new DisconnectScreen(this, title, reason));
 			GC.Collect();
 		}
 		
@@ -282,10 +284,18 @@ namespace ClassicalSharp {
 		}
 		
 		public void UpdateBlock(int x, int y, int z, BlockID block) {
-			int oldHeight = Lighting.GetLightHeight(x, z) + 1;
+			BlockID oldBlock = World.GetBlock(x, y, z);
 			World.SetBlock(x, y, z, block);
-			int newHeight = Lighting.GetLightHeight(x, z) + 1;
-			MapRenderer.RedrawBlock(x, y, z, block, oldHeight, newHeight);
+			
+			WeatherRenderer weather = WeatherRenderer;
+			if (weather.heightmap != null)
+				weather.OnBlockChanged(x, y, z, oldBlock, block);
+			Lighting.OnBlockChanged(x, y, z, oldBlock, block);
+			
+			// Refresh the chunk the block was located in.
+			int cx = x >> 4, cy = y >> 4, cz = z >> 4;
+			MapRenderer.GetChunk(cx, cy, cz).AllAir &= BlockInfo.Draw[block] == DrawType.Gas;
+			MapRenderer.RefreshChunk(cx, cy, cz);
 		}
 		
 		float limitMilliseconds;
@@ -346,7 +356,7 @@ namespace ClassicalSharp {
 		public bool CanPick(BlockID block) {
 			if (BlockInfo.Draw[block] == DrawType.Gas) return false;
 			if (BlockInfo.Draw[block] == DrawType.Sprite) return true;
-			if (BlockInfo.Collide[block] != CollideType.SwimThrough) return true;
+			if (BlockInfo.Collide[block] != CollideType.Liquid) return true;
 			
 			return !ModifiableLiquids ? false :
 				Inventory.CanPlace[block] && Inventory.CanDelete[block];
@@ -355,19 +365,26 @@ namespace ClassicalSharp {
 		
 		/// <summary> Reads a bitmap from the stream (converting it to 32 bits per pixel if necessary),
 		/// and updates the native texture for it. </summary>
-		public bool UpdateTexture(ref int texId, string file, byte[] data, bool setSkinType) {			
+		public bool UpdateTexture(ref int texId, string file, byte[] data, bool setSkinType) {
 			using (Bitmap bmp = Platform.ReadBmp32Bpp(Drawer2D, data)) {
 				if (!ValidateBitmap(file, bmp)) return false;
 				
 				Graphics.DeleteTexture(ref texId);
-				if (setSkinType) {
-					DefaultPlayerSkinType = Utils.GetSkinType(bmp);
-					if (DefaultPlayerSkinType == SkinType.Invalid)
-						throw new NotSupportedException("char.png has invalid dimensions");
-				}
+				if (setSkinType) SetDefaultSkinType(bmp);
 				
 				texId = Graphics.CreateTexture(bmp, true);
 				return true;
+			}
+		}
+		
+		void SetDefaultSkinType(Bitmap bmp) {
+			DefaultPlayerSkinType = Utils.GetSkinType(bmp);
+			if (DefaultPlayerSkinType == SkinType.Invalid)
+				throw new NotSupportedException("char.png has invalid dimensions");
+			
+			for (int i = 0; i < EntityList.MaxCount; i++) {
+				if (Entities[i] == null || Entities[i].TextureId != -1) continue;
+				Entities[i].SkinType = DefaultPlayerSkinType;
 			}
 		}
 		

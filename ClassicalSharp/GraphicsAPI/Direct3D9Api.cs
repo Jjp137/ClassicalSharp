@@ -267,12 +267,6 @@ namespace ClassicalSharp.GraphicsAPI {
 		}
 		
 		D3D.VertexFormat[] formatMapping;
-		public int CreateVb<T>(T[] vertices, VertexFormat format, int count) where T : struct {
-			int size = count * strideSizes[(int)format];
-			DataBuffer buffer = device.CreateVertexBuffer(size, Usage.None, formatMapping[(int)format], Pool.Default);
-			buffer.SetData(vertices, size, LockFlags.None);
-			return GetOrExpand(ref vBuffers, buffer, vBufferSize);
-		}
 		
 		public override int CreateVb(IntPtr vertices, VertexFormat format, int count) {
 			int size = count * strideSizes[(int)format];
@@ -396,7 +390,7 @@ namespace ClassicalSharp.GraphicsAPI {
 			}
 
 			public void MultiplyTop(ref Matrix4 matrix) {
-				Matrix4.Mult(ref matrix, ref stack[stackIndex], out stack[stackIndex]); // top = matrix * top
+				Matrix4.Mult(out stack[stackIndex], ref matrix, ref stack[stackIndex]); // top = matrix * top
 				device.SetTransform(matrixType, ref stack[stackIndex]);
 			}
 
@@ -429,11 +423,11 @@ namespace ClassicalSharp.GraphicsAPI {
 		
 		void LoopUntilRetrieved() {
 			ScheduledTask task = new ScheduledTask();
-			task.Interval = 1.0 / 20;
+			task.Interval = 1.0 / 60;
 			task.Callback = LostContextFunction;
 			
 			while (true) {
-				Thread.Sleep(50);
+				Thread.Sleep(16);
 				uint code = (uint)device.TestCooperativeLevel();
 				if ((uint)code == (uint)Direct3DError.DeviceNotReset) return;
 				
@@ -516,6 +510,7 @@ namespace ClassicalSharp.GraphicsAPI {
 					return i;
 				}
 			}
+			
 			// Otherwise resize and add more elements
 			int oldLength = array.Length;
 			Array.Resize(ref array, array.Length + expSize);

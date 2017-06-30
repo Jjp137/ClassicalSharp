@@ -7,8 +7,6 @@ using OpenTK.Input;
 namespace ClassicalSharp.Gui.Screens {
 	public partial class InventoryScreen : Screen {
 		
-		public override bool HandlesAllInput { get { return true; } }
-		
 		public override bool HandlesMouseMove(int mouseX, int mouseY) {
 			if (draggingMouse) {
 				mouseY -= TableY;
@@ -48,7 +46,7 @@ namespace ClassicalSharp.Gui.Screens {
 					return true;
 				}
 				
-				bool hotbar = game.IsKeyDown(Key.AltLeft) || game.IsKeyDown(Key.AltRight);
+				bool hotbar = game.Input.ControlDown;
 				if (!hotbar)
 					game.Gui.SetNewScreen(null);
 			}

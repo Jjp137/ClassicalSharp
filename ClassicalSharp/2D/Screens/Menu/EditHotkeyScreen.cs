@@ -64,7 +64,7 @@ namespace ClassicalSharp.Gui.Screens {
 			base.Init();
 			game.Keyboard.KeyRepeat = true;
 			titleFont = new Font(game.FontName, 16, FontStyle.Bold);
-			regularFont = new Font(game.FontName, 16, FontStyle.Regular);
+			regularFont = new Font(game.FontName, 16);
 			ContextRecreated();
 		}
 		
@@ -106,7 +106,7 @@ namespace ClassicalSharp.Gui.Screens {
 		}
 		
 		ButtonWidget Make(int x, int y, string text, int width,
-		                  Font font, Action<Game, Widget> onClick) {
+		                  Font font, SimpleClickHandler onClick) {
 			return ButtonWidget.Create(game, width, text, font, LeftOnly(onClick))
 				.SetLocation(Anchor.Centre, Anchor.Centre, x, y);
 		}

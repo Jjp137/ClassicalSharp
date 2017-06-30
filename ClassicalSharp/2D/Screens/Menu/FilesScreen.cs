@@ -8,6 +8,7 @@ namespace ClassicalSharp.Gui.Screens {
 	public abstract class FilesScreen : ClickableScreen {
 		
 		public FilesScreen(Game game) : base(game) {
+			HandlesAllInput = true;
 		}
 		
 		protected Font textFont, arrowFont, titleFont;
@@ -73,7 +74,7 @@ namespace ClassicalSharp.Gui.Screens {
 				.SetLocation(Anchor.Centre, Anchor.Centre, x, y);
 		}
 		
-		ButtonWidget Make(int x, int y, string text, Action<Game, Widget> onClick) {
+		ButtonWidget Make(int x, int y, string text, SimpleClickHandler onClick) {
 			return ButtonWidget.Create(game, 40, text, arrowFont, LeftOnly(onClick))
 				.SetLocation(Anchor.Centre, Anchor.Centre, x, y);
 		}
@@ -123,8 +124,6 @@ namespace ClassicalSharp.Gui.Screens {
 		public override bool HandlesMouseClick(int mouseX, int mouseY, MouseButton button) {
 			return HandleMouseClick(buttons, mouseX, mouseY, button);
 		}
-		
-		public override bool HandlesAllInput { get { return true; } }
 		
 		public override void OnResize(int width, int height) {
 			for (int i = 0; i < buttons.Length; i++)

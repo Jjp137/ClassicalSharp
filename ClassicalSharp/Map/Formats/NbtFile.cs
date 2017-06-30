@@ -41,13 +41,9 @@ namespace ClassicalSharp.Map {
 		
 		public void Write(NbtTagType v) { writer.Write((byte)v); }
 		
-		public void WriteInt64(long v) { writer.Write(IPAddress.HostToNetworkOrder(v)); }
-		
 		public void WriteInt32(int v) { writer.Write(IPAddress.HostToNetworkOrder(v)); }
 		
 		public void WriteInt16(short v) { writer.Write(IPAddress.HostToNetworkOrder(v)); }
-		
-		public void WriteInt8(sbyte v) { writer.Write((byte)v); }
 		
 		public void WriteUInt8(int v) { writer.Write((byte)v); }
 		

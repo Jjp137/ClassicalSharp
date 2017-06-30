@@ -27,8 +27,8 @@ namespace ClassicalSharp.Mode {
 
 		public void PickLeft(BlockID old) {
 			Vector3I pos = game.SelectedPos.BlockPos;
-			game.UpdateBlock(pos.X, pos.Y, pos.Z, 0);
-			game.UserEvents.RaiseBlockChanged(pos, old, 0);
+			game.UpdateBlock(pos.X, pos.Y, pos.Z, Block.Air);
+			game.UserEvents.RaiseBlockChanged(pos, old, Block.Air);
 			HandleDelete(old);
 		}
 		
@@ -52,7 +52,23 @@ namespace ClassicalSharp.Mode {
 		}
 		
 		public bool PickEntity(byte id) {
-			game.Chat.Add("PICKED ON: " + id + "," + game.Entities[id].ModelName);
+			Entity entity = game.Entities[id];
+			Entity player = game.Entities[EntityList.SelfID];
+			
+			Vector3 delta = player.Position - entity.Position;
+			delta.Y = 0.0f;
+			delta = Vector3.Normalize(delta);
+			delta.Y = -0.5f;
+			
+			entity.Velocity -= delta;
+			game.Chat.Add("PICKED ON: " + id + "," + entity.ModelName);
+			
+			entity.Health -= 2;
+			if (entity.Health < 0) {
+				game.Entities.RemoveEntity(id);
+				score += GetScore(entity.ModelName);
+				UpdateScore();
+			}
 			return true;
 		}
 		
@@ -105,8 +121,7 @@ namespace ClassicalSharp.Mode {
 
 		
 		public void OnNewMapLoaded(Game game) {
-			game.Chat.Add("&fScore: &e" + score, MessageType.Status1);
-			
+			UpdateScore();
 			string[] models = { "sheep", "pig", "skeleton", "zombie", "creeper", "spider" };
 			for (int i = 0; i < 254; i++) {
 				MobEntity fail = new MobEntity(game, models[rnd.Next(models.Length)]);
@@ -126,6 +141,20 @@ namespace ClassicalSharp.Mode {
 				hotbar[i] = Block.Air;
 			hotbar[Inventory.BlocksPerRow - 1] = Block.TNT;
 			game.Server.AppName += " (survival)";
+		}
+		
+		
+		int GetScore(string model) {
+			if (model == "sheep" || model == "pig") return 10;
+			if (model == "zombie") return 80;
+			if (model == "spider") return 105;
+			if (model == "skeleton") return 120;
+			if (model == "creeper") return 200;
+			return 5;
+		}
+		
+		void UpdateScore() {
+			game.Chat.Add("&fScore: &e" + score, MessageType.Status1);
 		}
 		
 		

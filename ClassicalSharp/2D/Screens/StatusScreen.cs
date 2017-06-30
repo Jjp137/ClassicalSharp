@@ -4,18 +4,19 @@ using System.Drawing;
 using ClassicalSharp.Entities;
 using ClassicalSharp.GraphicsAPI;
 using ClassicalSharp.Gui.Widgets;
+using ClassicalSharp.Network;
 #if ANDROID
 using Android.Graphics;
 #endif
 
 namespace ClassicalSharp.Gui.Screens {
-	public class FpsScreen : Screen, IGameComponent {
+	public class StatusScreen : Screen, IGameComponent {
 		
-		Font font, posFont;
-		StringBuffer text;
+		Font font;
+		StringBuffer statusBuffer;
 		
-		public FpsScreen(Game game) : base(game) {
-			text = new StringBuffer(128);
+		public StatusScreen(Game game) : base(game) {
+			statusBuffer = new StringBuffer(128);
 		}
 
 		public void Init(Game game) { }
@@ -24,14 +25,14 @@ namespace ClassicalSharp.Gui.Screens {
 		public void OnNewMap(Game game) { }
 		public void OnNewMapLoaded(Game game) { }
 		
-		TextWidget fpsText, hackStates;
+		TextWidget status, hackStates;
 		TextAtlas posAtlas;
 		public override void Render(double delta) {
-			UpdateFPS(delta);
+			UpdateStatus(delta);
 			if (game.HideGui || !game.ShowFPS) return;
 			
 			gfx.Texturing = true;
-			fpsText.Render(delta);
+			status.Render(delta);
 			if (!game.ClassicMode && game.Gui.activeScreen == null) {
 				UpdateHackState(false);
 				DrawPosition();
@@ -43,7 +44,7 @@ namespace ClassicalSharp.Gui.Screens {
 		double accumulator;
 		int frames, totalSeconds;
 		
-		void UpdateFPS(double delta) {
+		void UpdateStatus(double delta) {
 			frames++;
 			accumulator += delta;
 			if (accumulator < 1) return;
@@ -52,27 +53,28 @@ namespace ClassicalSharp.Gui.Screens {
 			totalSeconds++;
 			int fps = (int)(frames / accumulator);
 			
-			text.Clear()
+			statusBuffer.Clear()
 				.AppendNum(ref index, fps).Append(ref index, " fps, ");
 			if (game.ClassicMode) {
-				text.AppendNum(ref index, game.ChunkUpdates).Append(ref index, " chunk updates");
+				statusBuffer.AppendNum(ref index, game.ChunkUpdates).Append(ref index, " chunk updates");
 			} else {
-				text.AppendNum(ref index, game.ChunkUpdates).Append(ref index, " chunks/s, ")
+				statusBuffer.AppendNum(ref index, game.ChunkUpdates).Append(ref index, " chunks/s, ")
 					.AppendNum(ref index, game.Vertices).Append(ref index, " vertices");
+				
+				int ping = PingList.AveragePingMilliseconds();
+				if (ping != 0) {
+					statusBuffer.Append(ref index, ", ping ").AppendNum(ref index, ping).Append(ref index, " ms");
+				}
 			}
 			
-			string textString = text.ToString();
-			fpsText.SetText(textString);
+			status.SetText(statusBuffer.ToString());
 			accumulator = 0;
 			frames = 0;
 			game.ChunkUpdates = 0;
 		}
 		
-		string Q(int value) { return value == 1 ? "" : "s"; }
-		
 		public override void Init() {
 			font = new Font(game.FontName, 16);
-			posFont = new Font(game.FontName, 16, FontStyle.Regular);
 			ContextRecreated();
 			
 			game.Events.ChatFontChanged += ChatFontChanged;
@@ -81,25 +83,25 @@ namespace ClassicalSharp.Gui.Screens {
 		}
 		
 		protected override void ContextLost() {
-			fpsText.Dispose();
+			status.Dispose();
 			posAtlas.Dispose();
 			hackStates.Dispose();
 		}
 		
 		protected override void ContextRecreated() {
-			fpsText = new TextWidget(game, font)
+			status = new TextWidget(game, font)
 				.SetLocation(Anchor.LeftOrTop, Anchor.LeftOrTop, 2, 2);
-			fpsText.ReducePadding = true;
-			fpsText.Init();
-			string msg = text.Length > 0 ? text.ToString() : "FPS: no data yet";
-			fpsText.SetText(msg);
+			status.ReducePadding = true;
+			status.Init();
+			string msg = statusBuffer.Length > 0 ? statusBuffer.ToString() : "FPS: no data yet";
+			status.SetText(msg);
 			
-			posAtlas = new TextAtlas(game);
-			posAtlas.Pack("0123456789-, ()", posFont, "Position: ");
-			posAtlas.tex.Y = (short)(fpsText.Height + 2);
+			posAtlas = new TextAtlas(game, 16);
+			posAtlas.Pack("0123456789-, ()", font, "Position: ");
+			posAtlas.tex.Y = (short)(status.Height + 2);
 			
-			int yOffset = fpsText.Height + posAtlas.tex.Height + 2;
-			hackStates = new TextWidget(game, posFont)
+			int yOffset = status.Height + posAtlas.tex.Height + 2;
+			hackStates = new TextWidget(game, font)
 				.SetLocation(Anchor.LeftOrTop, Anchor.LeftOrTop, 2, yOffset);
 			hackStates.ReducePadding = true;
 			hackStates.Init();
@@ -108,7 +110,6 @@ namespace ClassicalSharp.Gui.Screens {
 		
 		public override void Dispose() {
 			font.Dispose();
-			posFont.Dispose();
 			ContextLost();
 			
 			game.Events.ChatFontChanged -= ChatFontChanged;
@@ -153,17 +154,17 @@ namespace ClassicalSharp.Gui.Screens {
 				speeding = hacks.Speeding; halfSpeeding = hacks.HalfSpeeding; noclip = hacks.Noclip; fly = hacks.Flying;
 				lastFov = game.Fov;
 				int index = 0;
-				text.Clear();
+				statusBuffer.Clear();
 				
-				if (game.Fov != game.DefaultFov) text.Append(ref index, "Zoom fov ")
+				if (game.Fov != game.DefaultFov) statusBuffer.Append(ref index, "Zoom fov ")
 					.AppendNum(ref index, lastFov).Append(ref index, "  ");
-				if (fly) text.Append(ref index, "Fly ON   ");
+				if (fly) statusBuffer.Append(ref index, "Fly ON   ");
 				
 				bool speed = (speeding || halfSpeeding) &&
 					(hacks.CanSpeed || hacks.MaxSpeedMultiplier > 1);
-				if (speed) text.Append(ref index, "Speed ON   ");
-				if (noclip) text.Append(ref index, "Noclip ON   ");
-				hackStates.SetText(text.ToString());
+				if (speed) statusBuffer.Append(ref index, "Speed ON   ");
+				if (noclip) statusBuffer.Append(ref index, "Noclip ON   ");
+				hackStates.SetText(statusBuffer.ToString());
 			}
 		}
 	}

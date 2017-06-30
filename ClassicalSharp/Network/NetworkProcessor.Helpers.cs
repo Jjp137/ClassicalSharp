@@ -12,15 +12,18 @@ namespace ClassicalSharp.Network {
 		
 		public override void SendChat(string text, bool partial) {
 			if (String.IsNullOrEmpty(text)) return;
-			classic.SendChat(text, partial);
+			classic.WriteChat(text, partial);
+			SendPacket();
 		}
 		
 		public override void SendPosition(Vector3 pos, float rotY, float headX) {
-			classic.SendPosition(pos, rotY, headX);
+			classic.WritePosition(pos, rotY, headX);
+			SendPacket();
 		}
 		
 		public override void SendPlayerClick(MouseButton button, bool buttonDown, byte targetId, PickedPos pos) {
-			cpe.SendPlayerClick(button, buttonDown, targetId, pos);
+			cpe.WritePlayerClick(button, buttonDown, targetId, pos);
+			SendPacket();
 		}
 
 		
@@ -40,10 +43,8 @@ namespace ClassicalSharp.Network {
 		internal void AddEntity(byte id, string displayName, string skinName, bool readPosition) {
 			if (id != EntityList.SelfID) {
 				Entity oldEntity = game.Entities[id];
-				if (oldEntity != null) {
-					game.EntityEvents.RaiseRemoved(id);
-					oldEntity.Despawn();
-				}
+				if (oldEntity != null) game.Entities.RemoveEntity(id);
+
 				game.Entities[id] = new NetPlayer(displayName, skinName, game, id);
 				game.EntityEvents.RaiseAdded(id);
 			} else {
@@ -53,7 +54,7 @@ namespace ClassicalSharp.Network {
 				game.LocalPlayer.UpdateName();
 			}
 			
-			if (!readPosition) return;			
+			if (!readPosition) return;
 			classic.ReadAbsoluteLocation(id, false);
 			if (id != EntityList.SelfID) return;
 			
@@ -65,13 +66,8 @@ namespace ClassicalSharp.Network {
 		
 		internal void RemoveEntity(byte id) {
 			Entity entity = game.Entities[id];
-			if (entity == null) return;
-			
-			if (id != EntityList.SelfID) {
-				game.EntityEvents.RaiseRemoved(id);
-				entity.Despawn();
-				game.Entities[id] = null;
-			}
+			if (entity == null) return;			
+			if (id != EntityList.SelfID) game.Entities.RemoveEntity(id);
 			
 			// See comment about some servers in HandleAddEntity
 			int mask = id >> 3, bit = 1 << (id & 0x7);
@@ -92,7 +88,7 @@ namespace ClassicalSharp.Network {
 		internal void AddTablistEntry(byte id, string playerName, string listName,
 		                              string groupName, byte groupRank) {
 			TabListEntry oldInfo = game.TabList.Entries[id];
-			TabListEntry info = new TabListEntry((byte)id, playerName, listName, groupName, groupRank);
+			TabListEntry info = new TabListEntry(playerName, listName, groupName, groupRank);
 			game.TabList.Entries[id] = info;
 			
 			if (oldInfo != null) {

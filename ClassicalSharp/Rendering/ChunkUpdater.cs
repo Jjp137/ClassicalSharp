@@ -22,7 +22,6 @@ namespace ClassicalSharp.Renderers {
 		internal ChunkMeshBuilder builder;
 		BlockInfo info;
 		
-		int width, height, length;
 		internal int[] distances;
 		internal Vector3I chunkPos = new Vector3I(int.MaxValue);
 		int elementsPerBitmap = 0;
@@ -64,15 +63,18 @@ namespace ClassicalSharp.Renderers {
 		
 		public void Refresh() {
 			chunkPos = new Vector3I(int.MaxValue);
-			renderer.totalUsed = new int[game.TerrainAtlas1D.TexIds.Length];
-			if (renderer.chunks == null || game.World.IsNotLoaded) return;
-			ClearChunkCache();
-			ResetChunkCache();
+			if (renderer.chunks != null && game.World.blocks != null) {
+				ClearChunkCache();
+				ResetChunkCache();
+			}
+			
+			renderer.normalPartsCount = new int[game.TerrainAtlas1D.TexIds.Length];
+			renderer.translucentPartsCount = new int[game.TerrainAtlas1D.TexIds.Length];
 		}
 		
 		void RefreshBorders(int clipLevel) {
 			chunkPos = new Vector3I(int.MaxValue);
-			if (renderer.chunks == null || game.World.IsNotLoaded) return;
+			if (renderer.chunks == null || game.World.blocks == null) return;
 			
 			int index = 0;
 			for (int z = 0; z < chunksZ; z++)
@@ -81,7 +83,7 @@ namespace ClassicalSharp.Renderers {
 			{
 				bool isBorder = x == 0 || z == 0 || x == (chunksX - 1) || z == (chunksZ - 1);
 				if (isBorder && (y * 16) < clipLevel)
-					DeleteChunk(renderer.unsortedChunks[index], true);
+					DeleteChunk(renderer.unsortedChunks[index]);
 				index++;
 			}
 		}
@@ -89,7 +91,7 @@ namespace ClassicalSharp.Renderers {
 		void EnvVariableChanged(object sender, EnvVarEventArgs e) {
 			if (e.Var == EnvVar.SunlightColour || e.Var == EnvVar.ShadowlightColour) {
 				Refresh();
-			} else if (e.Var == EnvVar.EdgeLevel) {
+			} else if (e.Var == EnvVar.EdgeLevel || e.Var == EnvVar.SidesOffset) {
 				int oldClip = builder.edgeLevel;
 				builder.sidesLevel = Math.Max(0, game.World.Env.SidesHeight);
 				builder.edgeLevel = Math.Max(0, game.World.Env.EdgeHeight);
@@ -99,19 +101,20 @@ namespace ClassicalSharp.Renderers {
 
 		void TerrainAtlasChanged(object sender, EventArgs e) {
 			if (renderer._1DUsed == -1) {
-				renderer.totalUsed = new int[game.TerrainAtlas1D.TexIds.Length];
+				renderer.normalPartsCount = new int[game.TerrainAtlas1D.TexIds.Length];
+				renderer.translucentPartsCount = new int[game.TerrainAtlas1D.TexIds.Length];
 			} else {
 				bool refreshRequired = elementsPerBitmap != game.TerrainAtlas1D.elementsPerBitmap;
 				if (refreshRequired) Refresh();
 			}
 			
-			renderer._1DUsed = game.TerrainAtlas1D.CalcMaxUsedRow(game.TerrainAtlas, info);
+			renderer._1DUsed = game.TerrainAtlas1D.UsedAtlasesCount(info);
 			elementsPerBitmap = game.TerrainAtlas1D.elementsPerBitmap;
 			ResetUsedFlags();
 		}
 		
 		void BlockDefinitionChanged(object sender, EventArgs e) {
-			renderer._1DUsed = game.TerrainAtlas1D.CalcMaxUsedRow(game.TerrainAtlas, info);
+			renderer._1DUsed = game.TerrainAtlas1D.UsedAtlasesCount(info);
 			ResetUsedFlags();
 			Refresh();
 		}
@@ -123,8 +126,10 @@ namespace ClassicalSharp.Renderers {
 		void OnNewMap(object sender, EventArgs e) {
 			game.ChunkUpdates = 0;
 			ClearChunkCache();
-			for (int i = 0; i < renderer.totalUsed.Length; i++)
-				renderer.totalUsed[i] = 0;
+			for (int i = 0; i < renderer.normalPartsCount.Length; i++) {
+				renderer.normalPartsCount[i] = 0;
+				renderer.translucentPartsCount[i] = 0;
+			}
 			
 			renderer.chunks = null;
 			renderer.unsortedChunks = null;
@@ -133,8 +138,6 @@ namespace ClassicalSharp.Renderers {
 		
 		void ViewDistanceChanged(object sender, EventArgs e) {
 			lastCamPos = Utils.MaxPos();
-			lastRotY = float.MaxValue;
-			lastHeadX = float.MaxValue;
 		}
 		
 		internal void ResetUsedFlags() {
@@ -157,12 +160,9 @@ namespace ClassicalSharp.Renderers {
 		
 		int chunksX, chunksY, chunksZ;
 		void OnNewMapLoaded(object sender, EventArgs e) {
-			width = NextMultipleOf16(game.World.Width);
-			height = NextMultipleOf16(game.World.Height);
-			length = NextMultipleOf16(game.World.Length);
-			chunksX = width >> 4;
-			chunksY = height >> 4;
-			chunksZ = length >> 4;
+			chunksX = Utils.CeilDiv(game.World.Width, 16); renderer.chunksX = chunksX;
+			chunksY = Utils.CeilDiv(game.World.Height, 16); renderer.chunksY = chunksY;
+			chunksZ = Utils.CeilDiv(game.World.Length, 16); renderer.chunksZ = chunksZ;
 			
 			int count = chunksX * chunksY * chunksZ;
 			if (renderer.chunks == null || renderer.chunks.Length != count) {
@@ -174,15 +174,13 @@ namespace ClassicalSharp.Renderers {
 			CreateChunkCache();
 			builder.OnNewMapLoaded();
 			lastCamPos = Utils.MaxPos();
-			lastRotY = float.MaxValue;
-			lastHeadX = float.MaxValue;
 		}
 		
 		void CreateChunkCache() {
 			int index = 0;
-			for (int z = 0; z < length; z += 16)
-				for (int y = 0; y < height; y += 16)
-					for (int x = 0; x < width; x += 16)
+			for (int z = 0; z < game.World.Length; z += 16)
+				for (int y = 0; y < game.World.Height; y += 16)
+					for (int x = 0; x < game.World.Width; x += 16)
 			{
 				renderer.chunks[index] = new ChunkInfo(x, y, z);
 				renderer.unsortedChunks[index] = renderer.chunks[index];
@@ -194,9 +192,9 @@ namespace ClassicalSharp.Renderers {
 		
 		void ResetChunkCache() {
 			int index = 0;
-			for (int z = 0; z < length; z += 16)
-				for (int y = 0; y < height; y += 16)
-					for (int x = 0; x < width; x += 16)
+			for (int z = 0; z < game.World.Length; z += 16)
+				for (int y = 0; y < game.World.Height; y += 16)
+					for (int x = 0; x < game.World.Width; x += 16)
 			{
 				renderer.unsortedChunks[index].Reset(x, y, z);
 				index++;
@@ -206,119 +204,42 @@ namespace ClassicalSharp.Renderers {
 		void ClearChunkCache() {
 			if (renderer.chunks == null) return;
 			for (int i = 0; i < renderer.chunks.Length; i++)
-				DeleteChunk(renderer.chunks[i], false);
-			renderer.totalUsed = new int[game.TerrainAtlas1D.TexIds.Length];
+				DeleteChunk(renderer.chunks[i]);
+			
+			renderer.normalPartsCount = new int[game.TerrainAtlas1D.TexIds.Length];
+			renderer.translucentPartsCount = new int[game.TerrainAtlas1D.TexIds.Length];
 		}
 		
-		void DeleteChunk(ChunkInfo info, bool decUsed) {
+		void DeleteChunk(ChunkInfo info) {
 			info.Empty = false; info.AllAir = false;
 			#if OCCLUSION
 			info.OcclusionFlags = 0;
 			info.OccludedFlags = 0;
 			#endif
 			
-			if (info.NormalParts != null)
-				DeleteData(ref info.NormalParts, decUsed);
-			if (info.TranslucentParts != null)
-				DeleteData(ref info.TranslucentParts, decUsed);
-		}
-		
-		void DeleteData(ref ChunkPartInfo[] parts, bool decUsed) {
-			if (decUsed) DecrementUsed(parts);
+			if (info.NormalParts != null) {
+				ChunkPartInfo[] parts = info.NormalParts;
+				for (int i = 0; i < parts.Length; i++) {
+					game.Graphics.DeleteVb(ref parts[i].VbId);
+					if (parts[i].IndicesCount == 0) continue;
+					renderer.normalPartsCount[i]--;
+				}
+				info.NormalParts = null;
+			}
 			
-			for (int i = 0; i < parts.Length; i++)
-				game.Graphics.DeleteVb(ref parts[i].VbId);
-			parts = null;
+			if (info.TranslucentParts != null) {
+				ChunkPartInfo[] parts = info.TranslucentParts;
+				for (int i = 0; i < parts.Length; i++) {
+					game.Graphics.DeleteVb(ref parts[i].VbId);
+					if (parts[i].IndicesCount == 0) continue;
+					renderer.translucentPartsCount[i]--;
+				}
+				info.TranslucentParts = null;
+			}
 		}
-		
-		static int NextMultipleOf16(int value) { return (value + 0x0F) & ~0x0F; }
 		
 		void ContextLost() { ClearChunkCache(); }
 		void ContextRecreated() { Refresh(); }
-		
-		
-		public void RedrawBlock(int x, int y, int z, BlockID block, int oldHeight, int newHeight) {
-			int cx = x >> 4, cy = y >> 4, cz = z >> 4;
-			
-			// Does this chunk now contain air?
-			ChunkInfo curInfo = renderer.unsortedChunks[cx + chunksX * (cy + cz * chunksY)];
-			curInfo.AllAir &= game.BlockInfo.Draw[block] == DrawType.Gas;
-			
-			// NOTE: It's a lot faster to only update the chunks that are affected by the change in shadows,
-			// rather than the entire column.
-			int newCy = newHeight < 0 ? 0 : newHeight >> 4;
-			int oldCy = oldHeight < 0 ? 0 : oldHeight >> 4;
-			int minCy = Math.Min(oldCy, newCy), maxCy = Math.Max(oldCy, newCy);
-			ResetColumn(cx, cy, cz, minCy, maxCy);
-			World world = game.World;
-			
-			int bX = x & 0x0F, bY = y & 0x0F, bZ = z & 0x0F;
-			if (bX == 0 && cx > 0)
-				ResetNeighbour(x - 1, y, z, block, cx - 1, cy, cz, minCy, maxCy);
-			if (bY == 0 && cy > 0 && Needs(block, world.GetBlock(x, y - 1, z)))
-				ResetChunk(cx, cy - 1, cz);
-			if (bZ == 0 && cz > 0)
-				ResetNeighbour(x, y, z - 1, block, cx, cy, cz - 1, minCy, maxCy);
-			
-			if (bX == 15 && cx < chunksX - 1)
-				ResetNeighbour(x + 1, y, z, block, cx + 1, cy, cz, minCy, maxCy);
-			if (bY == 15 && cy < chunksY - 1 && Needs(block, world.GetBlock(x, y + 1, z)))
-				ResetChunk(cx, cy + 1, cz);
-			if (bZ == 15 && cz < chunksZ - 1)
-				ResetNeighbour(x, y, z + 1, block, cx, cy, cz + 1, minCy, maxCy);
-		}
-		
-		bool Needs(BlockID block, BlockID other) {
-			return info.Draw[block] != DrawType.Opaque || info.Draw[other] != DrawType.Gas;
-		}
-		
-		void ResetNeighbour(int x, int y, int z, BlockID block,
-		                    int cx, int cy, int cz, int minCy, int maxCy) {
-			World world = game.World;
-			if (minCy == maxCy) {
-				int index = x + world.Width * (z + y * world.Length);
-				ResetNeighourChunk(cx, cy, cz, block, y, index, y);
-			} else {
-				for (cy = maxCy; cy >= minCy; cy--) {
-					int maxY = Math.Min(world.Height - 1, (cy << 4) + 15);
-					int index = x + world.Width * (z + maxY * world.Length);
-					ResetNeighourChunk(cx, cy, cz, block, maxY, index, y);
-				}
-			}
-		}
-		
-		void ResetNeighourChunk(int cx, int cy, int cz, BlockID block,
-		                        int y, int index, int nY) {
-			World world = game.World;
-			int minY = cy << 4;
-			
-			// Update if any blocks in the chunk are affected by light change
-			for (; y >= minY; y--) {
-				BlockID other = world.blocks[index];
-				bool affected = y == nY ? Needs(block, other) : info.Draw[other] != DrawType.Gas;
-				if (affected) { ResetChunk(cx, cy, cz); return; }
-				index -= world.Width * world.Length;
-			}
-		}
-		
-		void ResetColumn(int cx, int cy, int cz, int minCy, int maxCy) {
-			if (minCy == maxCy) {
-				ResetChunk(cx, cy, cz);
-			} else {
-				for (cy = maxCy; cy >= minCy; cy--)
-					ResetChunk(cx, cy, cz);
-			}
-		}
-		
-		void ResetChunk(int cx, int cy, int cz) {
-			if (cx < 0 || cy < 0 || cz < 0 ||
-			    cx >= chunksX || cy >= chunksY || cz >= chunksZ) return;
-			
-			ChunkInfo info = renderer.unsortedChunks[cx + chunksX * (cy + cz * chunksY)];
-			if (info.AllAir) return; // do not recreate chunks completely air
-			info.Empty = false;
-			info.PendingDelete = true;
-		}
 		
 
 		int chunksTarget = 12;
@@ -330,8 +251,7 @@ namespace ClassicalSharp.Renderers {
 			
 			LocalPlayer p = game.LocalPlayer;
 			Vector3 cameraPos = game.CurrentCameraPos;
-			bool samePos = cameraPos == lastCamPos && p.HeadY == lastRotY
-				&& p.HeadX == lastHeadX;
+			bool samePos = cameraPos == lastCamPos && p.HeadY == lastRotY && p.HeadX == lastHeadX;
 			renderer.renderCount = samePos ? UpdateChunksStill(ref chunkUpdates) :
 				UpdateChunksAndVisibility(ref chunkUpdates);
 			
@@ -357,12 +277,12 @@ namespace ClassicalSharp.Renderers {
 				
 				// Unload chunks beyond visible range
 				if (!noData && distSqr >= userDistSqr + 32 * 16) {
-					DeleteChunk(info, true); continue;
+					DeleteChunk(info); continue;
 				}
 				noData |= info.PendingDelete;
 				
 				if (noData && distSqr <= viewDistSqr && chunkUpdates < chunksTarget) {
-					DeleteChunk(info, true);
+					DeleteChunk(info);
 					BuildChunk(info, ref chunkUpdates);
 				}
 				info.Visible = distSqr <= viewDistSqr &&
@@ -385,12 +305,12 @@ namespace ClassicalSharp.Renderers {
 				bool noData = info.NormalParts == null && info.TranslucentParts == null;
 				
 				if (!noData && distSqr >= userDistSqr + 32 * 16) {
-					DeleteChunk(info, true); continue;
+					DeleteChunk(info); continue;
 				}
 				noData |= info.PendingDelete;
 				
 				if (noData && distSqr <= userDistSqr && chunkUpdates < chunksTarget) {
-					DeleteChunk(info, true);
+					DeleteChunk(info);
 					BuildChunk(info, ref chunkUpdates);
 					
 					// only need to update the visibility of chunks in range.
@@ -413,32 +333,28 @@ namespace ClassicalSharp.Renderers {
 		
 		void BuildChunk(ChunkInfo info, ref int chunkUpdates) {
 			game.ChunkUpdates++;
-			builder.GetDrawInfo(info.CentreX - 8, info.CentreY - 8, info.CentreZ - 8,
-			                    ref info.NormalParts, ref info.TranslucentParts, ref info.AllAir);
-			
+			chunkUpdates++;
 			info.PendingDelete = false;
+			builder.MakeChunk(info);
+			
 			if (info.NormalParts == null && info.TranslucentParts == null) {
 				info.Empty = true;
-			} else {
-				if (info.NormalParts != null)
-					IncrementUsed(info.NormalParts);
-				if (info.TranslucentParts != null)
-					IncrementUsed(info.TranslucentParts);
+				return;
 			}
-			chunkUpdates++;
-		}
-		
-		void IncrementUsed(ChunkPartInfo[] parts) {
-			for (int i = 0; i < parts.Length; i++) {
-				if (parts[i].IndicesCount == 0) continue;
-				renderer.totalUsed[i]++;
+			
+			if (info.NormalParts != null) {
+				ChunkPartInfo[] parts = info.NormalParts;
+				for (int i = 0; i < parts.Length; i++) {
+					if (parts[i].IndicesCount == 0) continue;
+					renderer.normalPartsCount[i]++;
+				}
 			}
-		}
-		
-		void DecrementUsed(ChunkPartInfo[] parts) {
-			for (int i = 0; i < parts.Length; i++) {
-				if (parts[i].IndicesCount == 0) continue;
-				renderer.totalUsed[i]--;
+			if (info.TranslucentParts != null) {
+				ChunkPartInfo[] parts = info.TranslucentParts;
+				for (int i = 0; i < parts.Length; i++) {
+					if (parts[i].IndicesCount == 0) continue;
+					renderer.translucentPartsCount[i]++;
+				}
 			}
 		}
 	}

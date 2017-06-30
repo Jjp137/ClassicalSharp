@@ -546,20 +546,6 @@ namespace ClassicalSharp.GraphicsAPI
 			return id;
 		}
 
-		public override int CreateVb( VertexP3fC4b[] vertices, VertexFormat format, int count ) {
-			fixed ( VertexP3fC4b* p = vertices ) {
-				IntPtr ptr = (IntPtr)p;
-				return CreateVb( ptr, format, count );
-			}
-		}
-		
-		public override int CreateVb( VertexP3fT2fC4b[] vertices, VertexFormat format, int count ) {
-			fixed ( VertexP3fT2fC4b* p = vertices ) {
-				IntPtr ptr = (IntPtr)p;
-				return CreateVb( ptr, format, count );
-			}
-		}
-
 		public override int CreateVb( IntPtr vertices, VertexFormat format, int count ) {
 			int id = GenAndBind( BufferTarget.ArrayBuffer );
 			int sizeInBytes = count * strideSizes[(int)format];

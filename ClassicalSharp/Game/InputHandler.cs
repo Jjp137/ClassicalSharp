@@ -251,10 +251,18 @@ namespace ClassicalSharp {
 					game.window.WindowState = state == WindowState.Fullscreen ?
 						WindowState.Normal : WindowState.Fullscreen;
 				}
+			} else if (key == Keys[KeyBind.SmoothCamera]) {
+				Toggle(key, ref game.SmoothCamera, 
+				       "  &eSmooth camera is &aenabled", 
+				       "  &eSmooth camera is &cdisabled");
 			} else if (key == Keys[KeyBind.AxisLines]) {
-				ToggleAxisLines();
+				Toggle(key, ref game.ShowAxisLines,
+				       "  &eAxis lines (&4X&e, &2Y&e, &1Z&e) now show", 
+				       "  &eAxis lines no longer show");
 			} else if (key == Keys[KeyBind.Autorotate]) {
-				ToggleAutoRotate();
+				Toggle(key, ref game.AutoRotate,
+				       "  &eAuto rotate is &aenabled", 
+				       "  &eAuto rotate is &cdisabled");
 			} else if (key == Keys[KeyBind.ThirdPerson]) {
 				game.CycleCamera();
 			} else if (key == Keys[KeyBind.ToggleFog]) {
@@ -263,7 +271,7 @@ namespace ClassicalSharp {
 				} else {
 					CycleDistanceForwards();
 				}
-			} else if (key == Keys[KeyBind.PauseOrExit] && !game.World.IsNotLoaded) {
+			} else if (key == Keys[KeyBind.PauseOrExit] && game.World.blocks != null) {
 				game.Gui.SetNewScreen(new PauseScreen(game));
 			} else if (!game.Mode.HandlesKeyDown(key)) {
 				return false;
@@ -271,23 +279,12 @@ namespace ClassicalSharp {
 			return true;
 		}
 		
-		void ToggleAxisLines() {
-			game.ShowAxisLines = !game.ShowAxisLines;
-			Key key = Keys[KeyBind.AxisLines];
-			if (game.ShowAxisLines) {
-				game.Chat.Add("  &eAxis lines (&4X&e, &2Y&e, &1Z&e) now show. Press &a" + key + " &eto disable.");
+		void Toggle(Key key, ref bool target, string enableMsg, string disableMsg) {
+			target = !target;
+			if (target) {
+				game.Chat.Add(enableMsg + ". &ePress &a" + key + " &eto disable.");
 			} else {
-				game.Chat.Add("  &eAxis lines no longer show. Press &a" + key + " &eto re-enable.");
-			}
-		}
-		
-		void ToggleAutoRotate() {
-			game.autoRotate = !game.autoRotate;
-			Key key = Keys[KeyBind.Autorotate];
-			if (game.autoRotate) {
-				game.Chat.Add("  &eAuto rotate is &aenabled. &ePress &a" + key + " &eto disable.");
-			} else {
-				game.Chat.Add("  &eAuto rotate is &cdisabled. &ePress &a" + key + " &eto re-enable.");
+				game.Chat.Add(disableMsg + ". &ePress &a" + key + " &eto re-enable.");
 			}
 		}
 		

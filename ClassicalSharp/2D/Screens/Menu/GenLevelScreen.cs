@@ -42,7 +42,7 @@ namespace ClassicalSharp.Gui.Screens {
 			base.Init();
 			game.Keyboard.KeyRepeat = true;
 			titleFont = new Font(game.FontName, 16, FontStyle.Bold);
-			regularFont = new Font(game.FontName, 16, FontStyle.Regular);
+			regularFont = new Font(game.FontName, 16);
 			ContextRecreated();
 		}
 		
@@ -118,7 +118,7 @@ namespace ClassicalSharp.Gui.Screens {
 			int length = GetInt(2), seed = GetSeedInt(3);
 			
 			long volume = (long)width * height * length;
-			if (volume > 800 * 800 * 800) {
+			if (volume > int.MaxValue) {
 				game.Chat.Add("&cThe generated map's volume is too big.");
 			} else if (width == 0 || height == 0 || length == 0) {
 				game.Chat.Add("&cOne of the map dimensions is invalid.");

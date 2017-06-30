@@ -23,14 +23,13 @@ namespace ClassicalSharp.Entities {
 		
 		/// <summary> Mode of how names of hovered entities are rendered (with or without depth testing),
 		/// and how other entity names are rendered. </summary>
-		public NameMode NamesMode = NameMode.AllAndHovered;
+		public NameMode NamesMode = NameMode.HoveredOnly;
 		
 		public EntityList(Game game) {
 			this.game = game;
 			game.Graphics.ContextLost += ContextLost;
 			game.Graphics.ContextRecreated += ContextRecreated;
 			game.Events.ChatFontChanged += ChatFontChanged;
-			game.Events.TextureChanged += TextureChanged;
 			
 			NamesMode = Options.GetEnum(OptionsKey.NamesMode, NameMode.HoveredOnly);
 			if (game.ClassicMode) NamesMode = NameMode.HoveredOnly;
@@ -116,14 +115,6 @@ namespace ClassicalSharp.Entities {
 			}
 		}
 		
-		void TextureChanged(object sender, TextureEventArgs e) {
-			if (e.Name != "char.png") return;
-			for (int i = 0; i < Entities.Length; i++) {
-				if (Entities[i] == null || Entities[i].TextureId != -1) continue;
-				Entities[i].SkinType = game.DefaultPlayerSkinType;				
-			}
-		}
-		
 		void ChatFontChanged(object sender, EventArgs e) {
 			for (int i = 0; i < Entities.Length; i++) {
 				if (Entities[i] == null) continue;
@@ -132,17 +123,22 @@ namespace ClassicalSharp.Entities {
 			}
 		}
 		
+		public void RemoveEntity(byte id) {
+			game.EntityEvents.RaiseRemoved(id);
+			Entities[id].Despawn();
+			Entities[id] = null;
+		}
+		
 		/// <summary> Disposes of all player entities contained in this list. </summary>
 		public void Dispose() {
 			for (int i = 0; i < Entities.Length; i++) {
 				if (Entities[i] == null) continue;
-				Entities[i].Despawn();
+				RemoveEntity((byte)i);
 			}
 			
 			game.Graphics.ContextLost -= ContextLost;
 			game.Graphics.ContextRecreated -= ContextRecreated;
 			game.Events.ChatFontChanged -= ChatFontChanged;
-			game.Events.TextureChanged -= TextureChanged;
 			
 			if (ShadowComponent.shadowTex > 0)
 				game.Graphics.DeleteTexture(ref ShadowComponent.shadowTex);

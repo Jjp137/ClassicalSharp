@@ -35,7 +35,7 @@
     <DebugType>Full</DebugType>
     <Optimize>False</Optimize>
     <CheckForOverflowUnderflow>False</CheckForOverflowUnderflow>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DefineConstants>DEBUG;TRACE;LAUNCHER</DefineConstants>
     <BaseIntermediateOutputPath>obj\</BaseIntermediateOutputPath>
     <StartAction>Project</StartAction>
   </PropertyGroup>
@@ -45,7 +45,7 @@
     <DebugType>None</DebugType>
     <Optimize>True</Optimize>
     <CheckForOverflowUnderflow>False</CheckForOverflowUnderflow>
-    <DefineConstants>TRACE</DefineConstants>
+    <DefineConstants>TRACE;LAUNCHER</DefineConstants>
     <BaseIntermediateOutputPath>obj\</BaseIntermediateOutputPath>
     <StartAction>Project</StartAction>
   </PropertyGroup>
@@ -59,6 +59,51 @@
     <Reference Include="System.Windows.Forms" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\ClassicalSharp\2D\Drawing\DrawTextArgs.cs">
+      <Link>Shared\DrawTextArgs.cs</Link>
+    </Compile>
+    <Compile Include="..\ClassicalSharp\2D\Drawing\GdiPlusDrawer2D.cs">
+      <Link>Shared\GdiPlusDrawer2D.cs</Link>
+    </Compile>
+    <Compile Include="..\ClassicalSharp\2D\Drawing\GdiPlusDrawer2D.Text.cs">
+      <Link>Shared\GdiPlusDrawer2D.Text.cs</Link>
+    </Compile>
+    <Compile Include="..\ClassicalSharp\2D\Drawing\IDrawer2D.cs">
+      <Link>Shared\IDrawer2D.cs</Link>
+    </Compile>
+    <Compile Include="..\ClassicalSharp\2D\Drawing\IDrawer2D.TextMC.cs">
+      <Link>Shared\IDrawer2D.TextMC.cs</Link>
+    </Compile>
+    <Compile Include="..\ClassicalSharp\2D\Utils\FastBitmap.cs">
+      <Link>Shared\FastBitmap.cs</Link>
+    </Compile>
+    <Compile Include="..\ClassicalSharp\2D\Utils\FastColour.cs">
+      <Link>Shared\FastColour.cs</Link>
+    </Compile>
+    <Compile Include="..\ClassicalSharp\Network\Utils\AsyncDownloader.cs">
+      <Link>Shared\AsyncDownloader.cs</Link>
+    </Compile>
+    <Compile Include="..\ClassicalSharp\Platform\Platform.cs">
+      <Link>Shared\Platform.cs</Link>
+    </Compile>
+    <Compile Include="..\ClassicalSharp\Program.cs">
+      <Link>Shared\Program.cs</Link>
+    </Compile>
+    <Compile Include="..\ClassicalSharp\TexturePack\ZipReader.cs">
+      <Link>Shared\ZipReader.cs</Link>
+    </Compile>
+    <Compile Include="..\ClassicalSharp\Utils\ErrorHandler.cs">
+      <Link>Shared\ErrorHandler.cs</Link>
+    </Compile>
+    <Compile Include="..\ClassicalSharp\Utils\Options.cs">
+      <Link>Shared\Options.cs</Link>
+    </Compile>
+    <Compile Include="..\ClassicalSharp\Utils\Utils.cs">
+      <Link>Shared\Utils.cs</Link>
+    </Compile>
+    <Compile Include="..\ClassicalSharp\Utils\Utils.Math.cs">
+      <Link>Shared\Utils.Math.cs</Link>
+    </Compile>
     <Compile Include="Drawing\BitmapDrawer.cs" />
     <Compile Include="Drawing\Drawer2DExt.cs" />
     <Compile Include="Drawing\Gradient.cs" />
@@ -102,7 +147,6 @@
     <Compile Include="LauncherWindow.Background.cs" />
     <Compile Include="LauncherWindow.cs" />
     <Compile Include="Patcher\Animations.cs" />
-    <Compile Include="Patcher\BinUnpacker.cs" />
     <Compile Include="Patcher\ResourceChecker.cs" />
     <Compile Include="Patcher\ResourceFetcher.cs" />
     <Compile Include="Patcher\ResourcePatcher.cs" />
@@ -114,7 +158,6 @@
     <Compile Include="Updater\Scripts.cs" />
     <Compile Include="Updater\Applier.cs" />
     <Compile Include="Utils\Client.cs" />
-    <Compile Include="Utils\ErrorHandler.cs" />
     <Compile Include="Utils\JSON.cs" />
     <Compile Include="Utils\LauncherSkin.cs" />
     <Compile Include="Utils\Secure.cs" />
@@ -124,10 +167,6 @@
     <Compile Include="WebService\UpdateCheckTask.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\ClassicalSharp\ClassicalSharp.csproj">
-      <Project>{BEB1C785-5CAD-48FF-A886-876BF0A318D4}</Project>
-      <Name>ClassicalSharp</Name>
-    </ProjectReference>
     <ProjectReference Include="..\OpenTK\OpenTK.csproj">
       <Project>{35FEE071-2DE6-48A1-9343-B5C1F202A12B}</Project>
       <Name>OpenTK</Name>
@@ -136,19 +175,14 @@
       <Project>{85480198-8711-4355-830E-72FD794AD3F6}</Project>
       <Name>SDL2-CS</Name>
     </ProjectReference>
+    <ProjectReference Include="..\ClassicalSharp\ClassicalSharp.csproj">
+      <Project>{BEB1C785-5CAD-48FF-A886-876BF0A318D4}</Project>
+      <Name>ClassicalSharp</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Gui" />
-    <Folder Include="Drawing\Platform" />
-    <Folder Include="Gui\Views" />
-    <Folder Include="Gui\TableWidget" />
-    <Folder Include="Gui\Screens" />
-    <Folder Include="Gui\Widgets" />
-    <Folder Include="Drawing" />
-    <Folder Include="Updater" />
-    <Folder Include="Utils" />
-    <Folder Include="Patcher" />
-    <Folder Include="WebService" />
+    <Folder Include="Drawing\" />
+    <Folder Include="Gui\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

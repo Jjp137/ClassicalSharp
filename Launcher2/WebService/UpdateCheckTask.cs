@@ -40,14 +40,14 @@ namespace Launcher.Web {
 			} catch (WebException ex) {
 				Finish(false, ex, null); return;
 			} catch (Exception ex) {
-				ErrorHandler2.LogError("UpdateCheckTask.CheckUpdates", ex);
+				ErrorHandler.LogError("UpdateCheckTask.CheckUpdates", ex);
 				Finish(false, null, "&cUpdate check failed"); return;
 			}
 			Finish(true, null, null);
 		}
 		
 		void CheckUpdates() {
-			string response = GetHtmlAll(BuildsUri, UpdatesUri);
+			string response = Get(BuildsUri, UpdatesUri);
 			int index = 0; bool success = true;
 			JsonObject data = (JsonObject)Json.ParseValue(response, ref index, ref success);
 			

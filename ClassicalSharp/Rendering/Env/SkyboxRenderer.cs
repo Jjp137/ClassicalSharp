@@ -21,7 +21,6 @@ namespace ClassicalSharp.Renderers {
 			game.Events.TextureChanged += TextureChanged;
 			game.Events.TexturePackChanged += TexturePackChanged;
 			game.WorldEvents.EnvVariableChanged += EnvVariableChanged;
-			game.WorldEvents.OnNewMap += OnNewMap;
 			game.Graphics.ContextLost += ContextLost;
 			game.Graphics.ContextRecreated += ContextRecreated;
 			ContextRecreated();
@@ -29,7 +28,7 @@ namespace ClassicalSharp.Renderers {
 		
 		public void Reset(Game game) { game.Graphics.DeleteTexture(ref tex); }
 		public void Ready(Game game) { }
-		public void OnNewMap(Game game) { }
+		public void OnNewMap(Game game) { MakeVb(); }
 		public void OnNewMapLoaded(Game game) { }
 		
 		public void Dispose() {
@@ -39,12 +38,9 @@ namespace ClassicalSharp.Renderers {
 			game.Events.TextureChanged -= TextureChanged;
 			game.Events.TexturePackChanged -= TexturePackChanged;
 			game.WorldEvents.EnvVariableChanged -= EnvVariableChanged;
-			game.WorldEvents.OnNewMap -= OnNewMap;
 			game.Graphics.ContextLost -= ContextLost;
 			game.Graphics.ContextRecreated -= ContextRecreated;			
 		}
-
-		void OnNewMap(object sender, EventArgs e) { MakeVb(); }
 		
 		void EnvVariableChanged(object sender, EnvVarEventArgs e) {
 			if (e.Var != EnvVar.CloudsColour) return;
@@ -67,12 +63,13 @@ namespace ClassicalSharp.Renderers {
 			game.Graphics.BindTexture(tex);
 			game.Graphics.SetBatchFormat(VertexFormat.P3fT2fC4b);
 			
-			Vector3 pos = game.CurrentCameraPos;
-			Matrix4 m = Matrix4.Identity;
+			Matrix4 m = Matrix4.Identity, rotY, rotX;
 			Vector2 rotation = game.Camera.GetCameraOrientation();
-			m *= Matrix4.RotateY(rotation.X); // yaw
-			m *= Matrix4.RotateX(rotation.Y); // pitch
-			m = m * game.Camera.tiltM;
+			Matrix4.RotateY(out rotY, rotation.X); // yaw
+			m *= rotY;
+			Matrix4.RotateX(out rotX, rotation.Y); // pitch
+			m *= rotX;
+			m *= game.Camera.tiltM;
 			game.Graphics.LoadMatrix(ref m);
 			
 			game.Graphics.BindVb(vb);
@@ -89,7 +86,7 @@ namespace ClassicalSharp.Renderers {
 		
 		unsafe void MakeVb() {
 			if (game.Graphics.LostContext) return;
-			game.Graphics.DeleteVb(ref vb);			
+			game.Graphics.DeleteVb(ref vb);
 			VertexP3fT2fC4b* vertices = stackalloc VertexP3fT2fC4b[count];
 			IntPtr start = (IntPtr)vertices;
 			const float pos = 0.5f;

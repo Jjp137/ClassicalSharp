@@ -105,10 +105,25 @@ namespace ClassicalSharp {
 		}
 		
 		static readonly float sensiFactor = 0.0002f / 3 * Utils.Rad2Deg;
-		private void UpdateMouseRotation() {
+		const float slippery = 0.97f;
+		const float adjust = 0.025f;
+		
+		static float speedX = 0, speedY = 0;
+		void UpdateMouseRotation() {
 			float sensitivity = sensiFactor * game.MouseSensitivity;
-			float rotY =  player.interp.next.HeadY + delta.X * sensitivity;
-			float yAdj =  game.InvertMouse ? -delta.Y * sensitivity : delta.Y * sensitivity;
+
+			if (game.SmoothCamera) {
+				speedX += delta.X * adjust;
+				speedX *= slippery;
+				speedY += delta.Y * adjust;
+				speedY *= slippery;
+			} else {
+				speedX = delta.X;
+				speedY = delta.Y;
+			}
+			
+			float rotY =  player.interp.next.HeadY + speedX * sensitivity;
+			float yAdj =  game.InvertMouse ? -speedY * sensitivity : speedY * sensitivity;
 			float headX = player.interp.next.HeadX + yAdj;
 			LocationUpdate update = LocationUpdate.MakeOri(rotY, headX);
 			
@@ -126,21 +141,22 @@ namespace ClassicalSharp {
 		
 		protected void CalcViewBobbing(float t, float velTiltScale) {
 			if (!game.ViewBobbing) { tiltM = Matrix4.Identity; return; }
-			
 			LocalPlayer p = game.LocalPlayer;
-			tiltM = Matrix4.RotateZ(-p.anim.tiltX * p.anim.bobStrength);
-			tiltM = tiltM * Matrix4.RotateX(Math.Abs(p.anim.tiltY) * 3 * p.anim.bobStrength);
+			Matrix4 tiltY, velX;
+			Matrix4.RotateZ(out tiltM, -p.tilt.tiltX * p.anim.bobStrength);
+			Matrix4.RotateX(out tiltY, Math.Abs(p.tilt.tiltY) * 3 * p.anim.bobStrength);
+			tiltM *= tiltY;
 			
 			bobbingHor = (p.anim.bobbingHor * 0.3f) * p.anim.bobStrength;
 			bobbingVer = (p.anim.bobbingVer * 0.6f) * p.anim.bobStrength;
 			
 			float vel = Utils.Lerp(p.OldVelocity.Y + 0.08f, p.Velocity.Y + 0.08f, t);
-			tiltM = tiltM * Matrix4.RotateX(-vel * 0.05f * p.anim.velTiltStrength / velTiltScale);
+			Matrix4.RotateX(out velX, -vel * 0.05f * p.tilt.velTiltStrength / velTiltScale);
+			tiltM *= velX;
 		}
 		
 		protected Vector3 GetDirVector() {
-			return Utils.GetDirVector(player.HeadYRadians,
-			                          AdjustHeadX(player.HeadX));
+			return Utils.GetDirVector(player.HeadYRadians, AdjustHeadX(player.HeadX));
 		}
 	}
 	

@@ -38,7 +38,7 @@ namespace ClassicalSharp.Gui.Screens {
 		public override void Init() {
 			base.Init();
 			titleFont = new Font(game.FontName, 16, FontStyle.Bold);
-			regularFont = new Font(game.FontName, 16, FontStyle.Regular);
+			regularFont = new Font(game.FontName, 16);
 			game.Keyboard.KeyRepeat = true;
 		}
 		
@@ -109,7 +109,7 @@ namespace ClassicalSharp.Gui.Screens {
 		protected virtual void InputClosed() { }
 		
 		protected ButtonWidget MakeOpt(int dir, int y, string text, ClickHandler onClick,
-		                               Func<Game, string> getter, Action<Game, string> setter) {
+		                               ButtonValueGetter getter, ButtonValueSetter setter) {
 			ButtonWidget widget = ButtonWidget.Create(game, 300, text + ": " + getter(game), titleFont, onClick)
 				.SetLocation(Anchor.Centre, Anchor.Centre, 160 * dir, y);
 			widget.Metadata = text;
@@ -122,12 +122,12 @@ namespace ClassicalSharp.Gui.Screens {
 		}
 		
 		protected ButtonWidget MakeBool(int dir, int y, string text, string optKey,
-		                                ClickHandler onClick, Func<Game, bool> getter, Action<Game, bool> setter) {
+		                                ClickHandler onClick, ButtonBoolGetter getter, ButtonBoolSetter setter) {
 			return MakeBool(dir, y, text, optKey, false, onClick, getter, setter);
 		}
 
 		protected ButtonWidget MakeBool(int dir, int y, string text, string optKey, bool invert,
-		                                ClickHandler onClick, Func<Game, bool> getter, Action<Game, bool> setter) {
+		                                ClickHandler onClick, ButtonBoolGetter getter, ButtonBoolSetter setter) {
 			string optName = text;
 			text = text + ": " + (getter(game) ? "ON" : "OFF");
 			ButtonWidget widget = ButtonWidget.Create(game, 300, text, titleFont, onClick)
@@ -253,6 +253,16 @@ namespace ClassicalSharp.Gui.Screens {
 			if (widgets[okayIndex] != null)
 				widgets[okayIndex].Dispose();
 			widgets[okayIndex] = null;
+		}
+		
+		protected void SetFPSLimitMethod(Game g, string v) {
+			object rawFps = Enum.Parse(typeof(FpsLimitMethod), v);
+			g.SetFpsLimitMethod((FpsLimitMethod)rawFps);
+			Options.Set(OptionsKey.FpsLimit, v);
+			
+			// NOTE: OpenGL backend doesn't recreate context, so cheat and act like recreated anyways
+			ContextLost();
+			ContextRecreated();
 		}
 	}
 }

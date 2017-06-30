@@ -276,20 +276,6 @@ namespace ClassicalSharp.GraphicsAPI {
 			device.SetStreamSource( 0, buffer, 0, batchStride );
 		}
 
-		public override int CreateVb( VertexP3fC4b[] vertices, VertexFormat format, int count ) {
-			fixed ( VertexP3fC4b* p = vertices ) {
-				IntPtr ptr = (IntPtr)p;
-				return CreateVb( ptr, format, count );
-			}
-		}
-
-		public override int CreateVb( VertexP3fT2fC4b[] vertices, VertexFormat format, int count ) {
-			fixed ( VertexP3fT2fC4b* p = vertices ) {
-				IntPtr ptr = (IntPtr)p;
-				return CreateVb( ptr, format, count );
-			}
-		}
-		
 		D3D.VertexFormat[] formatMapping;
 		
 		public override int CreateVb( IntPtr vertices, VertexFormat format, int count ) {
@@ -414,7 +400,7 @@ namespace ClassicalSharp.GraphicsAPI {
 			}
 
 			public void MultiplyTop( ref Matrix4 matrix ) {
-				Matrix4.Mult(ref matrix, ref stack[stackIndex], out stack[stackIndex]); // top = matrix * top
+				Matrix4.Mult(out matrix, ref stack[stackIndex], ref stack[stackIndex]); // top = matrix * top
 				device.SetTransform(matrixType, ref stack[stackIndex]);
 			}
 

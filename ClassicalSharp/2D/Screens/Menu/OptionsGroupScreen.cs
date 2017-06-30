@@ -27,7 +27,7 @@ namespace ClassicalSharp.Gui.Screens {
 			base.Init();
 			game.Events.HackPermissionsChanged += CheckHacksAllowed;
 			titleFont = new Font(game.FontName, 16, FontStyle.Bold);
-			regularFont = new Font(game.FontName, 16, FontStyle.Regular);
+			regularFont = new Font(game.FontName, 16);
 			ContextRecreated();
 		}
 		
@@ -80,7 +80,7 @@ namespace ClassicalSharp.Gui.Screens {
 			descText = text;
 		}
 		
-		ButtonWidget Make(int dir, int y, string text, Action<Game, Widget> onClick) {
+		ButtonWidget Make(int dir, int y, string text, SimpleClickHandler onClick) {
 			return ButtonWidget.Create(game, 300, text, titleFont, LeftOnly(onClick))
 				.SetLocation(Anchor.Centre, Anchor.Centre, dir * 160, y);
 		}

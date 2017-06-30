@@ -12,11 +12,9 @@ namespace ClassicalSharp.Audio {
 		Soundboard digBoard, stepBoard;
 		const int maxSounds = 6;
 		
-		public void SetSound(bool enabled) {
-			if (enabled)
-				InitSound();
-			else
-				DisposeSound();
+		public void SetSounds(int volume) {
+			if (volume > 0) InitSound();
+			else DisposeSound();
 		}
 		
 		void InitSound() {
@@ -55,32 +53,36 @@ namespace ClassicalSharp.Audio {
 			chunk.BytesOffset = 0;
 			chunk.BytesUsed = snd.Data.Length;
 			chunk.Data = snd.Data;
+			
+			float volume = game.SoundsVolume / 100.0f;
 			if (board == digBoard) {
 				if (type == SoundType.Metal) chunk.SampleRate = (snd.SampleRate * 6) / 5;
 				else chunk.SampleRate = (snd.SampleRate * 4) / 5;
 			} else {
+				volume *= 0.50f;
+				
 				if (type == SoundType.Metal) chunk.SampleRate = (snd.SampleRate * 7) / 5;
 				else chunk.SampleRate = snd.SampleRate;
 			}
 			
 			if (snd.Channels == 1) {
-				PlayCurrentSound(monoOutputs);
+				PlayCurrentSound(monoOutputs, volume);
 			} else if (snd.Channels == 2) {
-				PlayCurrentSound(stereoOutputs);
+				PlayCurrentSound(stereoOutputs, volume);
 			}
 		}
 		
 		IAudioOutput firstSoundOut;
-		void PlayCurrentSound(IAudioOutput[] outputs) {
+		void PlayCurrentSound(IAudioOutput[] outputs, float volume) {
 			for (int i = 0; i < monoOutputs.Length; i++) {
 				IAudioOutput output = outputs[i];
 				if (output == null) output = MakeSoundOutput(outputs, i);
-				if (!output.DoneRawAsync()) continue;
+				if (!output.DoneRawAsync()) continue;				
 				
 				LastChunk l = output.Last;
 				if (l.Channels == 0 || (l.Channels == chunk.Channels && l.BitsPerSample == chunk.BitsPerSample 
 				                        && l.SampleRate == chunk.SampleRate)) {
-					PlaySound(output); return;
+					PlaySound(output, volume); return;
 				}
 			}
 			
@@ -90,7 +92,7 @@ namespace ClassicalSharp.Audio {
 				IAudioOutput output = outputs[i];
 				if (!output.DoneRawAsync()) continue;
 				
-				PlaySound(output); return;
+				PlaySound(output, volume); return;
 			}
 		}
 		
@@ -105,8 +107,9 @@ namespace ClassicalSharp.Audio {
 			return output;
 		}
 		
-		void PlaySound(IAudioOutput output) {
+		void PlaySound(IAudioOutput output, float volume) {
 			try {
+				output.SetVolume(volume);
 				output.PlayRawAsync(chunk);
 			} catch (InvalidOperationException ex) {
 				ErrorHandler.LogError("AudioPlayer.PlayCurrentSound()", ex);
@@ -115,8 +118,8 @@ namespace ClassicalSharp.Audio {
 				else
 					game.Chat.Add("&cAn error occured when trying to play sounds, disabling sounds.");
 				
-				SetSound(false);
-				game.UseSound = false;
+				SetSounds(0);
+				game.SoundsVolume = 0;
 			}
 		}
 		

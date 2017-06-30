@@ -21,9 +21,9 @@ namespace ClassicalSharp.Gui.Screens {
 			
 			widgets = new Widget[] {
 				// Column 1
-				MakeBool(-1, -150, "Music", OptionsKey.UseMusic,
-				         OnWidgetClick, g => g.UseMusic,
-				         (g, v) => { g.UseMusic = v; g.AudioPlayer.SetMusic(g.UseMusic); }),
+				MakeVolumeBool(-1, -150, "Music", OptionsKey.MusicVolume,
+				        g => g.MusicVolume > 0,
+				        (g, v) => { g.MusicVolume = v ? 100 : 0; g.AudioPlayer.SetMusic(g.MusicVolume); }),
 				
 				MakeBool(-1, -100, "Invert mouse", OptionsKey.InvertMouse,
 				         OnWidgetClick, g => g.InvertMouse, (g, v) => g.InvertMouse = v),
@@ -38,9 +38,9 @@ namespace ClassicalSharp.Gui.Screens {
 					         (g, v) => ((SinglePlayerServer)network).physics.Enabled = v),
 				
 				// Column 2
-				MakeBool(1, -150, "Sound", OptionsKey.UseSound,
-				         OnWidgetClick, g => g.UseSound,
-				         (g, v) => { g.UseSound = v; g.AudioPlayer.SetSound(g.UseSound); }),
+				MakeVolumeBool(1, -150, "Sound", OptionsKey.SoundsVolume,
+				        g => g.SoundsVolume > 0,
+				        (g, v) => { g.SoundsVolume = v ? 100 : 0; g.AudioPlayer.SetSounds(g.SoundsVolume); }),
 				
 				MakeBool(1, -100, "Show FPS", OptionsKey.ShowFPS,
 				         OnWidgetClick, g => g.ShowFPS, (g, v) => g.ShowFPS = v),
@@ -50,9 +50,7 @@ namespace ClassicalSharp.Gui.Screens {
 				
 				MakeOpt(1, 0, "FPS mode", OnWidgetClick,
 				        g => g.FpsLimit.ToString(),
-				        (g, v) => { object raw = Enum.Parse(typeof(FpsLimitMethod), v);
-				        	g.SetFpsLimitMethod((FpsLimitMethod)raw);
-				        	Options.Set(OptionsKey.FpsLimit, v); }),
+				        (g, v) => { }),
 				
 				!game.ClassicHacks ? null :
 					MakeBool(0, 60, "Hacks enabled", OptionsKey.HacksEnabled,
@@ -67,6 +65,28 @@ namespace ClassicalSharp.Gui.Screens {
 				MakeBack(400, "Done", 25, titleFont, (g, w) => g.Gui.SetNewScreen(new PauseScreen(g))),
 				null, null,
 			};
+			
+			// NOTE: we need to override the default setter here, because changing FPS limit method
+			// recreates the graphics context on some backends (such as Direct3D9)
+			ButtonWidget btn = (ButtonWidget)widgets[7];
+			btn.SetValue = SetFPSLimitMethod;
+		}
+		
+		ButtonWidget MakeVolumeBool(int dir, int y, string text, string optKey,
+		                            ButtonBoolGetter getter, ButtonBoolSetter setter) {
+			string optName = text;
+			text = text + ": " + (getter(game) ? "ON" : "OFF");
+			ButtonWidget widget = ButtonWidget.Create(game, 300, text, titleFont, OnWidgetClick)
+				.SetLocation(Anchor.Centre, Anchor.Centre, 160 * dir, y);
+			widget.Metadata = optName;
+			widget.GetValue = g => getter(g) ? "yes" : "no";
+			
+			widget.SetValue = (g, v) => {
+				setter(g, v == "yes");
+				Options.Set(optKey, v == "yes" ? 100 : 0);
+				widget.SetText((string)widget.Metadata + ": " + (v == "yes" ? "ON" : "OFF"));
+			};
+			return widget;
 		}
 		
 		void MakeValidators() {

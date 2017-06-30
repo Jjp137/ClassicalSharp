@@ -24,13 +24,13 @@ namespace ClassicalSharp.Entities {
 			get { return (float)PhysicsComponent.GetMaxHeight(physics.jumpVel); }
 		}
 		
-		internal float curSwing;
 		internal CollisionsComponent collisions;
 		public HacksComponent Hacks;
 		internal PhysicsComponent physics;
 		internal InputComponent input;
 		internal SoundComponent sound;
 		internal LocalInterpComponent interp;
+		internal TiltComponent tilt;
 		
 		public LocalPlayer(Game game) : base(game) {
 			DisplayName = game.Username;
@@ -43,6 +43,7 @@ namespace ClassicalSharp.Entities {
 			input = new InputComponent(game, this);
 			sound = new SoundComponent(game, this);
 			interp = new LocalInterpComponent(game, this);
+			tilt = new TiltComponent(game);
 			
 			physics.hacks = Hacks; input.Hacks = Hacks;
 			physics.collisions = collisions;
@@ -50,7 +51,7 @@ namespace ClassicalSharp.Entities {
 		}
 		
 		public override void Tick(double delta) {
-			if (game.World.IsNotLoaded) return;
+			if (game.World.blocks == null) return;
 			StepSize = Hacks.FullBlockStep && Hacks.Enabled && Hacks.CanAnyHacks
 				&& Hacks.CanSpeed ? 1 : 0.5f;
 			OldVelocity = Velocity;
@@ -70,6 +71,7 @@ namespace ClassicalSharp.Entities {
 			
 			interp.next.Pos = Position; Position = interp.prev.Pos;
 			anim.UpdateAnimState(interp.prev.Pos, interp.next.Pos, delta);
+			tilt.UpdateAnimState(delta);
 			
 			CheckSkin();
 			sound.Tick(wasOnGround);
@@ -82,8 +84,8 @@ namespace ClassicalSharp.Entities {
 
 		public override void RenderModel(double deltaTime, float t) {
 			anim.GetCurrentAnimState(t);
-			curSwing = Utils.Lerp(anim.swingO, anim.swingN, t);
-
+			tilt.GetCurrentAnimState(t);
+			
 			if (!game.Camera.IsThirdPerson) return;
 			Model.Render(this);
 		}
@@ -141,6 +143,7 @@ namespace ClassicalSharp.Entities {
 			Hacks.WOMStyleHacks = !game.ClassicMode && Options.GetBool(OptionsKey.WOMStyleHacks, false);
 			Hacks.Enabled = !game.PureClassic && Options.GetBool(OptionsKey.HacksEnabled, true);
 			Hacks.FullBlockStep = !game.ClassicMode && Options.GetBool(OptionsKey.FullBlockStep, false);
+			Health = 20;
 		}
 		
 		public void Ready(Game game) { }
@@ -153,6 +156,7 @@ namespace ClassicalSharp.Entities {
 			Velocity = Vector3.Zero;
 			physics.jumpVel = 0.42f;
 			physics.serverJumpVel = 0.42f;
+			Health = 20;
 		}
 	}
 }

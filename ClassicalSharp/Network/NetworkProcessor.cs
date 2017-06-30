@@ -30,7 +30,7 @@ namespace ClassicalSharp.Network {
 		
 		Socket socket;
 		DateTime lastPacket;
-		Opcode lastOpcode;
+		byte lastOpcode;
 		internal NetReader reader;
 		internal NetWriter writer;
 		
@@ -40,9 +40,9 @@ namespace ClassicalSharp.Network {
 		internal WoMProtocol wom;
 
 		internal CPESupport cpeData;
-		internal ScheduledTask task;
 		internal bool receivedFirstPosition;
 		internal byte[] needRemoveNames = new byte[256 >> 3];
+		int netTicks, pingTicks;
 		
 		public override void Connect(IPAddress address, int port) {
 			socket = new Socket(address.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
@@ -74,7 +74,8 @@ namespace ClassicalSharp.Network {
 			game.WorldEvents.OnNewMap += OnNewMap;
 			game.UserEvents.BlockChanged += BlockChanged;
 
-			classic.SendLogin(game.Username, game.Mppass);
+			classic.WriteLogin(game.Username, game.Mppass);
+			SendPacket();
 			lastPacket = DateTime.UtcNow;
 		}
 		
@@ -92,9 +93,6 @@ namespace ClassicalSharp.Network {
 			}
 			if (Disconnected) return;
 			
-			LocalPlayer player = game.LocalPlayer;
-			this.task = task;
-			
 			try {
 				reader.ReadPendingData();
 			} catch (SocketException ex) {
@@ -110,6 +108,8 @@ namespace ClassicalSharp.Network {
 				if (cpeData.needD3Fix && lastOpcode == Opcode.CpeHackControl && (opcode == 0x00 || opcode == 0xFF)) {
 					Utils.LogDebug("Skipping invalid HackControl byte from D3 server.");
 					reader.Skip(1);
+					
+					LocalPlayer player = game.LocalPlayer;
 					player.physics.jumpVel = 0.42f; // assume default jump height
 					player.physics.serverJumpVel = player.physics.jumpVel;
 					continue;
@@ -127,18 +127,32 @@ namespace ClassicalSharp.Network {
 			}
 			
 			reader.RemoveProcessed();
-			if (receivedFirstPosition) {
-				SendPosition(player.Position, player.HeadY, player.HeadX);
-			}
+			// Network is ticked 60 times a second. We only send position updates 20 times a second.
+			if ((netTicks % 3) == 0) CoreTick();
+			netTicks++;
+		}
+		
+		void CoreTick() {
 			CheckAsyncResources();
-			wom.Tick();
+			wom.Tick();			
+			if (!receivedFirstPosition) return;
+			
+			LocalPlayer player = game.LocalPlayer;
+			classic.WritePosition(player.Position, player.HeadY, player.HeadX);
+			pingTicks++;
+			
+			if (pingTicks >= 20 && cpeData.twoWayPing) {
+				cpe.WriteTwoWayPing(false, PingList.NextTwoWayPingData());
+				pingTicks = 0;
+			}
+			SendPacket();
 		}
 		
 		/// <summary> Sets the incoming packet handler for the given packet id. </summary>
-		public void Set(Opcode opcode, Action handler, int packetSize) {
-			handlers[(byte)opcode] = handler;
-			packetSizes[(byte)opcode] = (ushort)packetSize;
-			maxHandledPacket = Math.Max((byte)opcode, maxHandledPacket);
+		public void Set(byte opcode, Action handler, int packetSize) {
+			handlers[opcode] = handler;
+			packetSizes[opcode] = (ushort)packetSize;
+			maxHandledPacket = Math.Max(opcode, maxHandledPacket);
 		}
 		
 		internal void SendPacket() {
@@ -146,6 +160,7 @@ namespace ClassicalSharp.Network {
 				writer.index = 0;
 				return;
 			}
+			
 			try {
 				writer.Send();
 			} catch (SocketException) {
@@ -156,17 +171,17 @@ namespace ClassicalSharp.Network {
 		
 		void ReadPacket(byte opcode) {
 			reader.Skip(1); // remove opcode
-			lastOpcode = (Opcode)opcode;
+			lastOpcode = opcode;
 			Action handler = handlers[opcode];
 			lastPacket = DateTime.UtcNow;
 			
 			if (handler == null)
-				throw new NotImplementedException("Unsupported packet:" + (Opcode)opcode);
+				throw new NotImplementedException("Unsupported packet:" + opcode);
 			handler();
 		}
 		
-		internal void SkipPacketData(Opcode opcode) {
-			reader.Skip(packetSizes[(byte)opcode] - 1);
+		internal void SkipPacketData(byte opcode) {
+			reader.Skip(packetSizes[opcode] - 1);
 		}
 		
 		internal void Reset() {
@@ -176,11 +191,18 @@ namespace ClassicalSharp.Network {
 			SupportsFullCP437 = false;
 			addEntityHack = true;
 			
-			for (int i = 0; i < handlers.Length; i++)
+			for (int i = 0; i < handlers.Length; i++) {
 				handlers[i] = null;
+				packetSizes[i] = 0;
+			}
+			if (classic == null) return; // null if no successful connection ever made before
 			
-			packetSizes[(byte)Opcode.CpeEnvSetMapApperance] = 69;
-			packetSizes[(byte)Opcode.CpeDefineBlockExt] = 85;
+			classic.Reset();
+			cpe.Reset();
+			cpeBlockDefs.Reset();
+			
+			reader.ExtendedPositions = false;
+			writer.ExtendedPositions = false;
 		}
 		
 		internal Action[] handlers = new Action[256];
@@ -192,10 +214,11 @@ namespace ClassicalSharp.Network {
 			BlockID block = game.Inventory.Selected;
 			
 			if (e.Block == 0) {
-				classic.SendSetBlock(p.X, p.Y, p.Z, false, block);
+				classic.WriteSetBlock(p.X, p.Y, p.Z, false, block);
 			} else {
-				classic.SendSetBlock(p.X, p.Y, p.Z, true, e.Block);
+				classic.WriteSetBlock(p.X, p.Y, p.Z, true, e.Block);
 			}
+			SendPacket();
 		}
 		
 		void OnNewMap(object sender, EventArgs e) {

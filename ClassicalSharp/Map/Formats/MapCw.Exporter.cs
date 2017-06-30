@@ -24,7 +24,7 @@ namespace ClassicalSharp.Map {
 				nbt.Write(NbtTagType.Compound); nbt.Write("ClassicWorld");
 				
 				nbt.Write(NbtTagType.Int8);
-				nbt.Write("FormatVersion"); nbt.WriteInt8(1);
+				nbt.Write("FormatVersion"); nbt.WriteUInt8(1);
 				
 				nbt.Write(NbtTagType.Int8Array);
 				nbt.Write("UUID"); nbt.WriteInt32(16);
@@ -71,11 +71,11 @@ namespace ClassicalSharp.Map {
 			
 			nbt.Write(NbtTagType.Int8);
 			nbt.Write("H");
-			nbt.WriteUInt8((byte)Utils.DegreesToPacked(p.SpawnRotY));
+			nbt.WriteUInt8(Utils.DegreesToPacked(p.SpawnRotY));
 			
 			nbt.Write(NbtTagType.Int8);
 			nbt.Write("P");
-			nbt.WriteUInt8((byte)Utils.DegreesToPacked(p.SpawnHeadX));
+			nbt.WriteUInt8(Utils.DegreesToPacked(p.SpawnHeadX));
 			
 			nbt.Write(NbtTagType.End);
 		}

@@ -87,18 +87,17 @@ namespace ClassicalSharp.Renderers {
 		}
 		
 		// Based off incredible gifs from (Thanks goodlyay!)
-		// https://dl.dropboxusercontent.com/u/12694594/slowBreakTranslate.gif
-		// https://dl.dropboxusercontent.com/u/12694594/slowBreakRotate1.gif
-		// https://dl.dropboxusercontent.com/u/12694594/slowBreakRotate2.gif
-		// https://dl.dropboxusercontent.com/u/12694594/slowBreakFull.gif
-		void DigFirstCycle() {			
+		// https://dl.dropboxusercontent.com/s/iuazpmpnr89zdgb/slowBreakTranslate.gif
+		// https://dl.dropboxusercontent.com/s/z7z8bset914s0ij/slowBreakRotate1.gif
+		// https://dl.dropboxusercontent.com/s/pdq79gkzntquld1/slowBreakRotate2.gif
+		// https://dl.dropboxusercontent.com/s/w1ego7cy7e5nrk1/slowBreakFull.gif
+		void DigFirstCycle() {
 			double angle = time * speed;
 			pos.X = -0.325f * (float)Math.Sin(angle * 2);
 			pos.Y = 0.20f * (float)Math.Sin(angle * 2 * 2);
 			pos.Z = -0.325f * (float)Math.Sin(angle * 2);
 			
 			angleY = -90 * (float)Math.Sin(angle * 2);
-			held.block.SwitchOrder = angleY <= -30;
 		}
 		
 		void DigSecondCycle() {
@@ -114,11 +113,9 @@ namespace ClassicalSharp.Renderers {
 			// For second cycle, rotate the block from 0-->15 then back to 15-->0.
 			float rotX = Math.Max(0, (float)angle - 90 * Utils.Deg2Rad);
 			if (rotX >= 45 * Utils.Deg2Rad) rotX = 90 * Utils.Deg2Rad - rotX;
-			held.block.CosX = (float)Math.Cos(rotX * 0.33333);
-			held.block.SinX = (float)Math.Sin(rotX * 0.33333);
 			
+			held.held.RotX = (rotX * 0.33333f) * Utils.Rad2Deg;
 			angleY = -90 * (float)Math.Sin(angle);
-			held.block.SwitchOrder = angleY <= -30;
 		}
 		
 		void ResetAnimationState(bool updateLastType, double period) {

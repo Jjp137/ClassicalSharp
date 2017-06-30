@@ -19,8 +19,6 @@ namespace ClassicalSharp {
 		TerrainAtlas1D atlas;
 		int index;
 		float scale;
-		const float invElemSize = TerrainAtlas2D.invElementSize;
-		bool bright;
 		VertexP3fT2fC4b[] vertices;
 		int vb;
 		
@@ -44,7 +42,10 @@ namespace ClassicalSharp {
 		
 		static IsometricBlockDrawer() {
 			FastColour.GetShaded(FastColour.White, out colXSide, out colZSide, out colYBottom);
-			transform = Matrix4.RotateY(45 * Utils.Deg2Rad) * Matrix4.RotateX(-30f * Utils.Deg2Rad);
+			Matrix4 rotY, rotX;
+			Matrix4.RotateY(out rotY, 45 * Utils.Deg2Rad);
+			Matrix4.RotateX(out rotX, -30f * Utils.Deg2Rad);
+			transform = rotY * rotX;
 			
 			cosX = (float)Math.Cos(30f * Utils.Deg2Rad);
 			sinX = (float)Math.Sin(30f * Utils.Deg2Rad);
@@ -58,7 +59,7 @@ namespace ClassicalSharp {
 			drawer.elementsPerAtlas1D = atlas.elementsPerAtlas1D;
 			drawer.invVerElementSize = atlas.invElementSize;
 			
-			bright = info.FullBright[block];
+			bool bright = info.FullBright[block];
 			if (info.Draw[block] == DrawType.Gas) return;
 			
 			// isometric coords size: cosY * -scale - sinY * scale
@@ -66,8 +67,8 @@ namespace ClassicalSharp {
 			scale = size / (2 * cosY);
 			// screen to isometric coords (cos(-x) = cos(x), sin(-x) = -sin(x))
 			pos.X = x; pos.Y = y; pos.Z = 0;
-			Utils.RotateX(ref pos.Y, ref pos.Z, cosX, -sinX);
-			Utils.RotateY(ref pos.X, ref pos.Z, cosY, -sinY);
+			RotateX(cosX, -sinX);
+			RotateY(cosY, -sinY);
 			
 			// See comment in IGraphicsApi.Draw2DTexture()
 			pos.X -= 0.5f; pos.Y -= 0.5f;
@@ -79,8 +80,8 @@ namespace ClassicalSharp {
 				SpriteZQuad(block, false);
 				SpriteXQuad(block, false);
 			} else {
-				drawer.minBB = info.MinBB[block]; drawer.minBB.Y = 1 - drawer.minBB.Y;    
-				drawer.maxBB = info.MaxBB[block]; drawer.maxBB.Y = 1 - drawer.maxBB.Y;				
+				drawer.minBB = info.MinBB[block]; drawer.minBB.Y = 1 - drawer.minBB.Y;
+				drawer.maxBB = info.MaxBB[block]; drawer.maxBB.Y = 1 - drawer.maxBB.Y;
 				
 				Vector3 min = info.MinBB[block], max = info.MaxBB[block];
 				drawer.x1 = scale * (1 - min.X * 2) + pos.X; drawer.x2 = scale * (1 - max.X * 2) + pos.X;
@@ -125,7 +126,7 @@ namespace ClassicalSharp {
 			
 			if (game.BlockInfo.Tinted[block]) {
 				v.Colour = Utils.Tint(v.Colour, game.BlockInfo.FogColour[block]);
-			}			
+			}
 			
 			float x1 = firstPart ? 0.5f : -0.1f, x2 = firstPart ? 1.1f : 0.5f;
 			rec.U1 = firstPart ? 0.0f : 0.5f; rec.U2 = (firstPart ? 0.5f : 1.0f) * (15.99f/16f);
@@ -170,6 +171,20 @@ namespace ClassicalSharp {
 			
 			lastIndex = texIndex;
 			game.Graphics.BindTexture(atlas.TexIds[texIndex]);
+		}
+		
+		/// <summary> Rotates the given 3D coordinates around the x axis. </summary>
+		static void RotateX(float cosA, float sinA) {
+			float y = cosA * pos.Y + sinA * pos.Z;
+			pos.Z = -sinA * pos.Y + cosA * pos.Z;
+			pos.Y = y;
+		}
+		
+		/// <summary> Rotates the given 3D coordinates around the y axis. </summary>
+		static void RotateY(float cosA, float sinA) {
+			float x = cosA * pos.X - sinA * pos.Z;
+			pos.Z = sinA * pos.X + cosA * pos.Z;
+			pos.X = x;
 		}
 	}
 }

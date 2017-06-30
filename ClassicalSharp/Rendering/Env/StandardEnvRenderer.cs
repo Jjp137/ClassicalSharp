@@ -124,7 +124,7 @@ namespace ClassicalSharp.Renderers {
 		}
 		
 		void UpdateFog() {
-			if (map.IsNotLoaded) return;
+			if (map.blocks == null) return;
 			FastColour fogCol = FastColour.White;
 			float fogDensity = 0;
 			BlockID block = BlockOn(out fogDensity, out fogCol);
@@ -134,14 +134,14 @@ namespace ClassicalSharp.Renderers {
 				gfx.SetFogDensity(fogDensity);
 			} else if (game.World.Env.ExpFog) {
 				gfx.SetFogMode(Fog.Exp);
-                // f = 1-z/end   f = e^(-dz)
-                //   solve for f = 0.01 gives:
-                // e^(-dz)=0.01 --> -dz=ln(0.01)
-                // 0.99=z/end   --> z=end*0.99
-                //   therefore
-                // d = -ln(0.01)/(end*0.99)
-                double density = -Math.Log(0.01) / (game.ViewDistance * 0.99);
-                gfx.SetFogDensity((float)density);
+				// f = 1-z/end   f = e^(-dz)
+				//   solve for f = 0.01 gives:
+				// e^(-dz)=0.01 --> -dz=ln(0.01)
+				// 0.99=z/end   --> z=end*0.99
+				//   therefore
+				// d = -ln(0.01)/(end*0.99)
+				double density = -Math.Log(0.01) / (game.ViewDistance * 0.99);
+				gfx.SetFogDensity((float)density);
 			} else {
 				gfx.SetFogMode(Fog.Linear);
 				gfx.SetFogEnd(game.ViewDistance);
@@ -151,13 +151,13 @@ namespace ClassicalSharp.Renderers {
 		}
 		
 		void ResetClouds() {
-			if (map.IsNotLoaded || game.Graphics.LostContext) return;
+			if (map.blocks == null || game.Graphics.LostContext) return;
 			gfx.DeleteVb(ref cloudsVb);
 			RebuildClouds((int)game.ViewDistance, legacy ? 128 : 65536);
 		}
 		
 		void ResetSky() {
-			if (map.IsNotLoaded || game.Graphics.LostContext) return;
+			if (map.blocks == null || game.Graphics.LostContext) return;
 			gfx.DeleteVb(ref skyVb);
 			RebuildSky((int)game.ViewDistance, legacy ? 128 : 65536);
 		}
@@ -181,7 +181,9 @@ namespace ClassicalSharp.Renderers {
 			
 			VertexP3fT2fC4b[] vertices = new VertexP3fT2fC4b[cloudVertices];
 			DrawCloudsY(x1, z1, x2, z2, map.Env.CloudHeight, axisSize, map.Env.CloudsCol.Pack(), vertices);
-			cloudsVb = gfx.CreateVb(vertices, VertexFormat.P3fT2fC4b, cloudVertices);
+			fixed (VertexP3fT2fC4b* ptr = vertices) {
+				cloudsVb = gfx.CreateVb((IntPtr)ptr, VertexFormat.P3fT2fC4b, cloudVertices);
+			}
 		}
 		
 		void RebuildSky(int extent, int axisSize) {
@@ -194,7 +196,9 @@ namespace ClassicalSharp.Renderers {
 			int height = Math.Max(map.Height + 2 + 6, map.Env.CloudHeight + 6);
 			
 			DrawSkyY(x1, z1, x2, z2, height, axisSize, map.Env.SkyCol.Pack(), vertices);
-			skyVb = gfx.CreateVb(vertices, VertexFormat.P3fC4b, skyVertices);
+			fixed (VertexP3fC4b* ptr = vertices) {
+				skyVb = gfx.CreateVb((IntPtr)ptr, VertexFormat.P3fC4b, skyVertices);
+			}
 		}
 		
 		void DrawSkyY(int x1, int z1, int x2, int z2, int y, int axisSize, int col, VertexP3fC4b[] vertices) {

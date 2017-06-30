@@ -21,8 +21,8 @@ namespace ClassicalSharp {
 			for (int block = 0; block < Block.Count; block++)
 				CanStretch[block] = 0x3F;
 			
-			for (int block = 1; block < Block.Count; block++) {
-				for (int neighbour = 1; neighbour < Block.Count; neighbour++) {
+			for (int block = 0; block < Block.Count; block++) {
+				for (int neighbour = 0; neighbour < Block.Count; neighbour++) {
 					CalcCulling((BlockID)block, (BlockID)neighbour);
 				}
 			}
@@ -31,7 +31,7 @@ namespace ClassicalSharp {
 		internal void UpdateCulling(BlockID block) {
 			CanStretch[block] = 0x3F;
 			
-			for (int other = 1; other < Block.Count; other++) {
+			for (int other = 0; other < Block.Count; other++) {
 				CalcCulling(block, (BlockID)other);
 				CalcCulling((BlockID)other, block);
 			}
@@ -66,7 +66,7 @@ namespace ClassicalSharp {
 			}
 		}
 		
-		bool IsHidden(BlockID block, BlockID other, int side) {
+		bool IsHidden(BlockID block, BlockID other) {
 			// Sprite blocks can never hide faces.
 			if (Draw[block] == DrawType.Sprite) return false;
 			
@@ -83,14 +83,14 @@ namespace ClassicalSharp {
 			if (Draw[block] != DrawType.Translucent || Draw[other] != DrawType.Translucent) return false;
 			
 			// e.g. for water / ice, don't need to draw water.
-			CollideType bType = Collide[block], oType = Collide[other];
+			byte bType = Collide[block], oType = Collide[other];
 			bool canSkip = (bType == CollideType.Solid && oType == CollideType.Solid) 
 				|| bType != CollideType.Solid;
 			return canSkip;
 		}
 		
 		void SetHidden(BlockID block, BlockID other, int side, bool value) {
-			value = IsHidden(block, other, side) && FaceOccluded(block, other, side) && value;
+			value = IsHidden(block, other) && FaceOccluded(block, other, side) && value;
 			int bit = value ? 1 : 0;
 			hidden[block * Block.Count + other] &= (byte)~(1 << side);
 			hidden[block * Block.Count + other] |= (byte)(bit << side);

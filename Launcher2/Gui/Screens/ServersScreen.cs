@@ -20,6 +20,8 @@ namespace Launcher.Gui.Screens {
 		
 		public override void Tick() {
 			base.Tick();
+			if (fetchingList) CheckFetchStatus();
+			
 			TableWidget table = (TableWidget)widgets[view.tableIndex];
 			if (!game.Window.Mouse[MouseButton.Left]) {
 				table.DraggingColumn = -1;
@@ -102,6 +104,7 @@ namespace Launcher.Gui.Screens {
 			widgets[view.backIndex].OnClick =
 				(x, y) => game.SetScreen(new MainScreen(game));
 			widgets[view.connectIndex].OnClick = ConnectToServer;
+			widgets[view.refreshIndex].OnClick = RefreshList;
 			
 			TableWidget widget = (TableWidget)widgets[view.tableIndex];
 			widget.NeedRedraw = MarkPendingRedraw;
@@ -128,6 +131,16 @@ namespace Launcher.Gui.Screens {
 		void ConnectToServer(int mouseX, int mouseY) {
 			TableWidget table = (TableWidget)widgets[view.tableIndex];
 			game.ConnectToServer(table.servers, Get(view.hashIndex));
+		}
+		
+		bool fetchingList = false;
+		void RefreshList(int mouseX, int mouseY) {
+			if (fetchingList) return;
+			fetchingList = true;
+			game.Session.FetchServersAsync();
+
+			view.RefreshText = "&eWorking..";
+			Resize();
 		}
 		
 		protected override void MouseWheelChanged(object sender, MouseWheelEventArgs e) {
@@ -168,6 +181,14 @@ namespace Launcher.Gui.Screens {
 				game.Dirty = true;
 			}
 			pendingRedraw = false;
+		}
+		
+		void CheckFetchStatus() {
+			if (!game.Session.Done) return;
+			fetchingList = false;
+			
+			view.RefreshText = game.Session.Exception == null ? "Refresh" : "&cFailed";
+			Resize();
 		}
 		
 		void MarkPendingRedraw() {

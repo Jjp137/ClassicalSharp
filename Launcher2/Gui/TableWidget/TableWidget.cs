@@ -7,9 +7,11 @@ using ClassicalSharp;
 namespace Launcher.Gui.Widgets {
 
 	internal struct TableEntry {
-		public string Hash, Name, Players, Uptime, Software;
+		public string Hash, Name, Players, Uptime, Software, RawUptime;
 		public int Y, Height;
 	}
+	
+	public delegate void TableNeedsRedrawHandler();
 	
 	public partial class TableWidget : Widget {
 		
@@ -20,7 +22,7 @@ namespace Launcher.Gui.Widgets {
 			view.Init(window, this);
 		}
 		
-		public Action NeedRedraw;
+		public TableNeedsRedrawHandler NeedRedraw;
 		public Action<string> SelectedChanged;
 		public int SelectedIndex = -1;
 		public int CurrentIndex, Count;
@@ -34,13 +36,15 @@ namespace Launcher.Gui.Widgets {
 			this.servers = servers;
 			int index = 0;
 			
-			foreach (ServerListEntry e in servers) {
+			for (int i = 0; i < servers.Count; i++) {
+				ServerListEntry e = servers[i];
 				TableEntry tableEntry = default(TableEntry);
 				tableEntry.Hash = e.Hash;
 				tableEntry.Name = e.Name;
 				tableEntry.Players = e.Players + "/" + e.MaximumPlayers;
 				tableEntry.Software = e.Software;
 				tableEntry.Uptime = MakeUptime(e.Uptime);
+				tableEntry.RawUptime = e.Uptime;
 				
 				entries[index] = tableEntry;
 				usedEntries[index] = tableEntry;

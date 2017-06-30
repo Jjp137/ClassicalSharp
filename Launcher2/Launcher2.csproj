@@ -165,6 +165,12 @@
     <Compile Include="WebService\IWebTask.cs" />
     <Compile Include="WebService\ServerListEntry.cs" />
     <Compile Include="WebService\UpdateCheckTask.cs" />
+    <Compile Include="..\ClassicalSharp\Platform\SDL2InputMapping.cs">
+      <Link>Shared\SDL2InputMapping.cs</Link>
+    </Compile>
+    <Compile Include="..\ClassicalSharp\Platform\SDL2Window.cs">
+      <Link>Shared\SDL2Window.cs</Link>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\OpenTK\OpenTK.csproj">
@@ -174,10 +180,6 @@
     <ProjectReference Include="..\SDL2-CS\SDL2-CS.csproj">
       <Project>{85480198-8711-4355-830E-72FD794AD3F6}</Project>
       <Name>SDL2-CS</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\ClassicalSharp\ClassicalSharp.csproj">
-      <Project>{BEB1C785-5CAD-48FF-A886-876BF0A318D4}</Project>
-      <Name>ClassicalSharp</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

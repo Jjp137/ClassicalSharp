@@ -534,6 +534,7 @@ namespace ClassicalSharp.GraphicsAPI {
 				value.Dispose();
 			}
 			array[id] = null;
+			id = -1;
 		}
 		
 		static int NumPrimitives( int vertices, DrawMode mode ) {

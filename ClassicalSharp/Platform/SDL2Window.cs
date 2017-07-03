@@ -19,7 +19,7 @@ namespace ClassicalSharp
 		public int Width {
 			get {
 				int w, h;
-				SDL.SDL_GetWindowSize( this.window, out w, out h );
+				SDL.SDL_GetWindowSize(this.window, out w, out h);
 				return w;
 			}
 		}
@@ -27,7 +27,7 @@ namespace ClassicalSharp
 		public int Height { 
 			get {
 				int w, h;
-				SDL.SDL_GetWindowSize( this.window, out w, out h );
+				SDL.SDL_GetWindowSize(this.window, out w, out h);
 				return h;
 			}
 		}
@@ -35,8 +35,8 @@ namespace ClassicalSharp
 		public Size ClientSize {
 			get {
 				int w, h;
-				SDL.SDL_GetWindowSize( this.window, out w, out h );
-				return new Size( w, h );
+				SDL.SDL_GetWindowSize(this.window, out w, out h);
+				return new Size(w, h);
 			}
 		}
 
@@ -59,11 +59,11 @@ namespace ClassicalSharp
 			}
 			set {
 				this.visible = value;
-				if ( value ) {
-					SDL.SDL_ShowWindow( this.window );
+				if (value) {
+					SDL.SDL_ShowWindow(this.window);
 				}
 				else {
-					SDL.SDL_HideWindow( this.window );
+					SDL.SDL_HideWindow(this.window);
 				}
 			}
 		}
@@ -71,16 +71,16 @@ namespace ClassicalSharp
 		public Point DesktopCursorPos {
 			get {
 				int win_x, win_y, mouse_x, mouse_y;
-				SDL.SDL_GetWindowPosition( this.window, out win_x, out win_y );
-				SDL.SDL_GetMouseState( out mouse_x, out mouse_y );
+				SDL.SDL_GetWindowPosition(this.window, out win_x, out win_y);
+				SDL.SDL_GetMouseState(out mouse_x, out mouse_y);
 
-				return new Point( win_x + mouse_x, win_y + mouse_y );
+				return new Point(win_x + mouse_x, win_y + mouse_y);
 			}
 			set {
 				int win_x, win_y;
 
-				SDL.SDL_GetWindowPosition( this.window, out win_x, out win_y );
-				SDL.SDL_WarpMouseInWindow( this.window, value.X - win_x, value.Y - win_y );
+				SDL.SDL_GetWindowPosition(this.window, out win_x, out win_y);
+				SDL.SDL_WarpMouseInWindow(this.window, value.X - win_x, value.Y - win_y);
 				// Force the mouse pointer to move since otherwise it won't update its position until the next
 				// call to SDL.SDL_PollEvent(); this is needed because the Camera uses its own mouse grabbing
 				// mechanism that depends on the change to mouse position immediately being applied
@@ -98,23 +98,23 @@ namespace ClassicalSharp
 			get { return keyboard; }
 		}
 		
-		public Point PointToScreen( Point coords ) {
+		public Point PointToScreen(Point coords) {
 			int win_x, win_y;
-			SDL.SDL_GetWindowPosition( this.window, out win_x, out win_y );
-			return new Point( coords.X + win_x, coords.Y + win_y );
+			SDL.SDL_GetWindowPosition(this.window, out win_x, out win_y);
+			return new Point(coords.X + win_x, coords.Y + win_y);
 		}
 		
 		public WindowState WindowState {
 			get {
-				uint flags = SDL.SDL_GetWindowFlags( this.window );
+				uint flags = SDL.SDL_GetWindowFlags(this.window);
 
-				if( ( flags & (uint)SDL.SDL_WindowFlags.SDL_WINDOW_MINIMIZED ) != 0 ) {
+				if ((flags & (uint)SDL.SDL_WindowFlags.SDL_WINDOW_MINIMIZED) != 0) {
 					return WindowState.Minimized;
 				}
-				else if( ( flags & (uint)SDL.SDL_WindowFlags.SDL_WINDOW_MAXIMIZED ) != 0 ) {
+				else if ((flags & (uint)SDL.SDL_WindowFlags.SDL_WINDOW_MAXIMIZED) != 0) {
 					return WindowState.Maximized;
 				}
-				else if( ( flags & (uint)SDL.SDL_WindowFlags.SDL_WINDOW_FULLSCREEN_DESKTOP ) != 0 ) {
+				else if ((flags & (uint)SDL.SDL_WindowFlags.SDL_WINDOW_FULLSCREEN_DESKTOP) != 0) {
 					return WindowState.Fullscreen;
 				}
 				else {
@@ -124,33 +124,33 @@ namespace ClassicalSharp
 			set {
 				WindowState current = this.WindowState;
 
-				if( value == WindowState.Minimized && current != WindowState.Minimized ) {
-					SDL.SDL_MinimizeWindow( this.window );
+				if (value == WindowState.Minimized && current != WindowState.Minimized) {
+					SDL.SDL_MinimizeWindow(this.window);
 				}
-				else if( value == WindowState.Maximized && current != WindowState.Maximized ) {
-					SDL.SDL_MaximizeWindow( this.window );
+				else if (value == WindowState.Maximized && current != WindowState.Maximized) {
+					SDL.SDL_MaximizeWindow(this.window);
 				}
-				else if( value == WindowState.Fullscreen && current != WindowState.Fullscreen ) {
+				else if (value == WindowState.Fullscreen && current != WindowState.Fullscreen) {
 					// I guess desktop fullscreen is desired since that's what it does with OpenTK on Linux
-					SDL.SDL_SetWindowFullscreen( this.window, (uint)SDL.SDL_WindowFlags.SDL_WINDOW_FULLSCREEN_DESKTOP );
+					SDL.SDL_SetWindowFullscreen(this.window, (uint)SDL.SDL_WindowFlags.SDL_WINDOW_FULLSCREEN_DESKTOP);
 
 					// There is no "changed from/to fullscreen" specific SDL event, so handle it here
 					UpdateSurfacePointer();
-					if( WindowStateChanged != null ) {
-						WindowStateChanged ( this, new EventArgs() );
+					if (WindowStateChanged != null) {
+						WindowStateChanged (this, new EventArgs());
 					}
 				}
 				else {  // WindowState.Normal
-					if( current == WindowState.Minimized || current == WindowState.Maximized ) {
-						SDL.SDL_RestoreWindow( this.window );
+					if (current == WindowState.Minimized || current == WindowState.Maximized) {
+						SDL.SDL_RestoreWindow(this.window);
 					}
-					else if( current == WindowState.Fullscreen ) {
-						SDL.SDL_SetWindowFullscreen( this.window, 0 );
+					else if (current == WindowState.Fullscreen) {
+						SDL.SDL_SetWindowFullscreen(this.window, 0);
 
 						// Same reasoning here
 						UpdateSurfacePointer();
-						if( WindowStateChanged != null ) {
-							WindowStateChanged ( this, new EventArgs() );
+						if (WindowStateChanged != null) {
+							WindowStateChanged (this, new EventArgs());
 						}
 					}
 				}
@@ -168,7 +168,7 @@ namespace ClassicalSharp
 				// TODO: actually implement it; currently it's a no-op
 				//Bitmap bitmap = currentIcon.ToBitmap();
 
-				//SDL.SDL_SetWindowIcon( this.window, IntPtr.Zero );
+				//SDL.SDL_SetWindowIcon(this.window, IntPtr.Zero);
 			}
 		}
 
@@ -181,18 +181,18 @@ namespace ClassicalSharp
 		public string ClipboardText { 
 			get {
 				string text = String.Empty;
-				if( SDL.SDL_HasClipboardText() == SDL.SDL_bool.SDL_TRUE ) {
+				if (SDL.SDL_HasClipboardText() == SDL.SDL_bool.SDL_TRUE) {
 					// FIXME: How do we call SDL_free() from this?
 					text = SDL.SDL_GetClipboardText();
-					if( text == null ) {
-						throw new InvalidOperationException( "SDL_GetClipboardText failed: " + SDL.SDL_GetError() );
+					if (text == null) {
+						throw new InvalidOperationException("SDL_GetClipboardText failed: " + SDL.SDL_GetError());
 					}
 				}
 				return text;
 			}
 			set {
-				if( SDL.SDL_SetClipboardText( value ) < 0 ) {
-					throw new InvalidOperationException( "SDL_SetClipboardText failed: " + SDL.SDL_GetError() );
+				if (SDL.SDL_SetClipboardText(value) < 0) {
+					throw new InvalidOperationException("SDL_SetClipboardText failed: " + SDL.SDL_GetError());
 				}
 			}
 		}
@@ -208,20 +208,20 @@ namespace ClassicalSharp
 
 		protected bool disposed;
 
-		public SDL2Window( int width, int height, string title, SDL.SDL_WindowFlags flags )
+		public SDL2Window(int width, int height, string title, SDL.SDL_WindowFlags flags)
 		{
 			SDL.SDL_version version;
-			SDL.SDL_GetVersion( out version );
-			Utils.LogDebug( "Using SDL version: " + version.major + "." + version.minor + "." + version.patch );
+			SDL.SDL_GetVersion(out version);
+			Utils.LogDebug("Using SDL version: " + version.major + "." + version.minor + "." + version.patch);
 
-			if( SDL.SDL_COMPILEDVERSION > SDL.SDL_VERSIONNUM( version.major, version.minor, version.patch ) ) {
-				throw new InvalidOperationException( "SDL version must be at least 2.0.4" );
+			if (SDL.SDL_COMPILEDVERSION > SDL.SDL_VERSIONNUM(version.major, version.minor, version.patch)) {
+				throw new InvalidOperationException("SDL version must be at least 2.0.4");
 			}
 
-			int success = SDL.SDL_Init( SDL.SDL_INIT_TIMER | SDL.SDL_INIT_VIDEO );
+			int success = SDL.SDL_Init(SDL.SDL_INIT_TIMER | SDL.SDL_INIT_VIDEO);
 
-			if( success != 0 ) {
-				throw new InvalidOperationException( "SDL_Init failed: " + SDL.SDL_GetError() );
+			if (success != 0) {
+				throw new InvalidOperationException("SDL_Init failed: " + SDL.SDL_GetError());
 			}
 
 			this.window = SDL.SDL_CreateWindow(
@@ -231,8 +231,8 @@ namespace ClassicalSharp
 				width, height, flags
 				);
 
-			if( this.window == IntPtr.Zero ) {
-				throw new InvalidOperationException( "SDL_CreateWindow failed: " + SDL.SDL_GetError() );
+			if (this.window == IntPtr.Zero) {
+				throw new InvalidOperationException("SDL_CreateWindow failed: " + SDL.SDL_GetError());
 			}
 
 			this.UpdateSurfacePointer();
@@ -241,7 +241,7 @@ namespace ClassicalSharp
 			this.visible = true;
 			this.focused = true;
 
-			this.windowInfo = new SDL2WindowInfo( this.window );
+			this.windowInfo = new SDL2WindowInfo(this.window);
 
 			this.keyboard = new KeyboardDevice();
 			this.mouse = new MouseDevice();
@@ -254,39 +254,39 @@ namespace ClassicalSharp
 		public void ProcessEvents() {
 			SDL.SDL_Event curEvent;
 
-			while( SDL.SDL_PollEvent( out curEvent ) != 0 ) {
-				switch( curEvent.type ) {
+			while (SDL.SDL_PollEvent(out curEvent) != 0) {
+				switch(curEvent.type) {
 					case SDL.SDL_EventType.SDL_QUIT:
 						Close();
 						break;
 					case SDL.SDL_EventType.SDL_WINDOWEVENT:
-						HandleWindowEvent( curEvent );
+						HandleWindowEvent(curEvent);
 						break;
 					case SDL.SDL_EventType.SDL_KEYDOWN:
-						HandleKeyDown( curEvent );
+						HandleKeyDown(curEvent);
 						break;
 					case SDL.SDL_EventType.SDL_KEYUP:
-						HandleKeyUp( curEvent );
+						HandleKeyUp(curEvent);
 						break;
 					case SDL.SDL_EventType.SDL_TEXTINPUT:
-						HandleTextInput( curEvent );
+						HandleTextInput(curEvent);
 						break;
 					case SDL.SDL_EventType.SDL_MOUSEMOTION:
-						HandleMouseMove( curEvent );
+						HandleMouseMove(curEvent);
 						break;
 					case SDL.SDL_EventType.SDL_MOUSEBUTTONDOWN:
-						HandleMouseDown( curEvent );
+						HandleMouseDown(curEvent);
 						break;
 					case SDL.SDL_EventType.SDL_MOUSEBUTTONUP:
-						HandleMouseUp( curEvent );
+						HandleMouseUp(curEvent);
 						break;
 					case SDL.SDL_EventType.SDL_MOUSEWHEEL:
-						HandleMouseWheel( curEvent );
+						HandleMouseWheel(curEvent);
 						break;
 				}
 
 				// Don't process any more events if the window has been destroyed
-				if ( !this.exists ) {
+				if (!this.exists) {
 					break;
 				}
 			}
@@ -298,24 +298,24 @@ namespace ClassicalSharp
 		/// destroyed. Override this method with one that does nothing if using OpenGL or DirectX, as 
 		/// SDL_GetWindowSurface is not intended to be used with those APIs. </remarks>
 		protected virtual void UpdateSurfacePointer() {
-			this.surface = SDL.SDL_GetWindowSurface( window );
-			if( this.window == IntPtr.Zero ) {
-				throw new InvalidOperationException( "SDL_GetWindowSurface failed: " + SDL.SDL_GetError() );
+			this.surface = SDL.SDL_GetWindowSurface(window);
+			if (this.window == IntPtr.Zero) {
+				throw new InvalidOperationException("SDL_GetWindowSurface failed: " + SDL.SDL_GetError());
 			}
 		}
 		
-		public virtual void Draw( Bitmap framebuffer ) {
-			Draw( framebuffer, Rectangle.Empty );
+		public virtual void Draw(Bitmap framebuffer) {
+			Draw(framebuffer, Rectangle.Empty);
 		}
 		
-		public virtual void Draw( Bitmap framebuffer, Rectangle rec ) {
-			using( FastBitmap fastBmp = new FastBitmap( framebuffer, true, true ) ) {
-				IntPtr image = SDL.SDL_CreateRGBSurfaceFrom( fastBmp.Scan0, fastBmp.Width, fastBmp.Height, 32,
+		public virtual void Draw(Bitmap framebuffer, Rectangle rec) {
+			using (FastBitmap fastBmp = new FastBitmap(framebuffer, true, true)) {
+				IntPtr image = SDL.SDL_CreateRGBSurfaceFrom(fastBmp.Scan0, fastBmp.Width, fastBmp.Height, 32,
 				                                            fastBmp.Stride, 0x00FF0000, 0x0000FF00, 0x000000FF,
-				                                            0xFF000000 );
+				                                            0xFF000000);
 				
-				if( rec.IsEmpty ) {
-					SDL.SDL_BlitSurface( image, IntPtr.Zero, this.surface, IntPtr.Zero );
+				if (rec.IsEmpty) {
+					SDL.SDL_BlitSurface(image, IntPtr.Zero, this.surface, IntPtr.Zero);
 				}
 				else {
 					SDL.SDL_Rect srcRect;
@@ -330,41 +330,41 @@ namespace ClassicalSharp
 					dstRect.w = 0;
 					dstRect.h = 0;
 					
-					SDL.SDL_BlitSurface( image, ref srcRect, this.surface, ref dstRect );
+					SDL.SDL_BlitSurface(image, ref srcRect, this.surface, ref dstRect);
 				}
 				
-				SDL.SDL_FreeSurface( image );
+				SDL.SDL_FreeSurface(image);
 			}
 
-			SDL.SDL_UpdateWindowSurface( window );
+			SDL.SDL_UpdateWindowSurface(window);
 		}
 
-		private void HandleWindowEvent( SDL.SDL_Event winEvent ) {
-			switch ( winEvent.window.windowEvent ) {
+		private void HandleWindowEvent(SDL.SDL_Event winEvent) {
+			switch (winEvent.window.windowEvent) {
 				case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_SIZE_CHANGED:
 				case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_RESIZED:
 					UpdateSurfacePointer();
-					if( Resize != null ) {
-						Resize( this, new EventArgs() );
+					if (Resize != null) {
+						Resize(this, new EventArgs());
 					}
 					break;
 				case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_FOCUS_GAINED:
 					this.focused = true;
-					if( FocusedChanged != null ) {
-						FocusedChanged( this, new EventArgs() );
+					if (FocusedChanged != null) {
+						FocusedChanged(this, new EventArgs());
 					}
 					break;
 				case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_FOCUS_LOST:
 					this.focused = false;
-					if( FocusedChanged != null ) {
-						FocusedChanged( this, new EventArgs() );
+					if (FocusedChanged != null) {
+						FocusedChanged(this, new EventArgs());
 					}
 					break;
 				case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_MINIMIZED:
 				case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_MAXIMIZED:
 				case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_RESTORED:
-					if( WindowStateChanged != null ) {
-						WindowStateChanged( this, new EventArgs() );
+					if (WindowStateChanged != null) {
+						WindowStateChanged(this, new EventArgs());
 					}
 					break;
 				case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_SHOWN:
@@ -378,85 +378,85 @@ namespace ClassicalSharp
 			}
 		}
 
-		private void HandleKeyDown( SDL.SDL_Event keyEvent ) {
+		private void HandleKeyDown(SDL.SDL_Event keyEvent) {
 			SDL.SDL_Keycode sdlKey = keyEvent.key.keysym.sym;
 
-			if( SDL2InputMapping.keyDict.ContainsKey( sdlKey ) ) {
+			if (SDL2InputMapping.keyDict.ContainsKey(sdlKey)) {
 				Key tkKey = SDL2InputMapping.keyDict[sdlKey];
 				this.keyboard[tkKey] = true;
 			}
 			else {
-				Utils.LogDebug( "No key dict entry for: " + SDL.SDL_GetKeyName( sdlKey ) );
+				Utils.LogDebug("No key dict entry for: " + SDL.SDL_GetKeyName(sdlKey));
 			}
 		}
 
-		private void HandleKeyUp( SDL.SDL_Event keyEvent ) {
+		private void HandleKeyUp(SDL.SDL_Event keyEvent) {
 			SDL.SDL_Keycode sdlKey = keyEvent.key.keysym.sym;
 
-			if( SDL2InputMapping.keyDict.ContainsKey( sdlKey ) ) {
+			if (SDL2InputMapping.keyDict.ContainsKey(sdlKey)) {
 				Key tkKey = SDL2InputMapping.keyDict[sdlKey];
 				this.keyboard[tkKey] = false;
 			}
 			else {
-				Utils.LogDebug( "No key dict entry for: " + SDL.SDL_GetKeyName( sdlKey ) );
+				Utils.LogDebug("No key dict entry for: " + SDL.SDL_GetKeyName(sdlKey));
 			}
 		}
 
-		private void HandleTextInput( SDL.SDL_Event textEvent ) {
+		private void HandleTextInput(SDL.SDL_Event textEvent) {
 			KeyPressEventArgs args = new KeyPressEventArgs();
 
-			for( int i = 0; i < SDL.SDL_TEXTINPUTEVENT_TEXT_SIZE; i++ ) {
+			for(int i = 0; i < SDL.SDL_TEXTINPUTEVENT_TEXT_SIZE; i++) {
 				char c;
 				unsafe {
 					c = (char)textEvent.text.text[i];
 				}
-				if( c == (char)0 ) {  // Reached a null
+				if (c == (char)0) {  // Reached a null
 					break;
 				}
 
 				args.KeyChar = c;
-				if( KeyPress != null ) {
-					KeyPress( this, args );
+				if (KeyPress != null) {
+					KeyPress(this, args);
 				}
 			}
 		}
 
-		private void HandleMouseMove( SDL.SDL_Event moveEvent ) {
+		private void HandleMouseMove(SDL.SDL_Event moveEvent) {
 			SDL.SDL_MouseMotionEvent motion = moveEvent.motion;
 			int x = motion.x;
 			int y = motion.y;
 
-			this.mouse.Position = new Point( x, y );
+			this.mouse.Position = new Point(x, y);
 		}
 
 		// TODO: fix mouse button limitation
-		private void HandleMouseDown( SDL.SDL_Event mouseEvent ) {
+		private void HandleMouseDown(SDL.SDL_Event mouseEvent) {
 			SDL.SDL_MouseButtonEvent down = mouseEvent.button;
 			uint button = down.button;
 
-			if( SDL2InputMapping.mouseDict.ContainsKey( button ) ) {
+			if (SDL2InputMapping.mouseDict.ContainsKey(button)) {
 				MouseButton tkButton = SDL2InputMapping.mouseDict[button];
 				this.mouse[tkButton] = true;
 			}
 			else {
-				Utils.LogDebug( "No mouse dict entry for: " + button );
+				Utils.LogDebug("No mouse dict entry for: " + button);
 			}
 		}
 
-		private void HandleMouseUp( SDL.SDL_Event mouseEvent ) {
+		private void HandleMouseUp(SDL.SDL_Event mouseEvent) {
 			SDL.SDL_MouseButtonEvent up = mouseEvent.button;
 			uint button = up.button;
 
-			if( SDL2InputMapping.mouseDict.ContainsKey( button ) ) {
+			if (SDL2InputMapping.mouseDict.ContainsKey(button)) {
 				MouseButton tkButton = SDL2InputMapping.mouseDict[button];
 				this.mouse[tkButton] = false;
 			}
 			else {
-				Utils.LogDebug( "No mouse dict entry for: " + button );
+				Utils.LogDebug("No mouse dict entry for: " + button);
 			}
 		}
 
-		private void HandleMouseWheel( SDL.SDL_Event wheelEvent ) {
+		private void HandleMouseWheel(SDL.SDL_Event wheelEvent) {
 			SDL.SDL_MouseWheelEvent scroll = wheelEvent.wheel;
 			// FIXME: doesn't take into account horizontal mouse wheels (hold Shift while scrolling on OS X, Linux)
 			int y = scroll.y;
@@ -468,12 +468,12 @@ namespace ClassicalSharp
 			// TODO: like its counterpart, turn text input into a toggle
 			SDL.SDL_StopTextInput();
 
-			SDL.SDL_DestroyWindow( window );
+			SDL.SDL_DestroyWindow(window);
 			this.exists = false;
 		}
 
 		public virtual void Close() {
-			if( this.exists ) {
+			if (this.exists) {
 				DestroyWindow();
 			}
 
@@ -481,11 +481,11 @@ namespace ClassicalSharp
 		}
 		
 		public void Dispose() {
-			Dispose( true );
+			Dispose(true);
 		}
 
-		protected void Dispose( bool disposing ) {
-			if( disposed ) {
+		protected void Dispose(bool disposing) {
+			if (disposed) {
 				return;
 			}
 		}
@@ -498,7 +498,7 @@ namespace ClassicalSharp
 			get { return window; }
 		}
 
-		public SDL2WindowInfo( IntPtr window ) {
+		public SDL2WindowInfo(IntPtr window) {
 			this.window = window;
 		}
 

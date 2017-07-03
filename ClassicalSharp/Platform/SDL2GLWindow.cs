@@ -15,18 +15,18 @@ namespace ClassicalSharp
 			}
 			set {
 				int arg = value ? 1 : 0;
-				SDL.SDL_GL_SetSwapInterval( arg );
+				SDL.SDL_GL_SetSwapInterval(arg);
 			}
 		}
 
 		public bool CursorVisible {
 			get {
-				int visible = SDL.SDL_ShowCursor( -1 );  // -1 = query
+				int visible = SDL.SDL_ShowCursor(-1);  // -1 = query
 				return visible == SDL.SDL_ENABLE;
 			}
 			set {
 				int arg = value ? SDL.SDL_ENABLE : SDL.SDL_DISABLE;
-				SDL.SDL_ShowCursor( arg );
+				SDL.SDL_ShowCursor(arg);
 			}
 		}
 
@@ -34,18 +34,18 @@ namespace ClassicalSharp
 
 		private IntPtr glContext;
 
-		public SDL2GLWindow( Game game, string username, bool nullContext, int width, int height ) :
-			base( width, height, Program.AppName + " - (" + username + " - OpenGL)", 
-			      SDL.SDL_WindowFlags.SDL_WINDOW_OPENGL | SDL.SDL_WindowFlags.SDL_WINDOW_RESIZABLE ) {
+		public SDL2GLWindow(Game game, string username, bool nullContext, int width, int height) :
+			base(width, height, Program.AppName + " - (" + username + " - OpenGL)", 
+			      SDL.SDL_WindowFlags.SDL_WINDOW_OPENGL | SDL.SDL_WindowFlags.SDL_WINDOW_RESIZABLE) {
 
-			this.glContext = SDL.SDL_GL_CreateContext( window );
+			this.glContext = SDL.SDL_GL_CreateContext(window);
 
-			if( this.glContext == IntPtr.Zero ) {
-				throw new InvalidOperationException( "SDL_GL_CreateContext: " + SDL.SDL_GetError() );
+			if (this.glContext == IntPtr.Zero) {
+				throw new InvalidOperationException("SDL_GL_CreateContext: " + SDL.SDL_GetError());
 			}
 
 			// Try to enable VSync, but don't worry if it fails
-			SDL.SDL_GL_SetSwapInterval( 1 );  // 1 = enable VSync
+			SDL.SDL_GL_SetSwapInterval(1);  // 1 = enable VSync
 
 			this.game = game;
 
@@ -61,43 +61,43 @@ namespace ClassicalSharp
 			uint prevTime = 0;
 			double delta = 0;
 
-			while( true ) {
+			while (true) {
 				ProcessEvents();
 
-				if( !this.exists ) {
+				if (!this.exists) {
 					break;
 				}
 
 				curTime = SDL.SDL_GetTicks();  // returns ms
-				delta = ( curTime - prevTime ) / 1000.0;  // convert to seconds
+				delta = (curTime - prevTime) / 1000.0;  // convert to seconds
 				prevTime = curTime;
 
-				game.RenderFrame( delta );
+				game.RenderFrame(delta);
 			}
 		}
 
-		private void OnResize( object sender, EventArgs e ) {
+		private void OnResize(object sender, EventArgs e) {
 			game.OnResize();
 		}
 
 		public void SwapBuffers() {
-			SDL.SDL_GL_SwapWindow( window );
+			SDL.SDL_GL_SwapWindow(window);
 		}
 
 		protected override void UpdateSurfacePointer() {
 			// Do nothing; it's best not to combine SDL_GetWindowSurface with OpenGL.
 		}
 
-		public override void Draw( Bitmap framebuffer ) {
-			throw new InvalidOperationException( "You can't use SDL drawing functions when OpenGL is being used directly." );
+		public override void Draw(Bitmap framebuffer) {
+			throw new InvalidOperationException("You can't use SDL drawing functions when OpenGL is being used directly.");
 		}
 
-		public override void Draw( Bitmap framebuffer, Rectangle rec ) {
-			throw new InvalidOperationException( "You can't use SDL drawing functions when OpenGL is being used directly." );
+		public override void Draw(Bitmap framebuffer, Rectangle rec) {
+			throw new InvalidOperationException("You can't use SDL drawing functions when OpenGL is being used directly.");
 		}
 
 		protected override void DestroyWindow() {
-			SDL.SDL_GL_DeleteContext( glContext );
+			SDL.SDL_GL_DeleteContext(glContext);
 
 			base.DestroyWindow();
 		}
@@ -106,7 +106,7 @@ namespace ClassicalSharp
 			SDL.SDL_Event newEvent = new SDL.SDL_Event();
 			newEvent.type = SDL.SDL_EventType.SDL_QUIT;
 
-			SDL.SDL_PushEvent( ref newEvent );
+			SDL.SDL_PushEvent(ref newEvent);
 		}
 	}
 }

@@ -26,6 +26,12 @@ namespace ClassicalSharp.GraphicsAPI
 			public static void AlphaFunc(Compare func, float value) {
 				glAlphaFunc((int)func, value);
 			}
+			
+			private delegate void GLBegin(int BeginMode);
+			private static GLBegin glBegin;
+			public static void Begin(BeginMode mode) {
+				glBegin((int)mode);
+			}
 
 			private delegate void GLBindBuffer(int bufferTarget, int buffer);
 			private static GLBindBuffer glBindBuffer;
@@ -64,6 +70,12 @@ namespace ClassicalSharp.GraphicsAPI
 			public static void BufferSubData<T>(BufferTarget target, IntPtr offset, IntPtr size, T[] data) where T : struct {
 				throw new NotImplementedException();
 			}
+			
+			private delegate void GLCallList(int list);
+			private static GLCallList glCallList;
+			public static void CallList(int list) {
+				glCallList(list);
+			}
 
 			private delegate void GLClear(int mask);
 			private static GLClear glClear;
@@ -77,6 +89,12 @@ namespace ClassicalSharp.GraphicsAPI
 				glClearColor(red, green, blue, alpha);
 			}
 
+			private delegate void GLColor4ub(byte red, byte green, byte blue, byte alpha);
+			private static GLColor4ub glColor4ub;
+			public static void Color4ub(byte red, byte green, byte blue, byte alpha) {
+				glColor4ub(red, green, blue, alpha);
+			}
+			
 			private delegate void GLColorMask(byte red, byte green, byte blue, byte alpha);
 			private static GLColorMask glColorMask;
 			public static void ColorMask(bool red, bool green, bool blue, bool alpha) {
@@ -130,6 +148,12 @@ namespace ClassicalSharp.GraphicsAPI
 			public static void DisableClientState(ArrayCap cap) {
 				glDisableClientState((int)cap);
 			}
+			
+			private delegate void GLDeleteLists(int list, int n);
+			private static GLDeleteLists glDeleteLists;
+			public static void DeleteLists(int list, int n) {
+				glDeleteLists(list, n);
+			}
 
 			private delegate void GLDrawArrays(int beginMode, int first, int count);
 			private static GLDrawArrays glDrawArrays;
@@ -153,6 +177,18 @@ namespace ClassicalSharp.GraphicsAPI
 			private static GLEnableClientState glEnableClientState;
 			public static void EnableClientState(ArrayCap cap) {
 				glEnableClientState((int)cap);
+			}
+			
+			private delegate void GLEnd();
+			private static GLEnd glEnd;
+			public static void End() {
+				glEnd();
+			}
+			
+			private delegate void GLEndList();
+			private static GLEndList glEndList;
+			public static void EndList() {
+				glEndList();
 			}
 
 			private delegate void GLFogf(int pname, float param);
@@ -179,6 +215,12 @@ namespace ClassicalSharp.GraphicsAPI
 				glGenBuffers(n, buffers);
 			}
 
+			private delegate int GLGenLists(int n);
+			private static GLGenLists glGenLists;
+			public static int GenLists(int n) {
+				return glGenLists(n);
+			}
+			
 			private delegate void GLGenTextures(int n, int* buffers);
 			private static GLGenTextures glGenTextures;
 			public static void GenTextures(int n, int* buffers) {
@@ -238,6 +280,12 @@ namespace ClassicalSharp.GraphicsAPI
 			public static void MultMatrixf(float* m) {
 				glMultMatrixf(m);
 			}
+			
+			private delegate void GLNewList(int list, int mode);
+			private static GLNewList glNewList;
+			public static void NewList(int list, int mode) {
+				glNewList(list, mode);
+			}
 
 			private delegate void GLPopMatrix();
 			private static GLPopMatrix glPopMatrix;
@@ -263,6 +311,12 @@ namespace ClassicalSharp.GraphicsAPI
 				glShadeModel((int)mode);
 			}
 
+			private delegate void GLTexCoord2f(float u, float v);
+			private static GLTexCoord2f glTexCoord2f;
+			public static void TexCoord2f(float u, float v) {
+				glTexCoord2f(u, v);
+			}
+			
 			private delegate void GLTexCoordPointer(int size, int pointerType, int stride, IntPtr pointer);
 			private static GLTexCoordPointer glTexCoordPointer;
 			public static void TexCoordPointer(int size, PointerType type, int stride, IntPtr pointer) {
@@ -291,6 +345,12 @@ namespace ClassicalSharp.GraphicsAPI
 			                                 int width, int height, GlPixelFormat format, PixelType type, IntPtr pixels) {
 				glTexSubImage2D((int)target, level, xoffset, yoffset, width, height, (int)format, (int)type, pixels);
 			}
+			
+			private delegate void GLVertex3f(float x, float y, float z);
+			private static GLVertex3f glVertex3f;
+			public static void Vertex3f(float x, float y, float z) {
+				glVertex3f(x, y, z);
+			}
 
 			private delegate void GLVertexPointer(int size, int pointerType, int stride, IntPtr pointer);
 			private static GLVertexPointer glVertexPointer;
@@ -310,13 +370,16 @@ namespace ClassicalSharp.GraphicsAPI
 
 			public static void LoadEntryPoints() {
 				glAlphaFunc = (GLAlphaFunc) GetFunc("glAlphaFunc", typeof(GLAlphaFunc));
+				glBegin = (GLBegin) GetFunc("glBegin", typeof(GLBegin));
 				glBindBuffer = (GLBindBuffer) GetFunc("glBindBuffer", typeof(GLBindBuffer));
 				glBindTexture = (GLBindTexture) GetFunc("glBindTexture", typeof(GLBindTexture));
 				glBlendFunc = (GLBlendFunc) GetFunc("glBlendFunc", typeof(GLBlendFunc));
 				glBufferData = (GLBufferData) GetFunc("glBufferData", typeof(GLBufferData));
 				glBufferSubData = (GLBufferSubData) GetFunc("glBufferSubData", typeof(GLBufferSubData));
+				glCallList = (GLCallList) GetFunc("glCallList", typeof(GLCallList));
 				glClear = (GLClear) GetFunc("glClear", typeof(GLClear));
-				glClearColor = (GLClearColor) GetFunc("glClearColor", typeof(GLClearColor)) ;
+				glClearColor = (GLClearColor) GetFunc("glClearColor", typeof(GLClearColor));
+				glColor4ub = (GLColor4ub) GetFunc("glColor4ub", typeof(GLColor4ub));
 				glColorMask = (GLColorMask) GetFunc("glColorMask", typeof(GLColorMask));
 				glColorPointer = (GLColorPointer) GetFunc("glColorPointer", typeof(GLColorPointer));
 				glCullFace = (GLCullFace) GetFunc("glCullFace", typeof(GLCullFace));
@@ -326,17 +389,21 @@ namespace ClassicalSharp.GraphicsAPI
 				glDepthMask = (GLDepthMask) GetFunc("glDepthMask", typeof(GLDepthMask));
 				glDisable = (GLDisable) GetFunc("glDisable", typeof(GLDisable));
 				glDisableClientState = (GLDisableClientState) GetFunc("glDisableClientState", typeof(GLDisableClientState));
+				glDeleteLists = (GLDeleteLists) GetFunc("glDeleteLists", typeof(GLDeleteLists));
 				glDrawArrays = (GLDrawArrays) GetFunc("glDrawArrays", typeof(GLDrawArrays));
 				glDrawElements = (GLDrawElements) GetFunc("glDrawElements", typeof(GLDrawElements));
 				glEnable = (GLEnable) GetFunc("glEnable", typeof(GLEnable));
 				glEnableClientState = (GLEnableClientState) GetFunc("glEnableClientState", typeof(GLEnableClientState));
+				glEnd = (GLEnd) GetFunc("glEnd", typeof(GLEnd));
+				glEndList = (GLEndList) GetFunc("glEndList", typeof(GLEndList));
 				glFogf = (GLFogf) GetFunc("glFogf", typeof(GLFogf));
 				glFogfv = (GLFogfv) GetFunc("glFogfv", typeof(GLFogfv));
 				glFogi = (GLFogi) GetFunc("glFogi", typeof(GLFogi));
 				glGenBuffers = (GLGenBuffers) GetFunc("glGenBuffers", typeof(GLGenBuffers));
+				glGenLists = (GLGenLists) GetFunc("glGenLists", typeof(GLGenLists));
 				glGenTextures = (GLGenTextures) GetFunc("glGenTextures", typeof(GLGenTextures));
 				glGetError = (GLGetError) GetFunc("glGetError", typeof(GLGetError));
-				glGetFloatv = (GLGetFloatv) GetFunc("glGetFloatv", typeof(GLGetFloatv)) ;
+				glGetFloatv = (GLGetFloatv) GetFunc("glGetFloatv", typeof(GLGetFloatv));
 				glGetIntegerv = (GLGetIntegerv) GetFunc("glGetIntegerv", typeof(GLGetIntegerv));
 				glGetString = (GLGetString) GetFunc("glGetString", typeof(GLGetString));
 				glHint = (GLHint) GetFunc("glHint", typeof(GLHint));
@@ -344,14 +411,17 @@ namespace ClassicalSharp.GraphicsAPI
 				glLoadMatrixf = (GLLoadMatrixf) GetFunc("glLoadMatrixf", typeof(GLLoadMatrixf));
 				glMatrixMode = (GLMatrixMode) GetFunc("glMatrixMode", typeof(GLMatrixMode));
 				glMultMatrixf = (GLMultMatrixf) GetFunc("glMultMatrixf", typeof(GLMultMatrixf));
+				glNewList = (GLNewList) GetFunc("glNewList", typeof(GLNewList));
 				glPopMatrix = (GLPopMatrix) GetFunc("glPopMatrix", typeof(GLPopMatrix));
 				glPushMatrix = (GLPushMatrix) GetFunc("glPushMatrix", typeof(GLPushMatrix));
 				glReadPixels = (GLReadPixels) GetFunc("glReadPixels", typeof(GLReadPixels));
 				glShadeModel = (GLShadeModel) GetFunc("glShadeModel", typeof(GLShadeModel));
+				glTexCoord2f = (GLTexCoord2f) GetFunc("glTexCoord2f", typeof(GLTexCoord2f));
 				glTexCoordPointer = (GLTexCoordPointer) GetFunc("glTexCoordPointer", typeof(GLTexCoordPointer));
 				glTexImage2D = (GLTexImage2D) GetFunc("glTexImage2D", typeof(GLTexImage2D));
 				glTexParameteri = (GLTexParameteri) GetFunc("glTexParameteri", typeof(GLTexParameteri));
 				glTexSubImage2D = (GLTexSubImage2D) GetFunc("glTexSubImage2D", typeof(GLTexSubImage2D));
+				glVertex3f = (GLVertex3f) GetFunc("glVertex3f", typeof(GLVertex3f));
 				glVertexPointer = (GLVertexPointer) GetFunc("glVertexPointer", typeof(GLVertexPointer));
 				glViewport = (GLViewport) GetFunc("glViewport", typeof(GLViewport));
 			}
@@ -365,6 +435,11 @@ namespace ClassicalSharp.GraphicsAPI
 			}
 		}
 
+		BeginMode[] modeMappings;
+		bool glLists = false;
+		int activeList = -1;
+		const int dynamicListId = 1234567891;
+		
 		public SDL2GLApi() {
 			GLFuncs.LoadEntryPoints();
 
@@ -373,6 +448,7 @@ namespace ClassicalSharp.GraphicsAPI
 			GLFuncs.GetIntegerv(GetPName.MaxTextureSize, &texDims);
 			texDimensions = texDims;
 			CheckVboSupport();
+			//glLists = true;
 			base.InitDynamicBuffers();
 
 			setupBatchFuncCol4b = SetupVbPos3fCol4b;
@@ -389,15 +465,15 @@ namespace ClassicalSharp.GraphicsAPI
 			if ((major > 1) || (major == 1 && minor >= 5)) return; // Supported in core since 1.5
 
 			Utils.LogDebug("Using ARB vertex buffer objects");
-			if (!extensions.Contains("GL_ARB_vertex_buffer_object")) {
+			if (extensions.Contains("GL_ARB_vertex_buffer_object")) {
+				GLFuncs.UseArbVboAddresses();
+			} else {
 				ErrorHandler.LogError("OpenGL VBO support check",
 				                      "Driver does not support OpenGL VBOs, which are required for the OpenGL build." +
 				                      Environment.NewLine + "You may need to install and/or update video card drivers." +
 				                      Environment.NewLine + "Alternatively, you can download the Direct3D 9 build.");
 				throw new InvalidOperationException("VBO support required for OpenGL build");
 			}
-
-			GLFuncs.UseArbVboAddresses();
 		}
 
 		public override bool AlphaTest {
@@ -540,6 +616,7 @@ namespace ClassicalSharp.GraphicsAPI
 		Action setupBatchFunc, setupBatchFuncCol4b, setupBatchFuncTex2fCol4b;
 
 		public override int CreateDynamicVb(VertexFormat format, int maxVertices) {
+			if (glLists) return dynamicListId;
 			int id = GenAndBind(BufferTarget.ArrayBuffer);
 			int sizeInBytes = maxVertices * strideSizes[(int)format];
 			GLFuncs.BufferData(BufferTarget.ArrayBuffer, new IntPtr(sizeInBytes), IntPtr.Zero, BufferUsage.DynamicDraw);
@@ -547,6 +624,26 @@ namespace ClassicalSharp.GraphicsAPI
 		}
 
 		public override int CreateVb(IntPtr vertices, VertexFormat format, int count) {
+			if (glLists) {
+				int list = GLFuncs.GenLists(1);
+				GLFuncs.NewList(list, 0x1300);
+
+				const int maxIndices = 65536 / 4 * 6;
+				ushort* indicesPtr = stackalloc ushort[maxIndices];
+				MakeIndices(indicesPtr, maxIndices);
+
+				int stride = format == VertexFormat.P3fT2fC4b ? VertexP3fT2fC4b.Size : VertexP3fC4b.Size;
+				GLFuncs.VertexPointer(3, PointerType.Float, stride, vertices);
+				GLFuncs.ColorPointer(4, PointerType.UnsignedByte, stride, (IntPtr)((byte*)vertices + 12));
+				if (format == VertexFormat.P3fT2fC4b) {
+					GLFuncs.TexCoordPointer(2, PointerType.Float, stride, (IntPtr)((byte*)vertices + 16));
+				}
+
+				GLFuncs.DrawElements(BeginMode.Triangles, count * 6 / 4, DrawElementsType.UnsignedShort, (IntPtr)indicesPtr);
+				GLFuncs.EndList();
+				return list;
+			}
+			
 			int id = GenAndBind(BufferTarget.ArrayBuffer);
 			int sizeInBytes = count * strideSizes[(int)format];
 			GLFuncs.BufferData(BufferTarget.ArrayBuffer, new IntPtr(sizeInBytes), vertices, BufferUsage.StaticDraw);
@@ -554,6 +651,7 @@ namespace ClassicalSharp.GraphicsAPI
 		}
 
 		public override int CreateIb(IntPtr indices, int indicesCount) {
+			if (glLists) return 0;
 			int id = GenAndBind(BufferTarget.ElementArrayBuffer);
 			int sizeInBytes = indicesCount * sizeof(ushort);
 			GLFuncs.BufferData(BufferTarget.ElementArrayBuffer, new IntPtr(sizeInBytes), indices, BufferUsage.StaticDraw);
@@ -568,6 +666,18 @@ namespace ClassicalSharp.GraphicsAPI
 		}
 		
 		public override void SetDynamicVbData(int vb, VertexP3fC4b[] vertices, int count) {
+			if (glLists) {
+				activeList = dynamicListId;
+				GLFuncs.Begin(BeginMode.Triangles);
+				VertexP3fC4b[] ptr = (VertexP3fC4b[])((object)vertices);
+				for (int i = 0; i < count; i += 4) {
+					V(ptr[i + 0]); V(ptr[i + 1]); V(ptr[i + 2]);
+					V(ptr[i + 2]); V(ptr[i + 3]); V(ptr[i + 0]);
+				}
+				GLFuncs.End();
+				return;
+			}
+			
 			fixed (VertexP3fC4b* p = vertices) {
 				IntPtr ptr = (IntPtr)p;
 				SetDynamicVbData(vb, ptr, count); 
@@ -575,6 +685,18 @@ namespace ClassicalSharp.GraphicsAPI
 		}
 		
 		public override void SetDynamicVbData(int vb, VertexP3fT2fC4b[] vertices, int count) {
+			if (glLists) {
+				activeList = dynamicListId;
+				GLFuncs.Begin(BeginMode.Triangles);
+				VertexP3fT2fC4b[] ptr = (VertexP3fT2fC4b[])((object)vertices);
+				for (int i = 0; i < count; i += 4) {
+					V(ptr[i + 0]); V(ptr[i + 1]); V(ptr[i + 2]);
+					V(ptr[i + 2]); V(ptr[i + 3]); V(ptr[i + 0]);
+				}
+				GLFuncs.End();
+				return;
+			}
+			
 			fixed (VertexP3fT2fC4b* p = vertices) {
 				IntPtr ptr = (IntPtr)p;
 				SetDynamicVbData(vb, ptr, count); 
@@ -602,17 +724,32 @@ namespace ClassicalSharp.GraphicsAPI
 			GLFuncs.BindBuffer(BufferTarget.ArrayBuffer, id);
 			GLFuncs.BufferSubData(BufferTarget.ArrayBuffer, IntPtr.Zero, new IntPtr(count * batchStride), vertices);
 		}
+		
+		static void V(VertexP3fC4b v) {
+			FastColour AAA = FastColour.Unpack(v.Colour);
+			GLFuncs.Color4ub(AAA.R, AAA.G, AAA.B, AAA.A);
+			GLFuncs.Vertex3f(v.X, v.Y, v.Z);
+		}
+
+		static void V(VertexP3fT2fC4b v) {
+			FastColour AAA = FastColour.Unpack(v.Colour);
+			GLFuncs.Color4ub(AAA.R, AAA.G, AAA.B, AAA.A);
+			GLFuncs.TexCoord2f(v.U, v.V);
+			GLFuncs.Vertex3f(v.X, v.Y, v.Z);
+		}
 
 		public override void DeleteVb(ref int vb) {
 			if (vb <= 0) return;
-			int id = vb; GLFuncs.DeleteBuffers(1, &id);
-			vb = -1;
+			int id = vb; vb = -1;
+
+			if (glLists) { if (id != dynamicListId) GLFuncs.DeleteLists(id, 1); }
+			else { GLFuncs.DeleteBuffers(1, &id); }
 		}
 
 		public override void DeleteIb(ref int ib) {
-			if (ib <= 0) return;
-			int id = ib; GLFuncs.DeleteBuffers(1, &id);
-			ib = -1;
+			if (glLists || ib <= 0) return;
+			int id = ib; ib = -1;
+			GLFuncs.DeleteBuffers(1, &id);
 		}
 
 		VertexFormat batchFormat = (VertexFormat)999;
@@ -635,25 +772,30 @@ namespace ClassicalSharp.GraphicsAPI
 		}
 
 		public override void BindVb(int vb) {
-			GLFuncs.BindBuffer(BufferTarget.ArrayBuffer, vb);
+			if (glLists) { activeList = vb; }
+			else { GLFuncs.BindBuffer(BufferTarget.ArrayBuffer, vb); }
 		}
 
 		public override void BindIb(int ib) {
+			if (glLists) return;
 			GLFuncs.BindBuffer(BufferTarget.ElementArrayBuffer, ib);
 		}
 
 		const DrawElementsType indexType = DrawElementsType.UnsignedShort;
 		public override void DrawVb(DrawMode mode, int startVertex, int verticesCount) {
+			if (glLists) { if (activeList != dynamicListId) GLFuncs.CallList(activeList); return; }
 			setupBatchFunc();
 			GLFuncs.DrawArrays(modeMappings[(int)mode], startVertex, verticesCount);
 		}
 
 		public override void DrawIndexedVb(DrawMode mode, int indicesCount, int startIndex) {
+			if (glLists) { if (activeList != dynamicListId) GLFuncs.CallList(activeList); return; }
 			setupBatchFunc();
 			GLFuncs.DrawElements(modeMappings[(int)mode], indicesCount, indexType, new IntPtr(startIndex * 2));
 		}
 
 		internal override void DrawIndexedVb_TrisT2fC4b(int indicesCount, int startIndex) {
+			if (glLists) return;
 			GLFuncs.VertexPointer(3, PointerType.Float, 24, zero);
 			GLFuncs.ColorPointer(4, PointerType.UnsignedByte, 24, twelve);
 			GLFuncs.TexCoordPointer(2, PointerType.Float, 24, sixteen);
@@ -661,6 +803,7 @@ namespace ClassicalSharp.GraphicsAPI
 		}
 
 		internal override void DrawIndexedVb_TrisT2fC4b(int indicesCount, int startVertex, int startIndex) {
+			if (glLists) return;
 			int offset = startVertex * VertexP3fT2fC4b.Size;
 			GLFuncs.VertexPointer(3, PointerType.Float, 24, new IntPtr(offset));
 			GLFuncs.ColorPointer(4, PointerType.UnsignedByte, 24, new IntPtr(offset + 12));
@@ -769,8 +912,6 @@ namespace ClassicalSharp.GraphicsAPI
 		public override void OnWindowResize(Game game) {
 			GLFuncs.Viewport(0, 0, game.Width, game.Height);
 		}
-
-		BeginMode[] modeMappings;
 
 		void InitFields() {
 			// See comment in Inventory() constructor for why this is necessary.

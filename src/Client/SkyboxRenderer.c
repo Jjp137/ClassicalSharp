@@ -85,7 +85,7 @@ void SkyboxRenderer_Render(Real64 deltaTime) {
 	Gfx_LoadMatrix(&m);
 
 	Gfx_BindVb(skybox_vb);
-	Gfx_DrawIndexedVb(DrawMode_Triangles, skybox_count * 6 / 4, 0);
+	Gfx_DrawVb_IndexedTris(skybox_count * 6 / 4);
 
 	Gfx_SetTexturing(false);
 	Gfx_LoadMatrix(&Game_View);
@@ -99,7 +99,7 @@ void SkyboxRenderer_MakeVb(void) {
 	if (Gfx_LostContext) return;
 	Gfx_DeleteVb(&skybox_vb);
 	VertexP3fT2fC4b vertices[skybox_count];
-	#define extent 0.5f
+	#define extent 1.0f
 	TextureRec rec;
 	PackedCol col = WorldEnv_CloudsCol;
 

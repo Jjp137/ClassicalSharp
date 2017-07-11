@@ -171,11 +171,14 @@ namespace ClassicalSharp.GraphicsAPI {
 		public abstract void SetDynamicVbData(int vb, VertexP3fC4b[] vertices, int count);
 		public abstract void SetDynamicVbData(int vb, VertexP3fT2fC4b[] vertices, int count);
 		
-		/// <summary> Draws the specified subset of the vertices in the current vertex buffer. </summary>
-		public abstract void DrawVb(DrawMode mode, int startVertex, int vCount);
+		/// <summary> Draws the specified subset of the vertices in the current vertex buffer as lines. </summary>
+		public abstract void DrawVb_Lines(int verticesCount);
 		
-		/// <summary> Draws the specified subset of the vertices in the current vertex buffer. </summary>
-		public abstract void DrawIndexedVb(DrawMode mode, int indicesCount, int startIndex);
+		/// <summary> Draws the specified subset of the vertices in the current vertex buffer as triangles. </summary>
+		public abstract void DrawVb_IndexedTris(int indicesCount, int startIndex);
+		
+		/// <summary> Draws the specified subset of the vertices in the current vertex buffer as triangles. </summary>
+		public abstract void DrawVb_IndexedTris(int indicesCount);
 		
 		/// <summary> Optimised version of DrawIndexedVb for VertexFormat.Pos3fTex2fCol4b </summary>
 		internal abstract void DrawIndexedVb_TrisT2fC4b(int indicesCount, int offsetVertex, int startIndex);

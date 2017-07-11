@@ -314,13 +314,18 @@ namespace ClassicalSharp.GraphicsAPI {
 			device.SetIndices(iBuffers[ib]);
 		}
 
-		public override void DrawVb(DrawMode mode, int startVertex, int verticesCount) {
-			device.DrawPrimitives(modeMappings[(int)mode], startVertex, NumPrimitives(verticesCount, mode));
+		public override void DrawVb_Lines(int verticesCount) {
+			device.DrawPrimitives(PrimitiveType.LineList, 0, verticesCount / 2);
 		}
 
-		public override void DrawIndexedVb(DrawMode mode, int indicesCount, int startIndex) {
-			device.DrawIndexedPrimitives(modeMappings[(int)mode], 0, startIndex / 6 * 4,
-			                             indicesCount / 6 * 4, startIndex, NumPrimitives(indicesCount, mode));
+		public override void DrawVb_IndexedTris(int indicesCount, int startIndex) {
+			device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, startIndex / 6 * 4,
+			                             indicesCount / 6 * 4, startIndex, indicesCount / 3);
+		}
+
+		public override void DrawVb_IndexedTris(int indicesCount) {
+			device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0,
+			                             indicesCount / 6 * 4, 0, indicesCount / 3);
 		}
 		
 		internal override void DrawIndexedVb_TrisT2fC4b(int indicesCount, int startIndex) {
@@ -535,10 +540,6 @@ namespace ClassicalSharp.GraphicsAPI {
 			}
 			array[id] = null;
 			id = -1;
-		}
-		
-		static int NumPrimitives(int vertices, DrawMode mode) {
-			return mode == DrawMode.Triangles ? vertices / 3 : vertices / 2;
 		}
 		
 		protected unsafe override void LoadOrthoMatrix(float width, float height) {

@@ -36,29 +36,28 @@ namespace ClassicalSharp.GraphicsAPI {
 		
 		/// <summary> Binds and draws the specified subset of the vertices in the current dynamic vertex buffer<br/>
 		/// This method also replaces the dynamic vertex buffer's data first with the given vertices before drawing. </summary>
-		public void UpdateDynamicVb(DrawMode mode, int vb, VertexP3fC4b[] vertices, int vCount) {
+		public void UpdateDynamicVb_Lines(int vb, VertexP3fC4b[] vertices, int vCount) {
 			SetDynamicVbData(vb, vertices, vCount);
-			DrawVb(mode, 0, vCount);
+			DrawVb_Lines(vCount);
 		}
 		
-		public void UpdateDynamicVb(DrawMode mode, int vb, VertexP3fT2fC4b[] vertices, int vCount) {
+		public void UpdateDynamicVb_Lines(int vb, VertexP3fT2fC4b[] vertices, int vCount) {
 			SetDynamicVbData(vb, vertices, vCount);
-			DrawVb(mode, 0, vCount);
+			DrawVb_Lines(vCount);
 
 		}
 		
 		/// <summary> Binds and draws the specified subset of the vertices in the current dynamic vertex buffer<br/>
 		/// This method also replaces the dynamic vertex buffer's data first with the given vertices before drawing. </summary>
-		public void UpdateDynamicIndexedVb(DrawMode mode, int vb, VertexP3fC4b[] vertices, int vCount) {
+		public void UpdateDynamicVb_IndexedTris(int vb, VertexP3fC4b[] vertices, int vCount) {
 			SetDynamicVbData(vb, vertices, vCount);
-			DrawIndexedVb(mode, vCount * 6 / 4, 0);
+			DrawVb_IndexedTris(vCount * 6 / 4);
 		}
 		
-		public void UpdateDynamicIndexedVb(DrawMode mode, int vb, VertexP3fT2fC4b[] vertices, int vCount) {
+		public void UpdateDynamicVb_IndexedTris(int vb, VertexP3fT2fC4b[] vertices, int vCount) {
 			SetDynamicVbData(vb, vertices, vCount);
-			DrawIndexedVb(mode, vCount * 6 / 4, 0);
+			DrawVb_IndexedTris(vCount * 6 / 4);
 		}
-		
 		
 		internal VertexP3fC4b[] quadVerts = new VertexP3fC4b[4];
 		internal int quadVb;
@@ -70,7 +69,7 @@ namespace ClassicalSharp.GraphicsAPI {
 			quadVerts[2] = new VertexP3fC4b(x + width, y + height, 0, c);
 			quadVerts[3] = new VertexP3fC4b(x, y + height, 0, c);
 			SetBatchFormat(VertexFormat.P3fC4b);
-			UpdateDynamicIndexedVb(DrawMode.Triangles, quadVb, quadVerts, 4);
+			UpdateDynamicVb_IndexedTris(quadVb, quadVerts, 4);
 		}
 		
 		public virtual void Draw2DQuad(float x, float y, float width, float height,
@@ -82,7 +81,7 @@ namespace ClassicalSharp.GraphicsAPI {
 			quadVerts[2] = new VertexP3fC4b(x + width, y + height, 0, c);
 			quadVerts[3] = new VertexP3fC4b(x, y + height, 0, c);
 			SetBatchFormat(VertexFormat.P3fC4b);
-			UpdateDynamicIndexedVb(DrawMode.Triangles, quadVb, quadVerts, 4);
+			UpdateDynamicVb_IndexedTris(quadVb, quadVerts, 4);
 		}
 		
 		internal VertexP3fT2fC4b[] texVerts = new VertexP3fT2fC4b[4];
@@ -91,7 +90,7 @@ namespace ClassicalSharp.GraphicsAPI {
 			int index = 0;
 			Make2DQuad(ref tex, col.Pack(), texVerts, ref index);
 			SetBatchFormat(VertexFormat.P3fT2fC4b);
-			UpdateDynamicIndexedVb(DrawMode.Triangles, texVb, texVerts, 4);
+			UpdateDynamicVb_IndexedTris(texVb, texVerts, 4);
 		}
 		
 		public static void Make2DQuad(ref Texture tex, int col,
@@ -161,10 +160,6 @@ namespace ClassicalSharp.GraphicsAPI {
 
 	public enum VertexFormat {
 		P3fC4b = 0, P3fT2fC4b = 1,
-	}
-	
-	public enum DrawMode {
-		Triangles = 0, Lines = 1,
 	}
 	
 	public enum CompareFunc {

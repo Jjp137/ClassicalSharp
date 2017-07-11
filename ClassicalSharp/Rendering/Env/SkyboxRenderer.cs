@@ -73,7 +73,7 @@ namespace ClassicalSharp.Renderers {
 			game.Graphics.LoadMatrix(ref m);
 			
 			game.Graphics.BindVb(vb);
-			game.Graphics.DrawIndexedVb(DrawMode.Triangles, count * 6 / 4, 0);
+			game.Graphics.DrawVb_IndexedTris(count * 6 / 4);
 			
 			game.Graphics.Texturing = false;
 			game.Graphics.LoadMatrix(ref game.View);
@@ -89,7 +89,7 @@ namespace ClassicalSharp.Renderers {
 			game.Graphics.DeleteVb(ref vb);
 			VertexP3fT2fC4b* vertices = stackalloc VertexP3fT2fC4b[count];
 			IntPtr start = (IntPtr)vertices;
-			const float pos = 0.5f;
+			const float pos = 1.0f;
 			TextureRec rec;
 			int col = game.World.Env.CloudsCol.Pack();
 			

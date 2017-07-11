@@ -435,10 +435,10 @@ namespace ClassicalSharp.GraphicsAPI
 			}
 		}
 
-		BeginMode[] modeMappings;
 		bool glLists = false;
 		int activeList = -1;
 		const int dynamicListId = 1234567891;
+		object dynamicListData = null;
 		
 		public SDL2GLApi() {
 			GLFuncs.LoadEntryPoints();
@@ -447,12 +447,16 @@ namespace ClassicalSharp.GraphicsAPI
 			int texDims;
 			GLFuncs.GetIntegerv(GetPName.MaxTextureSize, &texDims);
 			texDimensions = texDims;
+			glLists = Options.GetBool(OptionsKey.ForceOldOpenGL, false);
 			CheckVboSupport();
-			//glLists = true;
+			
 			base.InitDynamicBuffers();
 
 			setupBatchFuncCol4b = SetupVbPos3fCol4b;
 			setupBatchFuncTex2fCol4b = SetupVbPos3fTex2fCol4b;
+			setupBatchFuncCol4b_Range = SetupVbPos3fCol4b_Range;
+			setupBatchFuncTex2fCol4b_Range = SetupVbPos3fTex2fCol4b_Range;
+			
 			GLFuncs.EnableClientState(ArrayCap.VertexArray);
 			GLFuncs.EnableClientState(ArrayCap.ColorArray);
 		}
@@ -468,11 +472,7 @@ namespace ClassicalSharp.GraphicsAPI
 			if (extensions.Contains("GL_ARB_vertex_buffer_object")) {
 				GLFuncs.UseArbVboAddresses();
 			} else {
-				ErrorHandler.LogError("OpenGL VBO support check",
-				                      "Driver does not support OpenGL VBOs, which are required for the OpenGL build." +
-				                      Environment.NewLine + "You may need to install and/or update video card drivers." +
-				                      Environment.NewLine + "Alternatively, you can download the Direct3D 9 build.");
-				throw new InvalidOperationException("VBO support required for OpenGL build");
+				glLists = true;
 			}
 		}
 
@@ -614,6 +614,7 @@ namespace ClassicalSharp.GraphicsAPI
 
 		#region Vertex/index buffers
 		Action setupBatchFunc, setupBatchFuncCol4b, setupBatchFuncTex2fCol4b;
+		Action<int> setupBatchFunc_Range, setupBatchFuncCol4b_Range, setupBatchFuncTex2fCol4b_Range;
 
 		public override int CreateDynamicVb(VertexFormat format, int maxVertices) {
 			if (glLists) return dynamicListId;
@@ -668,13 +669,7 @@ namespace ClassicalSharp.GraphicsAPI
 		public override void SetDynamicVbData(int vb, VertexP3fC4b[] vertices, int count) {
 			if (glLists) {
 				activeList = dynamicListId;
-				GLFuncs.Begin(BeginMode.Triangles);
-				VertexP3fC4b[] ptr = (VertexP3fC4b[])((object)vertices);
-				for (int i = 0; i < count; i += 4) {
-					V(ptr[i + 0]); V(ptr[i + 1]); V(ptr[i + 2]);
-					V(ptr[i + 2]); V(ptr[i + 3]); V(ptr[i + 0]);
-				}
-				GLFuncs.End();
+				dynamicListData = vertices;
 				return;
 			}
 			
@@ -687,13 +682,7 @@ namespace ClassicalSharp.GraphicsAPI
 		public override void SetDynamicVbData(int vb, VertexP3fT2fC4b[] vertices, int count) {
 			if (glLists) {
 				activeList = dynamicListId;
-				GLFuncs.Begin(BeginMode.Triangles);
-				VertexP3fT2fC4b[] ptr = (VertexP3fT2fC4b[])((object)vertices);
-				for (int i = 0; i < count; i += 4) {
-					V(ptr[i + 0]); V(ptr[i + 1]); V(ptr[i + 2]);
-					V(ptr[i + 2]); V(ptr[i + 3]); V(ptr[i + 0]);
-				}
-				GLFuncs.End();
+				dynamicListData = vertices;
 				return;
 			}
 			
@@ -704,21 +693,6 @@ namespace ClassicalSharp.GraphicsAPI
 		}
 		
 		int batchStride;
-		public void UpdateDynamicVb(DrawMode mode, int id, IntPtr vertices, int count) {
-			GLFuncs.BindBuffer(BufferTarget.ArrayBuffer, id);
-			GLFuncs.BufferSubData(BufferTarget.ArrayBuffer, IntPtr.Zero, new IntPtr(count * batchStride), vertices);
-
-			setupBatchFunc();
-			GLFuncs.DrawArrays(modeMappings[(int)mode], 0, count);
-		}
-
-		public void UpdateDynamicIndexedVb(DrawMode mode, int id, IntPtr vertices, int vCount, int indicesCount) {
-			GLFuncs.BindBuffer(BufferTarget.ArrayBuffer, id);
-			GLFuncs.BufferSubData(BufferTarget.ArrayBuffer, IntPtr.Zero, new IntPtr(vCount * batchStride), vertices);
-
-			setupBatchFunc();
-			GLFuncs.DrawElements(modeMappings[(int)mode], indicesCount, indexType, zero);
-		}
 
 		public void SetDynamicVbData(int id, IntPtr vertices, int count) {
 			GLFuncs.BindBuffer(BufferTarget.ArrayBuffer, id);
@@ -764,9 +738,11 @@ namespace ClassicalSharp.GraphicsAPI
 			if (format == VertexFormat.P3fT2fC4b) {
 				GLFuncs.EnableClientState(ArrayCap.TextureCoordArray);
 				setupBatchFunc = setupBatchFuncTex2fCol4b;
+				setupBatchFunc_Range = setupBatchFuncTex2fCol4b_Range;
 				batchStride = VertexP3fT2fC4b.Size;
 			} else {
 				setupBatchFunc = setupBatchFuncCol4b;
+				setupBatchFunc_Range = setupBatchFuncCol4b_Range;
 				batchStride = VertexP3fC4b.Size;
 			}
 		}
@@ -782,33 +758,91 @@ namespace ClassicalSharp.GraphicsAPI
 		}
 
 		const DrawElementsType indexType = DrawElementsType.UnsignedShort;
-		public override void DrawVb(DrawMode mode, int startVertex, int verticesCount) {
-			if (glLists) { if (activeList != dynamicListId) GLFuncs.CallList(activeList); return; }
+		public override void DrawVb_Lines(int verticesCount) {
+			if (glLists) { DrawDynamicLines(verticesCount); return; }
+			
 			setupBatchFunc();
-			GLFuncs.DrawArrays(modeMappings[(int)mode], startVertex, verticesCount);
+			GLFuncs.DrawArrays(BeginMode.Lines, 0, verticesCount);
 		}
 
-		public override void DrawIndexedVb(DrawMode mode, int indicesCount, int startIndex) {
-			if (glLists) { if (activeList != dynamicListId) GLFuncs.CallList(activeList); return; }
+		public override void DrawVb_IndexedTris(int indicesCount, int startIndex) {
+			if (glLists) { 
+				if (activeList != dynamicListId) { GLFuncs.CallList(activeList); }
+				else { DrawDynamicTriangles(indicesCount, startIndex); }
+				return;
+			}
+			
+			setupBatchFunc_Range(startIndex);
+			GLFuncs.DrawElements(BeginMode.Lines, indicesCount, indexType, IntPtr.Zero);
+		}
+		
+		public override void DrawVb_IndexedTris(int indicesCount) {
+			if (glLists) {
+				if (activeList != dynamicListId) { GLFuncs.CallList(activeList); }
+				else { DrawDynamicTriangles(indicesCount, 0); }
+				return;
+			}
+
 			setupBatchFunc();
-			GLFuncs.DrawElements(modeMappings[(int)mode], indicesCount, indexType, new IntPtr(startIndex * 2));
+			GLFuncs.DrawElements(BeginMode.Triangles, indicesCount, indexType, IntPtr.Zero);
+		}
+		
+		void DrawDynamicLines(int verticesCount) {
+			GLFuncs.Begin(BeginMode.Lines);
+			if (batchFormat == VertexFormat.P3fT2fC4b) {
+				VertexP3fT2fC4b[] ptr = (VertexP3fT2fC4b[])dynamicListData;
+				for (int i = 0; i < verticesCount; i += 2) {
+					V(ptr[i + 0]); V(ptr[i + 1]);
+				}
+			} else {
+				VertexP3fC4b[] ptr = (VertexP3fC4b[])dynamicListData;
+				for (int i = 0; i < verticesCount; i += 2) {
+					V(ptr[i + 0]); V(ptr[i + 1]);
+				}
+			}
+			GLFuncs.End();
+		}
+
+		void DrawDynamicTriangles(int verticesCount, int startVertex) {
+			GLFuncs.Begin(BeginMode.Triangles);
+			// indices -> vertices count
+			verticesCount = verticesCount * 4 / 6;
+			startVertex = startVertex * 4 / 6;
+
+			if (batchFormat == VertexFormat.P3fT2fC4b) {
+				VertexP3fT2fC4b[] ptr = (VertexP3fT2fC4b[])dynamicListData;
+				for (int i = startVertex; i < startVertex + verticesCount; i += 4) {
+					V(ptr[i + 0]); V(ptr[i + 1]); V(ptr[i + 2]);
+					V(ptr[i + 2]); V(ptr[i + 3]); V(ptr[i + 0]);
+				}
+			} else {
+				VertexP3fC4b[] ptr = (VertexP3fC4b[])dynamicListData;
+				for (int i = startVertex; i < startVertex + verticesCount; i += 4) {
+					V(ptr[i + 0]); V(ptr[i + 1]); V(ptr[i + 2]);
+					V(ptr[i + 2]); V(ptr[i + 3]); V(ptr[i + 0]);
+				}
+			}
+			GLFuncs.End();
 		}
 
 		internal override void DrawIndexedVb_TrisT2fC4b(int indicesCount, int startIndex) {
 			if (glLists) return;
-			GLFuncs.VertexPointer(3, PointerType.Float, 24, zero);
-			GLFuncs.ColorPointer(4, PointerType.UnsignedByte, 24, twelve);
-			GLFuncs.TexCoordPointer(2, PointerType.Float, 24, sixteen);
-			GLFuncs.DrawElements(BeginMode.Triangles, indicesCount, indexType, new IntPtr(startIndex * 2));
+			int offset = (startIndex / 6 * 4) * VertexP3fT2fC4b.Size;
+
+			GLFuncs.VertexPointer(3, PointerType.Float, VertexP3fT2fC4b.Size, new IntPtr(offset));
+			GLFuncs.ColorPointer(4, PointerType.UnsignedByte, VertexP3fT2fC4b.Size, new IntPtr(offset + 12));
+			GLFuncs.TexCoordPointer(2, PointerType.Float, VertexP3fT2fC4b.Size, new IntPtr(offset + 16));
+			GLFuncs.DrawElements(BeginMode.Triangles, indicesCount, indexType, IntPtr.Zero);
 		}
 
 		internal override void DrawIndexedVb_TrisT2fC4b(int indicesCount, int startVertex, int startIndex) {
 			if (glLists) return;
 			int offset = startVertex * VertexP3fT2fC4b.Size;
-			GLFuncs.VertexPointer(3, PointerType.Float, 24, new IntPtr(offset));
-			GLFuncs.ColorPointer(4, PointerType.UnsignedByte, 24, new IntPtr(offset + 12));
-			GLFuncs.TexCoordPointer(2, PointerType.Float, 24, new IntPtr(offset + 16));
-			GLFuncs.DrawElements(BeginMode.Triangles, indicesCount, indexType, new IntPtr(startIndex * 2));
+
+			GLFuncs.VertexPointer(3, PointerType.Float, VertexP3fT2fC4b.Size, new IntPtr(offset));
+			GLFuncs.ColorPointer(4, PointerType.UnsignedByte, VertexP3fT2fC4b.Size, new IntPtr(offset + 12));
+			GLFuncs.TexCoordPointer(2, PointerType.Float, VertexP3fT2fC4b.Size, new IntPtr(offset + 16));
+			GLFuncs.DrawElements(BeginMode.Triangles, indicesCount, indexType, IntPtr.Zero);
 		}
 
 		IntPtr zero = new IntPtr(0), twelve = new IntPtr(12), sixteen = new IntPtr(16);
@@ -822,6 +856,19 @@ namespace ClassicalSharp.GraphicsAPI
 			GLFuncs.VertexPointer(3, PointerType.Float, VertexP3fT2fC4b.Size, zero);
 			GLFuncs.ColorPointer(4, PointerType.UnsignedByte, VertexP3fT2fC4b.Size, twelve);
 			GLFuncs.TexCoordPointer(2, PointerType.Float, VertexP3fT2fC4b.Size, sixteen);
+		}
+		
+		void SetupVbPos3fCol4b_Range(int startIndex) {
+			int offset = (startIndex / 6 * 4) * VertexP3fC4b.Size;
+			GLFuncs.VertexPointer(3, PointerType.Float, VertexP3fC4b.Size, new IntPtr(offset));
+			GLFuncs.ColorPointer(4, PointerType.UnsignedByte, VertexP3fC4b.Size, new IntPtr(offset + 12));
+		}
+
+		void SetupVbPos3fTex2fCol4b_Range(int startIndex) {
+			int offset = (startIndex / 6 * 4) * VertexP3fT2fC4b.Size;
+			GLFuncs.VertexPointer(3, PointerType.Float, VertexP3fT2fC4b.Size, new IntPtr(offset));
+			GLFuncs.ColorPointer(4, PointerType.UnsignedByte, VertexP3fT2fC4b.Size, new IntPtr(offset + 12));
+			GLFuncs.TexCoordPointer(2, PointerType.Float, VertexP3fT2fC4b.Size, new IntPtr(offset + 16));
 		}
 		#endregion
 
@@ -891,6 +938,12 @@ namespace ClassicalSharp.GraphicsAPI
 		}
 
 		public override bool WarnIfNecessary(Chat chat) {
+			if (glLists) {
+				chat.Add("&cYou are using the very outdated OpenGL backend.");
+				chat.Add("&cAs such you may experience poor performance.");
+				chat.Add("&cIt is likely you need to install video card drivers.");
+			}
+			
 			if (!isIntelRenderer) return false;
 
 			chat.Add("&cIntel graphics cards are known to have issues with the OpenGL build.");
@@ -925,8 +978,6 @@ namespace ClassicalSharp.GraphicsAPI
 			compareFuncs[4] = Compare.Lequal; compareFuncs[5] = Compare.Equal;
 			compareFuncs[6] = Compare.Gequal; compareFuncs[7] = Compare.Greater;
 
-			modeMappings = new BeginMode[2];
-			modeMappings[0] = BeginMode.Triangles; modeMappings[1] = BeginMode.Lines;
 			fogModes = new FogMode[3];
 			fogModes[0] = FogMode.Linear; fogModes[1] = FogMode.Exp;
 			fogModes[2] = FogMode.Exp2;

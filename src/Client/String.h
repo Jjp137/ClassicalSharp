@@ -7,7 +7,7 @@
 
 #define String_BufferSize(n) (n + 1)
 
-typedef struct String {
+typedef struct String_ {
 	/* Pointer to raw characters. Size is capacity + 1, as buffer is null terminated. */
 	UInt8* buffer;
 
@@ -55,6 +55,9 @@ static Int32 String_MakeInt32(Int32 num, UInt8* numBuffer);
 
 /* Attempts to append a constant raw null-terminated string. */
 bool String_AppendConstant(String* str, const UInt8* buffer);
+
+/* Attempts to append a string. */
+bool String_AppendString(String* str, String* buffer);
 
 
 /* Finds the first index of c in given string, -1 if not found. */

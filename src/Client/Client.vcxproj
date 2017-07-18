@@ -26,26 +26,26 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v140_xp</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v140_xp</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v140_xp</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v140_xp</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -171,6 +171,8 @@
   <ItemGroup>
     <ClInclude Include="2DStructs.h" />
     <ClInclude Include="AABB.h" />
+    <ClInclude Include="AnimatedComp.h" />
+    <ClInclude Include="AutoRotate.h" />
     <ClInclude Include="AxisLinesRenderer.h" />
     <ClInclude Include="BlockEnums.h" />
     <ClInclude Include="BlockID.h" />
@@ -226,6 +228,7 @@
     <ClInclude Include="TerrainAtlas1D.h" />
     <ClInclude Include="TerrainAtlas2D.h" />
     <ClInclude Include="TickQueue.h" />
+    <ClInclude Include="TiltComp.h" />
     <ClInclude Include="TreeGen.h" />
     <ClInclude Include="WeatherRenderer.h" />
     <ClInclude Include="WorldEvents.h" />
@@ -255,6 +258,8 @@
   <ItemGroup>
     <ClCompile Include="2DStructs.c" />
     <ClCompile Include="AABB.c" />
+    <ClCompile Include="AnimatedComp.c" />
+    <ClCompile Include="AutoRotate.c" />
     <ClCompile Include="AxisLinesRenderer.c" />
     <ClCompile Include="Block.c" />
     <ClCompile Include="BordersRenderer.c" />
@@ -263,7 +268,6 @@
     <ClCompile Include="ChunkInfo.c" />
     <ClCompile Include="ChunkSorter.c" />
     <ClCompile Include="ChunkUpdater.c" />
-    <ClCompile Include="Compiler.c" />
     <ClCompile Include="CreeperModel.c" />
     <ClCompile Include="D3D9Api.c" />
     <ClCompile Include="DefaultSet.c" />
@@ -294,6 +298,7 @@
     <ClCompile Include="NotchyGenerator.c" />
     <ClCompile Include="Physics.c" />
     <ClCompile Include="PickedPosRenderer.c" />
+    <ClCompile Include="Program.c" />
     <ClCompile Include="Random.c" />
     <ClCompile Include="Respawn.c" />
     <ClCompile Include="SelectionBox.c" />
@@ -306,6 +311,7 @@
     <ClCompile Include="Texture.c" />
     <ClCompile Include="TextureRec.c" />
     <ClCompile Include="TickQueue.c" />
+    <ClCompile Include="TiltComp.c" />
     <ClCompile Include="TreeGen.c" />
     <ClCompile Include="Vector3I.c" />
     <ClCompile Include="Vectors.c" />

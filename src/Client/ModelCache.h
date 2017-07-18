@@ -12,14 +12,14 @@
 */
 
 
-typedef struct CachedModel {
+typedef struct CachedModel_ {
 	/* Name associated with the model, all lowercase. */
 	String Name;
 	/* Pointer to the actual model instance. */
 	IModel* Instance;
 } CachedModel;
 
-typedef struct CachedTexture {
+typedef struct CachedTexture_ {
 	/* Filename of the texture. */
 	String Name;
 	/* Native texture ID. */
@@ -71,8 +71,8 @@ void ModelCache_RegisterModel(STRING_REF String* name, STRING_REF String* defaul
 You can use ModelCache_GetTextureIndex to get the index of this texture. */
 void ModelCache_RegisterTexture(STRING_REF String* texName);
 
-static void ModelCache_RegisterDefaultModels(void);
 
+static void ModelCache_RegisterDefaultModels(void);
 
 static void ModelCache_TextureChanged(Stream* stream);
 

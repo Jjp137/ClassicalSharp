@@ -8,31 +8,33 @@ ModelVertex CreeperModel_Vertices[IModel_BoxVertices * 6];
 IModel CreeperModel;
 
 void CreeperModel_CreateParts(void) {
-	BoxDesc desc = BoxDesc_Box(-4, 18, -4, 4, 26, 4);
+	BoxDesc desc;
+	
+	BoxDesc_Box(&desc, -4, 18, -4, 4, 26, 4);
 	BoxDesc_TexOrigin(&desc, 0, 0);
 	BoxDesc_RotOrigin(&desc, 0, 18, 0);
 	Head = BoxDesc_BuildBox(&CreeperModel, &desc);
 
-	desc = BoxDesc_Box(-4, 6, -2, 4, 18, 2);
+	BoxDesc_Box(&desc, -4, 6, -2, 4, 18, 2);
 	BoxDesc_TexOrigin(&desc, 16, 16);
 	Torso = BoxDesc_BuildBox(&CreeperModel, &desc);
 
-	desc = BoxDesc_Box(-4, 0, -6, 0, 6, -2);
+	BoxDesc_Box(&desc, -4, 0, -6, 0, 6, -2);
 	BoxDesc_TexOrigin(&desc, 0, 16);
 	BoxDesc_RotOrigin(&desc, 0, 6, -2);
 	LeftLegFront = BoxDesc_BuildBox(&CreeperModel, &desc);
 
-	desc = BoxDesc_Box(0, 0, -6, 4, 6, -2);
+	BoxDesc_Box(&desc, 0, 0, -6, 4, 6, -2);
 	BoxDesc_TexOrigin(&desc, 0, 16);
 	BoxDesc_RotOrigin(&desc, 0, 6, -2);
 	RightLegFront = BoxDesc_BuildBox(&CreeperModel, &desc);
 
-	desc = BoxDesc_Box(-4, 0, 2, 0, 6, 6);
+	BoxDesc_Box(&desc, -4, 0, 2, 0, 6, 6);
 	BoxDesc_TexOrigin(&desc, 0, 16);
 	BoxDesc_RotOrigin(&desc, 0, 6, 2);
 	LeftLegBack = BoxDesc_BuildBox(&CreeperModel, &desc);
 
-	desc = BoxDesc_Box(0, 0, 2, 4, 6, 6);
+	BoxDesc_Box(&desc, 0, 0, 2, 4, 6, 6);
 	BoxDesc_TexOrigin(&desc, 0, 16);
 	BoxDesc_RotOrigin(&desc, 0, 6, 2);
 	RightLegBack = BoxDesc_BuildBox(&CreeperModel, &desc);
@@ -40,11 +42,14 @@ void CreeperModel_CreateParts(void) {
 
 Real32 CreeperModel_GetNameYOffset(void) { return 1.7f; }
 Real32 CreeperModel_GetEyeY(Entity* entity) { return 22.0f / 16.0f; }
-Vector3 CreeperModel_GetCollisionSize(void) { return Vector3_Create3(8.0f / 16.0f, 26.0f / 16.0f, 8.0f / 16.0f); }
+Vector3 CreeperModel_GetCollisionSize(void) { 
+	return Vector3_Create3(8.0f / 16.0f, 26.0f / 16.0f, 8.0f / 16.0f); 
+}
 
 AABB CreeperModel_GetPickingBounds(void) {
 	AABB bb;
-	AABB_FromCoords6(&bb, -4.0f / 16.0f, 0.0f, -6.0f / 16.0f, 4.0f / 16.0f, 26.0f / 16.0f, 6.0f / 16.0f);
+	AABB_FromCoords6(&bb, -4.0f / 16.0f, 0.0f, -6.0f / 16.0f, 
+					4.0f / 16.0f, 26.0f / 16.0f, 6.0f / 16.0f);
 	return bb;
 }
 
@@ -62,6 +67,6 @@ void CreeperModel_DrawModel(Entity* entity) {
 
 IModel* CreeperModel_GetInstance(void) {
 	IModel_Init(&CreeperModel);
-	IModel_SetFuncPointers(CreeperModel);
+	IModel_SetPointers(CreeperModel);
 	return &CreeperModel;
 }

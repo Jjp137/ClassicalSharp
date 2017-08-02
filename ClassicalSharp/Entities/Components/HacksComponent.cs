@@ -9,10 +9,8 @@ namespace ClassicalSharp.Entities {
 	public sealed class HacksComponent {
 		
 		Game game;
-		Entity entity;
 		public HacksComponent(Game game, Entity entity) {
 			this.game = game;
-			this.entity = entity;
 		}
 		
 		public byte UserType;
@@ -44,9 +42,9 @@ namespace ClassicalSharp.Entities {
 		/// <summary> Whether the player is allowed to pass through all blocks. </summary>
 		public bool CanNoclip = true;
 		/// <summary> Whether the player is allowed to use pushback block placing. </summary>
-		public bool CanPushbackBlocks = true;		
+		public bool CanPushbackBlocks = true;
 		/// <summary> Whether the player is allowed to see all entity name tags. </summary>
-		public bool CanSeeAllNames = true;					
+		public bool CanSeeAllNames = true;
 		/// <summary> Whether the player is allowed to double jump. </summary>
 		public bool CanDoubleJump = true;	
 		/// <summary> Maximum speed the entity can move at horizontally when CanSpeed is false. </summary>
@@ -123,6 +121,7 @@ namespace ClassicalSharp.Entities {
 			if (!CanNoclip || !Enabled) Noclip = false;
 			if (!CanSpeed || !Enabled) { Speeding = false; HalfSpeeding = false; }
 			CanDoubleJump = CanAnyHacks && Enabled && CanSpeed;
+			CanSeeAllNames = CanAnyHacks && CanSeeAllNames;
 			
 			if (!CanUseThirdPersonCamera || !Enabled)
 				game.CycleCamera();

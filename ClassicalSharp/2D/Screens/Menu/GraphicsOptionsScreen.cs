@@ -80,17 +80,16 @@ namespace ClassicalSharp.Gui.Screens {
 				"&eVSync: &fNumber of frames rendered is at most the monitor's refresh rate.",
 				"&e30/60/120 FPS: &f30/60/120 frames rendered at most each second.",
 				"&eNoLimit: &fRenders as many frames as possible each second.",
-				"&cUsing NoLimit mode is discouraged for general usage.",
+				"&cUsing NoLimit mode is discouraged.",
 			};
 			descriptions[2] = new string[] {
 				"&cNote: &eSmooth lighting is still experimental and can heavily reduce performance.",
 			};
 			descriptions[3] = new string[] {
-				"&eNoNames: &fNo player names are drawn.",
-				"&eHoveredOnly: &fName of the targeted player is drawn see-through.",
-				"&eAll: &fAll player names are drawn normally.",
-				"&eAllAndHovered: &fName of the targeted player is drawn see-through.",
-				"&f      All other player names are drawn normally.",
+				"&eHovered: &fName of the targeted player is drawn see-through.",
+				"&eAll: &fNames of all other players are drawn normally.",
+				"&eAllHovered: &fAll names of players are drawn see-through.",
+				"&eAllUnscaled: &fAll names of players are drawn see-through without scaling.",
 			};
 			descriptions[4] = new string[] {
 				"&eNone: &fNo entity shadows are drawn.",

@@ -2,6 +2,7 @@
 using System;
 using ClassicalSharp.Entities;
 using ClassicalSharp.Entities.Mobs;
+using ClassicalSharp.Gui.Screens;
 using ClassicalSharp.Gui.Widgets;
 using OpenTK;
 using OpenTK.Input;
@@ -122,7 +123,11 @@ namespace ClassicalSharp.Mode {
 		
 		public void OnNewMapLoaded(Game game) {
 			UpdateScore();
+			wasOnGround = true;
+			showedDeathScreen = false;
+			game.LocalPlayer.Health = 20;
 			string[] models = { "sheep", "pig", "skeleton", "zombie", "creeper", "spider" };
+			
 			for (int i = 0; i < 254; i++) {
 				MobEntity fail = new MobEntity(game, models[rnd.Next(models.Length)]);
 				float x = rnd.Next(0, game.World.Width) + 0.5f;
@@ -136,11 +141,15 @@ namespace ClassicalSharp.Mode {
 		
 		public void Init(Game game) {
 			this.game = game;
+			ResetInventory();
+			game.Server.AppName += " (survival)";
+		}
+		
+		void ResetInventory() {
 			BlockID[] hotbar = game.Inventory.Hotbar;
 			for (int i = 0; i < hotbar.Length; i++)
 				hotbar[i] = Block.Air;
 			hotbar[Inventory.BlocksPerRow - 1] = Block.TNT;
-			game.Server.AppName += " (survival)";
 		}
 		
 		
@@ -162,5 +171,33 @@ namespace ClassicalSharp.Mode {
 		public void Reset(Game game) { }
 		public void OnNewMap(Game game) { }
 		public void Dispose() { }
+		
+		public void BeginFrame(double delta) { }
+		
+		bool wasOnGround = true;
+		float fallY = -1000;
+		bool showedDeathScreen = false;
+		
+		public void EndFrame(double delta) {
+			LocalPlayer p = game.LocalPlayer;
+			if (p.onGround) {
+				if (wasOnGround) return;
+				short damage = (short)((fallY - p.interp.next.Pos.Y) - 3);
+				// TODO: shouldn't take damage when land in water or lava
+				// TODO: is the damage formula correct
+				if (damage > 0) p.Health -= damage;
+				fallY = -1000;
+			} else {
+				fallY = Math.Max(fallY, p.interp.prev.Pos.Y);
+			}
+			
+			wasOnGround = p.onGround;
+			if (p.Health <= 0 && !showedDeathScreen) {
+				showedDeathScreen = true;
+				game.Gui.SetNewScreen(new DeathScreen(game));
+				// TODO: Should only reset inventory when actually click on 'load' or 'generate'
+				ResetInventory();
+			}
+		}
 	}
 }

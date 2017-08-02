@@ -298,10 +298,12 @@
     <ClCompile Include="NotchyGenerator.c" />
     <ClCompile Include="Physics.c" />
     <ClCompile Include="PickedPosRenderer.c" />
+    <ClCompile Include="PigModel.c" />
     <ClCompile Include="Program.c" />
     <ClCompile Include="Random.c" />
     <ClCompile Include="Respawn.c" />
     <ClCompile Include="SelectionBox.c" />
+    <ClCompile Include="SkeletonModel.c" />
     <ClCompile Include="SkyboxRenderer.c" />
     <ClCompile Include="Stream.c" />
     <ClCompile Include="String.c" />
@@ -322,6 +324,7 @@
     <ClCompile Include="WinPlatform.c" />
     <ClCompile Include="World.c" />
     <ClCompile Include="WorldEnv.c" />
+    <ClCompile Include="ZombieModel.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

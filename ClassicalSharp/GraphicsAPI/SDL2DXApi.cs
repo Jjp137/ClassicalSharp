@@ -332,11 +332,6 @@ namespace ClassicalSharp.GraphicsAPI {
 			device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, startIndex / 6 * 4,
 			                             indicesCount / 6 * 4, startIndex, indicesCount / 3);
 		}
-		
-		internal override void DrawIndexedVb_TrisT2fC4b(int indicesCount, int startVertex, int startIndex) {
-			device.DrawIndexedPrimitives(PrimitiveType.TriangleList, startVertex, 0,
-			                             indicesCount / 6 * 4, startIndex, indicesCount / 3);
-		}
 		#endregion
 
 

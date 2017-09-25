@@ -61,9 +61,6 @@ namespace ClassicalSharp {
 		/// <summary> Returns whether a starts with b, ignoring any case differences. </summary>
 		public static bool CaselessStarts(string a, string b) { return a.StartsWith(b, comp); }
 		
-		/// <summary> Returns whether a ends with b, ignoring any case differences. </summary>
-		public static bool CaselessEnds(string a, string b) { return a.EndsWith(b, comp); }
-		
 		/// <summary> Converts the given byte array of length N to a hex string of length 2N. </summary>
 		public static string ToHexString(byte[] array) {
 			int len = array.Length;
@@ -110,6 +107,15 @@ namespace ClassicalSharp {
 		public static void LogDebug(string text, params object[] args) {
 			Console.WriteLine(String.Format(text, args));
 		}
+		
+		public static int AccumulateWheelDelta(ref float accmulator, float delta) {
+			// Some mice may use deltas of say (0.2, 0.2, 0.2, 0.2, 0.2)
+			// We must use rounding at final step, not at every intermediate step.
+			accmulator += delta;
+			int steps = (int)accmulator;
+			accmulator -= steps;
+			return steps;
+		}
 
 #if !LAUNCHER
 		/// <summary> Attempts to caselessly parse the given string as a Key enum member,
@@ -140,16 +146,6 @@ namespace ClassicalSharp {
 			adjCol *= tint;
 			return adjCol.Pack();
 		}
-		
-		public static byte FastByte(string s) {
-			int sum = 0;
-			switch (s.Length) {
-				case 1: sum = (s[0] - '0'); break;
-				case 2: sum = (s[0] - '0') * 10 + (s[1] - '0'); break;
-				case 3: sum = (s[0] - '0') * 100 + (s[1] - '0') * 10 + (s[2] - '0'); break;
-			}
-			return (byte)sum;
-		}
 	
 		/// <summary> Determines the skin type of the specified bitmap. </summary>
 		public static SkinType GetSkinType(Bitmap bmp) {
@@ -178,22 +174,36 @@ namespace ClassicalSharp {
 #endif
 
 		/// <summary> Conversion for code page 437 characters from index 0 to 31 to unicode. </summary>
-		public const string ControlCharReplacements = "\0☺☻♥♦♣♠•◘○◙♂♀♪♫☼►◄↕‼¶§▬↨↑↓→←∟↔▲▼";
+		const string ControlCharReplacements = "\0☺☻♥♦♣♠•◘○◙♂♀♪♫☼►◄↕‼¶§▬↨↑↓→←∟↔▲▼";
 		
 		/// <summary> Conversion for code page 437 characters from index 127 to 255 to unicode. </summary>
-		public const string ExtendedCharReplacements = "⌂ÇüéâäàåçêëèïîìÄÅÉæÆôöòûùÿÖÜ¢£¥₧ƒáíóúñÑªº¿⌐¬½¼¡«»" +
+		const string ExtendedCharReplacements = "⌂ÇüéâäàåçêëèïîìÄÅÉæÆôöòûùÿÖÜ¢£¥₧ƒáíóúñÑªº¿⌐¬½¼¡«»" +
 			"░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌" +
 			"█▄▌▐▀αßΓπΣσµτΦΘΩδ∞φε∩≡±≥≤⌠⌡÷≈°∙·√ⁿ²■\u00a0";
 
-#if !LAUNCHER
 		public static bool IsValidInputChar(char c, bool supportsCP437) {
-			if (c >= ' ' && c <= '~') return true; // ascii
+			if (c == '?') return true;
+			byte cp437 = UnicodeToCP437(c);
+			if (cp437 == '?') return false; // not code page 437
 			
-			bool isCP437 = Utils.ControlCharReplacements.IndexOf(c) >= 0 ||
-				Utils.ExtendedCharReplacements.IndexOf(c) >= 0;
-			return supportsCP437 && isCP437;
+			return supportsCP437 || (cp437 == c);
 		}
-#endif
+
+		public static byte UnicodeToCP437(char c) {
+			if (c >= ' ' && c <= '~') return (byte)c;
+			
+			int cIndex = ControlCharReplacements.IndexOf(c);
+			if (cIndex >= 0) return (byte)cIndex;
+			int eIndex = ExtendedCharReplacements.IndexOf(c);
+			if (eIndex >= 0) return (byte)(127 + eIndex);
+			return (byte)'?';
+		}
+		
+		public static char CP437ToUnicode(byte c) {
+			if (c < 0x20) return ControlCharReplacements[c];
+			if (c < 0x7F) return (char)c;
+			return ExtendedCharReplacements[c - 0x7F];
+		}
 		
 		public unsafe static string ToLower(string value) {
 			fixed(char* ptr = value) {

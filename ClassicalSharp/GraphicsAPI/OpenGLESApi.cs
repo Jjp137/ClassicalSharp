@@ -18,6 +18,7 @@ namespace ClassicalSharp.GraphicsAPI {
 			GL.GetInteger(All.MaxTextureSize, &texDims);
 			textureDims = texDims;
 			base.InitDynamicBuffers();
+			// TODO: Support mipmaps
 			
 			setupBatchFuncCol4b = SetupVbPos3fCol4b;
 			setupBatchFuncTex2fCol4b = SetupVbPos3fTex2fCol4b;
@@ -39,7 +40,11 @@ namespace ClassicalSharp.GraphicsAPI {
 			GL.BlendFunc(blendFuncs[(int)srcFunc], blendFuncs[(int)dstFunc]);
 		}
 		
-		public override bool Fog { set { Toggle(All.Fog, value); } }
+		bool fogEnable;
+		public override bool Fog {
+			get { return fogEnable; }
+			set { fogEnable = value; Toggle(All.Fog, value); } 
+		}
 		
 		FastColour lastFogCol = FastColour.Black;
 		public override void SetFogColour(FastColour col) {
@@ -133,9 +138,9 @@ namespace ClassicalSharp.GraphicsAPI {
 			GL.BindTexture(All.Texture2D, texture);
 		}
 		
-		public override void UpdateTexturePart(int texId, int texX, int texY, FastBitmap part) {
+		public override void UpdateTexturePart(int texId, int x, int y, FastBitmap part) {
 			GL.BindTexture(All.Texture2D, texId);
-			GL.TexSubImage2D(All.Texture2D, 0, texX, texY, part.Width, part.Height,
+			GL.TexSubImage2D(All.Texture2D, 0, x, y, part.Width, part.Height,
 				All.BgraExt, All.UnsignedByte, part.Scan0);
 		}
 		
@@ -179,7 +184,7 @@ namespace ClassicalSharp.GraphicsAPI {
 		}
 		
 		int batchStride;		
-		public override void SetDynamicVbData<T>(int id, T[] vertices, int count) {
+		public override void SetDynamicVbData(int id, IntPtr vertices, int count) {
 			GL.BindBuffer(All.ArrayBuffer, id);
 			GL.BufferSubData(All.ArrayBuffer, IntPtr.Zero, 
 			                 new IntPtr(count * batchStride), vertices);

@@ -14,9 +14,6 @@ namespace ClassicalSharp.Gui {
 		protected Game game;
 		protected IGraphicsApi gfx;
 		
-		/// <summary> Object that represents any form of metadata attached to this widget. </summary>
-		public object Metadata = null;
-		
 		public GuiElement(Game game) {
 			this.game = game;
 			gfx = game.Graphics;
@@ -42,7 +39,7 @@ namespace ClassicalSharp.Gui {
 		
 		public virtual bool HandlesMouseMove(int mouseX, int mouseY) { return false; }
 		
-		public virtual bool HandlesMouseScroll(int delta) { return false; }
+		public virtual bool HandlesMouseScroll(float delta) { return false; }
 		
 		public virtual bool HandlesMouseUp(int mouseX, int mouseY, MouseButton button) { return false; }
 		

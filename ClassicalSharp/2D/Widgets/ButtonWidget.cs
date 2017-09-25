@@ -8,16 +8,12 @@ using Android.Graphics;
 
 namespace ClassicalSharp.Gui.Widgets {
 	
-	public delegate void ButtonValueSetter(Game game, string raw);
-	
-	public delegate string ButtonValueGetter(Game game);
-	
-	public delegate void ButtonBoolSetter(Game game, bool value);
-	
-	public delegate bool ButtonBoolGetter(Game game);
-	
+	public delegate void ButtonValueSetter(Game game, string raw);	
+	public delegate string ButtonValueGetter(Game game);	
+	public delegate void ButtonBoolSetter(Game game, bool value);	
 	
 	public sealed class ButtonWidget : Widget {
+		public string OptName;
 		
 		public ButtonWidget(Game game, Font font) : base(game) {
 			this.font = font;
@@ -35,7 +31,7 @@ namespace ClassicalSharp.Gui.Widgets {
 		public ButtonWidget SetLocation(Anchor horAnchor, Anchor verAnchor, int xOffset, int yOffset) {
 			HorizontalAnchor = horAnchor; VerticalAnchor = verAnchor;
 			XOffset = xOffset; YOffset = yOffset;
-			CalculatePosition();
+			Reposition();
 			return this;
 		}
 		
@@ -70,7 +66,7 @@ namespace ClassicalSharp.Gui.Widgets {
 				Width = Math.Max(texture.Width, MinWidth);
 				Height = Math.Max(texture.Height, MinHeight);
 				
-				CalculatePosition();
+				Reposition();
 				texture.X1 = X + (Width / 2 - texture.Width / 2);
 				texture.Y1 = Y + (Height / 2 - texture.Height / 2);
 			}
@@ -115,9 +111,9 @@ namespace ClassicalSharp.Gui.Widgets {
 			gfx.DeleteTexture(ref texture);
 		}
 		
-		public override void CalculatePosition() {
+		public override void Reposition() {
 			int oldX = X, oldY = Y;
-			base.CalculatePosition();
+			base.Reposition();
 			
 			texture.X1 += X - oldX;
 			texture.Y1 += Y - oldY;

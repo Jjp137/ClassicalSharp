@@ -19,6 +19,10 @@ namespace ClassicalSharp.Model {
 		protected const int boxVertices = 6 * quadVertices;
 		protected RotateOrder Rotate = RotateOrder.ZYX;
 		internal bool initalised;
+		
+		public const ushort UVMask   = 0x7FFF;
+		public const ushort UVMaxBit = 0x8000;
+		public const ushort UVMaxShift = 15;
 
 		public IModel(Game game) { this.game = game; }
 		
@@ -29,11 +33,22 @@ namespace ClassicalSharp.Model {
 		/// the whole model will be moved slightly down. </remarks>
 		public bool Bobbing = true;
 
-		/// <summary> Whether this entity requires downloading of a skin texture. </summary>
+		/// <summary> Whether this model uses a skin texture. </summary>
+		/// <remarks> If false, no attempt is made to download the skin of an entity which has this model. </remarks>
 		public bool UsesSkin = true;
 		
 		/// <summary> Whether humanoid animations should be calculated, instead of normal animations. </summary>
 		public bool CalcHumanAnims;
+		
+		/// <summary> Whether the model uses humanoid skin texture, instead of mob skin texture. </summary>
+		public bool UsesHumanSkin;
+		
+		/// <summary> Amount player score increased by when they kill an entity with this model. </summary>
+		public byte SurivalScore = 5;
+		
+		/// <summary> Whether this model pushes other models when collided with. </summary>
+		public bool Pushes = true;
+		
 		
 		/// <summary> Gravity applied to this entity. </summary>
 		public float Gravity = 0.08f;
@@ -69,8 +84,9 @@ namespace ClassicalSharp.Model {
 		/// assuming that the model is not rotated at all.</summary>
 		public abstract AABB PickingBounds { get; }
 		
-		protected float cosHead, sinHead;
-		protected float uScale, vScale;
+		protected static float cosHead, sinHead;
+		protected static float uScale, vScale;
+		protected static int[] cols = new int[6];
 		
 		/// <summary> Returns whether the model should be rendered based on the given entity's position. </summary>
 		public static bool ShouldRender(Entity p, FrustumCulling culling) {
@@ -148,16 +164,20 @@ namespace ClassicalSharp.Model {
 			index = 0;
 		}
 		
+		/// <summary> Recalculates properties such as name Y offset, collision size. </summary>
+		/// <remarks> This is not used by majority of models. (BlockModel is the exception). </remarks>
+		public virtual void RecalcProperties(Entity p) { }
+		
 		
 		protected internal virtual Matrix4 TransformMatrix(Entity p, Vector3 pos) {
 			return p.TransformMatrix(p.ModelScale, pos);
 		}
 		
-		protected int[] cols = new int[6];
 		protected internal ModelVertex[] vertices;
 		protected internal int index, texIndex;
 		
-		protected int GetTexture(int pTex) {
+		protected int GetTexture(Entity entity) {
+			int pTex = UsesHumanSkin ? entity.TextureId : entity.MobTextureId;
 			return pTex > 0 ? pTex : game.ModelCache.Textures[texIndex].TexID;
 		}
 		
@@ -187,10 +207,8 @@ namespace ClassicalSharp.Model {
 				vertex.X = v.X; vertex.Y = v.Y; vertex.Z = v.Z;
 				vertex.Colour = cols[i >> 2];
 				
-				vertex.U = v.U * uScale; vertex.V = v.V * vScale;
-				int quadI = i & 3;
-				if (quadI == 0 || quadI == 3) vertex.V -= 0.01f * vScale;
-				if (quadI == 2 || quadI == 3) vertex.U -= 0.01f * uScale;
+				vertex.U = (v.U & UVMask) * uScale - (v.U >> UVMaxShift) * 0.01f * uScale;
+				vertex.V = (v.V & UVMask) * vScale - (v.V >> UVMaxShift) * 0.01f * vScale;
 				finVertices[index++] = vertex;
 			}
 		}
@@ -217,6 +235,10 @@ namespace ClassicalSharp.Model {
 					t = cosX * v.Y + sinX * v.Z; v.Z = -sinX * v.Y + cosX * v.Z; v.Y = t; // Inlined RotX
 					t = cosZ * v.X + sinZ * v.Y; v.Y = -sinZ * v.X + cosZ * v.Y; v.X = t; // Inlined RotZ
 					t = cosY * v.X - sinY * v.Z; v.Z =  sinY * v.X + cosY * v.Z; v.X = t; // Inlined RotY
+				} else if (Rotate == RotateOrder.YZX) {
+					t = cosY * v.X - sinY * v.Z; v.Z =  sinY * v.X + cosY * v.Z; v.X = t; // Inlined RotY
+					t = cosZ * v.X + sinZ * v.Y; v.Y = -sinZ * v.X + cosZ * v.Y; v.X = t; // Inlined RotZ
+					t = cosX * v.Y + sinX * v.Z; v.Z = -sinX * v.Y + cosX * v.Z; v.Y = t; // Inlined RotX
 				}
 				
 				// Rotate globally
@@ -226,14 +248,12 @@ namespace ClassicalSharp.Model {
 				vertex.X = v.X + x; vertex.Y = v.Y + y; vertex.Z = v.Z + z;
 				vertex.Colour = cols[i >> 2];
 				
-				vertex.U = v.U * uScale; vertex.V = v.V * vScale;
-				int quadI = i & 3;
-				if (quadI == 0 || quadI == 3) vertex.V -= 0.01f * vScale;
-				if (quadI == 2 || quadI == 3) vertex.U -= 0.01f * uScale;
+				vertex.U = (v.U & UVMask) * uScale - (v.U >> UVMaxShift) * 0.01f * uScale;
+				vertex.V = (v.V & UVMask) * vScale - (v.V >> UVMaxShift) * 0.01f * vScale;
 				finVertices[index++] = vertex;
 			}
 		}
 		
-		protected enum RotateOrder { ZYX, XZY }
+		protected enum RotateOrder { ZYX, XZY, YZX }
 	}
 }

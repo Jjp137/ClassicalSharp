@@ -1,67 +1,13 @@
 #include "Lighting.h"
 #include "Block.h"
-#include "BlockEnums.h"
 #include "Funcs.h"
 #include "MapRenderer.h"
 #include "Platform.h"
 #include "World.h"
-#include "WorldEnv.h"
 /* Manages lighting through a simple heightmap, where each block is either in sun or shadow. */
 
 PackedCol shadow, shadowZSide, shadowXSide, shadowYBottom;
 #define Lighting_Pack(x, z) ((x) + World_Width * (z))
-
-IGameComponent Lighting_MakeGameComponent(void) {
-	IGameComponent comp = IGameComponent_MakeEmpty();
-	comp.Init = Lighting_Init;
-	comp.Free = Lighting_Free;
-	comp.OnNewMap = Lighting_OnNewMap;
-	comp.OnNewMapLoaded = Lighting_OnNewMapLoaded;
-	comp.Reset = Lighting_Reset;
-	return comp;
-}
-
-void Lighting_Init(void) {
-	EventHandler_RegisterInt32(WorldEvents_EnvVarChanged, &Lighting_EnvVariableChanged);
-	Lighting_SetSun(WorldEnv_DefaultSunCol);
-	Lighting_SetShadow(WorldEnv_DefaultShadowCol);
-}
-
-void Lighting_Reset(void) {
-	if (Lighting_heightmap != NULL) {
-		Platform_MemFree(Lighting_heightmap);
-		Lighting_heightmap = NULL;
-	}
-}
-
-void Lighting_OnNewMap(void) {
-	Lighting_SetSun(WorldEnv_DefaultSunCol);
-	Lighting_SetShadow(WorldEnv_DefaultShadowCol);
-	Lighting_Reset();
-}
-
-void Lighting_OnNewMapLoaded(void) {
-	UInt32 size = World_Width * World_Length * sizeof(Int16);
-	Lighting_heightmap = Platform_MemAlloc(size);
-	if (Lighting_heightmap == NULL) {
-		ErrorHandler_Fail("WorldLighting - failed to allocate heightmap");
-	}
-	Lighting_Refresh();
-}
-
-void Lighting_Free(void) {
-	EventHandler_UnregisterInt32(WorldEvents_EnvVarChanged, &Lighting_EnvVariableChanged);
-	Lighting_Reset();
-}
-
-
-void Lighting_EnvVariableChanged(EnvVar envVar) {
-	if (envVar == EnvVar_SunCol) {
-		Lighting_SetSun(WorldEnv_SunCol);
-	} else if (envVar == EnvVar_ShadowCol) {
-		Lighting_SetShadow(WorldEnv_ShadowCol);
-	}
-}
 
 void Lighting_SetSun(PackedCol col) {
 	Lighting_Outside = col;
@@ -75,17 +21,29 @@ void Lighting_SetShadow(PackedCol col) {
 		&shadowZSide, &shadowYBottom);
 }
 
-
-void Lighting_LightHint(Int32 startX, Int32 startZ) {
-	Int32 x1 = max(startX, 0), x2 = min(World_Width, startX + 18);
-	Int32 z1 = max(startZ, 0), z2 = min(World_Length, startZ + 18);
-	Int32 xCount = x2 - x1, zCount = z2 - z1;
-	Int32 skip[18 * 18];
-
-	Int32 elemsLeft = Lighting_InitialHeightmapCoverage(x1, z1, xCount, zCount, skip);
-	if (!Lighting_CalculateHeightmapCoverage(x1, z1, xCount, zCount, elemsLeft, skip)) {
-		Lighting_FinishHeightmapCoverage(x1, z1, xCount, zCount);
+void Lighting_EnvVariableChanged(EnvVar envVar) {
+	if (envVar == EnvVar_SunCol) {
+		Lighting_SetSun(WorldEnv_SunCol);
+	} else if (envVar == EnvVar_ShadowCol) {
+		Lighting_SetShadow(WorldEnv_ShadowCol);
 	}
+}
+
+Int32 Lighting_CalcHeightAt(Int32 x, Int32 maxY, Int32 z, Int32 index) {
+	Int32 mapIndex = World_Pack(x, maxY, z);
+	Int32 y;
+
+	for (y = maxY; y >= 0; y--) {
+		BlockID block = World_Blocks[mapIndex];
+		if (Block_BlocksLight[block]) {
+			Int32 offset = (Block_LightOffset[block] >> Face_YMax) & 1;
+			Lighting_heightmap[index] = (Int16)(y - offset);
+			return y - offset;
+		}
+		mapIndex -= World_OneY;
+	}
+	Lighting_heightmap[index] = (Int16)-10;
+	return -10;
 }
 
 Int32 Lighting_GetLightHeight(Int32 x, Int32 z) {
@@ -93,7 +51,6 @@ Int32 Lighting_GetLightHeight(Int32 x, Int32 z) {
 	Int32 lightH = Lighting_heightmap[index];
 	return lightH == Int16_MaxValue ? Lighting_CalcHeightAt(x, World_Height - 1, z, index) : lightH;
 }
-
 
 /* Outside colour is same as sunlight colour, so we reuse when possible */
 bool Lighting_IsLit(Int32 x, Int32 y, Int32 z) {
@@ -107,7 +64,6 @@ PackedCol Lighting_Col(Int32 x, Int32 y, Int32 z) {
 PackedCol Lighting_Col_ZSide(Int32 x, Int32 y, Int32 z) {
 	return y > Lighting_GetLightHeight(x, z) ? Lighting_OutsideZSide : shadowZSide;
 }
-
 
 PackedCol Lighting_Col_Sprite_Fast(Int32 x, Int32 y, Int32 z) {
 	return y > Lighting_heightmap[(z * World_Width) + x] ? Lighting_Outside : shadow;
@@ -136,19 +92,6 @@ void Lighting_Refresh(void) {
 	}
 }
 
-
-
-void Lighting_OnBlockChanged(Int32 x, Int32 y, Int32 z, BlockID oldBlock, BlockID newBlock) {
-	Int32 index = (z * World_Width) + x;
-	Int32 lightH = Lighting_heightmap[index];
-	/* Since light wasn't checked to begin with, means column never had meshes for any of its chunks built. */
-	/* So we don't need to do anything. */
-	if (lightH == Int16_MaxValue) return;
-
-	Lighting_UpdateLighting(x, y, z, oldBlock, newBlock, index, lightH);
-	Int32 newHeight = Lighting_heightmap[index] + 1;
-	Lighting_RefreshAffected(x, y, z, newBlock, lightH + 1, newHeight);
-}
 
 void Lighting_UpdateLighting(Int32 x, Int32 y, Int32 z, BlockID oldBlock, BlockID newBlock, Int32 index, Int32 lightH) {
 	bool didBlock = Block_BlocksLight[oldBlock];
@@ -184,6 +127,46 @@ void Lighting_UpdateLighting(Int32 x, Int32 y, Int32 z, BlockID oldBlock, BlockI
 	}
 }
 
+
+bool Lighting_Needs(BlockID block, BlockID other) {
+	return Block_Draw[block] != DrawType_Opaque || Block_Draw[other] != DrawType_Gas;
+}
+
+void Lighting_ResetNeighourChunk(Int32 cx, Int32 cy, Int32 cz, BlockID block, Int32 y, Int32 index, Int32 nY) {
+	Int32 minY = cy << 4;
+
+	/* Update if any blocks in the chunk are affected by light change. */
+	for (; y >= minY; y--) {
+		BlockID other = World_Blocks[index];
+		bool affected = y == nY ? Lighting_Needs(block, other) : Block_Draw[other] != DrawType_Gas;
+		if (affected) { MapRenderer_RefreshChunk(cx, cy, cz); return; }
+		index -= World_OneY;
+	}
+}
+
+void Lighting_ResetNeighbour(Int32 x, Int32 y, Int32 z, BlockID block,
+	Int32 cx, Int32 cy, Int32 cz, Int32 minCy, Int32 maxCy) {
+	if (minCy == maxCy) {
+		Lighting_ResetNeighourChunk(cx, cy, cz, block, y, World_Pack(x, y, z), y);
+	} else {
+		for (cy = maxCy; cy >= minCy; cy--) {
+			Int32 maxY = (cy << 4) + 15;
+			if (maxY > World_MaxY) maxY = World_MaxY;
+			Lighting_ResetNeighourChunk(cx, cy, cz, block, maxY, World_Pack(x, maxY, z), y);
+		}
+	}
+}
+
+void Lighting_ResetColumn(Int32 cx, Int32 cy, Int32 cz, Int32 minCy, Int32 maxCy) {
+	if (minCy == maxCy) {
+		MapRenderer_RefreshChunk(cx, cy, cz);
+	} else {
+		for (cy = maxCy; cy >= minCy; cy--) {
+			MapRenderer_RefreshChunk(cx, cy, cz);
+		}
+	}
+}
+
 void Lighting_RefreshAffected(Int32 x, Int32 y, Int32 z, BlockID block, Int32 oldHeight, Int32 newHeight) {
 	Int32 cx = x >> 4, cy = y >> 4, cz = z >> 4;
 
@@ -215,63 +198,18 @@ void Lighting_RefreshAffected(Int32 x, Int32 y, Int32 z, BlockID block, Int32 ol
 	}
 }
 
-bool Lighting_Needs(BlockID block, BlockID other) {
-	return Block_Draw[block] != DrawType_Opaque || Block_Draw[other] != DrawType_Gas;
+void Lighting_OnBlockChanged(Int32 x, Int32 y, Int32 z, BlockID oldBlock, BlockID newBlock) {
+	Int32 index = (z * World_Width) + x;
+	Int32 lightH = Lighting_heightmap[index];
+	/* Since light wasn't checked to begin with, means column never had meshes for any of its chunks built. */
+	/* So we don't need to do anything. */
+	if (lightH == Int16_MaxValue) return;
+
+	Lighting_UpdateLighting(x, y, z, oldBlock, newBlock, index, lightH);
+	Int32 newHeight = Lighting_heightmap[index] + 1;
+	Lighting_RefreshAffected(x, y, z, newBlock, lightH + 1, newHeight);
 }
 
-void Lighting_ResetNeighbour(Int32 x, Int32 y, Int32 z, BlockID block,
-	Int32 cx, Int32 cy, Int32 cz, Int32 minCy, Int32 maxCy) {
-	if (minCy == maxCy) {
-		Lighting_ResetNeighourChunk(cx, cy, cz, block, y, World_Pack(x, y, z), y);
-	} else {
-		for (cy = maxCy; cy >= minCy; cy--) {
-			Int32 maxY = (cy << 4) + 15;
-			if (maxY > World_MaxY) maxY = World_MaxY;
-			Lighting_ResetNeighourChunk(cx, cy, cz, block, maxY, World_Pack(x, maxY, z), y);
-		}
-	}
-}
-
-void Lighting_ResetNeighourChunk(Int32 cx, Int32 cy, Int32 cz, BlockID block, Int32 y, Int32 index, Int32 nY) {
-	Int32 minY = cy << 4;
-
-	/* Update if any blocks in the chunk are affected by light change. */
-	for (; y >= minY; y--) {
-		BlockID other = World_Blocks[index];
-		bool affected = y == nY ? Lighting_Needs(block, other) : Block_Draw[other] != DrawType_Gas;
-		if (affected) { MapRenderer_RefreshChunk(cx, cy, cz); return; }
-		index -= World_OneY;
-	}
-}
-
-void Lighting_ResetColumn(Int32 cx, Int32 cy, Int32 cz, Int32 minCy, Int32 maxCy) {
-	if (minCy == maxCy) {
-		MapRenderer_RefreshChunk(cx, cy, cz);
-	} else {
-		for (cy = maxCy; cy >= minCy; cy--) {
-			MapRenderer_RefreshChunk(cx, cy, cz);
-		}
-	}
-}
-
-
-
-Int32 Lighting_CalcHeightAt(Int32 x, Int32 maxY, Int32 z, Int32 index) {
-	Int32 mapIndex = World_Pack(x, maxY, z);
-	Int32 y;
-
-	for (y = maxY; y >= 0; y--) {
-		BlockID block = World_Blocks[mapIndex];
-		if (Block_BlocksLight[block]) {
-			Int32 offset = (Block_LightOffset[block] >> Face_YMax) & 1;
-			Lighting_heightmap[index] = (Int16)(y - offset);
-			return y - offset;
-		}
-		mapIndex -= World_OneY;
-	}
-	Lighting_heightmap[index] = (Int16)-10;
-	return -10;
-}
 
 Int32 Lighting_InitialHeightmapCoverage(Int32 x1, Int32 z1, Int32 xCount, Int32 zCount, Int32* skip) {
 	Int32 elemsLeft = 0, index = 0, curRunCount = 0;
@@ -355,4 +293,62 @@ void Lighting_FinishHeightmapCoverage(Int32 x1, Int32 z1, Int32 xCount, Int32 zC
 			heightmapIndex++;
 		}
 	}
+}
+
+
+void Lighting_LightHint(Int32 startX, Int32 startZ) {
+	Int32 x1 = max(startX, 0), x2 = min(World_Width, startX + 18);
+	Int32 z1 = max(startZ, 0), z2 = min(World_Length, startZ + 18);
+	Int32 xCount = x2 - x1, zCount = z2 - z1;
+	Int32 skip[18 * 18];
+
+	Int32 elemsLeft = Lighting_InitialHeightmapCoverage(x1, z1, xCount, zCount, skip);
+	if (!Lighting_CalculateHeightmapCoverage(x1, z1, xCount, zCount, elemsLeft, skip)) {
+		Lighting_FinishHeightmapCoverage(x1, z1, xCount, zCount);
+	}
+}
+
+
+void Lighting_Init(void) {
+	Event_RegisterInt32(&WorldEvents_EnvVarChanged, &Lighting_EnvVariableChanged);
+	Lighting_SetSun(WorldEnv_DefaultSunCol);
+	Lighting_SetShadow(WorldEnv_DefaultShadowCol);
+}
+
+void Lighting_Reset(void) {
+	if (Lighting_heightmap != NULL) {
+		Platform_MemFree(Lighting_heightmap);
+		Lighting_heightmap = NULL;
+	}
+}
+
+void Lighting_OnNewMap(void) {
+	Lighting_SetSun(WorldEnv_DefaultSunCol);
+	Lighting_SetShadow(WorldEnv_DefaultShadowCol);
+	Lighting_Reset();
+}
+
+void Lighting_OnNewMapLoaded(void) {
+	UInt32 size = World_Width * World_Length * sizeof(Int16);
+	Lighting_heightmap = Platform_MemAlloc(size);
+	if (Lighting_heightmap == NULL) {
+		ErrorHandler_Fail("WorldLighting - failed to allocate heightmap");
+	}
+	Lighting_Refresh();
+}
+
+void Lighting_Free(void) {
+	Event_UnregisterInt32(&WorldEvents_EnvVarChanged, &Lighting_EnvVariableChanged);
+	Lighting_Reset();
+}
+
+
+IGameComponent Lighting_MakeGameComponent(void) {
+	IGameComponent comp = IGameComponent_MakeEmpty();
+	comp.Init = Lighting_Init;
+	comp.Free = Lighting_Free;
+	comp.OnNewMap = Lighting_OnNewMap;
+	comp.OnNewMapLoaded = Lighting_OnNewMapLoaded;
+	comp.Reset = Lighting_Reset;
+	return comp;
 }

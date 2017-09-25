@@ -49,7 +49,8 @@ namespace ClassicalSharp.Network.Protocols {
 			net.Set(Opcode.CpeSetMapEnvUrl, HandleSetMapEnvUrl, 65);
 			net.Set(Opcode.CpeSetMapEnvProperty, HandleSetMapEnvProperty, 6);
 			net.Set(Opcode.CpeSetEntityProperty, HandleSetEntityProperty, 7);
-			net.Set(Opcode.TwoWayPing, HandleTwoWayPing, 4);
+			net.Set(Opcode.CpeTwoWayPing, HandleTwoWayPing, 4);
+			net.Set(Opcode.CpeSetInventoryOrder, HandleSetInventoryOrder, 3);
 		}
 		
 		#region Read
@@ -211,20 +212,20 @@ namespace ClassicalSharp.Network.Protocols {
 			if (blockId == 0) {
 				int count = game.UseCPEBlocks ? Block.CpeCount : Block.OriginalCount;
 				for (int i = 1; i < count; i++) {
-					inv.CanPlace.SetNotOverridable(canPlace, i);
-					inv.CanDelete.SetNotOverridable(canDelete, i);
+					BlockInfo.CanPlace[i] = canPlace;
+					BlockInfo.CanDelete[i] = canDelete;
 				}
 			} else {
-				inv.CanPlace.SetNotOverridable(canPlace, blockId);
-				inv.CanDelete.SetNotOverridable(canDelete, blockId);
+				BlockInfo.CanPlace[blockId] = canPlace;
+				BlockInfo.CanDelete[blockId] = canDelete;
 			}
 			game.Events.RaiseBlockPermissionsChanged();
 		}
 		
 		void HandleChangeModel() {
-			byte playerId = reader.ReadUInt8();
+			byte id = reader.ReadUInt8();
 			string modelName = Utils.ToLower(reader.ReadString());
-			Entity entity = game.Entities[playerId];
+			Entity entity = game.Entities.List[id];
 			if (entity != null) entity.SetModel(modelName);
 		}
 		
@@ -318,7 +319,7 @@ namespace ClassicalSharp.Network.Protocols {
 		
 		void HandleSetMapEnvUrl() {
 			string url = reader.ReadString();
-			if (!game.AllowServerTextures) return;
+			if (!game.UseServerTextures) return;
 			
 			if (url == "") {
 				TexturePack.ExtractDefault(game);
@@ -367,7 +368,7 @@ namespace ClassicalSharp.Network.Protocols {
 			byte type = reader.ReadUInt8();
 			int value = reader.ReadInt32();
 			
-			Entity entity = game.Entities[id];
+			Entity entity = game.Entities.List[id];
 			if (entity == null) return;
 			LocationUpdate update = LocationUpdate.Empty();
 			
@@ -403,8 +404,17 @@ namespace ClassicalSharp.Network.Protocols {
 			
 			WriteTwoWayPing(true, data); // server to client reply
 			net.SendPacket();
-		}		
-				
+		}
+		
+		void HandleSetInventoryOrder() {
+			byte block = reader.ReadUInt8();
+			byte order = reader.ReadUInt8();
+			
+			game.Inventory.Remove(block);
+			if (order != Block.Invalid) {
+				game.Inventory.Insert(order, block);
+			}
+		}					
 		
 		#endregion
 		
@@ -444,7 +454,7 @@ namespace ClassicalSharp.Network.Protocols {
 		}
 		
 		internal void WriteTwoWayPing(bool serverToClient, ushort data) {
-			writer.WriteUInt8((byte)Opcode.TwoWayPing);
+			writer.WriteUInt8((byte)Opcode.CpeTwoWayPing);
 			writer.WriteUInt8((byte)(serverToClient ? 1 : 0));
 			writer.WriteInt16((short)data);			
 		}
@@ -453,7 +463,7 @@ namespace ClassicalSharp.Network.Protocols {
 			if (net.cpeData.ServerExtensionsCount != 0) return;
 			string[] clientExts = CPESupport.ClientExtensions;
 			int count = clientExts.Length;
-			if (!game.AllowCustomBlocks) count -= 2;
+			if (!game.UseCustomBlocks) count -= 2;
 			
 			WriteExtInfo(net.AppName, count);
 			net.SendPacket();
@@ -464,7 +474,7 @@ namespace ClassicalSharp.Network.Protocols {
 				if (name == "EnvMapAppearance") ver = net.cpeData.envMapVer;
 				if (name == "BlockDefinitionsExt") ver = net.cpeData.blockDefsExtVer;
 				
-				if (!game.AllowCustomBlocks && name.StartsWith("BlockDefinitions")) continue;
+				if (!game.UseCustomBlocks && name.StartsWith("BlockDefinitions")) continue;
 				
 				WriteExtEntry(name, ver);
 				net.SendPacket();

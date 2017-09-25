@@ -31,8 +31,7 @@ namespace ClassicalSharp.Gui.Screens {
 		}
 		
 		protected override void ContextLost() {
-			for (int i = 0; i < buttons.Length; i++)
-				buttons[i].Dispose();
+			DisposeWidgets(buttons);
 			title.Dispose();
 		}
 		
@@ -47,13 +46,15 @@ namespace ClassicalSharp.Gui.Screens {
 				MakeText(0, 50, Get(3)),
 				MakeText(0, 100, Get(4)),
 				
-				Make(-220, 0, "<", (g, w) => PageClick(false)),
-				Make(220, 0, ">", (g, w) => PageClick(true)),
-				MakeBack(false, titleFont, 
-				         (g, w) => g.Gui.SetNewScreen(new PauseScreen(g))),
+				Make(-220, 0, "<", MoveBackwards),
+				Make(220, 0, ">", MoveForwards),
+				MakeBack(false, titleFont, SwitchPause),
 			};
 			UpdateArrows();
 		}
+		
+		void MoveBackwards(Game g, Widget w) { PageClick(false); }
+		void MoveForwards(Game g, Widget w) { PageClick(true); }
 		
 		string Get(int index) {
 			return index < entries.Length ? entries[index] : "-----";
@@ -62,7 +63,7 @@ namespace ClassicalSharp.Gui.Screens {
 		public override void Dispose() {
 			ContextLost();
 			gfx.ContextLost -= ContextLost;
-			gfx.ContextRecreated -= ContextRecreated;			
+			gfx.ContextRecreated -= ContextRecreated;
 			
 			textFont.Dispose();
 			arrowFont.Dispose();
@@ -85,7 +86,7 @@ namespace ClassicalSharp.Gui.Screens {
 			SetCurrentIndex(currentIndex + (forward ? items : -items));
 		}
 		
-		protected void SetCurrentIndex(int index) {			
+		protected void SetCurrentIndex(int index) {
 			if (index >= entries.Length) index -= items;
 			if (index < 0) index = 0;
 			currentIndex = index;
@@ -126,17 +127,15 @@ namespace ClassicalSharp.Gui.Screens {
 		}
 		
 		public override void OnResize(int width, int height) {
-			for (int i = 0; i < buttons.Length; i++)
-				buttons[i].CalculatePosition();
-			title.CalculatePosition();
+			RepositionWidgets(buttons);
+			title.Reposition();
 		}
 		
 		public override void Render(double delta) {
 			gfx.Draw2DQuad(0, 0, game.Width, game.Height, new FastColour(60, 60, 60, 160));
 			gfx.Texturing = true;
 			title.Render(delta);
-			for (int i = 0; i < buttons.Length; i++)
-				buttons[i].Render(delta);
+			RenderWidgets(buttons, delta);
 			gfx.Texturing = false;
 		}
 	}

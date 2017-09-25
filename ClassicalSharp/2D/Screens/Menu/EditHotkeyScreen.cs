@@ -71,28 +71,20 @@ namespace ClassicalSharp.Gui.Screens {
 		protected override void ContextRecreated() {
 			string flags = HotkeyListScreen.MakeFlagsString(curHotkey.Flags);
 			if (curHotkey.Text == null) curHotkey.Text = "";
-			string staysOpen = curHotkey.StaysOpen ? "yes" : "no";
+			string staysOpen = curHotkey.StaysOpen ? "ON" : "OFF";
 			bool existed = origHotkey.BaseKey != Key.Unknown;
 			
 			widgets = new Widget[] {
-				Make(0, -150, "Key: " + curHotkey.BaseKey,
-				     300, titleFont, BaseKeyClick),
-				Make(0, -100, "Modifiers:" + flags,
-				     300, titleFont, ModifiersClick),
+				Make(0, -150, "Key: " + curHotkey.BaseKey, 300, titleFont, BaseKeyClick),
+				Make(0, -100, "Modifiers:" + flags, 300, titleFont, ModifiersClick),
 				
-				MenuInputWidget.Create(game, 500, 30, curHotkey.Text,
-				                       regularFont, new StringValidator(Utils.StringLength))
+				MenuInputWidget.Create(game, 500, 30, curHotkey.Text, regularFont, new StringValidator())
 					.SetLocation(Anchor.Centre, Anchor.Centre, 0, -35),
-				Make(-100, 10, "Input stays open: " + staysOpen,
-				     300, titleFont, LeaveOpenClick),
+				Make(-100, 10, "Input stays open: " + staysOpen, 300, titleFont, LeaveOpenClick),
 				
-				Make(0, 80, existed ? "Save changes" : "Add hotkey",
-				     300, titleFont, SaveChangesClick),
-				Make(0, 130, existed ? "Remove hotkey" : "Cancel",
-				     300, titleFont, RemoveHotkeyClick),
-				
-				MakeBack(false, titleFont,
-				         (g, w) => g.Gui.SetNewScreen(new PauseScreen(g))),
+				Make(0, 80, existed ? "Save changes" : "Add hotkey", 300, titleFont, SaveChangesClick),
+				Make(0, 130, existed ? "Remove hotkey" : "Cancel", 300, titleFont, RemoveHotkeyClick),				
+				MakeBack(false, titleFont, SwitchPause),
 			};
 			
 			((InputWidget)widgets[actionI]).ShowCaret = true;
@@ -119,7 +111,7 @@ namespace ClassicalSharp.Gui.Screens {
 		void LeaveOpenClick(Game game, Widget widget) {
 			LostFocus();
 			curHotkey.StaysOpen = !curHotkey.StaysOpen;
-			string staysOpen = curHotkey.StaysOpen ? "yes" : "no";
+			string staysOpen = curHotkey.StaysOpen ? "ON" : "OFF";
 			staysOpen = "Input stays open: " + staysOpen;
 			SetButton(widgets[3], staysOpen);
 		}

@@ -18,45 +18,59 @@ namespace ClassicalSharp.Gui.Screens {
 		}
 		
 		protected override void ContextRecreated() {
-			IServerConnection network = game.Server;
+			bool multi = !game.Server.IsSinglePlayer;
+			ClickHandler onClick = OnWidgetClick;
 			widgets = new Widget[] {
-				// Column 1
-				!network.IsSinglePlayer ? null :
-					MakeOpt(-1, -100, "Click distance", OnWidgetClick,
-					        g => g.LocalPlayer.ReachDistance.ToString(),
-					        (g, v) => g.LocalPlayer.ReachDistance = Utils.ParseDecimal(v)),
-				
-				MakeOpt(-1, -50, "Music volume", OnWidgetClick,
-				        g => g.MusicVolume.ToString(), SetMusicVolume),
-				
-				MakeOpt(-1, 0, "Sounds volume", OnWidgetClick,
-				        g => g.SoundsVolume.ToString(), SetSoundsVolume),
-				
-				MakeBool(-1, 50, "View bobbing", OptionsKey.ViewBobbing,
-				         OnWidgetClick, g => g.ViewBobbing, (g, v) => g.ViewBobbing = v),
-				
-				// Column 2
-				!network.IsSinglePlayer ? null :
-					MakeBool(1, -100, "Block physics", OptionsKey.SingleplayerPhysics, OnWidgetClick,
-					         g => ((SinglePlayerServer)network).physics.Enabled,
-					         (g, v) => ((SinglePlayerServer)network).physics.Enabled = v),
-				
-				MakeBool(1, -50, "Auto close launcher", OptionsKey.AutoCloseLauncher, OnWidgetClick,
-				         g => Options.GetBool(OptionsKey.AutoCloseLauncher, false),
-				         (g, v) => Options.Set(OptionsKey.AutoCloseLauncher, v)),
-				
-				MakeBool(1, 0, "Invert mouse", OptionsKey.InvertMouse,
-				         OnWidgetClick, g => g.InvertMouse, (g, v) => g.InvertMouse = v),
-				
-				MakeOpt(1, 50, "Mouse sensitivity", OnWidgetClick,
-				        g => g.MouseSensitivity.ToString(),
-				        (g, v) => { g.MouseSensitivity = Int32.Parse(v);
-				        	Options.Set(OptionsKey.Sensitivity, v); }),
-				
-				MakeBack(false, titleFont,
-				         (g, w) => g.Gui.SetNewScreen(new OptionsGroupScreen(g))),
+				multi ? null : MakeOpt(-1, -100, "Click distance", onClick, GetReach,       SetReach),
+				MakeOpt(-1, -50, "Music volume",                   onClick, GetMusic,       SetMusic),
+				MakeOpt(-1, 0, "Sounds volume",                    onClick, GetSounds,      SetSounds),
+				MakeOpt(-1, 50, "View bobbing",                    onClick, GetViewBob,     SetViewBob),
+
+				multi ? null : MakeOpt(1, -100, "Block physics",  onClick, GetPhysics,     SetPhysics),
+				MakeOpt(1, -50, "Auto close launcher",            onClick, GetAutoClose,   SetAutoClose),
+				MakeOpt(1, 0, "Invert mouse",                     onClick, GetInvert,      SetInvert),
+				MakeOpt(1, 50, "Mouse sensitivity",               onClick, GetSensitivity, SetSensitivity),
+
+				MakeBack(false, titleFont, SwitchOptions),
 				null, null,
 			};
+		}
+		
+		static string GetReach(Game g) { return g.LocalPlayer.ReachDistance.ToString(); }
+		static void SetReach(Game g, string v) { g.LocalPlayer.ReachDistance = Utils.ParseDecimal(v); }
+		
+		static string GetMusic(Game g) { return g.MusicVolume.ToString(); }
+		static void SetMusic(Game g, string v) {
+			g.MusicVolume = Int32.Parse(v);
+			Options.Set(OptionsKey.MusicVolume, v);
+			g.AudioPlayer.SetMusic(g.MusicVolume);
+		}
+		
+		static string GetSounds(Game g) { return g.SoundsVolume.ToString(); }
+		static void SetSounds(Game g, string v) {
+			g.SoundsVolume = Int32.Parse(v);
+			Options.Set(OptionsKey.SoundsVolume, v);
+			g.AudioPlayer.SetSounds(g.SoundsVolume);
+		}
+		
+		static string GetViewBob(Game g) { return GetBool(g.ViewBobbing); }
+		static void SetViewBob(Game g, string v) { g.ViewBobbing = SetBool(v, OptionsKey.ViewBobbing); }
+		
+		static string GetPhysics(Game g) { return GetBool(((SinglePlayerServer)g.Server).physics.Enabled); }
+		static void SetPhysics(Game g, string v) { 
+			((SinglePlayerServer)g.Server).physics.Enabled = SetBool(v, OptionsKey.BlockPhysics);
+		}
+		
+		static string GetAutoClose(Game g) { return GetBool(Options.GetBool(OptionsKey.AutoCloseLauncher, false)); }
+		static void SetAutoClose(Game g, string v) { SetBool(v, OptionsKey.AutoCloseLauncher); }
+		
+		static string GetInvert(Game g) { return GetBool(g.InvertMouse); }
+		static void SetInvert(Game g, string v) { g.InvertMouse = SetBool(v, OptionsKey.InvertMouse); }
+		
+		static string GetSensitivity(Game g) { return g.MouseSensitivity.ToString(); }
+		static void SetSensitivity(Game g, string v) {
+			g.MouseSensitivity = Int32.Parse(v);
+			Options.Set(OptionsKey.Sensitivity, v);
 		}
 		
 		void MakeValidators() {
@@ -80,18 +94,6 @@ namespace ClassicalSharp.Gui.Screens {
 				"&eSets how far away you can place/delete blocks",
 				"&fThe default click distance is 5 blocks.",
 			};
-		}
-		
-		void SetMusicVolume(Game g, string v) {
-			g.MusicVolume = Int32.Parse(v);
-			Options.Set(OptionsKey.MusicVolume, v);
-			g.AudioPlayer.SetMusic(g.MusicVolume);
-		}
-		
-		void SetSoundsVolume(Game g, string v) {
-			g.SoundsVolume = Int32.Parse(v);
-			Options.Set(OptionsKey.SoundsVolume, v);
-			g.AudioPlayer.SetSounds(g.SoundsVolume);			
 		}
 	}
 }

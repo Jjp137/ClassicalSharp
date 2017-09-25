@@ -58,11 +58,6 @@ namespace ClassicalSharp.Model {
 
 		
 		public IModel Get(string modelName) {
-			if (modelName == "block") return Models[0].Instance;
-			byte blockId;
-			if (Byte.TryParse(modelName, out blockId))
-				modelName = "block";
-
 			for (int i = 0; i < Models.Count; i++) {
 				CachedModel m = Models[i];
 				if (m.Name != modelName) continue;
@@ -109,9 +104,10 @@ namespace ClassicalSharp.Model {
 			
 			Register("block", null, new BlockModel(game));
 			Register("chibi", "char.png", new ChibiModel(game));
-			Register("head", "char.png", new HumanoidHeadModel(game));
+			Register("head", "char.png", new HeadModel(game));
 			Register("sit", "char.png", new SittingModel(game));
 			Register("sitting", "char.png", new SittingModel(game));
+			Register("arm", "char.png", new ArmModel(game));
 		}
 
 		void TextureChanged(object sender, TextureEventArgs e) {

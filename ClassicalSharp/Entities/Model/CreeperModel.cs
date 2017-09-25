@@ -8,7 +8,7 @@ namespace ClassicalSharp.Model {
 
 	public class CreeperModel : IModel {
 		
-		public CreeperModel(Game window) : base(window) { }
+		public CreeperModel(Game window) : base(window) { SurivalScore = 200; }
 
 		/// <inheritdoc/>		
 		public override void CreateParts() {
@@ -51,7 +51,7 @@ namespace ClassicalSharp.Model {
 
 		/// <inheritdoc/>		
 		public override void DrawModel(Entity p) {
-			game.Graphics.BindTexture(GetTexture(p.MobTextureId));
+			game.Graphics.BindTexture(GetTexture(p));
 			DrawRotate(-p.HeadXRadians, 0, 0, Head, true);
 
 			DrawPart(Torso);

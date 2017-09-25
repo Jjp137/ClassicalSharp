@@ -39,7 +39,7 @@ namespace ClassicalSharp {
 			TerrainAtlas1D.Dispose();
 			TerrainAtlas.Dispose();
 			
-			TerrainAtlas.UpdateState(BlockInfo, bmp);
+			TerrainAtlas.UpdateState(bmp);
 			TerrainAtlas1D.UpdateState(TerrainAtlas);
 		}
 		
@@ -66,31 +66,10 @@ namespace ClassicalSharp {
 				Components[i].OnNewMapLoaded(this);
 		}
 		
-		public T AddComponent<T>(T obj) where T : IGameComponent {
-			Components.Add(obj);
-			return obj;
-		}
-		
-		public bool ReplaceComponent<T>(ref T old, T obj) where T : IGameComponent {
-			for (int i = 0; i < Components.Count; i++) {
-				if (!object.ReferenceEquals(Components[i], old)) continue;
-				old.Dispose();
-				
-				Components[i] = obj;
-				old = obj;
-				obj.Init(this);
-				return true;
-			}
-			
-			Components.Add(obj);
-			obj.Init(this);
-			return false;
-		}
-		
 		public void SetViewDistance(float distance, bool userDist) {
 			if (userDist) {
 				UserViewDistance = distance;
-				Options.Set(OptionsKey.ViewDist, distance);
+				Options.Set(OptionsKey.ViewDist, (int)distance);
 			}
 			
 			distance = Math.Min(distance, MaxViewDistance);
@@ -149,10 +128,9 @@ namespace ClassicalSharp {
 		
 		void UpdateViewMatrix() {
 			Graphics.SetMatrixMode(MatrixType.Modelview);
-			Matrix4 modelView = Camera.GetView();
-			View = modelView;
-			Graphics.LoadMatrix(ref modelView);
-			Culling.CalcFrustumEquations(ref Projection, ref modelView);
+			Camera.GetView(out View);
+			Graphics.LoadMatrix(ref View);
+			Culling.CalcFrustumEquations(ref Projection, ref View);
 		}
 		
 		void Render3D(double delta, float t) {
@@ -217,7 +195,7 @@ namespace ClassicalSharp {
 		}
 		
 		public ScheduledTask AddScheduledTask(double interval,
-		                                      Action<ScheduledTask> callback) {
+		                                      ScheduledTaskCallback callback) {
 			ScheduledTask task = new ScheduledTask();
 			task.Interval = interval; task.Callback = callback;
 			Tasks.Add(task);
@@ -239,11 +217,10 @@ namespace ClassicalSharp {
 		
 		public void UpdateProjection() {
 			DefaultFov = Options.GetInt(OptionsKey.FieldOfView, 1, 150, 70);
-			Matrix4 projection = Camera.GetProjection();
-			Projection = projection;
+			Camera.GetProjection(out Projection);
 			
 			Graphics.SetMatrixMode(MatrixType.Projection);
-			Graphics.LoadMatrix(ref projection);
+			Graphics.LoadMatrix(ref Projection);
 			Graphics.SetMatrixMode(MatrixType.Modelview);
 			Events.RaiseProjectionChanged();
 		}
@@ -353,10 +330,9 @@ namespace ClassicalSharp {
 		public bool CanPick(BlockID block) {
 			if (BlockInfo.Draw[block] == DrawType.Gas) return false;
 			if (BlockInfo.Draw[block] == DrawType.Sprite) return true;
-			if (BlockInfo.Collide[block] != CollideType.Liquid) return true;
 			
-			return !ModifiableLiquids ? false :
-				Inventory.CanPlace[block] && Inventory.CanDelete[block];
+			if (BlockInfo.Collide[block] != CollideType.Liquid) return true;		
+			return ModifiableLiquids && BlockInfo.CanPlace[block] && BlockInfo.CanDelete[block];
 		}
 		
 		
@@ -369,7 +345,7 @@ namespace ClassicalSharp {
 				Graphics.DeleteTexture(ref texId);
 				if (setSkinType) SetDefaultSkinType(bmp);
 				
-				texId = Graphics.CreateTexture(bmp, true);
+				texId = Graphics.CreateTexture(bmp, true, false);
 				return true;
 			}
 		}
@@ -379,9 +355,10 @@ namespace ClassicalSharp {
 			if (DefaultPlayerSkinType == SkinType.Invalid)
 				throw new NotSupportedException("char.png has invalid dimensions");
 			
+			Entity[] entities = Entities.List;
 			for (int i = 0; i < EntityList.MaxCount; i++) {
-				if (Entities[i] == null || Entities[i].TextureId != -1) continue;
-				Entities[i].SkinType = DefaultPlayerSkinType;
+				if (entities[i] == null || entities[i].TextureId != -1) continue;
+				entities[i].SkinType = DefaultPlayerSkinType;
 			}
 		}
 		
@@ -421,24 +398,19 @@ namespace ClassicalSharp {
 		
 		void SetNewRenderType(bool legacy, bool minimal) {
 			if (MapBordersRenderer == null) {
-				MapBordersRenderer = AddComponent(new MapBordersRenderer());
+				MapBordersRenderer = new MapBordersRenderer(); Components.Add(MapBordersRenderer);
 				MapBordersRenderer.legacy = legacy;
 			} else {
 				MapBordersRenderer.UseLegacyMode(legacy);
 			}
 			
-			if (minimal) {
-				if (EnvRenderer == null)
-					EnvRenderer = AddComponent(new MinimalEnvRenderer());
-				else
-					ReplaceComponent(ref EnvRenderer, new MinimalEnvRenderer());
-			} else if (EnvRenderer == null) {
-				EnvRenderer = AddComponent(new StandardEnvRenderer());
-				((StandardEnvRenderer)EnvRenderer).legacy = legacy;
+			if (EnvRenderer == null) {
+				EnvRenderer = new StandardEnvRenderer(); Components.Add(EnvRenderer);
+				EnvRenderer.legacy = legacy;
+				EnvRenderer.minimal = minimal;
 			} else {
-				if (!(EnvRenderer is StandardEnvRenderer))
-					ReplaceComponent(ref EnvRenderer, new StandardEnvRenderer());
-				((StandardEnvRenderer)EnvRenderer).UseLegacyMode(legacy);
+				EnvRenderer.UseLegacyMode(legacy);
+				EnvRenderer.UseMinimalMode(minimal);
 			}
 		}
 		

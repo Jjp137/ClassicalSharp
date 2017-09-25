@@ -9,7 +9,7 @@ using ClassicalSharp.Textures;
 
 namespace Launcher.Patcher {
 	
-	public partial class ResourcePatcher {
+	public class ResourcePatcher {
 
 		public ResourcePatcher(ResourceFetcher fetcher, IDrawer2D drawer) {
 			jarClassic = fetcher.jarClassic;
@@ -28,7 +28,7 @@ namespace Launcher.Patcher {
 		byte[] jarClassic, jar162, pngTerrainPatch, pngGuiPatch;
 		public void Run() {
 			reader = new ZipReader();
-			reader.ShouldProcessZipEntry = ShouldProcessZipEntry_Classic;
+			reader.SelectZipEntry = SelectZipEntry_Classic;
 			reader.ProcessZipEntry = ProcessZipEntry_Classic;
 			string texDir = Path.Combine(Program.AppDirectory, "texpacks");
 			string path = Path.Combine(texDir, "default.zip");
@@ -59,7 +59,6 @@ namespace Launcher.Patcher {
 			if (!File.Exists(path)) return;
 			
 			using (Stream src = new FileStream(path, FileMode.Open, FileAccess.Read)) {
-				reader.ShouldProcessZipEntry = (file) => true;
 				reader.ProcessZipEntry = ExtractExisting;
 				reader.Extract(src);
 			}
@@ -80,13 +79,13 @@ namespace Launcher.Patcher {
 		void ExtractClassic() {
 			if (jarClassic == null) return;
 			using (Stream src = new MemoryStream(jarClassic)) {
-				reader.ShouldProcessZipEntry = ShouldProcessZipEntry_Classic;
+				reader.SelectZipEntry = SelectZipEntry_Classic;
 				reader.ProcessZipEntry = ProcessZipEntry_Classic;
 				reader.Extract(src);
 			}
 		}
 		
-		bool ShouldProcessZipEntry_Classic(string filename) {
+		bool SelectZipEntry_Classic(string filename) {
 			return filename.StartsWith("gui")
 				|| filename.StartsWith("mob") || filename.IndexOf('/') < 0;
 		}
@@ -121,7 +120,7 @@ namespace Launcher.Patcher {
 			using (Stream src = new MemoryStream(jar162)) {
 				// Grab animations and snow
 				animBitmap = Platform.CreateBmp(1024, 64);
-				reader.ShouldProcessZipEntry = ShouldProcessZipEntry_Modern;
+				reader.SelectZipEntry = SelectZipEntry_Modern;
 				reader.ProcessZipEntry = ProcessZipEntry_Modern;
 				reader.Extract(src);
 				
@@ -133,7 +132,7 @@ namespace Launcher.Patcher {
 			}
 		}
 		
-		bool ShouldProcessZipEntry_Modern(string filename) {
+		bool SelectZipEntry_Modern(string filename) {
 			return filename.StartsWith("assets/minecraft/textures") &&
 				(filename == "assets/minecraft/textures/environment/snow.png" ||
 				 filename == "assets/minecraft/textures/blocks/water_still.png" ||
@@ -188,6 +187,50 @@ namespace Launcher.Patcher {
 				for (int xx = 0; xx < 16; xx++) {
 					animBitmap.SetPixel(dst + xx, y + yy,
 					                    bmp.GetPixel(xx, src + yy));
+				}
+			}
+		}
+		
+		
+		const string animationsTxt = @"# This file defines the animations used in a texture pack for ClassicalSharp and other supporting applications.
+# Each line is in the format: <TileX> <TileY> <FrameX> <FrameY> <Frame size> <Frames count> <Tick delay>
+# - TileX and TileY indicate the coordinates of the tile in terrain.png that 
+#     will be replaced by the animation frames. These range from 0 to 15. (inclusive of 15)
+# - FrameX and FrameY indicates the pixel coordinates of the first animation frame in animations.png.
+# - Frame Size indicates the size in pixels of an animation frame.
+# - Frames count indicates the number of used frames.  The first frame is located at 
+#     (FrameX, FrameY), the second one at (FrameX + FrameSize, FrameY) and so on.
+# - Tick delay is the number of ticks a frame doesn't change. For instance, a value of 0
+#     means that the frame would be changed every tick, while a value of 2 would mean 
+#    'replace with frame 1, don't change frame, don't change frame, replace with frame 2'.
+# NOTE: If a file called 'uselavaanim' is in the texture pack,  ClassicalSharp 0.99.2 onwards uses its built-in dynamic generation for the lava texture animation.
+# NOTE: If a file called 'usewateranim' is in the texture pack, ClassicalSharp 0.99.5 onwards uses its built-in dynamic generation for the water texture animation.
+
+# still water
+14 0 0 0 16 32 2
+# still lava
+14 1 0 16 16 39 2
+# fire
+6 2 0 32 16 32 0";
+		
+		unsafe void PatchDefault(byte[] data, int y) {
+			// Sadly files in modern are 24 rgb, so we can't use fastbitmap here
+			using (Bitmap bmp = Platform.ReadBmp32Bpp(drawer, data)) {
+				for (int tile = 0; tile < bmp.Height; tile += 16) {
+					CopyTile(tile, tile, y, bmp);
+				}
+			}
+		}
+		
+		unsafe void PatchCycle(byte[] data, int y) {
+			using (Bitmap bmp = Platform.ReadBmp32Bpp(drawer, data)) {
+				int dst = 0;
+				for (int tile = 0; tile < bmp.Height; tile += 16, dst += 16) {
+					CopyTile(tile, dst, y, bmp);
+				}
+				// Cycle back to first frame.
+				for (int tile = bmp.Height - 32; tile >= 0; tile -= 16, dst += 16) {
+					CopyTile(tile, dst, y, bmp);
 				}
 			}
 		}

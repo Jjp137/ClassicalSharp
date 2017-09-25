@@ -26,7 +26,7 @@ namespace ClassicalSharp {
 		
 		public void BeginBatch(Game game, VertexP3fT2fC4b[] vertices, int vb) {
 			this.game = game;
-			lastIndex = -1;
+			lastTexIndex = -1;
 			index = 0;
 			this.vertices = vertices;
 			this.vb = vb;
@@ -45,7 +45,7 @@ namespace ClassicalSharp {
 			Matrix4 rotY, rotX;
 			Matrix4.RotateY(out rotY, 45 * Utils.Deg2Rad);
 			Matrix4.RotateX(out rotX, -30f * Utils.Deg2Rad);
-			transform = rotY * rotX;
+			Matrix4.Mult(out transform, ref rotY, ref rotX);
 			
 			cosX = (float)Math.Cos(30f * Utils.Deg2Rad);
 			sinX = (float)Math.Sin(30f * Utils.Deg2Rad);
@@ -54,13 +54,12 @@ namespace ClassicalSharp {
 		}
 		
 		public void DrawBatch(BlockID block, float size, float x, float y) {
-			BlockInfo info = game.BlockInfo;
 			atlas = game.TerrainAtlas1D;
 			drawer.elementsPerAtlas1D = atlas.elementsPerAtlas1D;
 			drawer.invVerElementSize = atlas.invElementSize;
 			
-			bool bright = info.FullBright[block];
-			if (info.Draw[block] == DrawType.Gas) return;
+			bool bright = BlockInfo.FullBright[block];
+			if (BlockInfo.Draw[block] == DrawType.Gas) return;
 			
 			// isometric coords size: cosY * -scale - sinY * scale
 			// we need to divide by (2 * cosY), as the calling function expects size to be in pixels.
@@ -73,23 +72,23 @@ namespace ClassicalSharp {
 			// See comment in IGraphicsApi.Draw2DTexture()
 			pos.X -= 0.5f; pos.Y -= 0.5f;
 			
-			if (info.Draw[block] == DrawType.Sprite) {
+			if (BlockInfo.Draw[block] == DrawType.Sprite) {
 				SpriteXQuad(block, true);
 				SpriteZQuad(block, true);
 				
 				SpriteZQuad(block, false);
 				SpriteXQuad(block, false);
 			} else {
-				drawer.minBB = info.MinBB[block]; drawer.minBB.Y = 1 - drawer.minBB.Y;
-				drawer.maxBB = info.MaxBB[block]; drawer.maxBB.Y = 1 - drawer.maxBB.Y;
+				drawer.minBB = BlockInfo.MinBB[block]; drawer.minBB.Y = 1 - drawer.minBB.Y;
+				drawer.maxBB = BlockInfo.MaxBB[block]; drawer.maxBB.Y = 1 - drawer.maxBB.Y;
 				
-				Vector3 min = info.MinBB[block], max = info.MaxBB[block];
+				Vector3 min = BlockInfo.MinBB[block], max = BlockInfo.MaxBB[block];
 				drawer.x1 = scale * (1 - min.X * 2) + pos.X; drawer.x2 = scale * (1 - max.X * 2) + pos.X;
 				drawer.y1 = scale * (1 - min.Y * 2) + pos.Y; drawer.y2 = scale * (1 - max.Y * 2) + pos.Y;
 				drawer.z1 = scale * (1 - min.Z * 2) + pos.Z; drawer.z2 = scale * (1 - max.Z * 2) + pos.Z;
 				
-				drawer.Tinted = info.Tinted[block];
-				drawer.TintColour = info.FogColour[block];
+				drawer.Tinted = BlockInfo.Tinted[block];
+				drawer.TintColour = BlockInfo.FogColour[block];
 				
 				drawer.Right(1, bright ? colNormal : colXSide, GetTex(block, Side.Right), vertices, ref index);
 				drawer.Front(1, bright ? colNormal : colZSide, GetTex(block, Side.Front), vertices, ref index);
@@ -98,34 +97,30 @@ namespace ClassicalSharp {
 		}
 		
 		public void EndBatch() {
-			if (index > 0) {
-				if (texIndex != lastIndex) game.Graphics.BindTexture(atlas.TexIds[texIndex]);
-				game.Graphics.UpdateDynamicVb_IndexedTris(vb, vertices, index);
-				index = 0;
-				lastIndex = -1;
-			}
+			if (index > 0) { lastTexIndex = texIndex; Flush(); }
+			lastTexIndex = -1;
 			game.Graphics.PopMatrix();
 		}
 		
 		int GetTex(BlockID block, int side) {
-			int texId = game.BlockInfo.GetTextureLoc(block, side);
-			texIndex = texId / atlas.elementsPerAtlas1D;
+			int texLoc = BlockInfo.GetTextureLoc(block, side);
+			texIndex = texLoc / atlas.elementsPerAtlas1D;
 			
-			if (lastIndex != texIndex) Flush();
-			return texId;
+			if (lastTexIndex != texIndex) Flush();
+			return texLoc;
 		}
 
 		static Vector3 pos = Vector3.Zero;
 		void SpriteZQuad(BlockID block, bool firstPart) {
-			int texLoc = game.BlockInfo.GetTextureLoc(block, Side.Right);
+			int texLoc = BlockInfo.GetTextureLoc(block, Side.Right);
 			TextureRec rec = atlas.GetTexRec(texLoc, 1, out texIndex);
-			if (lastIndex != texIndex) Flush();
+			if (lastTexIndex != texIndex) Flush();
 			
 			VertexP3fT2fC4b v = default(VertexP3fT2fC4b);
 			v.Colour = colNormal;
 			
-			if (game.BlockInfo.Tinted[block]) {
-				v.Colour = Utils.Tint(v.Colour, game.BlockInfo.FogColour[block]);
+			if (BlockInfo.Tinted[block]) {
+				v.Colour = Utils.Tint(v.Colour, BlockInfo.FogColour[block]);
 			}
 			
 			float x1 = firstPart ? 0.5f : -0.1f, x2 = firstPart ? 1.1f : 0.5f;
@@ -133,22 +128,23 @@ namespace ClassicalSharp {
 			float minX = scale * (1 - x1 * 2) + pos.X, maxX = scale * (1 - x2 * 2)   + pos.X;
 			float minY = scale * (1 - 0 * 2)  + pos.Y, maxY = scale * (1 - 1.1f * 2) + pos.Y;
 			
-			v.X = minX; v.Y = minY; v.Z = pos.Z; v.U = rec.U2; v.V = rec.V2; vertices[index++] = v;
-			v.X = minX; v.Y = maxY; v.Z = pos.Z; v.U = rec.U2; v.V = rec.V1; vertices[index++] = v;
-			v.X = maxX; v.Y = maxY; v.Z = pos.Z; v.U = rec.U1; v.V = rec.V1; vertices[index++] = v;
-			v.X = maxX; v.Y = minY; v.Z = pos.Z; v.U = rec.U1; v.V = rec.V2; vertices[index++] = v;
+			v.Z = pos.Z;
+			v.X = minX; v.Y = minY; v.U = rec.U2; v.V = rec.V2; vertices[index++] = v;
+			            v.Y = maxY;               v.V = rec.V1; vertices[index++] = v;
+			v.X = maxX;             v.U = rec.U1;               vertices[index++] = v;
+			            v.Y = minY;               v.V = rec.V2; vertices[index++] = v;
 		}
 
 		void SpriteXQuad(BlockID block, bool firstPart) {
-			int texLoc = game.BlockInfo.GetTextureLoc(block, Side.Right);
+			int texLoc = BlockInfo.GetTextureLoc(block, Side.Right);
 			TextureRec rec = atlas.GetTexRec(texLoc, 1, out texIndex);
-			if (lastIndex != texIndex) Flush();
+			if (lastTexIndex != texIndex) Flush();
 			
 			VertexP3fT2fC4b v = default(VertexP3fT2fC4b);
 			v.Colour = colNormal;
 			
-			if (game.BlockInfo.Tinted[block]) {
-				v.Colour = Utils.Tint(v.Colour, game.BlockInfo.FogColour[block]);
+			if (BlockInfo.Tinted[block]) {
+				v.Colour = Utils.Tint(v.Colour, BlockInfo.FogColour[block]);
 			}
 			
 			float z1 = firstPart ? 0.5f : -0.1f, z2 = firstPart ? 1.1f : 0.5f;
@@ -156,21 +152,22 @@ namespace ClassicalSharp {
 			float minY = scale * (1 - 0 * 2)  + pos.Y, maxY = scale * (1 - 1.1f * 2) + pos.Y;
 			float minZ = scale * (1 - z1 * 2) + pos.Z, maxZ = scale * (1 - z2 * 2)   + pos.Z;
 			
-			v.X = pos.X; v.Y = minY; v.Z = minZ; v.U = rec.U2; v.V = rec.V2; vertices[index++] = v;
-			v.X = pos.X; v.Y = maxY; v.Z = minZ; v.U = rec.U2; v.V = rec.V1; vertices[index++] = v;
-			v.X = pos.X; v.Y = maxY; v.Z = maxZ; v.U = rec.U1; v.V = rec.V1; vertices[index++] = v;
-			v.X = pos.X; v.Y = minY; v.Z = maxZ; v.U = rec.U1; v.V = rec.V2; vertices[index++] = v;
+			v.X = pos.X; 
+			v.Y = minY; v.Z = minZ; v.U = rec.U2; v.V = rec.V2; vertices[index++] = v;
+			v.Y = maxY;                           v.V = rec.V1; vertices[index++] = v;
+			            v.Z = maxZ; v.U = rec.U1;               vertices[index++] = v;
+			v.Y = minY;                           v.V = rec.V2; vertices[index++] = v;
 		}
 		
-		int lastIndex, texIndex;
+		int lastTexIndex, texIndex;
 		void Flush() {
-			if (lastIndex != -1) {
+			if (lastTexIndex != -1) {
+				game.Graphics.BindTexture(atlas.TexIds[lastTexIndex]);
 				game.Graphics.UpdateDynamicVb_IndexedTris(vb, vertices, index);
-				index = 0;
 			}
 			
-			lastIndex = texIndex;
-			game.Graphics.BindTexture(atlas.TexIds[texIndex]);
+			lastTexIndex = texIndex;
+			index = 0;			
 		}
 		
 		/// <summary> Rotates the given 3D coordinates around the x axis. </summary>

@@ -8,7 +8,7 @@ namespace ClassicalSharp.Model {
 
 	public class SkeletonModel : IModel {
 		
-		public SkeletonModel(Game window) : base(window) { }
+		public SkeletonModel(Game window) : base(window) { SurivalScore = 120; }
 		
 		public override void CreateParts() {
 			vertices = new ModelVertex[boxVertices * 6];
@@ -44,7 +44,7 @@ namespace ClassicalSharp.Model {
 		}
 		
 		public override void DrawModel(Entity p) {
-			game.Graphics.BindTexture(GetTexture(p.MobTextureId));
+			game.Graphics.BindTexture(GetTexture(p));
 			DrawRotate(-p.HeadXRadians, 0, 0, Head, true);
 
 			DrawPart(Torso);

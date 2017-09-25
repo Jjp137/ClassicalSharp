@@ -7,7 +7,7 @@ using OpenTK.Input;
 
 namespace ClassicalSharp.Entities {
 	
-	public partial class LocalPlayer : Player, IGameComponent {
+	public class LocalPlayer : Player, IGameComponent {
 		
 		/// <summary> Position the player's position is set to when the 'respawn' key binding is pressed. </summary>
 		public Vector3 Spawn;
@@ -35,7 +35,6 @@ namespace ClassicalSharp.Entities {
 		public LocalPlayer(Game game) : base(game) {
 			DisplayName = game.Username;
 			SkinName = game.Username;
-			SkinIdentifier = "skin_255";
 			
 			collisions = new CollisionsComponent(game, this);
 			Hacks = new HacksComponent(game, this);
@@ -60,8 +59,7 @@ namespace ClassicalSharp.Entities {
 			bool wasOnGround = onGround;
 			
 			HandleInput(ref xMoving, ref zMoving);
-			if (game.ClassicMode && !Hacks.Noclip)
-				physics.DoEntityPush();
+			if (!Hacks.Floating && Hacks.CanBePushed) physics.DoEntityPush();
 			
 			// Immediate stop in noclip mode
 			if (!Hacks.NoclipSlide && (Hacks.Noclip && xMoving == 0 && zMoving == 0))
@@ -141,7 +139,7 @@ namespace ClassicalSharp.Entities {
 			Hacks.PushbackPlacing = !game.ClassicMode && Options.GetBool(OptionsKey.PushbackPlacing, false);
 			Hacks.NoclipSlide = Options.GetBool(OptionsKey.NoclipSlide, false);
 			Hacks.WOMStyleHacks = !game.ClassicMode && Options.GetBool(OptionsKey.WOMStyleHacks, false);
-			Hacks.Enabled = !game.PureClassic && Options.GetBool(OptionsKey.HacksEnabled, true);
+			Hacks.Enabled = !game.PureClassic && Options.GetBool(OptionsKey.HacksOn, true);
 			Hacks.FullBlockStep = !game.ClassicMode && Options.GetBool(OptionsKey.FullBlockStep, false);
 			Health = 20;
 		}

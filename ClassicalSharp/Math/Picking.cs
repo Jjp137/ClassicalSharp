@@ -35,9 +35,10 @@ namespace ClassicalSharp {
 				return false;
 			Vector3 I = t.Origin + t.Dir * t0;
 			
+			// Only pick the block if the block is precisely within reach distance.
 			float lenSq = (I - t.Origin).LengthSquared;
 			float reach = game.LocalPlayer.ReachDistance;
-			if (lenSq <=  reach * reach) {
+			if (lenSq <= reach * reach) {
 				pos.SetAsValid(t.X, t.Y, t.Z, t.Min, t.Max, t.Block, I);
 			} else {
 				pos.SetAsInvalid();
@@ -55,8 +56,7 @@ namespace ClassicalSharp {
 		}
 		
 		static bool CameraClip(Game game, PickedPos pos) {
-			BlockInfo info = game.BlockInfo;
-			if (info.Draw[t.Block] == DrawType.Gas || info.Collide[t.Block] != CollideType.Solid)
+			if (BlockInfo.Draw[t.Block] == DrawType.Gas || BlockInfo.Collide[t.Block] != CollideType.Solid)
 				return false;
 			
 			float t0, t1;
@@ -81,15 +81,14 @@ namespace ClassicalSharp {
 		static bool RayTrace(Game game, Vector3 origin, Vector3 dir, float reach,
 		                     PickedPos pos, bool clipMode) {
 			t.SetVectors(origin, dir);
-			BlockInfo info = game.BlockInfo;
 			float reachSq = reach * reach;
 			Vector3I pOrigin = Vector3I.Floor(origin);
 
 			for (int i = 0; i < 10000; i++) {
 				int x = t.X, y = t.Y, z = t.Z;
 				t.Block = GetBlock(game.World, x, y, z, pOrigin);
-				Vector3 min = new Vector3(x, y, z) + info.RenderMinBB[t.Block];
-				Vector3 max = new Vector3(x, y, z) + info.RenderMaxBB[t.Block];
+				Vector3 min = new Vector3(x, y, z) + BlockInfo.RenderMinBB[t.Block];
+				Vector3 max = new Vector3(x, y, z) + BlockInfo.RenderMaxBB[t.Block];
 				
 				float dx = Math.Min(Math.Abs(origin.X - min.X), Math.Abs(origin.X - max.X));
 				float dy = Math.Min(Math.Abs(origin.Y - min.Y), Math.Abs(origin.Y - max.Y));
@@ -114,9 +113,9 @@ namespace ClassicalSharp {
 			
 			// handling of blocks inside the map, above, and on borders
 			if (x >= 0 && z >= 0 && x < map.Width && z < map.Length) {
-				if (y >= map.Height) return 0;
-				if (sides && y == -1 && insideMap) return border;
-				if (sides && y == 0 && origin.Y < 0) return border;
+				if (y >= map.Height) return Block.Air;
+				if (sides && y == -1 && origin.Y > 0) return border;
+				if (sides && y == 0  && origin.Y < 0) return border;
 				
 				if (sides && x == 0 && y >= 0 && y < height && origin.X < 0) return border;
 				if (sides && z == 0 && y >= 0 && y < height && origin.Z < 0) return border;
@@ -128,12 +127,12 @@ namespace ClassicalSharp {
 			}
 			
 			// pick blocks on the map boundaries (when inside the map)
-			if (!sides || !insideMap) return 0;
+			if (!sides || !insideMap) return Block.Air;
 			if (y == 0 && origin.Y < 0) return border;
 			bool validX = (x == -1 || x == map.Width) && (z >= 0 && z < map.Length);
 			bool validZ = (z == -1 || z == map.Length) && (x >= 0 && x < map.Width);
 			if (y >= 0 && y < height && (validX || validZ)) return border;
-			return 0;
+			return Block.Air;
 		}
 	}
 }

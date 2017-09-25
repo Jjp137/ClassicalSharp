@@ -131,36 +131,32 @@ namespace ClassicalSharp {
 			}
 		}
 
-		float deltaAcc = 0;
+		float deltaAcc;
 		void MouseWheelChanged(object sender, MouseWheelEventArgs e) {
 			if (game.Gui.ActiveScreen.HandlesMouseScroll(e.Delta)) return;
 			
 			Inventory inv = game.Inventory;
 			bool hotbar = AltDown || ControlDown || ShiftDown;
-			if ((!hotbar && game.Camera.Zoom(e.DeltaPrecise)) || DoFovZoom(e.DeltaPrecise) || !inv.CanChangeHeldBlock)
+			if ((!hotbar && game.Camera.Zoom(e.Delta)) || DoFovZoom(e.Delta) || !inv.CanChangeHeldBlock)
 				return;
-			ScrollHotbar(e.DeltaPrecise);
+			ScrollHotbar(e.Delta);
 		}
 		
-		void ScrollHotbar(float deltaPrecise) {
+		void ScrollHotbar(float delta) {
 			Inventory inv = game.Inventory;
 			if (AltDown) {
 				int index = inv.Offset / Inventory.BlocksPerRow;
-				inv.Offset = ScrolledIndex(deltaPrecise, index) * Inventory.BlocksPerRow;
+				inv.Offset = ScrolledIndex(delta, index) * Inventory.BlocksPerRow;
 			} else {
-				inv.SelectedIndex = ScrolledIndex(deltaPrecise, inv.SelectedIndex);
+				inv.SelectedIndex = ScrolledIndex(delta, inv.SelectedIndex);
 			}
 		}
 		
-		int ScrolledIndex(float deltaPrecise, int currentIndex) {
-			// Some mice may use deltas of say (0.2, 0.2, 0.2, 0.2, 0.2)
-			// We must use rounding at final step, not at every intermediate step.
-			deltaAcc += deltaPrecise;
-			int delta = (int)deltaAcc;
-			deltaAcc -= delta;
+		int ScrolledIndex(float delta, int currentIndex) {
+			int steps = Utils.AccumulateWheelDelta(ref deltaAcc, delta);
 			
 			const int blocksPerRow = Inventory.BlocksPerRow;
-			int diff = -delta % blocksPerRow;
+			int diff = -steps % blocksPerRow;
 			int index = currentIndex + diff;
 			
 			if (index < 0) index += blocksPerRow;
@@ -229,11 +225,9 @@ namespace ClassicalSharp {
 			
 			if (!(key == left || key == middle || key == right))
 				return false;
-			simArgs.Button = key == left ? MouseButton.Left :
-				key == middle ? MouseButton.Middle : MouseButton.Right;
+			simArgs.Button = key == left ? MouseButton.Left : key == middle ? MouseButton.Middle : MouseButton.Right;
 			simArgs.X = game.Mouse.X;
 			simArgs.Y = game.Mouse.Y;
-			simArgs.IsPressed = pressed;
 			
 			if (pressed) MouseButtonDown(null, simArgs);
 			else MouseButtonUp(null, simArgs);
@@ -252,16 +246,16 @@ namespace ClassicalSharp {
 						WindowState.Normal : WindowState.Fullscreen;
 				}
 			} else if (key == Keys[KeyBind.SmoothCamera]) {
-				Toggle(key, ref game.SmoothCamera, 
-				       "  &eSmooth camera is &aenabled", 
+				Toggle(key, ref game.SmoothCamera,
+				       "  &eSmooth camera is &aenabled",
 				       "  &eSmooth camera is &cdisabled");
 			} else if (key == Keys[KeyBind.AxisLines]) {
 				Toggle(key, ref game.ShowAxisLines,
-				       "  &eAxis lines (&4X&e, &2Y&e, &1Z&e) now show", 
+				       "  &eAxis lines (&4X&e, &2Y&e, &1Z&e) now show",
 				       "  &eAxis lines no longer show");
 			} else if (key == Keys[KeyBind.Autorotate]) {
 				Toggle(key, ref game.AutoRotate,
-				       "  &eAuto rotate is &aenabled", 
+				       "  &eAuto rotate is &aenabled",
 				       "  &eAuto rotate is &cdisabled");
 			} else if (key == Keys[KeyBind.ThirdPerson]) {
 				game.CycleCamera();
@@ -273,12 +267,16 @@ namespace ClassicalSharp {
 				}
 			} else if (key == Keys[KeyBind.PauseOrExit] && game.World.blocks != null) {
 				game.Gui.SetNewScreen(new PauseScreen(game));
-			} else if (!game.Mode.HandlesKeyDown(key)) {
+			} else if (game.Mode.HandlesKeyDown(key)) {
+			} else if (key == Key.F10) {
+				if (game.Gui.overlays.Count > 0) return true;
+				game.Gui.ShowOverlay(new TexIdsOverlay(game));
+			} else {
 				return false;
 			}
 			return true;
 		}
-		
+
 		void Toggle(Key key, ref bool target, string enableMsg, string disableMsg) {
 			target = !target;
 			if (target) {

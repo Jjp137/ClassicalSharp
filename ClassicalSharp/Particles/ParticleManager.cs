@@ -61,52 +61,55 @@ namespace ClassicalSharp.Particles {
 			gfx.Texturing = false;
 		}
 		
-		void RenderTerrainParticles(IGraphicsApi gfx, Particle[] particles, int elems, double delta, float t) {
+		unsafe void RenderTerrainParticles(IGraphicsApi gfx, TerrainParticle[] particles, int elems, double delta, float t) {
 			int count = elems * 4;
 			if (count > vertices.Length)
 				vertices = new VertexP3fT2fC4b[count];
 
 			Update1DCounts(particles, elems);
 			for (int i = 0; i < elems; i++) {
-				int index = particles[i].Get1DBatch(game);
-				particles[i].Render(game, delta, t, vertices, ref terrain1DIndices[index]);
+				int index = game.TerrainAtlas1D.Get1DIndex(particles[i].texLoc);
+				particles[i].Render(game, t, vertices, ref terrain1DIndices[index]);
 			}
 			int drawCount = Math.Min(count, maxParticles * 4);
 			if (drawCount == 0) return;
 			
-			gfx.SetDynamicVbData(vb, vertices, drawCount);
-			int offset = 0;
-			for (int i = 0; i < terrain1DCount.Length; i++) {
-				int partCount = terrain1DCount[i];
-				if (partCount == 0) continue;
-				
-				gfx.BindTexture(game.TerrainAtlas1D.TexIds[i]);
-				gfx.DrawVb_IndexedTris(partCount * 6 / 4, offset * 6 / 4);
-				offset += partCount;
+			fixed (VertexP3fT2fC4b* ptr = vertices) {
+				gfx.SetDynamicVbData(vb, (IntPtr)ptr, drawCount);
+				int offset = 0;
+				for (int i = 0; i < terrain1DCount.Length; i++) {
+					int partCount = terrain1DCount[i];
+					if (partCount == 0) continue;
+					
+					gfx.BindTexture(game.TerrainAtlas1D.TexIds[i]);
+					gfx.DrawVb_IndexedTris(partCount, offset);
+					offset += partCount;
+				}
 			}
 		}
 		
-		void Update1DCounts(Particle[] particles, int elems) {
+		void Update1DCounts(TerrainParticle[] particles, int elems) {
 			for (int i = 0; i < terrain1DCount.Length; i++) {
 				terrain1DCount[i] = 0;
 				terrain1DIndices[i] = 0;
 			}
 			for (int i = 0; i < elems; i++) {
-				int index = particles[i].Get1DBatch(game);
+				int index = game.TerrainAtlas1D.Get1DIndex(particles[i].texLoc);
 				terrain1DCount[index] += 4;
 			}
-			for (int i = 1; i < terrain1DCount.Length; i++)
+			for (int i = 1; i < terrain1DCount.Length; i++) {
 				terrain1DIndices[i] = terrain1DIndices[i - 1] + terrain1DCount[i - 1];
+			}
 		}
 		
-		void RenderRainParticles(IGraphicsApi gfx, Particle[] particles, int elems, double delta, float t) {
+		void RenderRainParticles(IGraphicsApi gfx, RainParticle[] particles, int elems, double delta, float t) {
 			int count = elems * 4;
 			if (count > vertices.Length)
 				vertices = new VertexP3fT2fC4b[count];
 			
 			int index = 0;
 			for (int i = 0; i < elems; i++)
-				particles[i].Render(game, delta, t, vertices, ref index);
+				particles[i].Render(game, t, vertices, ref index);
 			
 			int drawCount = Math.Min(count, maxParticles * 4);
 			if (drawCount == 0) return;

@@ -44,19 +44,19 @@ namespace ClassicalSharp.Entities {
 				if (Hacks.Noclip) entity.Velocity.Y = 0;
 				Hacks.Noclip = !Hacks.Noclip;
 			} else if (key == keys[KeyBind.Jump] && !entity.onGround && !(Hacks.Flying || Hacks.Noclip)) {
-				if (!physics.firstJump && Hacks.CanDoubleJump && Hacks.WOMStyleHacks) {
+				int maxJumps = Hacks.CanDoubleJump && Hacks.WOMStyleHacks ? 2 : 0;
+				maxJumps = Math.Max(maxJumps, Hacks.MaxJumps - 1);
+				
+			    if (physics.multiJumps < maxJumps) {
 					physics.DoNormalJump();
-					physics.firstJump = true;
-				} else if (!physics.secondJump && Hacks.CanDoubleJump && Hacks.WOMStyleHacks) {
-					physics.DoNormalJump();
-					physics.secondJump = true;
+					physics.multiJumps++;
 				}
 			} else {
 				return false;
 			}
 			return true;
 		}
-		
+				
 		void DoRespawn() {
 			LocalPlayer p = (LocalPlayer)entity;
 			Vector3 spawn = p.Spawn;
@@ -71,11 +71,13 @@ namespace ClassicalSharp.Entities {
 			// Update onGround, otherwise if 'respawn' then 'space' is pressed, you still jump into the air if onGround was true before
 			AABB bb = entity.Bounds;
 			bb.Min.Y -= 0.01f; bb.Max.Y = bb.Min.Y;
-			entity.onGround = entity.TouchesAny(bb, b => game.BlockInfo.Collide[b] == CollideType.Solid);
+			entity.onGround = entity.TouchesAny(bb, touchesAnySolid);
 		}
 		
+		static Predicate<BlockID> touchesAnySolid = IsSolidCollide;
+		static bool IsSolidCollide(BlockID b) { return BlockInfo.Collide[b] == CollideType.Solid; }
+
 		void FindHighestFree(ref Vector3 spawn) {
-			BlockInfo info = game.BlockInfo;
 			AABB bb = AABB.Make(spawn, entity.Size);
 			
 			Vector3I P = Vector3I.Floor(spawn);
@@ -84,7 +86,7 @@ namespace ClassicalSharp.Entities {
 				float spawnY = Respawn.HighestFreeY(game, ref bb);
 				if (spawnY == float.NegativeInfinity) {
 					BlockID block = game.World.GetPhysicsBlock(P.X, y, P.Z);
-					float height = info.Collide[block] == CollideType.Solid ? info.MaxBB[block].Y : 0;
+					float height = BlockInfo.Collide[block] == CollideType.Solid ? BlockInfo.MaxBB[block].Y : 0;
 					spawn.Y = y + height + Entity.Adjustment;
 					return;
 				}

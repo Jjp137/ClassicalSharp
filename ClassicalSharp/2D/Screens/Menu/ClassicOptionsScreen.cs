@@ -17,77 +17,65 @@ namespace ClassicalSharp.Gui.Screens {
 		}
 		
 		protected override void ContextRecreated() {
-			IServerConnection network = game.Server;
-			
+			bool multi = !game.Server.IsSinglePlayer, hacks = game.ClassicHacks;
+			ClickHandler onClick = OnWidgetClick;			
 			widgets = new Widget[] {
-				// Column 1
-				MakeVolumeBool(-1, -150, "Music", OptionsKey.MusicVolume,
-				        g => g.MusicVolume > 0,
-				        (g, v) => { g.MusicVolume = v ? 100 : 0; g.AudioPlayer.SetMusic(g.MusicVolume); }),
+				MakeOpt(-1, -150, "Music",                      onClick, GetMusic,    SetMusic),
+				MakeOpt(-1, -100, "Invert mouse",               onClick, GetInvert,   SetInvert),
+				MakeOpt(-1, -50, "View distance",               onClick, GetViewDist, SetViewDist),
+				multi ? null : MakeOpt(-1, 0, "Block physics",  onClick, GetPhysics,  SetPhysics),
 				
-				MakeBool(-1, -100, "Invert mouse", OptionsKey.InvertMouse,
-				         OnWidgetClick, g => g.InvertMouse, (g, v) => g.InvertMouse = v),
+				MakeOpt(1, -150, "Sound",                       onClick, GetSounds,   SetSounds),
+				MakeOpt(1, -100, "Show FPS",                    onClick, GetShowFPS,  SetShowFPS),
+				MakeOpt(1, -50, "View bobbing",                 onClick, GetViewBob,  SetViewBob),
+				MakeOpt(1, 0, "FPS mode",                       onClick, GetFPS,      SetFPS),
+				!hacks ? null : MakeOpt(0, 60, "Hacks enabled", onClick, GetHacks,    SetHacks),
 				
-				MakeOpt(-1, -50, "View distance", OnWidgetClick,
-				        g => g.ViewDistance.ToString(),
-				        (g, v) => g.SetViewDistance(Int32.Parse(v), true)),
-				
-				!network.IsSinglePlayer ? null :
-					MakeBool(-1, 0, "Block physics", OptionsKey.SingleplayerPhysics, OnWidgetClick,
-					         g => ((SinglePlayerServer)network).physics.Enabled,
-					         (g, v) => ((SinglePlayerServer)network).physics.Enabled = v),
-				
-				// Column 2
-				MakeVolumeBool(1, -150, "Sound", OptionsKey.SoundsVolume,
-				        g => g.SoundsVolume > 0,
-				        (g, v) => { g.SoundsVolume = v ? 100 : 0; g.AudioPlayer.SetSounds(g.SoundsVolume); }),
-				
-				MakeBool(1, -100, "Show FPS", OptionsKey.ShowFPS,
-				         OnWidgetClick, g => g.ShowFPS, (g, v) => g.ShowFPS = v),
-				
-				MakeBool(1, -50, "View bobbing", OptionsKey.ViewBobbing,
-				         OnWidgetClick, g => g.ViewBobbing, (g, v) => g.ViewBobbing = v),
-				
-				MakeOpt(1, 0, "FPS mode", OnWidgetClick,
-				        g => g.FpsLimit.ToString(),
-				        (g, v) => { }),
-				
-				!game.ClassicHacks ? null :
-					MakeBool(0, 60, "Hacks enabled", OptionsKey.HacksEnabled,
-					         OnWidgetClick, g => g.LocalPlayer.Hacks.Enabled,
-					         (g, v) => { g.LocalPlayer.Hacks.Enabled = v;
-					         	g.LocalPlayer.CheckHacksConsistency(); }),
-				
-				ButtonWidget.Create(game, 400, "Controls", titleFont,
-				                    LeftOnly((g, w) => g.Gui.SetNewScreen(new ClassicKeyBindingsScreen(g))))
+				ButtonWidget.Create(game, 400, "Controls", titleFont, LeftOnly(SwitchClassic))
 					.SetLocation(Anchor.Centre, Anchor.BottomOrRight, 0, 95),
-				
-				MakeBack(400, "Done", 25, titleFont, (g, w) => g.Gui.SetNewScreen(new PauseScreen(g))),
+				MakeBack(400, "Done", 25, titleFont, SwitchPause),
 				null, null,
 			};
-			
-			// NOTE: we need to override the default setter here, because changing FPS limit method
-			// recreates the graphics context on some backends (such as Direct3D9)
-			ButtonWidget btn = (ButtonWidget)widgets[7];
-			btn.SetValue = SetFPSLimitMethod;
 		}
 		
-		ButtonWidget MakeVolumeBool(int dir, int y, string text, string optKey,
-		                            ButtonBoolGetter getter, ButtonBoolSetter setter) {
-			string optName = text;
-			text = text + ": " + (getter(game) ? "ON" : "OFF");
-			ButtonWidget widget = ButtonWidget.Create(game, 300, text, titleFont, OnWidgetClick)
-				.SetLocation(Anchor.Centre, Anchor.Centre, 160 * dir, y);
-			widget.Metadata = optName;
-			widget.GetValue = g => getter(g) ? "yes" : "no";
-			
-			widget.SetValue = (g, v) => {
-				setter(g, v == "yes");
-				Options.Set(optKey, v == "yes" ? 100 : 0);
-				widget.SetText((string)widget.Metadata + ": " + (v == "yes" ? "ON" : "OFF"));
-			};
-			return widget;
+		static string GetMusic(Game g) { return GetBool(g.MusicVolume > 0); }
+		static void SetMusic(Game g, string v) {
+			g.MusicVolume = v == "ON" ? 100 : 0; 
+			g.AudioPlayer.SetMusic(g.MusicVolume); 
+			Options.Set(OptionsKey.MusicVolume, g.MusicVolume);
 		}
+		
+		static string GetInvert(Game g) { return GetBool(g.InvertMouse); }
+		static void SetInvert(Game g, string v) { g.InvertMouse = SetBool(v, OptionsKey.InvertMouse); }
+		
+		static string GetViewDist(Game g) { return g.ViewDistance.ToString(); }
+		static void SetViewDist(Game g, string v) { g.SetViewDistance(Int32.Parse(v), true); }
+		
+		static string GetPhysics(Game g) { return GetBool(((SinglePlayerServer)g.Server).physics.Enabled); }
+		static void SetPhysics(Game g, string v) { 
+			((SinglePlayerServer)g.Server).physics.Enabled = SetBool(v, OptionsKey.BlockPhysics);
+		}
+		
+		static string GetSounds(Game g) { return GetBool(g.SoundsVolume > 0); }
+		static void SetSounds(Game g, string v) { 
+			g.SoundsVolume = v == "ON" ? 100 : 0; 
+			g.AudioPlayer.SetSounds(g.SoundsVolume);
+			Options.Set(OptionsKey.SoundsVolume, g.SoundsVolume);
+		}
+		
+		static string GetShowFPS(Game g) { return GetBool(g.ShowFPS); }
+		static void SetShowFPS(Game g, string v) { g.ShowFPS = SetBool(v, OptionsKey.ShowFPS); }
+		
+		static string GetViewBob(Game g) { return GetBool(g.ViewBobbing); }
+		static void SetViewBob(Game g, string v) { g.ViewBobbing = SetBool(v, OptionsKey.ViewBobbing); }
+		
+		static string GetHacks(Game g) { return GetBool(g.LocalPlayer.Hacks.Enabled); }
+		static void SetHacks(Game g, string v) { 
+			g.LocalPlayer.Hacks.Enabled = SetBool(v, OptionsKey.HacksOn);
+			g.LocalPlayer.CheckHacksConsistency();
+		}
+		
+		static void SwitchClassic(Game g, Widget w) { g.Gui.SetNewScreen(new ClassicKeyBindingsScreen(g)); }
 		
 		void MakeValidators() {
 			IServerConnection network = game.Server;

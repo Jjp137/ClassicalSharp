@@ -28,7 +28,7 @@ namespace ClassicalSharp.Gui.Screens {
 			}
 			
 			gfx.Texturing = true;
-			RenderMenuWidgets(delta);
+			RenderWidgets(widgets, delta);
 			
 			if (extendedHelp != null && extEndY <= extClipY)
 				extendedHelp.Render(delta);
@@ -72,7 +72,7 @@ namespace ClassicalSharp.Gui.Screens {
 			
 			extendedHelp.XOffset = game.Width / 2 - extendedHelp.Width / 2;
 			extendedHelp.YOffset = game.Height / 2 + extHelpY;
-			extendedHelp.CalculatePosition();
+			extendedHelp.Reposition();
 		}
 		
 		protected override void ContextLost() {
@@ -108,47 +108,27 @@ namespace ClassicalSharp.Gui.Screens {
 		
 		protected virtual void InputClosed() { }
 		
-		protected ButtonWidget MakeOpt(int dir, int y, string text, ClickHandler onClick,
+		protected ButtonWidget MakeOpt(int dir, int y, string optName, ClickHandler onClick,
 		                               ButtonValueGetter getter, ButtonValueSetter setter) {
-			ButtonWidget widget = ButtonWidget.Create(game, 300, text + ": " + getter(game), titleFont, onClick)
+			ButtonWidget btn = ButtonWidget.Create(game, 300, optName + ": " + getter(game), titleFont, onClick)
 				.SetLocation(Anchor.Centre, Anchor.Centre, 160 * dir, y);
-			widget.Metadata = text;
-			widget.GetValue = getter;
-			widget.SetValue = (g, v) => {
-				setter(g, v);
-				widget.SetText((string)widget.Metadata + ": " + getter(g));
-			};
-			return widget;
+			btn.OptName = optName;
+			btn.GetValue = getter;
+			btn.SetValue = setter;
+			return btn;
 		}
 		
-		protected ButtonWidget MakeBool(int dir, int y, string text, string optKey,
-		                                ClickHandler onClick, ButtonBoolGetter getter, ButtonBoolSetter setter) {
-			return MakeBool(dir, y, text, optKey, false, onClick, getter, setter);
-		}
-
-		protected ButtonWidget MakeBool(int dir, int y, string text, string optKey, bool invert,
-		                                ClickHandler onClick, ButtonBoolGetter getter, ButtonBoolSetter setter) {
-			string optName = text;
-			text = text + ": " + (getter(game) ? "ON" : "OFF");
-			ButtonWidget widget = ButtonWidget.Create(game, 300, text, titleFont, onClick)
-				.SetLocation(Anchor.Centre, Anchor.Centre, 160 * dir, y);
-			widget.Metadata = optName;
-			widget.GetValue = g => getter(g) ? "yes" : "no";
-			string target = invert ? "no" : "yes";
-			
-			widget.SetValue = (g, v) => {
-				setter(g, v == "yes");
-				Options.Set(optKey, v == target);
-				widget.SetText((string)widget.Metadata + ": " + (v == "yes" ? "ON" : "OFF"));
-			};
-			return widget;
+		protected static string GetBool(bool v) { return v ? "ON" : "OFF"; }
+		protected static bool SetBool(string v, string key) {
+			Options.Set(key, v == "ON");
+			return v == "ON";
 		}
 		
 		void ShowExtendedHelp() {
 			bool canShow = input == null && selectedWidget != null && descriptions != null;
 			if (!canShow) return;
 			
-			int index = Array.IndexOf<Widget>(widgets, selectedWidget);
+			int index = IndexOfWidget(selectedWidget);
 			if (index < 0 || index >= descriptions.Length) return;
 			string[] desc = descriptions[index];
 			if (desc == null) return;
@@ -167,7 +147,7 @@ namespace ClassicalSharp.Gui.Screens {
 			
 			extendedHelp.XOffset = game.Width / 2 - extendedHelp.Width / 2;
 			extendedHelp.YOffset = game.Height / 2 + extHelpY;
-			extendedHelp.CalculatePosition();
+			extendedHelp.Reposition();
 		}
 		
 		void DisposeExtendedHelp() {
@@ -185,11 +165,11 @@ namespace ClassicalSharp.Gui.Screens {
 			if (button == null) return;
 			DisposeExtendedHelp();
 			
-			int index = Array.IndexOf<Widget>(widgets, button);
+			int index = IndexOfWidget(button);
 			MenuInputValidator validator = validators[index];
 			if (validator is BooleanValidator) {
 				string value = button.GetValue(game);
-				button.SetValue(game, value == "yes" ? "no" : "yes");
+				SetButtonValue(button, value == "ON" ? "OFF" : "ON");
 				UpdateDescription(button);
 				return;
 			} else if (validator is EnumValidator) {
@@ -221,21 +201,21 @@ namespace ClassicalSharp.Gui.Screens {
 		}		
 		
 		void HandleEnumOption(ButtonWidget button, Type type) {
-			string value = button.GetValue(game);
-			int enumValue = (int)Enum.Parse(type, value, true);
-			enumValue++;
-			
+			string rawName = button.GetValue(game);
+			int value = (int)Enum.Parse(type, rawName, true);
+			value++;		
 			// go back to first value
-			if (!Enum.IsDefined(type, enumValue))
-				enumValue = 0;
-			button.SetValue(game, Enum.GetName(type, enumValue));
+			if (!Enum.IsDefined(type, value)) value = 0;
+			
+			SetButtonValue(button, Enum.GetName(type, value));
 			UpdateDescription(button);
 		}
 		
 		void ChangeSetting() {
 			string text = input.Text.ToString();
-			if (((MenuInputWidget)input).Validator.IsValidValue(text))
-				targetWidget.SetValue(game, text);
+			if (((MenuInputWidget)input).Validator.IsValidValue(text)) {
+				SetButtonValue(targetWidget, text);
+			}
 			
 			DisposeWidgets();
 			UpdateDescription(targetWidget);
@@ -243,9 +223,15 @@ namespace ClassicalSharp.Gui.Screens {
 			InputClosed();
 		}
 		
+		void SetButtonValue(ButtonWidget btn, string text) {
+			btn.SetValue(game, text);
+			int index = IndexOfWidget(btn);
+			// e.g. changing FPS invalidates all widgets
+			if (index >= 0) btn.SetText(btn.OptName + ": " + btn.GetValue(game));
+		}
+		
 		void DisposeWidgets() {
-			if (input != null)
-				input.Dispose();
+			if (input != null) input.Dispose();
 			widgets[widgets.Length - 2] = null;
 			input = null;
 			
@@ -255,14 +241,11 @@ namespace ClassicalSharp.Gui.Screens {
 			widgets[okayIndex] = null;
 		}
 		
-		protected void SetFPSLimitMethod(Game g, string v) {
-			object rawFps = Enum.Parse(typeof(FpsLimitMethod), v);
-			g.SetFpsLimitMethod((FpsLimitMethod)rawFps);
+		protected static string GetFPS(Game g) { return g.FpsLimit.ToString(); }
+		protected void SetFPS(Game g, string v) {
+			object raw = Enum.Parse(typeof(FpsLimitMethod), v);
+			g.SetFpsLimitMethod((FpsLimitMethod)raw);
 			Options.Set(OptionsKey.FpsLimit, v);
-			
-			// NOTE: OpenGL backend doesn't recreate context, so cheat and act like recreated anyways
-			ContextLost();
-			ContextRecreated();
 		}
 	}
 }

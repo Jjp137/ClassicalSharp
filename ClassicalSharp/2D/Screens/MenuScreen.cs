@@ -14,21 +14,21 @@ namespace ClassicalSharp.Gui.Screens {
 		protected Font titleFont, regularFont;
 		protected FastColour backCol = new FastColour(60, 60, 60, 160);
 		
-		protected void RenderMenuBounds() {
-			gfx.Draw2DQuad(0, 0, game.Width, game.Height, backCol);
+		protected int IndexOfWidget(Widget w) {
+			for (int i = 0; i < widgets.Length; i++) {
+				if (widgets[i] == w) return i;
+			}
+			return -1;
 		}
 		
-		protected void RenderMenuWidgets(double delta) {
-			for (int i = 0; i < widgets.Length; i++) {
-				if (widgets[i] == null) continue;
-				widgets[i].Render(delta);
-			}
+		protected void RenderMenuBounds() {
+			gfx.Draw2DQuad(0, 0, game.Width, game.Height, backCol);
 		}
 		
 		public override void Render(double delta) {
 			RenderMenuBounds();
 			gfx.Texturing = true;
-			RenderMenuWidgets(delta);
+			RenderWidgets(widgets, delta);
 			gfx.Texturing = false;
 		}
 		
@@ -46,20 +46,10 @@ namespace ClassicalSharp.Gui.Screens {
 			gfx.ContextRecreated -= ContextRecreated;
 		}
 		
-		protected override void ContextLost() {
-			if (widgets == null) return;
-			
-			for (int i = 0; i < widgets.Length; i++) {
-				if (widgets[i] == null) continue;
-				widgets[i].Dispose();
-			}
-		}
+		protected override void ContextLost() { DisposeWidgets(widgets); }
 
 		public override void OnResize(int width, int height) {
-			for (int i = 0; i < widgets.Length; i++) {
-				if (widgets[i] == null) continue;
-				widgets[i].CalculatePosition();
-			}
+			RepositionWidgets(widgets);
 		}
 		
 		
@@ -71,7 +61,7 @@ namespace ClassicalSharp.Gui.Screens {
 			return HandleMouseMove(widgets, mouseX, mouseY);
 		}
 		
-		public override bool HandlesMouseScroll(int delta) { return true; }
+		public override bool HandlesMouseScroll(float delta) { return true; }
 		
 		public override bool HandlesKeyPress(char key) { return true; }
 		

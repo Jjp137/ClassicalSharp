@@ -10,11 +10,9 @@ namespace Launcher.Web {
 	public sealed class ClassicubeSession : IWebTask {
 		
 		const string classicubeNetUri = "https://www.classicube.net/",
-		loginUri = "https://www.classicube.net/api/login/",
-		publicServersUri = "https://www.classicube.net/api/servers",
-		playUri = "https://www.classicube.net/api/server/";
-		const string wrongCredentialsMessage = "Login failed";
-		const string loggedInAs = @"<a href=""/acc"" class=""button"">";
+		loginUri  = "https://www.classicube.net/api/login/",
+		listUri   = "https://www.classicube.net/api/servers",
+		serverUri = "https://www.classicube.net/api/server/";
 		
 		public List<ServerListEntry> Servers = new List<ServerListEntry>();
 		
@@ -69,12 +67,15 @@ namespace Launcher.Web {
 		
 		void Login(string user, string password) {
 			Username = user;
+			
 			// Step 1: GET csrf token from login page.
-			var swGet = System.Diagnostics.Stopwatch.StartNew();
+			DateTime start = DateTime.UtcNow;
 			string getResponse = Get(loginUri, classicubeNetUri);
 			int index = 0; bool success = true;
 			JsonObject data = (JsonObject)Json.ParseValue(getResponse, ref index, ref success);
-			string token = (string)data["token"];
+			string token = (string)data["token"];			
+			DateTime end = DateTime.UtcNow;
+			Log("cc login took " + (end - start).TotalMilliseconds);
 			
 			// Step 2: POST to login page with csrf token.
 			string loginData = String.Format(
@@ -83,20 +84,17 @@ namespace Launcher.Web {
 				Uri.EscapeDataString(password),
 				Uri.EscapeDataString(token)
 			);
-			Log("cc login took " + swGet.ElapsedMilliseconds);
 			
-			var sw = System.Diagnostics.Stopwatch.StartNew();
+			start = DateTime.UtcNow;
 			string response = Post(loginUri, loginUri, loginData);
 			index = 0; success = true;
 			data = (JsonObject)Json.ParseValue(response, ref index, ref success);
+			end = DateTime.UtcNow;
+			Log("cc login took " + (end - start).TotalMilliseconds);
 			
 			string err = GetLoginError(data);
-			if (err != null)
-				throw new InvalidOperationException(err);
-			
+			if (err != null) throw new InvalidOperationException(err);			
 			Username = (string)data["username"];
-			Log("cc login took " + sw.ElapsedMilliseconds);
-			sw.Stop();
 		}
 		
 		static string GetLoginError(JsonObject obj) {
@@ -110,7 +108,7 @@ namespace Launcher.Web {
 		}
 		
 		public ClientStartData GetConnectInfo(string hash) {
-			string uri = playUri + hash;
+			string uri = serverUri + hash;
 			string response = Get(uri, classicubeNetUri);
 			
 			int index = 0; bool success = true;
@@ -123,9 +121,9 @@ namespace Launcher.Web {
 		}
 		
 		public List<ServerListEntry> GetPublicServers() {
-			var sw = System.Diagnostics.Stopwatch.StartNew();
+			DateTime start = DateTime.UtcNow;
 			List<ServerListEntry> servers = new List<ServerListEntry>();
-			string response = Get(publicServersUri, classicubeNetUri);
+			string response = Get(listUri, classicubeNetUri);
 			int index = 0; bool success = true;
 			JsonObject root = (JsonObject)Json.ParseValue(response, ref index, ref success);
 			List<object> list = (List<object>)root["servers"];
@@ -139,8 +137,9 @@ namespace Launcher.Web {
 					(string)obj["ip"], (string)obj["port"],
 					(string)obj["software"]));
 			}
-			Log("cc servers took " + sw.ElapsedMilliseconds);
-			sw.Stop();
+			
+			DateTime end = DateTime.UtcNow;
+			Log("cc servers took " + (end - start).TotalMilliseconds);
 			return servers;
 		}
 	}

@@ -1,5 +1,5 @@
 #include "Drawer.h"
-#include "TerrainAtlas1D.h"
+#include "TerrainAtlas.h"
 #include "Constants.h"
 
 #define AddVertex *ptr = v; ptr++

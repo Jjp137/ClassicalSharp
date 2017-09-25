@@ -26,6 +26,9 @@ namespace ClassicalSharp.Gui.Screens {
 		AltTextInputWidget altText;
 		
 		Font chatFont, chatUrlFont, announcementFont;
+		// needed for lost contexts, to restore chat typed in
+		static string chatInInputBuffer = null;
+		
 		public override void Init() {
 			float textScale = game.Drawer2D.UseBitmappedChat ? 1.25f : 1;
 			int fontSize = (int)(8 * game.GuiChatScale);
@@ -86,12 +89,13 @@ namespace ClassicalSharp.Gui.Screens {
 			bottomRight.SetText(1, chat.BottomRight2.Text);
 			bottomRight.SetText(0, chat.BottomRight3.Text);
 			announcement.SetText(chat.Announcement.Text);
-			for (int i = 0; i < chat.ClientStatus.Length; i++)
+			for (int i = 0; i < chat.ClientStatus.Length; i++) {
 				clientStatus.SetText(i, chat.ClientStatus[i].Text);
+			}
 			
-			if (game.chatInInputBuffer != null) {
-				OpenTextInputBar(game.chatInInputBuffer);
-				game.chatInInputBuffer = null;
+			if (chatInInputBuffer != null) {
+				OpenTextInputBar(chatInInputBuffer);
+				chatInInputBuffer = null;
 			}
 		}
 		
@@ -152,14 +156,17 @@ namespace ClassicalSharp.Gui.Screens {
 		}
 		
 		void RenderRecentChat(DateTime now, double delta) {
-			int[] metadata = (int[])Metadata;
 			for (int i = 0; i < normalChat.Textures.Length; i++) {
 				Texture texture = normalChat.Textures[i];
-				if (!texture.IsValid || metadata[i] == -1) continue;
+				int logIdx = chatIndex + i;
 				
-				DateTime received = game.Chat.Log[metadata[i]].Received;
-				if ((now - received).TotalSeconds <= 10)
+				if (!texture.IsValid) continue;
+				if (logIdx < 0 || logIdx >= game.Chat.Log.Count) continue;
+				
+				DateTime received = game.Chat.Log[logIdx].Received;
+				if ((now - received).TotalSeconds <= 10) {
 					texture.Render(gfx);
+				}
 			}
 		}
 		
@@ -194,10 +201,10 @@ namespace ClassicalSharp.Gui.Screens {
 			int height = InputUsedHeight;
 			if (force || height != inputOldHeight) {
 				clientStatus.YOffset = Math.Max(hud.BottomOffset + 15, height);
-				clientStatus.CalculatePosition();
+				clientStatus.Reposition();
 				
 				normalChat.YOffset = clientStatus.YOffset + clientStatus.GetUsedHeight();
-				normalChat.CalculatePosition();
+				normalChat.Reposition();
 				inputOldHeight = height;
 			}
 		}
@@ -231,13 +238,10 @@ namespace ClassicalSharp.Gui.Screens {
 			if (type == MessageType.Normal) {
 				chatIndex++;
 				if (game.ChatLines == 0) return;
+				
 				List<ChatLine> chat = game.Chat.Log;
 				normalChat.PushUpAndReplaceLast(chat[chatIndex + chatLines - 1].Text);
-				
-				int[] metadata = (int[])Metadata;
-				for (int i = 0; i < chatLines - 1; i++)
-					metadata[i] = metadata[i + 1];
-				metadata[chatLines - 1] = chatIndex + chatLines - 1;
+
 			} else if (type >= MessageType.Status1 && type <= MessageType.Status3) {
 				status.SetText(2 + (int)(type - MessageType.Status1), e.Text);
 			} else if (type >= MessageType.BottomRight1 && type <= MessageType.BottomRight3) {
@@ -265,10 +269,10 @@ namespace ClassicalSharp.Gui.Screens {
 		
 		protected override void ContextLost() {
 			if (HandlesAllInput) {
-				game.chatInInputBuffer = input.Text.ToString();
+				chatInInputBuffer = input.Text.ToString();
 				game.CursorVisible = false;
 			} else {
-				game.chatInInputBuffer = null;
+				chatInInputBuffer = null;
 			}
 
 			normalChat.Dispose();
@@ -282,11 +286,6 @@ namespace ClassicalSharp.Gui.Screens {
 		
 		protected override void ContextRecreated() {
 			ConstructWidgets();
-			
-			int[] indices = new int[chatLines];
-			for (int i = 0; i < indices.Length; i++)
-				indices[i] = -1;
-			Metadata = indices;
 			SetInitialMessages();
 		}
 		
@@ -305,14 +304,10 @@ namespace ClassicalSharp.Gui.Screens {
 		void ResetChat() {
 			normalChat.Dispose();
 			List<ChatLine> chat = game.Chat.Log;
-			int[] metadata = (int[])Metadata;
-			for (int i = 0; i < chatLines; i++)
-				metadata[i] = -1;
 			
 			for (int i = chatIndex; i < chatIndex + chatLines; i++) {
 				if (i >= 0 && i < chat.Count) {
 					normalChat.PushUpAndReplaceLast(chat[i].Text);
-					metadata[i - chatIndex] = i;
 				}
 			}
 		}
@@ -388,9 +383,11 @@ namespace ClassicalSharp.Gui.Screens {
 			return true;
 		}
 		
-		public override bool HandlesMouseScroll(int delta) {
+		float chatAcc;
+		public override bool HandlesMouseScroll(float delta) {
 			if (!HandlesAllInput) return false;
-			chatIndex -= delta;
+			int steps = Utils.AccumulateWheelDelta(ref chatAcc, delta);
+			chatIndex -= steps;
 			ScrollHistory();
 			return true;
 		}
@@ -421,32 +418,32 @@ namespace ClassicalSharp.Gui.Screens {
 			string url = Utils.StripColours(text);
 			
 			if (Utils.IsUrlPrefix(url, 0)) {
-				WarningScreen warning = new WarningScreen(game, false, false);
-				warning.Metadata = url;
-				warning.SetHandlers(OpenUrl, AppendUrl, null);
+				WarningOverlay overlay = new WarningOverlay(game, false, false);
+				overlay.Metadata = url;
+				overlay.SetHandlers(OpenUrl, AppendUrl);
+				overlay.lines[0] = "&eAre you sure you want to open this link?";
 				
-				warning.SetTextData(
-					"&eAre you sure you want to open this link?",
-					url, "Be careful - links from strangers may be websites that",
-					" have viruses, or things you may not want to open/see.");
-				game.Gui.ShowWarning(warning);
+				overlay.lines[1] = url;
+				overlay.lines[2] = "Be careful - links from strangers may be websites that";
+				overlay.lines[3] = " have viruses, or things you may not want to open/see.";
+				game.Gui.ShowOverlay(overlay);
 			} else if (game.ClickableChat) {
 				input.Append(text);
 			}
 			return true;
 		}
 		
-		void OpenUrl(WarningScreen screen, bool always) {
+		void OpenUrl(Overlay urlOverlay, bool always) {
 			try {
-				Process.Start((string)screen.Metadata);
+				Process.Start(urlOverlay.Metadata);
 			} catch (Exception ex) {
 				ErrorHandler.LogError("ChatScreen.OpenUrl", ex);
 			}
 		}
 		
-		void AppendUrl(WarningScreen screen, bool always) {
+		void AppendUrl(Overlay urlOverlay, bool always) {
 			if (!game.ClickableChat) return;
-			input.Append((string)screen.Metadata);
+			input.Append(urlOverlay.Metadata);
 		}
 		
 		void ScrollHistory() {
@@ -464,7 +461,7 @@ namespace ClassicalSharp.Gui.Screens {
 			int height = Math.Max(input.Height + input.YOffset, hud.BottomOffset);
 			height += input.YOffset;
 			altText.texture.Y1 = game.Height - (height + altText.texture.Height);
-			altText.Y = altText.texture.Y1;
+			altText.Y = altText.texture.Y;
 		}
 		
 		void SetHandlesAllInput(bool handles) {

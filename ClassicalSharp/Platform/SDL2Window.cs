@@ -461,7 +461,7 @@ namespace ClassicalSharp
 			// FIXME: doesn't take into account horizontal mouse wheels (hold Shift while scrolling on OS X, Linux)
 			int y = scroll.y;
 
-			this.mouse.WheelPrecise += y;
+			this.mouse.Wheel += y;
 		}
 		
 		protected virtual void DestroyWindow() {

@@ -8,7 +8,7 @@ namespace ClassicalSharp.Model {
 
 	public class PigModel : IModel {
 		
-		public PigModel(Game window) : base(window) { }
+		public PigModel(Game window) : base(window) { SurivalScore = 10; }
 
 		/// <inheritdoc/>		
 		public override void CreateParts() {
@@ -50,7 +50,7 @@ namespace ClassicalSharp.Model {
 
 		/// <inheritdoc/>
 		public override void DrawModel(Entity p) {
-			game.Graphics.BindTexture(GetTexture(p.MobTextureId));
+			game.Graphics.BindTexture(GetTexture(p));
 			DrawRotate(-p.HeadXRadians, 0, 0, Head, true);
 
 			DrawPart(Torso);

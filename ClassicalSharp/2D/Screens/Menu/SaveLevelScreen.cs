@@ -20,7 +20,7 @@ namespace ClassicalSharp.Gui.Screens {
 		public override void Render(double delta) {
 			RenderMenuBounds();
 			gfx.Texturing = true;
-			RenderMenuWidgets(delta);
+			RenderWidgets(widgets, delta);
 			input.Render(delta);
 			if (desc != null) desc.Render(delta);
 			gfx.Texturing = false;
@@ -77,14 +77,13 @@ namespace ClassicalSharp.Gui.Screens {
 				TextWidget.Create(game, "&eCan be imported into MCEdit", regularFont)
 					.SetLocation(Anchor.Centre, Anchor.Centre, 110, 120),
 				null,
-				MakeBack(false, titleFont,
-				         (g, w) => g.Gui.SetNewScreen(new PauseScreen(g))),
+				MakeBack(false, titleFont, SwitchPause),
 			};
 		}
 		
 		
 		public override void OnResize(int width, int height) {
-			input.CalculatePosition();
+			input.Reposition();
 			base.OnResize(width, height);
 		}
 		
@@ -112,9 +111,9 @@ namespace ClassicalSharp.Gui.Screens {
 			text = Path.Combine(Program.AppDirectory, "maps");
 			text = Path.Combine(text, file);
 			
-			if (File.Exists(text) && widget.Metadata == null) {
+			if (File.Exists(text) && ((ButtonWidget)widget).OptName == null) {
 				((ButtonWidget)widget).SetText("&cOverwrite existing?");
-				((ButtonWidget)widget).Metadata = true;
+				((ButtonWidget)widget).OptName = "O";
 			} else {
 				// NOTE: We don't immediately save here, because otherwise the 'saving...'
 				// will not be rendered in time because saving is done on the main thread.
@@ -125,14 +124,16 @@ namespace ClassicalSharp.Gui.Screens {
 		}
 		
 		void RemoveOverwrites() {
-			RemoveOverwrite(widgets[0]); RemoveOverwrite(widgets[1]);
+			RemoveOverwrite(widgets[0], "Save"); 
+			RemoveOverwrite(widgets[1], "Save schematic");
 		}
 		
-		void RemoveOverwrite(Widget widget) {
+		void RemoveOverwrite(Widget widget, string defaultText) {
 			ButtonWidget button = (ButtonWidget)widget;
-			if (button.Metadata == null) return;
-			button.Metadata = null;
-			button.SetText("Save");
+			if (button.OptName == null) return;
+			
+			button.OptName = null;
+			button.SetText(defaultText);
 		}
 		
 		string textPath;

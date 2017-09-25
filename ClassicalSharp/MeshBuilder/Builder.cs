@@ -20,7 +20,6 @@ namespace ClassicalSharp {
 		
 		protected int X, Y, Z;
 		protected BlockID curBlock;
-		protected BlockInfo info;
 		protected World map;
 		protected IWorldLighting light;
 		protected WorldEnv env;
@@ -33,7 +32,6 @@ namespace ClassicalSharp {
 		public void Init(Game game) {
 			this.game = game;
 			gfx = game.Graphics;
-			info = game.BlockInfo;
 			game.Events.TerrainAtlasChanged += TerrainAtlasChanged;
 		}
 		
@@ -70,7 +68,7 @@ namespace ClassicalSharp {
 					int chunkIndex = (yy + 1) * extChunkSize2 + (zz + 1) * extChunkSize + (0 + 1);
 					for (int x = x1, xx = 0; x < xMax; x++, xx++) {
 						curBlock = chunk[chunkIndex];
-						if (info.Draw[curBlock] != DrawType.Gas) {
+						if (BlockInfo.Draw[curBlock] != DrawType.Gas) {
 							int index = ((yy << 8) | (zz << 4) | xx) * Side.Sides;
 							X = x; Y = y; Z = z;
 							cIndex = chunkIndex;
@@ -107,8 +105,8 @@ namespace ClassicalSharp {
 							if (x >= width) break;
 							BlockID rawBlock = mapPtr[index];
 							
-							allAir = allAir && info.Draw[rawBlock] == DrawType.Gas;
-							allSolid = allSolid && info.FullOpaque[rawBlock];
+							allAir = allAir && BlockInfo.Draw[rawBlock] == DrawType.Gas;
+							allSolid = allSolid && BlockInfo.FullOpaque[rawBlock];
 							chunk[chunkIndex] = rawBlock;
 						}
 					}
@@ -140,15 +138,14 @@ namespace ClassicalSharp {
 		}
 		
 		void SetPartInfo(DrawInfo part, int i, ref ChunkPartInfo[] parts) {
-			if (part.iCount == 0) return;
+			int vertCount = part.VerticesCount();
+			if (vertCount == 0) return;
 			
 			ChunkPartInfo info;
-			int vertCount = (part.iCount / 6 * 4) + 2;
-			
 			fixed (VertexP3fT2fC4b* ptr = part.vertices) {
 				info.VbId = gfx.CreateVb((IntPtr)ptr, VertexFormat.P3fT2fC4b, vertCount);
 			}
-			info.IndicesCount = part.iCount;
+			info.VerticesCount = vertCount;
 			
 			info.LeftCount =   (ushort)part.vCount[Side.Left];
 			info.RightCount =  (ushort)part.vCount[Side.Right];
@@ -158,12 +155,12 @@ namespace ClassicalSharp {
 			info.TopCount =    (ushort)part.vCount[Side.Top];
 			info.SpriteCount = part.spriteCount;
 			
-			info.LeftIndex = info.SpriteCount;
-			info.RightIndex = info.LeftIndex  + info.LeftCount;
-			info.FrontIndex = info.RightIndex + info.RightCount;
-			info.BackIndex = info.FrontIndex  + info.FrontCount;
-			info.BottomIndex = info.BackIndex + info.BackCount;
-			info.TopIndex = info.BottomIndex  + info.BottomCount;
+			info.LeftIndex =   (ushort)(info.SpriteCount);
+			info.RightIndex =  (ushort)(info.LeftIndex   + info.LeftCount);
+			info.FrontIndex =  (ushort)(info.RightIndex  + info.RightCount);
+			info.BackIndex =   (ushort)(info.FrontIndex  + info.FrontCount);
+			info.BottomIndex = (ushort)(info.BackIndex   + info.BackCount);
+			info.TopIndex =    (ushort)(info.BottomIndex + info.BottomCount);
 			
 			// Lazy initalize part arrays so we can save time in MapRenderer for chunks that only contain 1 or 2 part types.
 			if (parts == null)
@@ -188,7 +185,7 @@ namespace ClassicalSharp {
 			map.SunlightZSide = map.ShadowlightZSide = col;
 			map.SunlightYBottom = map.ShadowlightYBottom = col;
 			#endif
-			byte[] hidden = game.BlockInfo.hidden;
+			byte[] hidden = BlockInfo.hidden;
 			
 			for (int y = y1, yy = 0; y < yMax; y++, yy++) {
 				for (int z = z1, zz = 0; z < zMax; z++, zz++) {
@@ -196,12 +193,12 @@ namespace ClassicalSharp {
 					for (int x = x1, xx = 0; x < xMax; x++, xx++) {
 						cIndex++;
 						BlockID b = chunk[cIndex];
-						if (info.Draw[b] == DrawType.Gas) continue;
+						if (BlockInfo.Draw[b] == DrawType.Gas) continue;
 						int index = ((yy << 8) | (zz << 4) | xx) * Side.Sides;
 						
 						// Sprites only use one face to indicate stretching count, so we can take a shortcut here.
 						// Note that sprites are not drawn with any of the DrawXFace, they are drawn using DrawSprite.
-						if (info.Draw[b] == DrawType.Sprite) {
+						if (BlockInfo.Draw[b] == DrawType.Sprite) {
 							index += Side.Top;
 							if (counts[index] != 0) {
 								X = x; Y = y; Z = z;
@@ -212,7 +209,7 @@ namespace ClassicalSharp {
 						}
 						
 						X = x; Y = y; Z = z;
-						fullBright = info.FullBright[b];
+						fullBright = BlockInfo.FullBright[b];
 						#if USE16_BIT
 						int tileIdx = b << 12;
 						#else
@@ -296,11 +293,11 @@ namespace ClassicalSharp {
 		protected bool OccludedLiquid(int chunkIndex) {
 			chunkIndex += 324;
 			return
-				info.FullOpaque[chunk[chunkIndex]]
-				&& info.Draw[chunk[chunkIndex - 18]] != DrawType.Gas
-				&& info.Draw[chunk[chunkIndex - 1]] != DrawType.Gas
-				&& info.Draw[chunk[chunkIndex + 1]] != DrawType.Gas
-				&& info.Draw[chunk[chunkIndex + 18]] != DrawType.Gas;
+				BlockInfo.FullOpaque[chunk[chunkIndex]]
+				&& BlockInfo.Draw[chunk[chunkIndex - 18]] != DrawType.Gas
+				&& BlockInfo.Draw[chunk[chunkIndex - 1]] != DrawType.Gas
+				&& BlockInfo.Draw[chunk[chunkIndex + 1]] != DrawType.Gas
+				&& BlockInfo.Draw[chunk[chunkIndex + 18]] != DrawType.Gas;
 		}
 		
 		public void OnNewMapLoaded() {
@@ -316,10 +313,8 @@ namespace ClassicalSharp {
 	
 	public struct ChunkPartInfo {
 		
-		public int VbId, IndicesCount, SpriteCount;
-		public int LeftIndex, RightIndex, FrontIndex,
-		BackIndex, BottomIndex, TopIndex;
-		public ushort LeftCount, RightCount, FrontCount,
-		BackCount, BottomCount, TopCount;
+		public int VbId, VerticesCount, SpriteCount;
+		public ushort LeftIndex, RightIndex, FrontIndex, BackIndex, BottomIndex, TopIndex;
+		public ushort LeftCount, RightCount, FrontCount, BackCount, BottomCount, TopCount;
 	}
 }

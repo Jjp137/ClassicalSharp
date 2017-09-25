@@ -23,7 +23,7 @@ namespace ClassicalSharp.Network {
 		
 		public NetworkProcessor(Game window) {
 			game = window;
-			cpeData = game.AddComponent(new CPESupport());
+			cpeData = new CPESupport(); game.Components.Add(cpeData);
 		}
 		
 		public override bool IsSinglePlayer { get { return false; } }
@@ -31,8 +31,8 @@ namespace ClassicalSharp.Network {
 		Socket socket;
 		DateTime lastPacket;
 		byte lastOpcode;
-		internal NetReader reader;
-		internal NetWriter writer;
+		public NetReader reader;
+		public NetWriter writer;
 		
 		internal ClassicProtocol classic;
 		internal CPEProtocol cpe;
@@ -116,8 +116,7 @@ namespace ClassicalSharp.Network {
 				}
 				
 				if (opcode > maxHandledPacket) {
-					ErrorHandler.LogError("NetworkProcessor.Tick",
-					                      "received an invalid opcode of " + opcode);
+					ErrorHandler.LogError("NetworkProcessor.Tick", "received invalid opcode: " + opcode);
 					reader.Skip(1);
 					continue;
 				}
@@ -155,7 +154,7 @@ namespace ClassicalSharp.Network {
 			maxHandledPacket = Math.Max(opcode, maxHandledPacket);
 		}
 		
-		internal void SendPacket() {
+		public void SendPacket() {
 			if (Disconnected) {
 				writer.index = 0;
 				return;

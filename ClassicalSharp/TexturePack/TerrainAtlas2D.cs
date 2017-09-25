@@ -15,16 +15,19 @@ namespace ClassicalSharp {
 		public Bitmap AtlasBitmap;
 		public int TileSize;
 		
+		Game game;		
+		public TerrainAtlas2D(Game game) { this.game = game; }
+		
 		/// <summary> Updates the underlying atlas bitmap, fields, and texture. </summary>
-		public void UpdateState(BlockInfo info, Bitmap bmp) {
+		public void UpdateState(Bitmap bmp) {
 			AtlasBitmap = bmp;
 			TileSize = bmp.Width / TilesPerRow;
 			using (FastBitmap fastBmp = new FastBitmap(bmp, true, true))
-				info.RecalculateSpriteBB(fastBmp);
+				BlockInfo.RecalculateSpriteBB(fastBmp);
 		}
 		
 		/// <summary> Creates a new texture that contains the tile at the specified index. </summary>
-		public int LoadTextureElement(IGraphicsApi gfx, int index) {
+		public int LoadTextureElement(int index) {
 			int size = TileSize;
 			using (FastBitmap atlas = new FastBitmap(AtlasBitmap, true, true))
 				using (Bitmap bmp = Platform.CreateBmp(size, size))
@@ -32,7 +35,7 @@ namespace ClassicalSharp {
 			{
 				int x = index % TilesPerRow, y = index / TilesPerRow;
 				FastBitmap.MovePortion(x * size, y * size, 0, 0, atlas, dst, size);
-				return gfx.CreateTexture(dst, true);
+				return game.Graphics.CreateTexture(dst, true, game.Graphics.Mipmaps);
 			}
 		}
 		

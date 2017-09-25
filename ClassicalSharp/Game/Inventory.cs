@@ -9,16 +9,16 @@ using BlockID = System.Byte;
 
 namespace ClassicalSharp {
 	
-	/// <summary> Contains the hotbar of blocks, as well as the permissions for placing and deleting all blocks. </summary>
+	/// <summary> Manages the hotbar and inventory of blocks. </summary>
 	public sealed class Inventory : IGameComponent {
 		
 		public void Init(Game game) {
 			this.game = game;
-			MakeMap();
+			SetDefaultMapping();
 		}
 
 		public void Ready(Game game) { }
-		public void Reset(Game game) { }
+		public void Reset(Game game) { SetDefaultMapping(); }
 		public void OnNewMap(Game game) { }
 		public void OnNewMapLoaded(Game game) { }
 		public void Dispose() { }
@@ -29,8 +29,6 @@ namespace ClassicalSharp {
 		
 		public const int BlocksPerRow = 9, Rows = 9;
 		public BlockID[] Hotbar = new BlockID[BlocksPerRow * Rows];
-		public InventoryPermissions CanPlace = new InventoryPermissions();
-		public InventoryPermissions CanDelete = new InventoryPermissions();
 		
 		/// <summary> Gets or sets the block at the given index within the current row. </summary>
 		public BlockID this[int index] {
@@ -90,60 +88,115 @@ namespace ClassicalSharp {
 			}
 		}
 		
-		BlockID[] map = new BlockID[Block.Count];
-		public BlockID MapBlock(int i) { return map[i]; }
-		
-		void MakeMap() {
-			for (int i = 0; i < map.Length; i++)
-				map[i] = (BlockID)i;
-			if (!game.ClassicMode) return;
-			
-			// First row
-			map[Block.Dirt] = Block.Cobblestone;
-			map[Block.Cobblestone] = Block.Brick;
-			map[Block.Wood] = Block.Dirt;
-			map[Block.Sapling] = Block.Wood;
-			map[Block.Sand] = Block.Log;
-			map[Block.Gravel] = Block.Leaves;
-			map[Block.GoldOre] = Block.Glass;
-			map[Block.IronOre] = Block.Slab;
-			map[Block.CoalOre] = Block.MossyRocks;
-			// Second row
-			map[Block.Log] = Block.Sapling;
-			for (int i = 0; i < 4; i++)
-				map[Block.Leaves + i] = (BlockID)(Block.Dandelion + i);
-			map[Block.Orange] = Block.Sand;
-			map[Block.Yellow] = Block.Gravel;
-			map[Block.Lime] = Block.Sponge;
-			// Third and fourth row
-			for (int i = 0; i < 16; i++)
-				map[Block.Green + i] = (BlockID)(Block.Red + i);
-			map[Block.Gold] = Block.CoalOre;
-			map[Block.Iron] = Block.IronOre;
-			// Fifth row
-			if (!game.PureClassic) map[Block.DoubleSlab] = Block.GoldOre;
-			map[Block.Slab] = game.PureClassic ? Block.GoldOre : Block.DoubleSlab;
-			map[Block.Brick] = Block.Iron;
-			map[Block.TNT] = Block.Gold;
-			map[Block.MossyRocks] = Block.TNT;
-		}
-	}
-	
-	public class InventoryPermissions {
-		
-		byte[] values = new byte[Block.Count];
-		public bool this[int index] {
-			get { return (values[index] & 1) != 0; }
-			set {
-				if (values[index] >= 0x80) return;
-				values[index] &= 0xFE; // reset perm bit
-				values[index] |= (byte)(value ? 1 : 0);
+		public BlockID[] Map = new BlockID[Block.Count];
+		void SetDefaultMapping() {
+			for (int i = 0; i < Map.Length; i++) Map[i] = (BlockID)i;
+			for (int i = 0; i < Map.Length; i++) {
+				BlockID mapping = DefaultMapping(i);
+				if (mapping != i) Map[i] = mapping;
 			}
 		}
 		
-		public void SetNotOverridable(bool value, int index) {
-			values[index] &= 0xFE; // reset perm bit
-			values[index] |= (byte)(value ? 0x81 : 0x80); // set 'don't override' bit
+		BlockID DefaultMapping(int i) {
+#if USE16_BIT
+			if ((i >= Block.CpeCount && i < 256) || i == Block.Air) return Block.Invalid;			
+#else
+			if (i >= Block.CpeCount || i == Block.Air) return Block.Invalid;
+#endif
+			if (!game.ClassicMode) return (BlockID)i;
+			if (game.PureClassic && IsHackBlock(i)) return Block.Invalid;
+			
+			if (i >= 25 && i <= 40) {
+				return (BlockID)(Block.Red + (i - 25));
+			}
+			if (i >= 18 && i <= 21) {
+				return (BlockID)(Block.Dandelion + (i - 18));
+			}
+			
+			switch (i) {
+				// First row
+				case 3: return Block.Cobblestone;
+				case 4: return Block.Brick;
+				case 5: return Block.Dirt;
+				case 6: return Block.Wood;
+				
+				// Second row
+				case 12: return Block.Log;
+				case 13: return Block.Leaves;
+				case 14: return Block.Glass;
+				case 15: return Block.Slab;
+				case 16: return Block.MossyRocks;
+				case 17: return Block.Sapling;
+					
+				// Third row
+				case 22: return Block.Sand;
+				case 23: return Block.Gravel;
+				case 24: return Block.Sponge;
+					
+				// Fifth row
+				case 41: return Block.CoalOre;
+				case 42: return Block.IronOre;
+				case 43: return Block.GoldOre;
+				case 44: return Block.DoubleSlab;
+				case 45: return Block.Iron;
+				case 46: return Block.Gold;
+				case 47: return Block.Bookshelf;
+				case 48: return Block.TNT;
+			}
+			return (BlockID)i;
+		}
+		
+		static bool IsHackBlock(int b) {
+			return b == Block.DoubleSlab || b == Block.Bedrock ||
+				b == Block.Grass || BlockInfo.IsLiquid((BlockID)b);
+		}
+		
+		public void AddDefault(BlockID block) {
+			if (block >= Block.CpeCount || DefaultMapping(block) == block) {
+				Map[block] = block;
+				return;
+			}
+			
+			for (int i = 0; i < Block.CpeCount; i++) {
+				if (DefaultMapping(i) != block) continue;
+				Map[i] = block; return;
+			}
+		}
+		
+		public void Reset(BlockID block) {
+			for (int i = 0; i < Map.Length; i++) {
+				if (Map[i] == block) Map[i] = DefaultMapping(i);
+			}
+		}
+		
+		public void Remove(BlockID block) {
+			for (int i = 0; i < Map.Length; i++) {
+				if (Map[i] == block) Map[i] = Block.Invalid;
+			}
+		}
+		
+		public void Insert(int i, BlockID block) {
+			if (Map[i] == block) return;		
+			// Need to push the old block to a different slot if different block			
+			if (Map[i] != Block.Invalid) PushToFreeSlots(i);
+			
+			Map[i] = block;
+		}
+		
+		void PushToFreeSlots(int i) {
+			BlockID block = Map[i];
+			// The slot was already pushed out in the past
+			// TODO: find a better way of fixing this
+			for (int j = 1; j < Map.Length; j++) {
+				if (j != i && Map[j] == block) return;
+			}
+			
+			for (int j = block; j < Map.Length; j++) {
+				if (Map[j] == Block.Invalid) { Map[j] = block; return; }
+			}
+			for (int j = 1; j < block; j++) {
+				if (Map[j] == Block.Invalid) { Map[j] = block; return; }
+			}
 		}
 	}
 }

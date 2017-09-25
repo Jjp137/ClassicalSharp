@@ -17,12 +17,29 @@ namespace ClassicalSharp.Mode {
 		Game game;
 		
 		public bool HandlesKeyDown(Key key) {
-			if (key == game.Input.Keys[KeyBind.Inventory]) {
+			if (key == game.Input.Keys[KeyBind.Inventory] && game.Gui.ActiveScreen == game.Gui.hudScreen) {
 				game.Gui.SetNewScreen(new InventoryScreen(game));
+				return true;
+			} else if (key == game.Input.Keys[KeyBind.DropBlock] && !game.ClassicMode) {
+				Inventory inv = game.Inventory;
+				if (inv.CanChangeSelected()) {
+					// Don't assign Selected directly, because we don't want held block
+					// switching positions if they already have air in their inventory hotbar.
+					inv[inv.SelectedIndex] = Block.Air;
+					game.Events.RaiseHeldBlockChanged();
+				}
 				return true;
 			}
 			return false;
 		}
+		
+		public bool PickingLeft() { 
+			// always play delete animations, even if we aren't picking a block.
+			game.HeldBlockRenderer.ClickAnim(true);
+			return false; 
+		}
+		
+		public bool PickingRight() { return false; }
 		
 		public void PickLeft(BlockID old) {
 			Vector3I pos = game.SelectedPos.BlockPos;
@@ -32,9 +49,9 @@ namespace ClassicalSharp.Mode {
 		
 		public void PickMiddle(BlockID old) {
 			Inventory inv = game.Inventory;
-			if (game.BlockInfo.Draw[old] == DrawType.Gas) return;
-			if (!(inv.CanPlace[old] || inv.CanDelete[old])) return;
-			if (!inv.CanChangeSelected()) return;
+			if (BlockInfo.Draw[old] == DrawType.Gas) return;
+			if (!(BlockInfo.CanPlace[old] || BlockInfo.CanDelete[old])) return;
+			if (!inv.CanChangeSelected() || inv.Selected == old) return;
 			
 			// Is the currently selected block an empty slot
 			if (inv.Hotbar[inv.SelectedIndex] == Block.Air) { 
@@ -58,13 +75,10 @@ namespace ClassicalSharp.Mode {
 			game.UpdateBlock(pos.X, pos.Y, pos.Z, block);
 			game.UserEvents.RaiseBlockChanged(pos, old, block);
 		}
+
+		public Widget MakeHotbar() { return new HotbarWidget(game); }		
 		
-		public bool PickEntity(byte id) { return false; }
-		public Widget MakeHotbar() { return new HotbarWidget(game); }
-		
-		
-		public void OnNewMapLoaded(Game game) {
-		}
+		public void OnNewMapLoaded(Game game) { }
 
 		public void Init(Game game) {
 			this.game = game;

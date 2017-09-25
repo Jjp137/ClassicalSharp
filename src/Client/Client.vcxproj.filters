@@ -145,17 +145,14 @@
     <Filter Include="Source Files\Entities\Model">
       <UniqueIdentifier>{d9fb5d8e-29d7-4774-abfb-d30b6ab766e7}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Entities\Components">
-      <UniqueIdentifier>{45bcb3f5-ebec-46a0-ac73-8480a7b4fe4d}</UniqueIdentifier>
+    <Filter Include="Source Files\Platform\Window">
+      <UniqueIdentifier>{e4324350-79a5-4976-a8cc-28881077ca9a}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\Entities\Components">
-      <UniqueIdentifier>{e36a6223-ce95-4439-aa54-df32b9828ae0}</UniqueIdentifier>
+    <Filter Include="Header Files\Platform\Window">
+      <UniqueIdentifier>{37746374-0a3a-415c-99a6-e1e350328eab}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="NotchyGenerator.h">
-      <Filter>Header Files\Generator</Filter>
-    </ClInclude>
     <ClInclude Include="Noise.h">
       <Filter>Header Files\Generator</Filter>
     </ClInclude>
@@ -186,9 +183,6 @@
     <ClInclude Include="Bitmap.h">
       <Filter>Header Files\2D\Utils</Filter>
     </ClInclude>
-    <ClInclude Include="BlockEnums.h">
-      <Filter>Header Files\Blocks</Filter>
-    </ClInclude>
     <ClInclude Include="Vectors.h">
       <Filter>Header Files\Math</Filter>
     </ClInclude>
@@ -207,41 +201,17 @@
     <ClInclude Include="Texture.h">
       <Filter>Header Files\Graphics</Filter>
     </ClInclude>
-    <ClInclude Include="TextureRec.h">
-      <Filter>Header Files\Graphics</Filter>
-    </ClInclude>
     <ClInclude Include="VertexStructs.h">
       <Filter>Header Files\Graphics</Filter>
     </ClInclude>
     <ClInclude Include="ErrorHandler.h">
       <Filter>Header Files\Platform</Filter>
     </ClInclude>
-    <ClInclude Include="Vector3I.h">
-      <Filter>Header Files\Math</Filter>
-    </ClInclude>
     <ClInclude Include="World.h">
       <Filter>Header Files\Map</Filter>
     </ClInclude>
-    <ClInclude Include="WorldEnv.h">
-      <Filter>Header Files\Map</Filter>
-    </ClInclude>
-    <ClInclude Include="D3D9Api.h">
-      <Filter>Header Files\Graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="EventHandler.h">
-      <Filter>Header Files\Events</Filter>
-    </ClInclude>
-    <ClInclude Include="WorldEvents.h">
-      <Filter>Header Files\Events</Filter>
-    </ClInclude>
     <ClInclude Include="Funcs.h">
       <Filter>Header Files\Utils</Filter>
-    </ClInclude>
-    <ClInclude Include="TerrainAtlas1D.h">
-      <Filter>Header Files\TexturePack</Filter>
-    </ClInclude>
-    <ClInclude Include="TerrainAtlas2D.h">
-      <Filter>Header Files\TexturePack</Filter>
     </ClInclude>
     <ClInclude Include="PackedCol.h">
       <Filter>Header Files\2D\Utils</Filter>
@@ -264,23 +234,8 @@
     <ClInclude Include="Intersection.h">
       <Filter>Header Files\Math</Filter>
     </ClInclude>
-    <ClInclude Include="EntityEvents.h">
-      <Filter>Header Files\Events</Filter>
-    </ClInclude>
-    <ClInclude Include="MiscEvents.h">
-      <Filter>Header Files\Events</Filter>
-    </ClInclude>
     <ClInclude Include="Camera.h">
       <Filter>Header Files\Utils</Filter>
-    </ClInclude>
-    <ClInclude Include="PickedPos.h">
-      <Filter>Header Files\Math</Filter>
-    </ClInclude>
-    <ClInclude Include="GameProps.h">
-      <Filter>Header Files\Game</Filter>
-    </ClInclude>
-    <ClInclude Include="IO.h">
-      <Filter>Header Files\Platform</Filter>
     </ClInclude>
     <ClInclude Include="NetworkEnums.h">
       <Filter>Header Files\Network</Filter>
@@ -309,16 +264,7 @@
     <ClInclude Include="DateTime.h">
       <Filter>Header Files\Utils</Filter>
     </ClInclude>
-    <ClInclude Include="StringConvert.h">
-      <Filter>Header Files\Utils</Filter>
-    </ClInclude>
     <ClInclude Include="MapRenderer.h">
-      <Filter>Header Files\Rendering\Map</Filter>
-    </ClInclude>
-    <ClInclude Include="ChunkInfo.h">
-      <Filter>Header Files\Rendering\Map</Filter>
-    </ClInclude>
-    <ClInclude Include="ChunkSorter.h">
       <Filter>Header Files\Rendering\Map</Filter>
     </ClInclude>
     <ClInclude Include="Respawn.h">
@@ -327,14 +273,8 @@
     <ClInclude Include="Constants.h">
       <Filter>Header Files\Defines</Filter>
     </ClInclude>
-    <ClInclude Include="GZipHeader.h">
-      <Filter>Header Files\IO</Filter>
-    </ClInclude>
     <ClInclude Include="Random.h">
       <Filter>Header Files\Math</Filter>
-    </ClInclude>
-    <ClInclude Include="NormalBuilder.h">
-      <Filter>Header Files\MeshBuilder</Filter>
     </ClInclude>
     <ClInclude Include="2DStructs.h">
       <Filter>Header Files\2D\Utils</Filter>
@@ -348,17 +288,11 @@
     <ClInclude Include="MapGenerator.h">
       <Filter>Header Files\Generator</Filter>
     </ClInclude>
-    <ClInclude Include="FlatgrassGenerator.h">
-      <Filter>Header Files\Generator</Filter>
-    </ClInclude>
     <ClInclude Include="AxisLinesRenderer.h">
       <Filter>Header Files\SelectionBox</Filter>
     </ClInclude>
     <ClInclude Include="PickedPosRenderer.h">
       <Filter>Header Files\SelectionBox</Filter>
-    </ClInclude>
-    <ClInclude Include="LocalPlayer.h">
-      <Filter>Header Files\Entities</Filter>
     </ClInclude>
     <ClInclude Include="Player.h">
       <Filter>Header Files\Entities</Filter>
@@ -381,17 +315,8 @@
     <ClInclude Include="Builder.h">
       <Filter>Header Files\MeshBuilder</Filter>
     </ClInclude>
-    <ClInclude Include="Builder1DPart.h">
-      <Filter>Header Files\MeshBuilder</Filter>
-    </ClInclude>
     <ClInclude Include="ChunkUpdater.h">
       <Filter>Header Files\Rendering\Map</Filter>
-    </ClInclude>
-    <ClInclude Include="LocationUpdate.h">
-      <Filter>Header Files\Entities</Filter>
-    </ClInclude>
-    <ClInclude Include="ModelBuilder.h">
-      <Filter>Header Files\Entities\Model</Filter>
     </ClInclude>
     <ClInclude Include="IModel.h">
       <Filter>Header Files\Entities\Model</Filter>
@@ -399,20 +324,35 @@
     <ClInclude Include="ModelCache.h">
       <Filter>Header Files\Entities\Model</Filter>
     </ClInclude>
-    <ClInclude Include="AutoRotate.h">
-      <Filter>Header Files\Blocks</Filter>
+    <ClInclude Include="DisplayDevice.h">
+      <Filter>Header Files\Platform\Window</Filter>
     </ClInclude>
-    <ClInclude Include="AnimatedComp.h">
-      <Filter>Header Files\Entities\Components</Filter>
+    <ClInclude Include="Event.h">
+      <Filter>Header Files\Events</Filter>
     </ClInclude>
-    <ClInclude Include="TiltComp.h">
-      <Filter>Header Files\Entities\Components</Filter>
+    <ClInclude Include="Events.h">
+      <Filter>Header Files\Events</Filter>
+    </ClInclude>
+    <ClInclude Include="Key.h">
+      <Filter>Header Files\Platform\Window</Filter>
+    </ClInclude>
+    <ClInclude Include="Window.h">
+      <Filter>Header Files\Platform\Window</Filter>
+    </ClInclude>
+    <ClInclude Include="Mouse.h">
+      <Filter>Header Files\Platform\Window</Filter>
+    </ClInclude>
+    <ClInclude Include="TerrainAtlas.h">
+      <Filter>Header Files\TexturePack</Filter>
+    </ClInclude>
+    <ClInclude Include="Picking.h">
+      <Filter>Header Files\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Deflate.h">
+      <Filter>Header Files\IO</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="NotchyGenerator.c">
-      <Filter>Source Files\Generator</Filter>
-    </ClCompile>
     <ClCompile Include="Noise.c">
       <Filter>Source Files\Generator</Filter>
     </ClCompile>
@@ -440,14 +380,8 @@
     <ClCompile Include="Texture.c">
       <Filter>Source Files\Graphics</Filter>
     </ClCompile>
-    <ClCompile Include="TextureRec.c">
-      <Filter>Source Files\Graphics</Filter>
-    </ClCompile>
     <ClCompile Include="GraphicsCommon.c">
       <Filter>Source Files\Graphics</Filter>
-    </ClCompile>
-    <ClCompile Include="Vector3I.c">
-      <Filter>Source Files\Math</Filter>
     </ClCompile>
     <ClCompile Include="ExtMath.c">
       <Filter>Source Files\Math</Filter>
@@ -455,26 +389,14 @@
     <ClCompile Include="World.c">
       <Filter>Source Files\Map</Filter>
     </ClCompile>
-    <ClCompile Include="WorldEnv.c">
-      <Filter>Source Files\Map</Filter>
-    </ClCompile>
     <ClCompile Include="D3D9Api.c">
       <Filter>Source Files\Graphics</Filter>
-    </ClCompile>
-    <ClCompile Include="EventHandler.c">
-      <Filter>Source Files\Events</Filter>
     </ClCompile>
     <ClCompile Include="VertexStructs.c">
       <Filter>Source Files\Math</Filter>
     </ClCompile>
     <ClCompile Include="Funcs.c">
       <Filter>Source Files\Utils</Filter>
-    </ClCompile>
-    <ClCompile Include="TerrainAtlas1D.c">
-      <Filter>Source Files\TexturePack</Filter>
-    </ClCompile>
-    <ClCompile Include="TerrainAtlas2D.c">
-      <Filter>Source Files\TexturePack</Filter>
     </ClCompile>
     <ClCompile Include="PackedCol.c">
       <Filter>Source Files\2D\Utils</Filter>
@@ -497,9 +419,6 @@
     <ClCompile Include="Intersection.c">
       <Filter>Source Files\Math</Filter>
     </ClCompile>
-    <ClCompile Include="WinIO.c">
-      <Filter>Source Files\Platform</Filter>
-    </ClCompile>
     <ClCompile Include="SelectionBox.c">
       <Filter>Source Files\SelectionBox</Filter>
     </ClCompile>
@@ -512,23 +431,11 @@
     <ClCompile Include="WeatherRenderer.c">
       <Filter>Source Files\Rendering\Env</Filter>
     </ClCompile>
-    <ClCompile Include="StringConvert.c">
-      <Filter>Source Files\Utils</Filter>
-    </ClCompile>
-    <ClCompile Include="ChunkInfo.c">
-      <Filter>Source Files\Rendering\Map</Filter>
-    </ClCompile>
     <ClCompile Include="MapRenderer.c">
-      <Filter>Source Files\Rendering\Map</Filter>
-    </ClCompile>
-    <ClCompile Include="ChunkSorter.c">
       <Filter>Source Files\Rendering\Map</Filter>
     </ClCompile>
     <ClCompile Include="Respawn.c">
       <Filter>Source Files\Entities</Filter>
-    </ClCompile>
-    <ClCompile Include="GZipHeader.c">
-      <Filter>Source Files\IO</Filter>
     </ClCompile>
     <ClCompile Include="Random.c">
       <Filter>Source Files\Math</Filter>
@@ -541,9 +448,6 @@
     </ClCompile>
     <ClCompile Include="EnvRenderer.c">
       <Filter>Source Files\Rendering\Env</Filter>
-    </ClCompile>
-    <ClCompile Include="FlatgrassGenerator.c">
-      <Filter>Source Files\Generator</Filter>
     </ClCompile>
     <ClCompile Include="AxisLinesRenderer.c">
       <Filter>Source Files\SelectionBox</Filter>
@@ -566,26 +470,14 @@
     <ClCompile Include="IsometricDrawer.c">
       <Filter>Source Files\2D</Filter>
     </ClCompile>
-    <ClCompile Include="NormalBuilder.c">
-      <Filter>Source Files\MeshBuilder</Filter>
-    </ClCompile>
-    <ClCompile Include="Builder1DPart.c">
-      <Filter>Source Files\MeshBuilder</Filter>
-    </ClCompile>
     <ClCompile Include="Builder.c">
       <Filter>Source Files\MeshBuilder</Filter>
     </ClCompile>
     <ClCompile Include="ChunkUpdater.c">
       <Filter>Source Files\Rendering\Map</Filter>
     </ClCompile>
-    <ClCompile Include="LocationUpdate.c">
-      <Filter>Source Files\Entities</Filter>
-    </ClCompile>
     <ClCompile Include="AABB.c">
       <Filter>Source Files\Math</Filter>
-    </ClCompile>
-    <ClCompile Include="ModelBuilder.c">
-      <Filter>Source Files\Entities\Model</Filter>
     </ClCompile>
     <ClCompile Include="IModel.c">
       <Filter>Source Files\Entities\Model</Filter>
@@ -593,29 +485,50 @@
     <ClCompile Include="ModelCache.c">
       <Filter>Source Files\Entities\Model</Filter>
     </ClCompile>
-    <ClCompile Include="CreeperModel.c">
-      <Filter>Source Files\Entities\Model</Filter>
-    </ClCompile>
-    <ClCompile Include="AutoRotate.c">
-      <Filter>Source Files\Blocks</Filter>
-    </ClCompile>
-    <ClCompile Include="AnimatedComp.c">
-      <Filter>Source Files\Entities\Components</Filter>
-    </ClCompile>
-    <ClCompile Include="TiltComp.c">
-      <Filter>Source Files\Entities\Components</Filter>
-    </ClCompile>
     <ClCompile Include="Program.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="SkeletonModel.c">
-      <Filter>Source Files\Entities\Model</Filter>
+    <ClCompile Include="DisplayDevice.c">
+      <Filter>Source Files\Platform\Window</Filter>
     </ClCompile>
-    <ClCompile Include="ZombieModel.c">
-      <Filter>Source Files\Entities\Model</Filter>
+    <ClCompile Include="Event.c">
+      <Filter>Source Files\Events</Filter>
     </ClCompile>
-    <ClCompile Include="PigModel.c">
-      <Filter>Source Files\Entities\Model</Filter>
+    <ClCompile Include="Key.c">
+      <Filter>Source Files\Platform\Window</Filter>
+    </ClCompile>
+    <ClCompile Include="Mouse.c">
+      <Filter>Source Files\Platform\Window</Filter>
+    </ClCompile>
+    <ClCompile Include="WinWindow.c">
+      <Filter>Source Files\Platform</Filter>
+    </ClCompile>
+    <ClCompile Include="TerrainAtlas.c">
+      <Filter>Source Files\TexturePack</Filter>
+    </ClCompile>
+    <ClCompile Include="MapGenerator.c">
+      <Filter>Source Files\Generator</Filter>
+    </ClCompile>
+    <ClCompile Include="Entity.c">
+      <Filter>Source Files\Entities</Filter>
+    </ClCompile>
+    <ClCompile Include="Camera.c">
+      <Filter>Source Files\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="Picking.c">
+      <Filter>Source Files\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="Game.c">
+      <Filter>Source Files\Game</Filter>
+    </ClCompile>
+    <ClCompile Include="Options.c">
+      <Filter>Source Files\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="DateTime.c">
+      <Filter>Source Files\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="Deflate.c">
+      <Filter>Source Files\IO</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

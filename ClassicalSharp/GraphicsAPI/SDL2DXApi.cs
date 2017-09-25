@@ -254,22 +254,8 @@ namespace ClassicalSharp.GraphicsAPI {
 			                                              formatMapping[(int)format], Pool.Default);
 			return GetOrExpand(ref vBuffers, buffer, iBufferSize);
 		}
-
-		public override void SetDynamicVbData(int vb, VertexP3fC4b[] vertices, int count) {
-			fixed (VertexP3fC4b* p = vertices) {
-				IntPtr ptr = (IntPtr)p;
-				SetDynamicVbData(vb, ptr, count); 
-			}
-		}
-
-		public override void SetDynamicVbData(int vb, VertexP3fT2fC4b[] vertices, int count) {
-			fixed (VertexP3fT2fC4b* p = vertices) {
-				IntPtr ptr = (IntPtr)p;
-				SetDynamicVbData(vb, ptr, count); 
-			}
-		}
 		
-		public void SetDynamicVbData(int vb, IntPtr vertices, int count) {
+		public override void SetDynamicVbData(int vb, IntPtr vertices, int count) {
 			int size = count * batchStride;
 			DataBuffer buffer = vBuffers[vb];
 			buffer.SetData(vertices, size, LockFlags.Discard);

@@ -16,7 +16,7 @@ namespace ClassicalSharp {
 		
 		Game game;
 		public DesktopWindow(Game game, string username, bool nullContext, int width, int height) :
-			base(width, height, GraphicsMode.Default, Program.AppName + " (" + username + ")", nullContext, 0, DisplayDevice.Default) {
+			base(width, height, GraphicsMode.Default, Program.AppName + " (" + username + ")", nullContext, 0, DisplayDevice.Primary) {
 			this.game = game;
 		}
 		
@@ -57,13 +57,13 @@ namespace ClassicalSharp {
 		// TODO: retry when clipboard returns null.
 		public string ClipboardText {
 			get {
-				if (OpenTK.Configuration.RunningOnMacOS)
+				if (!OpenTK.Configuration.RunningOnLinux)
 					return GetClipboardText();
 				else
 					return Clipboard.GetText();
 			}
 			set {
-				if (OpenTK.Configuration.RunningOnMacOS)
+				if (!OpenTK.Configuration.RunningOnLinux)
 					SetClipboardText(value);
 				else
 					Clipboard.SetText(value);

@@ -72,8 +72,8 @@ namespace ClassicalSharp.Gui.Screens {
 		}
 		
 		public override void OnResize(int width, int height) {
-			messageWidget.CalculatePosition();
-			titleWidget.CalculatePosition();
+			messageWidget.Reposition();
+			titleWidget.Reposition();
 		}
 		
 		protected override void ContextLost() {
@@ -107,7 +107,7 @@ namespace ClassicalSharp.Gui.Screens {
 		
 		public override bool HandlesMouseMove(int mouseX, int mouseY) { return true; }
 		
-		public override bool HandlesMouseScroll(int delta)  { return true; }
+		public override bool HandlesMouseScroll(float delta)  { return true; }
 		
 		public override bool HandlesMouseUp(int mouseX, int mouseY, MouseButton button) { return true; }
 		
@@ -131,7 +131,7 @@ namespace ClassicalSharp.Gui.Screens {
 			int drawnY = 0, height = game.Height;
 			int col = new FastColour(64, 64, 64).Pack();
 			
-			int texLoc = game.BlockInfo.GetTextureLoc(Block.Dirt, Side.Top);
+			int texLoc = BlockInfo.GetTextureLoc(Block.Dirt, Side.Top);
 			TerrainAtlas1D atlas = game.TerrainAtlas1D;
 			Texture tex = new Texture(0, 0, 0, game.Width, 64, 
 			                          atlas.GetTexRec(texLoc, 1, out atlasIndex));

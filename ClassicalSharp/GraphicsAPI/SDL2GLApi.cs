@@ -496,8 +496,11 @@ namespace ClassicalSharp.GraphicsAPI
 			GLFuncs.BlendFunc(blendFuncs[(int)srcFunc], blendFuncs[(int)dstFunc]);
 		}
 
+		bool fogEnable;
 		public override bool Fog {
-			set { if (value) GLFuncs.Enable(EnableCap.Fog);
+			get { return fogEnable; }
+			set { fogEnable = value;
+				if (value) GLFuncs.Enable(EnableCap.Fog);
 				else GLFuncs.Disable(EnableCap.Fog); }
 		}
 
@@ -583,7 +586,8 @@ namespace ClassicalSharp.GraphicsAPI
 			}
 		}
 
-		protected override int CreateTexture(int width, int height, IntPtr scan0, bool managedPool) {
+		protected override int CreateTexture(int width, int height, IntPtr scan0, bool managedPool, bool mipmaps) {
+			// TODO: integrate mipmaps
 			int texId = 0;
 			GLFuncs.GenTextures(1, &texId);
 			GLFuncs.BindTexture(TextureTarget.Texture2D, texId);
@@ -599,7 +603,8 @@ namespace ClassicalSharp.GraphicsAPI
 			GLFuncs.BindTexture(TextureTarget.Texture2D, texture);
 		}
 
-		public override void UpdateTexturePart(int texId, int texX, int texY, FastBitmap part) {
+		public override void UpdateTexturePart(int texId, int texX, int texY, FastBitmap part, bool mipmaps) {
+			// TODO: integrate mipmaps
 			GLFuncs.BindTexture(TextureTarget.Texture2D, texId);
 			GLFuncs.TexSubImage2D(TextureTarget.Texture2D, 0, texX, texY, part.Width, part.Height,
 			                 GlPixelFormat.Bgra, PixelType.UnsignedByte, part.Scan0);
@@ -610,6 +615,10 @@ namespace ClassicalSharp.GraphicsAPI
 			int id = texId; GLFuncs.DeleteTextures(1, &id);
 			texId = -1;
 		}
+
+		public override void EnableMipmaps() { }
+
+		public override void DisableMipmaps() { }
 		#endregion
 
 		#region Vertex/index buffers
@@ -665,38 +674,19 @@ namespace ClassicalSharp.GraphicsAPI
 			GLFuncs.BindBuffer(target, id);
 			return id;
 		}
-		
-		public override void SetDynamicVbData(int vb, VertexP3fC4b[] vertices, int count) {
-			if (glLists) {
-				activeList = dynamicListId;
-				dynamicListData = vertices;
-				return;
-			}
-			
-			fixed (VertexP3fC4b* p = vertices) {
-				IntPtr ptr = (IntPtr)p;
-				SetDynamicVbData(vb, ptr, count); 
-			}
-		}
-		
-		public override void SetDynamicVbData(int vb, VertexP3fT2fC4b[] vertices, int count) {
-			if (glLists) {
-				activeList = dynamicListId;
-				dynamicListData = vertices;
-				return;
-			}
-			
-			fixed (VertexP3fT2fC4b* p = vertices) {
-				IntPtr ptr = (IntPtr)p;
-				SetDynamicVbData(vb, ptr, count); 
-			}
-		}
-		
+
 		int batchStride;
 
-		public void SetDynamicVbData(int id, IntPtr vertices, int count) {
+		public override void SetDynamicVbData(int id, IntPtr vertices, int count) {
+			if (glLists) {
+				activeList = dynamicListId;
+				dynamicListData = vertices;
+				return;
+			}
+
 			GLFuncs.BindBuffer(BufferTarget.ArrayBuffer, id);
-			GLFuncs.BufferSubData(BufferTarget.ArrayBuffer, IntPtr.Zero, new IntPtr(count * batchStride), vertices);
+			GLFuncs.BufferSubData(BufferTarget.ArrayBuffer, IntPtr.Zero,
+				new IntPtr(count * batchStride), vertices);
 		}
 		
 		static void V(VertexP3fC4b v) {

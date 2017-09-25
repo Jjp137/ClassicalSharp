@@ -117,6 +117,7 @@ namespace ClassicalSharp.Renderers {
 			gfx.Texturing = true;
 			gfx.AlphaTest = true;
 			
+			gfx.EnableMipmaps();
 			for (int batch = 0; batch < _1DUsed; batch++) {
 				if (normalPartsCount[batch] <= 0) continue;
 				if (pendingNormal[batch] || usedNormal[batch]) {
@@ -125,6 +126,7 @@ namespace ClassicalSharp.Renderers {
 					pendingNormal[batch] = false;
 				}
 			}
+			gfx.DisableMipmaps();
 			
 			CheckWeather(deltaTime);
 			gfx.AlphaTest = false;
@@ -140,7 +142,7 @@ namespace ClassicalSharp.Renderers {
 			if (chunks == null) return;
 			
 			// First fill depth buffer
-			long vertices = game.Vertices;
+			int vertices = game.Vertices;
 			gfx.SetBatchFormat(VertexFormat.P3fT2fC4b);
 			gfx.Texturing = false;
 			gfx.AlphaBlending = false;
@@ -161,12 +163,14 @@ namespace ClassicalSharp.Renderers {
 			gfx.DepthWrite = false; // we already calculated depth values in depth pass
 			
 			int[] texIds = game.TerrainAtlas1D.TexIds;
+			gfx.EnableMipmaps();
 			for (int batch = 0; batch < _1DUsed; batch++) {
 				if (translucentPartsCount[batch] <= 0) continue;
 				if (!usedTranslucent[batch]) continue;
 				gfx.BindTexture(texIds[batch]);
 				RenderTranslucentBatch(batch);
 			}
+			gfx.DisableMipmaps();
 			
 			gfx.DepthWrite = true;
 			// If we weren't under water, render weather after to blend properly
@@ -187,7 +191,7 @@ namespace ClassicalSharp.Renderers {
 			
 			BlockID block = game.World.SafeGetBlock(coords);
 			bool outside = !game.World.IsValidPos(coords);
-			inTranslucent = game.BlockInfo.Draw[block] == DrawType.Translucent
+			inTranslucent = BlockInfo.Draw[block] == DrawType.Translucent
 				|| (pos.Y < env.EdgeHeight && outside);
 			
 			// If we are under water, render weather before to blend properly
@@ -203,7 +207,7 @@ namespace ClassicalSharp.Renderers {
 				if (info.NormalParts == null) continue;
 
 				ChunkPartInfo part = info.NormalParts[batch];
-				if (part.IndicesCount == 0) continue;
+				if (part.VerticesCount == 0) continue;
 				usedNormal[batch] = true;
 				
 				gfx.BindVb(part.VbId);
@@ -278,7 +282,7 @@ namespace ClassicalSharp.Renderers {
 				if (info.TranslucentParts == null) continue;
 				
 				ChunkPartInfo part = info.TranslucentParts[batch];
-				if (part.IndicesCount == 0) continue;
+				if (part.VerticesCount == 0) continue;
 				usedTranslucent[batch] = true;
 				
 				gfx.BindVb(part.VbId);

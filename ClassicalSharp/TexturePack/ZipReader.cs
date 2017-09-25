@@ -7,8 +7,9 @@ using System.Text;
 namespace ClassicalSharp.Textures {
 
 	public struct ZipEntry {
-		public int CompressedDataSize, UncompressedDataSize;
-		public int LocalHeaderOffset, CentralHeaderOffset;
+		public int CompressedDataSize;
+		public int UncompressedDataSize;
+		public int LocalHeaderOffset;
 		public uint Crc32;
 		public string Filename;
 	}
@@ -22,7 +23,7 @@ namespace ClassicalSharp.Textures {
 	public sealed class ZipReader {
 		
 		public ZipEntryProcessor ProcessZipEntry;
-		public ZipEntrySelector ShouldProcessZipEntry;
+		public ZipEntrySelector SelectZipEntry;
 		public ZipEntry[] entries;
 		int index;
 		
@@ -49,7 +50,8 @@ namespace ClassicalSharp.Textures {
 				} else if (sig == 0x06054b50) {
 					break;
 				} else {
-					throw new NotSupportedException("Unsupported signature: " + sig.ToString("X8"));
+					Utils.LogDebug("Unsupported signature: " + sig.ToString("X8"));
+					return;
 				}
 			}
 			
@@ -58,8 +60,11 @@ namespace ClassicalSharp.Textures {
 				ZipEntry entry = entries[i];
 				reader.BaseStream.Seek(entry.LocalHeaderOffset, SeekOrigin.Begin);
 				sig = reader.ReadUInt32();
-				if (sig != 0x04034b50)
-					throw new NotSupportedException("Unsupported signature: " + sig.ToString("X8"));
+				
+				if (sig != 0x04034b50) {
+					Utils.LogDebug(entry.Filename + " is an invalid entry");
+					continue;
+				}
 				ReadLocalFileHeader(reader, entry);
 			}
 			entries = null;
@@ -77,10 +82,11 @@ namespace ClassicalSharp.Textures {
 			if (compressedSize == 0) compressedSize = entry.CompressedDataSize;
 			int uncompressedSize = reader.ReadInt32();
 			if (uncompressedSize == 0) uncompressedSize = entry.UncompressedDataSize;
+			
 			ushort fileNameLen = reader.ReadUInt16();
 			ushort extraFieldLen = reader.ReadUInt16();
 			string fileName = enc.GetString(reader.ReadBytes(fileNameLen));
-			if (!ShouldProcessZipEntry(fileName)) return;
+			if (SelectZipEntry != null && !SelectZipEntry(fileName)) return;
 			
 			reader.ReadBytes(extraFieldLen);
 			if (versionNeeded > 20)
@@ -93,7 +99,6 @@ namespace ClassicalSharp.Textures {
 		
 		void ReadCentralDirectory(BinaryReader reader, ZipEntry[] entries) {
 			ZipEntry entry;
-			entry.CentralHeaderOffset = (int)(reader.BaseStream.Position - 4);
 			reader.ReadUInt16(); // OS
 			ushort versionNeeded = reader.ReadUInt16();
 			ushort flags = reader.ReadUInt16();

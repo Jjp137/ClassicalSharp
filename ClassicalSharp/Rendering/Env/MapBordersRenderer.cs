@@ -47,16 +47,18 @@ namespace ClassicalSharp.Renderers {
 		public void RenderSides(double delta) {
 			if (sidesVb == -1) return;
 			BlockID block = game.World.Env.SidesBlock;
-			
-			gfx.SetupAlphaState(game.BlockInfo.Draw[block]);
+						
 			gfx.Texturing = true;
+			gfx.SetupAlphaState(BlockInfo.Draw[block]);
+			gfx.EnableMipmaps();
 			
 			gfx.BindTexture(sideTexId);
 			gfx.SetBatchFormat(VertexFormat.P3fT2fC4b);
 			gfx.BindVb(sidesVb);
-			gfx.DrawVb_IndexedTris(sidesVertices * 6 / 4);
+			gfx.DrawVb_IndexedTris(sidesVertices);
 			
-			gfx.RestoreAlphaState(game.BlockInfo.Draw[block]);
+			gfx.DisableMipmaps();
+			gfx.RestoreAlphaState(BlockInfo.Draw[block]);
 			gfx.Texturing = false;
 		}
 		
@@ -64,9 +66,10 @@ namespace ClassicalSharp.Renderers {
 			if (edgesVb == -1) return;
 			BlockID block = game.World.Env.EdgeBlock;		
 			
-			Vector3 camPos = game.CurrentCameraPos;
-			gfx.SetupAlphaState(game.BlockInfo.Draw[block]);
+			Vector3 camPos = game.CurrentCameraPos;			
 			gfx.Texturing = true;
+			gfx.SetupAlphaState(BlockInfo.Draw[block]);
+			gfx.EnableMipmaps();
 			
 			gfx.BindTexture(edgeTexId);
 			gfx.SetBatchFormat(VertexFormat.P3fT2fC4b);
@@ -75,9 +78,10 @@ namespace ClassicalSharp.Renderers {
 			// Fixes some 'depth bleeding through' issues with 16 bit depth buffers on large maps.
 			float yVisible = Math.Min(0, map.Env.SidesHeight);
 			if (camPos.Y >= yVisible)
-				gfx.DrawVb_IndexedTris(edgesVertices * 6 / 4);
+				gfx.DrawVb_IndexedTris(edgesVertices);
 			
-			gfx.RestoreAlphaState(game.BlockInfo.Draw[block]);
+			gfx.DisableMipmaps();
+			gfx.RestoreAlphaState(BlockInfo.Draw[block]);
 			gfx.Texturing = false;
 		}
 		
@@ -159,7 +163,7 @@ namespace ClassicalSharp.Renderers {
 		void RebuildSides(int y, int axisSize) {
 			BlockID block = game.World.Env.SidesBlock;
 			sidesVertices = 0;
-			if (game.BlockInfo.Draw[block] == DrawType.Gas) return;
+			if (BlockInfo.Draw[block] == DrawType.Gas) return;
 			
 			for (int i = 0; i < rects.Length; i++) {
 				Rectangle r = rects[i];
@@ -172,10 +176,10 @@ namespace ClassicalSharp.Renderers {
 			VertexP3fT2fC4b[] v = new VertexP3fT2fC4b[sidesVertices];
 			int index = 0;
 			
-			fullBrightSides = game.BlockInfo.FullBright[block];
+			fullBrightSides = BlockInfo.FullBright[block];
 			int col = fullBrightSides ? FastColour.WhitePacked : map.Env.Shadow;
-			if (game.BlockInfo.Tinted[block]) {
-				col = Utils.Tint(col, game.BlockInfo.FogColour[block]);
+			if (BlockInfo.Tinted[block]) {
+				col = Utils.Tint(col, BlockInfo.FogColour[block]);
 			}
 			
 			for (int i = 0; i < rects.Length; i++) {
@@ -200,7 +204,7 @@ namespace ClassicalSharp.Renderers {
 		void RebuildEdges(int y, int axisSize) {
 			BlockID block = game.World.Env.EdgeBlock;
 			edgesVertices = 0;
-			if (game.BlockInfo.Draw[block] == DrawType.Gas) return;
+			if (BlockInfo.Draw[block] == DrawType.Gas) return;
 			
 			for (int i = 0; i < rects.Length; i++) {
 				Rectangle r = rects[i];
@@ -209,10 +213,10 @@ namespace ClassicalSharp.Renderers {
 			VertexP3fT2fC4b[] v = new VertexP3fT2fC4b[edgesVertices];
 			int index = 0;
 			
-			fullBrightEdge = game.BlockInfo.FullBright[block];
+			fullBrightEdge = BlockInfo.FullBright[block];
 			int col = fullBrightEdge ? FastColour.WhitePacked : map.Env.Sun;
-			if (game.BlockInfo.Tinted[block]) {
-				col = Utils.Tint(col, game.BlockInfo.FogColour[block]);
+			if (BlockInfo.Tinted[block]) {
+				col = Utils.Tint(col, BlockInfo.FogColour[block]);
 			}
 			
 			for (int i = 0; i < rects.Length; i++) {
@@ -227,18 +231,19 @@ namespace ClassicalSharp.Renderers {
 		}
 
 		float HorOffset(BlockID block) {
-			BlockInfo info = game.BlockInfo;
-			return info.RenderMinBB[block].X - info.MinBB[block].X;
+			return BlockInfo.RenderMinBB[block].X - BlockInfo.MinBB[block].X;
 		}
 		
 		float YOffset(BlockID block) {
-			BlockInfo info = game.BlockInfo;
-			return info.RenderMinBB[block].Y - info.MinBB[block].Y;
+			return BlockInfo.RenderMinBB[block].Y - BlockInfo.MinBB[block].Y;
 		}
 		
 		void DrawX(int x, int z1, int z2, int y1, int y2, int axisSize,
-		           int col, VertexP3fT2fC4b[] v, ref int i) {
+		           int col, VertexP3fT2fC4b[] vertices, ref int i) {
 			int endZ = z2, endY = y2, startY = y1;
+			VertexP3fT2fC4b v;
+			v.X = x; v.Colour = col;
+			
 			for (; z1 < endZ; z1 += axisSize) {
 				z2 = z1 + axisSize;
 				if (z2 > endZ) z2 = endZ;
@@ -247,18 +252,21 @@ namespace ClassicalSharp.Renderers {
 					y2 = y1 + axisSize;
 					if (y2 > endY) y2 = endY;
 					
-					TextureRec rec = new TextureRec(0, 0, z2 - z1, y2 - y1);
-					v[i++] = new VertexP3fT2fC4b(x, y1, z1, rec.U1, rec.V2, col);
-					v[i++] = new VertexP3fT2fC4b(x, y2, z1, rec.U1, rec.V1, col);
-					v[i++] = new VertexP3fT2fC4b(x, y2, z2, rec.U2, rec.V1, col);
-					v[i++] = new VertexP3fT2fC4b(x, y1, z2, rec.U2, rec.V2, col);
+					float u2 = z2 - z1, v2 = y2 - y1;
+					v.Y = y1; v.Z = z1; v.U = 0f; v.V = v2; vertices[i++] = v;
+					v.Y = y2;                     v.V = 0f; vertices[i++] = v;
+					          v.Z = z2; v.U = u2;           vertices[i++] = v;
+					v.Y = y1;                     v.V = v2; vertices[i++] = v;
 				}
 			}
 		}
 		
 		void DrawZ(int z, int x1, int x2, int y1, int y2, int axisSize,
-		           int col, VertexP3fT2fC4b[] v, ref int i) {
+		           int col, VertexP3fT2fC4b[] vertices, ref int i) {
 			int endX = x2, endY = y2, startY = y1;
+			VertexP3fT2fC4b v;
+			v.Z = z; v.Colour = col;
+			
 			for (; x1 < endX; x1 += axisSize) {
 				x2 = x1 + axisSize;
 				if (x2 > endX) x2 = endX;
@@ -267,18 +275,21 @@ namespace ClassicalSharp.Renderers {
 					y2 = y1 + axisSize;
 					if (y2 > endY) y2 = endY;
 					
-					TextureRec rec = new TextureRec(0, 0, x2 - x1, y2 - y1);
-					v[i++] = new VertexP3fT2fC4b(x1, y1, z, rec.U1, rec.V2, col);
-					v[i++] = new VertexP3fT2fC4b(x1, y2, z, rec.U1, rec.V1, col);
-					v[i++] = new VertexP3fT2fC4b(x2, y2, z, rec.U2, rec.V1, col);
-					v[i++] = new VertexP3fT2fC4b(x2, y1, z, rec.U2, rec.V2, col);
+					float u2 = x2 - x1, v2 = y2 - y1;
+					v.X = x1; v.Y = y1; v.U = 0f; v.V = v2; vertices[i++] = v;
+					          v.Y = y2;           v.V = 0f; vertices[i++] = v;
+					v.X = x2;           v.U = u2;           vertices[i++] = v;
+					          v.Y = y1;           v.V = v2; vertices[i++] = v;
 				}
 			}
 		}
 		
 		void DrawY(int x1, int z1, int x2, int z2, float y, int axisSize,
-		           int col, float offset, float yOffset, VertexP3fT2fC4b[] v, ref int i) {
+		           int col, float offset, float yOffset, VertexP3fT2fC4b[] vertices, ref int i) {
 			int endX = x2, endZ = z2, startZ = z1;
+			VertexP3fT2fC4b v;
+			v.Y = y + yOffset; v.Colour = col;
+			
 			for (; x1 < endX; x1 += axisSize) {
 				x2 = x1 + axisSize;
 				if (x2 > endX) x2 = endX;
@@ -287,11 +298,11 @@ namespace ClassicalSharp.Renderers {
 					z2 = z1 + axisSize;
 					if (z2 > endZ) z2 = endZ;
 					
-					TextureRec rec = new TextureRec(0, 0, x2 - x1, z2 - z1);
-					v[i++] = new VertexP3fT2fC4b(x1 + offset, y + yOffset, z1 + offset, rec.U1, rec.V1, col);
-					v[i++] = new VertexP3fT2fC4b(x1 + offset, y + yOffset, z2 + offset, rec.U1, rec.V2, col);
-					v[i++] = new VertexP3fT2fC4b(x2 + offset, y + yOffset, z2 + offset, rec.U2, rec.V2, col);
-					v[i++] = new VertexP3fT2fC4b(x2 + offset, y + yOffset, z1 + offset, rec.U2, rec.V1, col);
+					float u2 = x2 - x1, v2 = z2 - z1;
+					v.X = x1 + offset; v.Z = z1 + offset; v.U = 0f; v.V = 0f; vertices[i++] = v;
+					                   v.Z = z2 + offset;           v.V = v2; vertices[i++] = v;
+					v.X = x2 + offset;                    v.U = u2;           vertices[i++] = v;
+					                   v.Z = z1 + offset;           v.V = 0f; vertices[i++] = v;
 				}
 			}
 		}
@@ -308,12 +319,12 @@ namespace ClassicalSharp.Renderers {
 		
 		int lastEdgeTexLoc, lastSideTexLoc;
 		void MakeTexture(ref int id, ref int lastTexLoc, BlockID block) {
-			int texLoc = game.BlockInfo.GetTextureLoc(block, Side.Top);
+			int texLoc = BlockInfo.GetTextureLoc(block, Side.Top);
 			if (texLoc == lastTexLoc || gfx.LostContext) return;
 			lastTexLoc = texLoc;
 			
 			game.Graphics.DeleteTexture(ref id);
-			id = game.TerrainAtlas.LoadTextureElement(gfx, texLoc);
+			id = game.TerrainAtlas.LoadTextureElement(texLoc);
 		}
 	}
 }

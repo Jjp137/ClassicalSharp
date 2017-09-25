@@ -13,10 +13,10 @@ namespace ClassicalSharp {
 		internal float bobbingVer, bobbingHor;
 		
 		/// <summary> Calculates the projection matrix for this camera. </summary>
-		public abstract Matrix4 GetProjection();
+		public abstract void GetProjection(out Matrix4 m);
 		
 		/// <summary> Calculates the world/view matrix for this camera. </summary>
-		public abstract Matrix4 GetView();
+		public abstract void GetView(out Matrix4 m);
 		
 		/// <summary> Calculates the location of the camera's position in the world. </summary>
 		public abstract Vector3 GetCameraPos(float t);
@@ -66,18 +66,22 @@ namespace ClassicalSharp {
 			tiltM = Matrix4.Identity;
 		}
 		
-		public override Matrix4 GetProjection() {
+		protected Vector3 GetDirVector() {
+			return Utils.GetDirVector(player.HeadYRadians, AdjustHeadX(player.HeadX));
+		}
+		
+		public override void GetProjection(out Matrix4 m) {
 			float fovy = game.Fov * Utils.Deg2Rad;
 			float aspectRatio = (float)game.Width / game.Height;
 			float zNear = game.Graphics.MinZNear;
-			return Matrix4.CreatePerspectiveFieldOfView(fovy, aspectRatio, zNear, game.ViewDistance);
+			Matrix4.CreatePerspectiveFieldOfView(fovy, aspectRatio, zNear, game.ViewDistance, out m);
 		}
 		
 		public override void GetPickedBlock(PickedPos pos) {
-			Vector3 dir = Utils.GetDirVector(player.HeadYRadians,
-			                                 AdjustHeadX(player.HeadX));
+			Vector3 dir = GetDirVector();
 			Vector3 eyePos = player.EyePosition;
 			float reach = game.LocalPlayer.ReachDistance;
+			
 			Picking.CalculatePickedBlock(game, eyePos, dir, reach, pos);
 		}
 		
@@ -143,20 +147,17 @@ namespace ClassicalSharp {
 			if (!game.ViewBobbing) { tiltM = Matrix4.Identity; return; }
 			LocalPlayer p = game.LocalPlayer;
 			Matrix4 tiltY, velX;
+			
 			Matrix4.RotateZ(out tiltM, -p.tilt.tiltX * p.anim.bobStrength);
 			Matrix4.RotateX(out tiltY, Math.Abs(p.tilt.tiltY) * 3 * p.anim.bobStrength);
-			tiltM *= tiltY;
+			Matrix4.Mult(out tiltM, ref tiltM, ref tiltY);
 			
 			bobbingHor = (p.anim.bobbingHor * 0.3f) * p.anim.bobStrength;
 			bobbingVer = (p.anim.bobbingVer * 0.6f) * p.anim.bobStrength;
 			
 			float vel = Utils.Lerp(p.OldVelocity.Y + 0.08f, p.Velocity.Y + 0.08f, t);
 			Matrix4.RotateX(out velX, -vel * 0.05f * p.tilt.velTiltStrength / velTiltScale);
-			tiltM *= velX;
-		}
-		
-		protected Vector3 GetDirVector() {
-			return Utils.GetDirVector(player.HeadYRadians, AdjustHeadX(player.HeadX));
+			Matrix4.Mult(out tiltM, ref tiltM, ref velX);
 		}
 	}
 	
@@ -171,12 +172,14 @@ namespace ClassicalSharp {
 			return true;
 		}
 		
-		public override Matrix4 GetView() {
+		public override void GetView(out Matrix4 m) {
+			Vector3 camPos = game.CurrentCameraPos;
 			Vector3 eyePos = player.EyePosition;
 			eyePos.Y += bobbingVer;
 			
-			Vector3 cameraPos = game.CurrentCameraPos;
-			return Matrix4.LookAt(cameraPos, eyePos, Vector3.UnitY) * tiltM;
+			Matrix4 lookAt;
+			Matrix4.LookAt(camPos, eyePos, Vector3.UnitY, out lookAt);
+			Matrix4.Mult(out m, ref lookAt, ref tiltM);
 		}
 		
 		public override Vector2 GetCameraOrientation() {
@@ -201,10 +204,13 @@ namespace ClassicalSharp {
 		public FirstPersonCamera(Game window) : base(window) { }
 		public override bool IsThirdPerson { get { return false; } }
 		
-		public override Matrix4 GetView() {
+		public override void GetView(out Matrix4 m) {
 			Vector3 camPos = game.CurrentCameraPos;
 			Vector3 dir = GetDirVector();
-			return Matrix4.LookAt(camPos, camPos + dir, Vector3.UnitY) * tiltM;
+			
+			Matrix4 lookAt;
+			Matrix4.LookAt(camPos, camPos + dir, Vector3.UnitY, out lookAt);
+			Matrix4.Mult(out m, ref lookAt, ref tiltM);
 		}
 		
 		public override Vector2 GetCameraOrientation() {

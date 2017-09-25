@@ -8,7 +8,7 @@ namespace ClassicalSharp.Model {
 
 	public class ZombieModel : IModel {
 		
-		public ZombieModel(Game window) : base(window) { }
+		public ZombieModel(Game window) : base(window) { SurivalScore = 80; }
 		
 		public override void CreateParts() {
 			vertices = new ModelVertex[boxVertices * 7];
@@ -47,7 +47,7 @@ namespace ClassicalSharp.Model {
 		}
 		
 		public override void DrawModel(Entity p) {
-			game.Graphics.BindTexture(GetTexture(p.MobTextureId));
+			game.Graphics.BindTexture(GetTexture(p));
 			DrawRotate(-p.HeadXRadians, 0, 0, Head, true);
 			
 			DrawPart(Torso);

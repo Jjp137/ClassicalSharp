@@ -25,18 +25,41 @@ namespace ClassicalSharp.Gui.Screens {
 		public bool RenderHudOver;
 
 		/// <summary> Called when the game window is resized. </summary>
-		public abstract void OnResize(int width, int height);		
+		public abstract void OnResize(int width, int height);
 		
 		protected ClickHandler LeftOnly(SimpleClickHandler action) {
-			if (action == null) return (g, w, btn, x, y) => {};
-			return (g, w, btn, x, y) => {
+			return delegate(Game g, Widget w, MouseButton btn, int x, int y) {
 				if (btn != MouseButton.Left) return;
-				action(g, w);
+				if (action != null) action(g, w);
 			};
 		}
 		
 		protected abstract void ContextLost();
 		
 		protected abstract void ContextRecreated();
+		
+		protected static void DisposeWidgets<T>(T[] widgets) where T : Widget {
+			if (widgets == null) return;
+			
+			for (int i = 0; i < widgets.Length; i++) {
+				if (widgets[i] != null) widgets[i].Dispose();
+			}
+		}
+		
+		protected static void RepositionWidgets<T>(T[] widgets) where T : Widget {
+			if (widgets == null) return;
+			
+			for (int i = 0; i < widgets.Length; i++) {
+				if (widgets[i] != null) widgets[i].Reposition();
+			}
+		}
+		
+		protected static void RenderWidgets<T>(T[] widgets, double delta) where T : Widget {
+			if (widgets == null) return;
+			
+			for (int i = 0; i < widgets.Length; i++) {
+				if (widgets[i] != null) widgets[i].Render(delta);
+			}
+		}
 	}
 }

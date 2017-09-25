@@ -73,8 +73,8 @@ namespace Launcher.Gui.Screens {
 		
 		protected override void RedrawLastInput() {
 			base.RedrawLastInput();
-			if (curInput != widgets[view.hashIndex])
-				return;
+			if (curInput != widgets[view.hashIndex]) return;
+			
 			TableWidget table = (TableWidget)widgets[view.tableIndex];
 			table.SetSelected(widgets[view.hashIndex].Text);
 			MarkPendingRedraw();
@@ -101,8 +101,7 @@ namespace Launcher.Gui.Screens {
 			InputWidget hashWidget = (InputWidget)widgets[view.hashIndex];
 			hashWidget.Chars.ClipboardFilter = HashFilter;
 			
-			widgets[view.backIndex].OnClick =
-				(x, y) => game.SetScreen(new MainScreen(game));
+			widgets[view.backIndex].OnClick = SwitchToMain;
 			widgets[view.connectIndex].OnClick = ConnectToServer;
 			widgets[view.refreshIndex].OnClick = RefreshList;
 			
@@ -111,6 +110,8 @@ namespace Launcher.Gui.Screens {
 			widget.SelectedChanged = SelectedChanged;
 			SetupInputHandlers();
 		}
+		
+		void SwitchToMain(int x, int y) { game.SetScreen(new MainScreen(game)); }
 		
 		void FilterList() {
 			if (curInput != widgets[view.searchIndex])
@@ -143,9 +144,11 @@ namespace Launcher.Gui.Screens {
 			Resize();
 		}
 		
+		float tableAcc;
 		protected override void MouseWheelChanged(object sender, MouseWheelEventArgs e) {
 			TableWidget table = (TableWidget)widgets[view.tableIndex];
-			table.CurrentIndex -= e.Delta;
+			int steps = Utils.AccumulateWheelDelta(ref tableAcc, e.Delta);
+			table.CurrentIndex -= steps;
 			MarkPendingRedraw();
 		}
 		

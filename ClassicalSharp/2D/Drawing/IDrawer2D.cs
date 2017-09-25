@@ -10,6 +10,20 @@ using Android.Graphics;
 #endif
 
 namespace ClassicalSharp {
+	
+	/// <summary> Contains arguments for measuring or drawing text. </summary>
+	public struct DrawTextArgs {		
+		public string Text;
+		public Font Font;
+		public bool UseShadow, SkipPartsCheck;
+		
+		public DrawTextArgs(string text, Font font, bool useShadow) {
+			Text = text;
+			Font = font;
+			UseShadow = useShadow;
+			SkipPartsCheck = false;
+		}		
+	}
 
 	/// <summary> Class responsible for performing drawing operations on bitmaps
 	/// and for converting bitmaps into graphics api textures. </summary>
@@ -22,7 +36,7 @@ namespace ClassicalSharp {
 		
 		/// <summary>Whether chat text should be drawn and measuring using the currently bitmapped font, 
 		/// false uses the font supplied as the DrawTextArgs argument supplied to the function. </summary>
-		public bool UseBitmappedChat = false;
+		public bool UseBitmappedChat;
 		
 		/// <summary> Whether the shadows behind text (that uses shadows) is fully black. </summary>
 		public bool BlackTextShadows;
@@ -37,9 +51,6 @@ namespace ClassicalSharp {
 		/// <summary> Draws the outline of a 2D flat rectangle of the specified dimensions
 		/// at the specified coordinates in the currently bound bitmap. </summary>
 		public abstract void DrawRectBounds(FastColour colour, float lineWidth, int x, int y, int width, int height);
-		
-		/// <summary> Clears the entire bound bitmap to the specified colour. </summary>
-		public abstract void Clear(FastColour colour);
 		
 		/// <summary> Clears the entire given area to the specified colour. </summary>
 		public abstract void Clear(FastColour colour, int x, int y, int width, int height);
@@ -111,7 +122,7 @@ namespace ClassicalSharp {
 #if !LAUNCHER
 		/// <summary> Creates a 2D texture with origin at the specified window coordinates. </summary>
 		public Texture Make2DTexture(Bitmap bmp, Size used, int windowX, int windowY) {			
-			int texId = graphics.CreateTexture(bmp, false);
+			int texId = graphics.CreateTexture(bmp, false, false);
 			return new Texture(texId, windowX, windowY, used.Width, used.Height,
 			                   (float)used.Width / bmp.Width, (float)used.Height / bmp.Height);
 		}

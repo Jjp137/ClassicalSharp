@@ -13,7 +13,7 @@ namespace ClassicalSharp.Renderers {
 		const int count = 6 * 4;
 		
 		public bool ShouldRender {
-			get { return tex > 0 && !(game.EnvRenderer is MinimalEnvRenderer); }
+			get { return tex > 0 && !(game.EnvRenderer.minimal); }
 		}
 		
 		public void Init(Game game) {
@@ -65,15 +65,16 @@ namespace ClassicalSharp.Renderers {
 			
 			Matrix4 m = Matrix4.Identity, rotY, rotX;
 			Vector2 rotation = game.Camera.GetCameraOrientation();
-			Matrix4.RotateY(out rotY, rotation.X); // yaw
-			m *= rotY;
-			Matrix4.RotateX(out rotX, rotation.Y); // pitch
-			m *= rotX;
-			m *= game.Camera.tiltM;
-			game.Graphics.LoadMatrix(ref m);
 			
+			Matrix4.RotateY(out rotY, rotation.X); // yaw
+			Matrix4.Mult(out m, ref m, ref rotY);
+			Matrix4.RotateX(out rotX, rotation.Y); // pitch
+			Matrix4.Mult(out m, ref m, ref rotX);
+			Matrix4.Mult(out m, ref m, ref game.Camera.tiltM);
+			
+			game.Graphics.LoadMatrix(ref m);			
 			game.Graphics.BindVb(vb);
-			game.Graphics.DrawVb_IndexedTris(count * 6 / 4);
+			game.Graphics.DrawVb_IndexedTris(count);
 			
 			game.Graphics.Texturing = false;
 			game.Graphics.LoadMatrix(ref game.View);
@@ -89,46 +90,52 @@ namespace ClassicalSharp.Renderers {
 			game.Graphics.DeleteVb(ref vb);
 			VertexP3fT2fC4b* vertices = stackalloc VertexP3fT2fC4b[count];
 			IntPtr start = (IntPtr)vertices;
+			
 			const float pos = 1.0f;
-			TextureRec rec;
-			int col = game.World.Env.CloudsCol.Pack();
+			VertexP3fT2fC4b v; v.Colour = game.World.Env.CloudsCol.Pack();
 			
 			// Render the front quad
-			rec = new TextureRec(1/4f, 1/2f, 1/4f, 1/2f);
-			*vertices = new VertexP3fT2fC4b( pos, -pos, -pos, rec.U1, rec.V2, col); vertices++;
-			*vertices = new VertexP3fT2fC4b(-pos, -pos, -pos, rec.U2, rec.V2, col); vertices++;
-			*vertices = new VertexP3fT2fC4b(-pos,  pos, -pos, rec.U2, rec.V1, col); vertices++;
-			*vertices = new VertexP3fT2fC4b( pos,  pos, -pos, rec.U1, rec.V1, col); vertices++;
+			                        v.Z = -pos;
+			v.X =  pos; v.Y = -pos;             v.U = 0.25f; v.V = 1.00f; *vertices = v; vertices++;
+			v.X = -pos;                         v.U = 0.50f;              *vertices = v; vertices++;
+			            v.Y =  pos;                          v.V = 0.50f; *vertices = v; vertices++;
+			v.X =  pos;                         v.U = 0.25f;              *vertices = v; vertices++;
+			
 			// Render the left quad
-			rec = new TextureRec(0/4f, 1/2f, 1/4f, 1/2f);
-			*vertices = new VertexP3fT2fC4b( pos, -pos,  pos, rec.U1, rec.V2, col); vertices++;
-			*vertices = new VertexP3fT2fC4b( pos, -pos, -pos, rec.U2, rec.V2, col); vertices++;
-			*vertices = new VertexP3fT2fC4b( pos,  pos, -pos, rec.U2, rec.V1, col); vertices++;
-			*vertices = new VertexP3fT2fC4b( pos,  pos,  pos, rec.U1, rec.V1, col); vertices++;
+			v.X =  pos;
+			            v.Y = -pos; v.Z =  pos; v.U = 0.00f; v.V = 1.00f; *vertices = v; vertices++;
+			                        v.Z = -pos; v.U = 0.25f;              *vertices = v; vertices++;
+			            v.Y =  pos;                          v.V = 0.50f; *vertices = v; vertices++;
+			                        v.Z =  pos; v.U = 0.00f;              *vertices = v; vertices++;
+			
 			// Render the back quad
-			rec = new TextureRec(3/4f, 1/2f, 1/4f, 1/2f);
-			*vertices = new VertexP3fT2fC4b(-pos, -pos,  pos, rec.U1, rec.V2, col); vertices++;
-			*vertices = new VertexP3fT2fC4b( pos, -pos,  pos, rec.U2, rec.V2, col); vertices++;
-			*vertices = new VertexP3fT2fC4b( pos,  pos,  pos, rec.U2, rec.V1, col); vertices++;
-			*vertices = new VertexP3fT2fC4b(-pos,  pos,  pos, rec.U1, rec.V1, col); vertices++;
+			                        v.Z =  pos;
+			v.X = -pos; v.Y = -pos;             v.U = 0.75f; v.V = 1.00f; *vertices = v; vertices++;
+			v.X =  pos;                         v.U = 1.00f;              *vertices = v; vertices++;
+			            v.Y =  pos;                          v.V = 0.50f; *vertices = v; vertices++;
+			v.X = -pos;                         v.U = 0.75f;              *vertices = v; vertices++;
+			
 			// Render the right quad
-			rec = new TextureRec(2/4f, 1/2f, 1/4f, 1/2f);
-			*vertices = new VertexP3fT2fC4b(-pos, -pos, -pos, rec.U1, rec.V2, col); vertices++;
-			*vertices = new VertexP3fT2fC4b(-pos, -pos,  pos, rec.U2, rec.V2, col); vertices++;
-			*vertices = new VertexP3fT2fC4b(-pos,  pos,  pos, rec.U2, rec.V1, col); vertices++;
-			*vertices = new VertexP3fT2fC4b(-pos,  pos, -pos, rec.U1, rec.V1, col); vertices++;
+			v.X = -pos;
+			            v.Y = -pos; v.Z = -pos; v.U = 0.50f; v.V = 1.00f; *vertices = v; vertices++;
+			                        v.Z =  pos; v.U = 0.75f;              *vertices = v; vertices++;
+			            v.Y =  pos;                          v.V = 0.50f; *vertices = v; vertices++;
+			                        v.Z = -pos; v.U = 0.50f;              *vertices = v; vertices++;
+			
 			// Render the top quad
-			rec = new TextureRec(1/4f, 0/2f, 1/4f, 1/2f);
-			*vertices = new VertexP3fT2fC4b(-pos,  pos, -pos, rec.U2, rec.V2, col); vertices++;
-			*vertices = new VertexP3fT2fC4b(-pos,  pos,  pos, rec.U2, rec.V1, col); vertices++;
-			*vertices = new VertexP3fT2fC4b( pos,  pos,  pos, rec.U1, rec.V1, col); vertices++;
-			*vertices = new VertexP3fT2fC4b( pos,  pos, -pos, rec.U1, rec.V2, col); vertices++;
+			            v.Y =  pos;
+			v.X = -pos;             v.Z = -pos;                           *vertices = v; vertices++;
+			                        v.Z =  pos;              v.V = 0.00f; *vertices = v; vertices++;
+			v.X =  pos;                         v.U = 0.25f;              *vertices = v; vertices++;
+			                        v.Z = -pos;              v.V = 0.50f; *vertices = v; vertices++;
+			
 			// Render the bottom quad
-			rec = new TextureRec(2/4f, 0/2f, 1/4f, 1/2f);
-			*vertices = new VertexP3fT2fC4b(-pos, -pos, -pos, rec.U2, rec.V2, col); vertices++;
-			*vertices = new VertexP3fT2fC4b(-pos, -pos,  pos, rec.U2, rec.V1, col); vertices++;
-			*vertices = new VertexP3fT2fC4b( pos, -pos,  pos, rec.U1, rec.V1, col); vertices++;
-			*vertices = new VertexP3fT2fC4b( pos, -pos, -pos, rec.U1, rec.V2, col); vertices++;
+			            v.Y = -pos;
+			v.X = -pos;             v.Z = -pos; v.U = 0.75f;              *vertices = v; vertices++;
+			                        v.Z =  pos;              v.V = 0.00f; *vertices = v; vertices++;
+			v.X =  pos;                         v.U = 0.50f;              *vertices = v; vertices++;
+			                        v.Z = -pos;              v.V = 0.50f; *vertices = v; vertices++;
+			
 			vb = game.Graphics.CreateVb(start, VertexFormat.P3fT2fC4b, count);
 		}
 	}

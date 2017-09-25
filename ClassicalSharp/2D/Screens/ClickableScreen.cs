@@ -57,5 +57,8 @@ namespace ClassicalSharp.Gui.Screens {
 			return ButtonWidget.Create(game, width, text, font, LeftOnly(onClick))
 				.SetLocation(Anchor.Centre, Anchor.BottomOrRight, 0, y);
 		}
+		
+		protected static void SwitchOptions(Game g, Widget w) { g.Gui.SetNewScreen(new OptionsGroupScreen(g)); }
+		protected static void SwitchPause(Game g, Widget w) { g.Gui.SetNewScreen(new PauseScreen(g)); }
 	}
 }

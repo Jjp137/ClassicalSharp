@@ -20,7 +20,6 @@ namespace ClassicalSharp.Renderers {
 		
 		Game game;
 		internal ChunkMeshBuilder builder;
-		BlockInfo info;
 		
 		internal int[] distances;
 		internal Vector3I chunkPos = new Vector3I(int.MaxValue);
@@ -30,7 +29,6 @@ namespace ClassicalSharp.Renderers {
 		public ChunkUpdater(Game game, MapRenderer renderer) {
 			this.game = game;
 			this.renderer = renderer;
-			info = game.BlockInfo;
 			
 			game.Events.TerrainAtlasChanged += TerrainAtlasChanged;
 			game.WorldEvents.OnNewMap += OnNewMap;
@@ -108,13 +106,13 @@ namespace ClassicalSharp.Renderers {
 				if (refreshRequired) Refresh();
 			}
 			
-			renderer._1DUsed = game.TerrainAtlas1D.UsedAtlasesCount(info);
+			renderer._1DUsed = game.TerrainAtlas1D.UsedAtlasesCount();
 			elementsPerBitmap = game.TerrainAtlas1D.elementsPerBitmap;
 			ResetUsedFlags();
 		}
 		
 		void BlockDefinitionChanged(object sender, EventArgs e) {
-			renderer._1DUsed = game.TerrainAtlas1D.UsedAtlasesCount(info);
+			renderer._1DUsed = game.TerrainAtlas1D.UsedAtlasesCount();
 			ResetUsedFlags();
 			Refresh();
 		}
@@ -221,7 +219,7 @@ namespace ClassicalSharp.Renderers {
 				ChunkPartInfo[] parts = info.NormalParts;
 				for (int i = 0; i < parts.Length; i++) {
 					game.Graphics.DeleteVb(ref parts[i].VbId);
-					if (parts[i].IndicesCount == 0) continue;
+					if (parts[i].VerticesCount == 0) continue;
 					renderer.normalPartsCount[i]--;
 				}
 				info.NormalParts = null;
@@ -231,7 +229,7 @@ namespace ClassicalSharp.Renderers {
 				ChunkPartInfo[] parts = info.TranslucentParts;
 				for (int i = 0; i < parts.Length; i++) {
 					game.Graphics.DeleteVb(ref parts[i].VbId);
-					if (parts[i].IndicesCount == 0) continue;
+					if (parts[i].VerticesCount == 0) continue;
 					renderer.translucentPartsCount[i]--;
 				}
 				info.TranslucentParts = null;
@@ -345,14 +343,14 @@ namespace ClassicalSharp.Renderers {
 			if (info.NormalParts != null) {
 				ChunkPartInfo[] parts = info.NormalParts;
 				for (int i = 0; i < parts.Length; i++) {
-					if (parts[i].IndicesCount == 0) continue;
+					if (parts[i].VerticesCount == 0) continue;
 					renderer.normalPartsCount[i]++;
 				}
 			}
 			if (info.TranslucentParts != null) {
 				ChunkPartInfo[] parts = info.TranslucentParts;
 				for (int i = 0; i < parts.Length; i++) {
-					if (parts[i].IndicesCount == 0) continue;
+					if (parts[i].VerticesCount == 0) continue;
 					renderer.translucentPartsCount[i]++;
 				}
 			}

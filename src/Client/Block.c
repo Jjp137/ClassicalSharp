@@ -1,8 +1,24 @@
+#include "Block.h"
 #include "DefaultSet.h"
 #include "Funcs.h"
 #include "ExtMath.h"
-#include "Block.h"
-#include "TerrainAtlas2D.h"
+#include "TerrainAtlas.h"
+#include "Player.h"
+
+TextureLoc Block_TopTex[Block_CpeCount] = { 0,  1,  0,  2, 16,  4, 15, 17, 14, 14,
+30, 30, 18, 19, 32, 33, 34, 21, 22, 48, 49, 64, 65, 66, 67, 68, 69, 70, 71,
+72, 73, 74, 75, 76, 77, 78, 79, 13, 12, 29, 28, 24, 23,  6,  6,  7,  9,  4,
+36, 37, 16, 11, 25, 50, 38, 80, 81, 82, 83, 84, 51, 54, 86, 26, 53, 52, };
+
+TextureLoc Block_SideTex[Block_CpeCount] = { 0,  1,  3,  2, 16,  4, 15, 17, 14, 14,
+30, 30, 18, 19, 32, 33, 34, 20, 22, 48, 49, 64, 65, 66, 67, 68, 69, 70, 71,
+72, 73, 74, 75, 76, 77, 78, 79, 13, 12, 29, 28, 40, 39,  5,  5,  7,  8, 35,
+36, 37, 16, 11, 41, 50, 38, 80, 81, 82, 83, 84, 51, 54, 86, 42, 53, 52, };
+
+TextureLoc Block_BottomTex[Block_CpeCount] = { 0,  1,  2,  2, 16,  4, 15, 17, 14, 14,
+30, 30, 18, 19, 32, 33, 34, 21, 22, 48, 49, 64, 65, 66, 67, 68, 69, 70, 71,
+72, 73, 74, 75, 76, 77, 78, 79, 13, 12, 29, 28, 56, 55,  6,  6,  7, 10,  4,
+36, 37, 16, 11, 57, 50, 38, 80, 81, 82, 83, 84, 51, 54, 86, 58, 53, 52 };
 
 void Block_Reset(void) {
 	Block_Init();
@@ -10,9 +26,9 @@ void Block_Reset(void) {
 }
 
 void Block_Init(void) {
-	#define DefinedCustomBlocks_Len (Block_Count >> 5)
+	Int32 count = Array_NumElements(DefinedCustomBlocks);
 	Int32 i;
-	for (i = 0; i < DefinedCustomBlocks_Len; i++) {
+	for (i = 0; i < count; i++) {
 		DefinedCustomBlocks[i] = 0;
 	}
 
@@ -64,6 +80,46 @@ void Block_SetDrawType(BlockID block, UInt8 draw) {
 		&& Vector3_Equals(&Block_MaxBB[block], &one);
 }
 
+
+void Block_SplitUppercase(STRING_TRANSIENT String* buffer, STRING_TRANSIENT String* blockNames, Int32 start, Int32 end) {
+	Int32 i;
+	for (i = start; i < end; i++) {
+		UInt8 c = String_CharAt(blockNames, i);
+		bool upper = Char_IsUpper(c) && i > start;
+		bool nextLower = i < end - 1 && !Char_IsUpper(String_CharAt(blockNames, i + 1));
+
+		if (upper && nextLower) {
+			String_Append(buffer, ' ');
+			String_Append(buffer, Char_ToLower(c));
+		} else {
+			String_Append(buffer, c);
+		}
+	}
+}
+
+String Block_DefaultName(BlockID block) {
+#if USE16_BIT
+	if (block >= 256) return "ID " + block;
+#endif
+	if (block >= Block_CpeCount) {
+		String invalid = String_FromConstant("Invalid");
+		return invalid;
+	}
+
+	String blockNames = String_FromConstant(Block_RawNames);
+	/* Find start and end of this particular block name. */
+	Int32 start = 0, i;
+	for (i = 0; i < block; i++) {
+		start = String_IndexOf(&blockNames, ' ', start) + 1;
+	}
+	Int32 end = String_IndexOf(&blockNames, ' ', start);
+	if (end == -1) end = blockNames.length;
+
+	String buffer = String_FromRawBuffer(Block_NamePtr(block), STRING_SIZE);
+	Block_SplitUppercase(&buffer, &blockNames, start, end);
+	return buffer;
+}
+
 void Block_ResetProps(BlockID block) {
 	Block_BlocksLight[block] = DefaultSet_BlocksLight(block);
 	Block_FullBright[block] = DefaultSet_FullBright(block);
@@ -102,9 +158,9 @@ void Block_ResetProps(BlockID block) {
 		Block_SetSide(0, block);
 #endif
 	} else {
-		Block_SetTex(topTex[block], Face_YMax, block);
-		Block_SetTex(bottomTex[block], Face_YMin, block);
-		Block_SetSide(sideTex[block], block);
+		Block_SetTex(Block_TopTex[block], Face_YMax, block);
+		Block_SetTex(Block_BottomTex[block], Face_YMin, block);
+		Block_SetSide(Block_SideTex[block], block);
 	}
 }
 
@@ -117,50 +173,6 @@ Int32 Block_FindID(STRING_TRANSIENT String* name) {
 }
 
 bool Block_IsLiquid(BlockID b) { return b >= BlockID_Water && b <= BlockID_StillLava; }
-
-
-
-String Block_DefaultName(BlockID block) {
-#if USE16_BIT
-	if (block >= 256) return "ID " + block;
-#endif
-	if (block >= Block_CpeCount) {
-		return String_FromConstant("Invalid");
-	}
-
-	/* TODO: how much performance impact here. */
-	String blockNames = String_FromConstant(Block_RawNames);
-
-	/* Find start and end of this particular block name. */
-	Int32 start = 0, i;
-	for (i = 0; i < block; i++) {
-		start = String_IndexOf(&blockNames, ' ', start) + 1;
-	}
-	Int32 end = String_IndexOf(&blockNames, ' ', start);
-	if (end == -1) end = blockNames.length;
-
-	String buffer = String_FromRawBuffer(Block_NamePtr(block), STRING_SIZE);
-	Block_SplitUppercase(&buffer, &blockNames, start, end);
-	return buffer;
-}
-
-static void Block_SplitUppercase(STRING_TRANSIENT String* buffer, STRING_TRANSIENT String* blockNames, 
-	Int32 start, Int32 end) {
-	Int32 i;
-	for (i = start; i < end; i++) {
-		UInt8 c = String_CharAt(blockNames, i);
-		bool upper = Char_IsUpper(c) && i > start;
-		bool nextLower = i < end - 1 && !Char_IsUpper(String_CharAt(blockNames, i + 1));
-
-		if (upper && nextLower) {
-			String_Append(buffer, ' ');
-			String_Append(buffer, Char_ToLower(c));
-		} else {
-			String_Append(buffer, c);
-		}
-	}
-}
-
 
 
 void Block_SetSide(TextureLoc texLoc, BlockID blockId) {
@@ -253,6 +265,58 @@ void Block_RecalculateSpriteBB(void) {
 	}
 }
 
+Real32 Block_GetSpriteBB_TopY(Int32 size, Int32 tileX, Int32 tileY, Bitmap* bmp) {
+	Int32 x, y;
+	for (y = 0; y < size; y++) {
+		UInt32* row = Bitmap_GetRow(bmp, tileY * size + y) + (tileX * size);
+		for (x = 0; x < size; x++) {
+			if ((UInt8)(row[x] >> 24) != 0) {
+				return 1 - (Real32)y / size;
+			}
+		}
+	}
+	return 0;
+}
+
+Real32 Block_GetSpriteBB_BottomY(Int32 size, Int32 tileX, Int32 tileY, Bitmap* bmp) {
+	Int32 x, y;
+	for (y = size - 1; y >= 0; y--) {
+		UInt32* row = Bitmap_GetRow(bmp, tileY * size + y) + (tileX * size);
+		for (x = 0; x < size; x++) {
+			if ((UInt8)(row[x] >> 24) != 0) {
+				return 1 - (Real32)(y + 1) / size;
+			}
+		}
+	}
+	return 1;
+}
+
+Real32 Block_GetSpriteBB_LeftX(Int32 size, Int32 tileX, Int32 tileY, Bitmap* bmp) {
+	Int32 x, y;
+	for (x = 0; x < size; x++) {
+		for (y = 0; y < size; y++) {
+			UInt32* row = Bitmap_GetRow(bmp, tileY * size + y) + (tileX * size);
+			if ((UInt8)(row[x] >> 24) != 0) {
+				return (Real32)x / size;
+			}
+		}
+	}
+	return 1;
+}
+
+Real32 Block_GetSpriteBB_RightX(Int32 size, Int32 tileX, Int32 tileY, Bitmap* bmp) {
+	Int32 x, y;
+	for (x = size - 1; x >= 0; x--) {
+		for (y = 0; y < size; y++) {
+			UInt32* row = Bitmap_GetRow(bmp, tileY * size + y) + (tileX * size);
+			if ((UInt8)(row[x] >> 24) != 0) {
+				return (Real32)(x + 1) / size;
+			}
+		}
+	}
+	return 0;
+}
+
 void Block_RecalculateBB(BlockID block) {
 	Bitmap* bmp = &Atlas2D_Bitmap;
 	Int32 elemSize = Atlas2D_ElementSize;
@@ -273,80 +337,16 @@ void Block_RecalculateBB(BlockID block) {
 	Block_CalcRenderBounds(block);
 }
 
-Real32 Block_GetSpriteBB_TopY(Int32 size, Int32 tileX, Int32 tileY, Bitmap* bmp) {
-	Int32 x, y;
-	for (y = 0; y < size; y++) {
-		UInt32* row = Bitmap_GetRow(bmp, tileY * size + y) + (tileX * size);
-		for (x = 0; x < size; x++) {
-			if ((UInt8)(row[x] >> 24) != 0) {
-				return 1 - (float)y / size;
-			}
-		}
-	}
-	return 0;
+
+
+void Block_SetXStretch(BlockID block, bool stretch) {
+	Block_CanStretch[block] &= 0xC3; /* ~0x3C */
+	Block_CanStretch[block] |= (stretch ? 0x3C : (UInt8)0);
 }
 
-Real32 Block_GetSpriteBB_BottomY(Int32 size, Int32 tileX, Int32 tileY, Bitmap* bmp) {
-	Int32 x, y;
-	for (y = size - 1; y >= 0; y--) {
-		UInt32* row = Bitmap_GetRow(bmp, tileY * size + y) + (tileX * size);
-		for (x = 0; x < size; x++) {
-			if ((UInt8)(row[x] >> 24) != 0) {
-				return 1 - (float)(y + 1) / size;
-			}
-		}
-	}
-	return 1;
-}
-
-Real32 Block_GetSpriteBB_LeftX(Int32 size, Int32 tileX, Int32 tileY, Bitmap* bmp) {
-	Int32 x, y;
-	for (x = 0; x < size; x++) {
-		for (y = 0; y < size; y++) {
-			UInt32* row = Bitmap_GetRow(bmp, tileY * size + y) + (tileX * size);
-			if ((UInt8)(row[x] >> 24) != 0) {
-				return (float)x / size;
-			}
-		}
-	}
-	return 1;
-}
-
-Real32 Block_GetSpriteBB_RightX(Int32 size, Int32 tileX, Int32 tileY, Bitmap* bmp) {
-	Int32 x, y;
-	for (x = size - 1; x >= 0; x--) {
-		for (y = 0; y < size; y++) {
-			UInt32* row = Bitmap_GetRow(bmp, tileY * size + y) + (tileX * size);
-			if ((UInt8)(row[x] >> 24) != 0) {
-				return (float)(x + 1) / size;
-			}
-		}
-	}
-	return 0;
-}
-
-
-
-void Block_UpdateCullingAll(void) {
-	Int32 block, neighbour;
-	for (block = BlockID_Air; block < Block_Count; block++)
-		Block_CanStretch[block] = 0x3F;
-
-	for (block = BlockID_Air; block < Block_Count; block++) {
-		for (neighbour = BlockID_Air; neighbour < Block_Count; neighbour++) {
-			Block_CalcCulling((BlockID)block, (BlockID)neighbour);
-		}
-	}
-}
-
-void Block_UpdateCulling(BlockID block) {
-	Block_CanStretch[block] = 0x3F;
-
-	Int32 other;
-	for (other = BlockID_Air; other < Block_Count; other++) {
-		Block_CalcCulling(block, (BlockID)other);
-		Block_CalcCulling((BlockID)other, block);
-	}
+void Block_SetZStretch(BlockID block, bool stretch) {
+	Block_CanStretch[block] &= 0xFC; /* ~0x03 */
+	Block_CanStretch[block] |= (stretch ? 0x03 : (UInt8)0);
 }
 
 void Block_CalcCulling(BlockID block, BlockID other) {
@@ -376,6 +376,28 @@ void Block_CalcCulling(BlockID block, BlockID other) {
 			bothLiquid || (oMax.Y == 1 && bMin.Y == 0));
 		Block_SetHidden(block, other, Face_YMax,
 			bothLiquid || (oMin.Y == 0 && bMax.Y == 1));
+	}
+}
+
+void Block_UpdateCullingAll(void) {
+	Int32 block, neighbour;
+	for (block = BlockID_Air; block < Block_Count; block++)
+		Block_CanStretch[block] = 0x3F;
+
+	for (block = BlockID_Air; block < Block_Count; block++) {
+		for (neighbour = BlockID_Air; neighbour < Block_Count; neighbour++) {
+			Block_CalcCulling((BlockID)block, (BlockID)neighbour);
+		}
+	}
+}
+
+void Block_UpdateCulling(BlockID block) {
+	Block_CanStretch[block] = 0x3F;
+
+	Int32 other;
+	for (other = BlockID_Air; other < Block_Count; other++) {
+		Block_CalcCulling(block, (BlockID)other);
+		Block_CalcCulling((BlockID)other, block);
 	}
 }
 
@@ -417,12 +439,116 @@ bool Block_IsFaceHidden(BlockID block, BlockID other, Face face) {
 #endif
 }
 
-void Block_SetXStretch(BlockID block, bool stretch) {
-	Block_CanStretch[block] &= 0xC3; /* ~0x3C */
-	Block_CanStretch[block] |= (stretch ? 0x3C : (UInt8)0);
+
+
+#define AR_EQ1(s, x) (s.length >= 1 && Char_ToLower(s.buffer[0]) == x)
+#define AR_EQ2(s, x, y) (s.length >= 2 && Char_ToLower(s.buffer[0]) == x && Char_ToLower(s.buffer[1]) == y)
+
+BlockID AutoRotate_Find(BlockID block, String* name, const UInt8* suffix) {
+	UInt8 buffer[String_BufferSize(128)];
+	String temp = String_FromRawBuffer(buffer, 128);
+	String_AppendString(&temp, name);
+	String_AppendConstant(&temp, suffix);
+
+	Int32 rotated = Block_FindID(&temp);
+	if (rotated != -1) return (BlockID)rotated;
+	return block;
 }
 
-void Block_SetZStretch(BlockID block, bool stretch) {
-	Block_CanStretch[block] &= 0xFC; /* ~0x03 */
-	Block_CanStretch[block] |= (stretch ? 0x03 : (UInt8)0);
+BlockID AutoRotate_RotateCorner(BlockID block, String* name, Vector3 offset) {
+	if (offset.X < 0.5f && offset.Z < 0.5f) {
+		return AutoRotate_Find(block, name, "-NW");
+	} else if (offset.X >= 0.5f && offset.Z < 0.5f) {
+		return AutoRotate_Find(block, name, "-NE");
+	} else if (offset.X < 0.5f && offset.Z >= 0.5f) {
+		return AutoRotate_Find(block, name, "-SW");
+	} else if (offset.X >= 0.5f && offset.Z >= 0.5f) {
+		return AutoRotate_Find(block, name, "-SE");
+	}
+	return block;
+}
+
+BlockID AutoRotate_RotateVertical(BlockID block, String* name, Vector3 offset) {
+	if (offset.Y >= 0.5f) {
+		return AutoRotate_Find(block, name, "-U");
+	} else {
+		return AutoRotate_Find(block, name, "-D");
+	}
+}
+
+BlockID AutoRotate_RotateOther(BlockID block, String* name, Vector3 offset) {
+	/* Fence type blocks */
+	if (AutoRotate_Find(BlockID_Invalid, name, "-UD") == BlockID_Invalid) {
+		Real32 headY = LocalPlayer_Instance.Base.Base.HeadY;
+		headY = LocationUpdate_Clamp(headY);
+
+		if (headY < 45.0f || (headY >= 135.0f && headY < 225.0f) || headY > 315.0f) {
+			return AutoRotate_Find(block, name, "-WE");
+		} else {
+			return AutoRotate_Find(block, name, "-NS");
+		}
+	}
+
+	/* Thin pillar type blocks */
+	Face face = Game_SelectedPos.ClosestFace;
+	if (face == Face_YMax || face == Face_YMin)
+		return AutoRotate_Find(block, name, "-UD");
+	if (face == Face_XMax || face == Face_XMin)
+		return AutoRotate_Find(block, name, "-WE");
+	if (face == Face_ZMax || face == Face_ZMin)
+		return AutoRotate_Find(block, name, "-NS");
+	return block;
+}
+
+BlockID AutoRotate_RotateDirection(BlockID block, String* name, Vector3 offset) {
+	Vector3 SE = Vector3_Create3(+1.0f, 0.0f, 1.0f);
+	Vector3 SW = Vector3_Create3(-1.0f, 0.0f, 1.0f);
+
+	Vector3I pos = Game_SelectedPos.TranslatedPos;
+	Vector3 exact = Game_SelectedPos.Intersect;
+	Vector3 exactFlat = exact; exactFlat.Y = 0.0f;
+
+	Vector3 SEToPoint = exactFlat; SEToPoint.X -= pos.X; SEToPoint.Z -= pos.Z;
+	Vector3 SWToPoint = exactFlat; SWToPoint.X -= (pos.X + 1); SWToPoint.Z -= pos.Z;
+
+	Real32 dotSE = Vector3_Dot(&SEToPoint, &SW);
+	Real32 dotSW = Vector3_Dot(&SWToPoint, &SE);
+
+	if (dotSE <= 0.0f) { /* NorthEast */
+		if (dotSW <= 0.0f) { /* NorthWest */
+			return AutoRotate_Find(block, name, "-N");
+		} else { /* SouthEast */
+			return AutoRotate_Find(block, name, "-E");
+		}
+	} else { /* SouthWest */
+		if (dotSW <= 0.0f) { /* NorthWest */
+			return AutoRotate_Find(block, name, "-W");
+		} else { /* SouthEast */
+			return AutoRotate_Find(block, name, "-S");
+		}
+	}
+}
+
+BlockID AutoRotate_RotateBlock(BlockID block) {
+	String name = Block_Name[block];
+	Int32 dirIndex = String_LastIndexOf(&name, '-');
+	if (dirIndex == -1) return block; /* not a directional block */
+
+	String dir = String_UNSAFE_SubstringAt(&name, dirIndex + 1);
+	String baseName = String_UNSAFE_Substring(&name, 0, dirIndex);
+
+	Vector3 translated, offset;
+	Vector3I_ToVector3(&translated, &Game_SelectedPos.TranslatedPos);
+	Vector3_Subtract(&offset, &Game_SelectedPos.Intersect, &translated);
+
+	if (AR_EQ2(dir, 'n', 'w') || AR_EQ2(dir, 'n', 'e') || AR_EQ2(dir, 's', 'w') || AR_EQ2(dir, 's', 'e')) {
+		return AutoRotate_RotateCorner(block, &baseName, offset);
+	} else if (AR_EQ1(dir, 'u') || AR_EQ1(dir, 'd')) {
+		return AutoRotate_RotateVertical(block, &baseName, offset);
+	} else if (AR_EQ1(dir, 'n') || AR_EQ1(dir, 'w') || AR_EQ1(dir, 's') || AR_EQ1(dir, 'e')) {
+		return AutoRotate_RotateDirection(block, &baseName, offset);
+	} else if (AR_EQ2(dir, 'u', 'd') || AR_EQ2(dir, 'w', 'e') || AR_EQ2(dir, 'n', 's')) {
+		return AutoRotate_RotateOther(block, &baseName, offset);
+	}
+	return block;
 }

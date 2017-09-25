@@ -142,11 +142,18 @@ namespace ClassicalSharp.Gui.Screens {
 		}
 		
 		public void SetBlockTo(BlockID block) {
-			selIndex = Array.IndexOf<BlockID>(blocksTable, block);
+			selIndex = IndexOfBlock(block);
 			scrollY = (selIndex / blocksPerRow) - (maxRows - 1);
 			ClampScrollY();
 			MoveCursorToSelected();
 			RecreateBlockInfoTexture();
+		}
+		
+		int IndexOfBlock(BlockID block) {
+			for (int i = 0; i < blocksTable.Length; i++) {
+				if (blocksTable[i] == block) return i;
+			}
+			return -1;
 		}
 		
 		void MoveCursorToSelected() {
@@ -167,17 +174,19 @@ namespace ClassicalSharp.Gui.Screens {
 		void UpdateBlockInfoString(BlockID block) {
 			int index = 0;
 			buffer.Clear();
+			if (game.PureClassic) { buffer.Append(ref index, "Select block"); return; }
+			
 			buffer.Append(ref index, "&f");
-			string value = game.BlockInfo.Name[block];
+			string value = BlockInfo.Name[block];
 			buffer.Append(ref index, value);
 			if (game.ClassicMode) return;
 			
 			buffer.Append(ref index, " (ID ");
 			buffer.AppendNum(ref index, block);
 			buffer.Append(ref index, "&f, place ");
-			buffer.Append(ref index, game.Inventory.CanPlace[block] ? "&aYes" : "&cNo");
+			buffer.Append(ref index, BlockInfo.CanPlace[block] ? "&aYes" : "&cNo");
 			buffer.Append(ref index, "&f, delete ");
-			buffer.Append(ref index, game.Inventory.CanDelete[block] ? "&aYes" : "&cNo");
+			buffer.Append(ref index, BlockInfo.CanDelete[block] ? "&aYes" : "&cNo");
 			buffer.Append(ref index, "&f)");
 		}
 		
@@ -205,8 +214,8 @@ namespace ClassicalSharp.Gui.Screens {
 		void RecreateBlockTable() {
 			int blocksCount = 0;
 			int count = game.UseCPE ? Block.Count : Block.OriginalCount;
-			for (int i = 1; i < count; i++) {
-				BlockID block = game.Inventory.MapBlock(i);
+			for (int i = 0; i < count; i++) {
+				BlockID block = game.Inventory.Map[i];
 				if (Show(block)) blocksCount++;
 			}
 			
@@ -217,25 +226,22 @@ namespace ClassicalSharp.Gui.Screens {
 			blocksTable = new BlockID[blocksCount];
 			
 			int index = 0;
-			for (int i = 1; i < count; i++) {
-				BlockID block = game.Inventory.MapBlock(i);
-				if (Show(block))  blocksTable[index++] = block;
+			for (int i = 0; i < count; i++) {
+				BlockID block = game.Inventory.Map[i];
+				if (Show(block)) blocksTable[index++] = block;
 			}
 		}
 		
 		bool Show(BlockID block) {
-			if (game.PureClassic && IsHackBlock(block)) return false;
+			if (block == Block.Invalid) return false;
+
 			if (block < Block.CpeCount) {
 				int count = game.UseCPEBlocks ? Block.CpeCount : Block.OriginalCount;
-				return block < count && game.BlockInfo.Name[block] != "Invalid";
+				return block < count;
 			}
-			return game.BlockInfo.Name[block] != "Invalid";
+			return true;
 		}
 		
-		bool IsHackBlock(BlockID block) {
-			return block == Block.DoubleSlab || block == Block.Bedrock ||
-				block == Block.Grass || game.BlockInfo.IsLiquid(block);
-		}
 		
 		protected override void ContextLost() { 
 			gfx.DeleteVb(ref vb);

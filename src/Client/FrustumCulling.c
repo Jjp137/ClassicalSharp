@@ -8,8 +8,20 @@ frustum20, frustum21, frustum22, frustum23,
 frustum30, frustum31, frustum32, frustum33,
 frustum40, frustum41, frustum42, frustum43;
 
+void FrustumCulling_Normalise(Real32* plane0, Real32* plane1, Real32* plane2, Real32* plane3) {
+	Real32 val1 = *plane0;
+	Real32 val2 = *plane1;
+	Real32 val3 = *plane2;
+	Real32 t = (Real32)Math_Sqrt(val1 * val1 + val2 * val2 + val3 * val3);
+
+	*plane0 /= t;
+	*plane1 /= t;
+	*plane2 /= t;
+	*plane3 /= t;
+}
+
 bool FrustumCulling_SphereInFrustum(Real32 x, Real32 y, Real32 z, Real32 radius) {
-	float d = frustum00 * x + frustum01 * y + frustum02 * z + frustum03;
+	Real32 d = frustum00 * x + frustum01 * y + frustum02 * z + frustum03;
 	if (d <= -radius) return false;
 
 	d = frustum10 * x + frustum11 * y + frustum12 * z + frustum13;
@@ -66,16 +78,4 @@ void FrustumCulling_CalcFrustumEquations(Matrix* projection, Matrix* modelView) 
 	frustum42 = clip[11] - clip[10];
 	frustum43 = clip[15] - clip[14];
 	FrustumCulling_Normalise(&frustum40, &frustum41, &frustum42, &frustum43);
-}
-
-void FrustumCulling_Normalise(Real32* plane0, Real32* plane1, Real32* plane2, Real32* plane3) {
-	Real32 val1 = *plane0;
-	Real32 val2 = *plane1;
-	Real32 val3 = *plane2;
-	Real32 t = (Real32)Math_Sqrt(val1 * val1 + val2 * val2 + val3 * val3);
-
-	*plane0 /= t;
-	*plane1 /= t;
-	*plane2 /= t;
-	*plane3 /= t;
 }

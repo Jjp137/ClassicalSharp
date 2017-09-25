@@ -13,6 +13,7 @@ namespace ClassicalSharp.Model {
 		int furIndex;
 		
 		public SheepModel(Game game) : base(game) {
+			SurivalScore = 10;
 			furIndex = game.ModelCache.GetTextureIndex("sheep_fur.png");
 		}
 		
@@ -84,7 +85,7 @@ namespace ClassicalSharp.Model {
 		/// <inheritdoc/>		
 		public override void DrawModel(Entity p) {
 			IGraphicsApi gfx = game.Graphics;
-			gfx.BindTexture(GetTexture(p.MobTextureId));
+			gfx.BindTexture(GetTexture(p));
 			DrawRotate(-p.HeadXRadians, 0, 0, Head, true);
 			
 			DrawPart(Torso);

@@ -31,9 +31,15 @@ namespace ClassicalSharp.GraphicsAPI {
 		/// <summary> Event raised when a context is recreated after having been previously lost. </summary>
 		public event Action ContextRecreated;
 		
+		/// <summary> Whether mipmapping of terrain textures is used. </summary>
+		public bool Mipmaps;
+
+		/// <summary> Whether the backend supports setting the number of custom mipmaps levels. </summary>
+		public bool CustomMipmapsLevels;
+		
 		/// <summary> Delegate that is invoked when the current context is lost,
 		/// and is repeatedly invoked until the context can be retrieved. </summary>
-		public Action<ScheduledTask> LostContextFunction;
+		public ScheduledTaskCallback LostContextFunction;
 		
 		
 		/// <summary> Creates a new native texture with the specified dimensions and using the
@@ -41,27 +47,27 @@ namespace ClassicalSharp.GraphicsAPI {
 		/// <remarks> Note that should make every effort you can to ensure that the dimensions of the bitmap
 		/// are powers of two, because otherwise they will not display properly on certain graphics cards.	<br/>
 		/// This method returns -1 if the input image is not a 32bpp format. </remarks>
-		public int CreateTexture(Bitmap bmp, bool managedPool) {
+		public int CreateTexture(Bitmap bmp, bool managedPool, bool mipmaps) {
 			if (!Platform.Is32Bpp(bmp)) {
 				throw new ArgumentOutOfRangeException("Bitmap must be 32bpp");
 			}
 			
 			bmpBuffer.SetData(bmp, true, true);
-			return CreateTexture(bmpBuffer, managedPool);
+			return CreateTexture(bmpBuffer, managedPool, mipmaps);
 		}
 		
 		/// <summary> Creates a new native texture with the specified dimensions and FastBitmap instance
 		/// that encapsulates the pointer to the 32bpp image data.</summary>
 		/// <remarks> Note that should make every effort you can to ensure that the dimensions are powers of two,
 		/// because otherwise they will not display properly on certain graphics cards.	</remarks>
-		public int CreateTexture(FastBitmap bmp, bool managedPool) {
+		public int CreateTexture(FastBitmap bmp, bool managedPool, bool mipmaps) {
 			if (!Utils.IsPowerOf2(bmp.Width) || !Utils.IsPowerOf2(bmp.Height)) {
 				throw new ArgumentOutOfRangeException("Bitmap must have power of two dimensions");
 			}
 			if (LostContext) throw new InvalidOperationException("Cannot create texture when context lost");
 			
 			if (!bmp.IsLocked) bmp.LockBits();		
-			int texId = CreateTexture(bmp.Width, bmp.Height, bmp.Scan0, managedPool);
+			int texId = CreateTexture(bmp.Width, bmp.Height, bmp.Scan0, managedPool, mipmaps);
 			bmp.UnlockBits();
 			return texId;
 		}
@@ -69,11 +75,11 @@ namespace ClassicalSharp.GraphicsAPI {
 		/// <summary> Creates a new native texture with the specified dimensions and pointer to the 32bpp image data. </summary>
 		/// <remarks> Note that should make every effort you can to ensure that the dimensions are powers of two,
 		/// because otherwise they will not display properly on certain graphics cards.	</remarks>
-		protected abstract int CreateTexture(int width, int height, IntPtr scan0, bool managedPool);
+		protected abstract int CreateTexture(int width, int height, IntPtr scan0, bool managedPool, bool mipmaps);
 		
-		/// <summary> Updates the sub-rectangle (texX, texY) -> (texX + part.Width, texY + part.Height)
+		/// <summary> Updates the sub-rectangle (x, y) -> (x + part.Width, y + part.Height)
 		/// of the native texture associated with the given ID, with the pixels encapsulated in the 'part' instance. </summary>
-		public abstract void UpdateTexturePart(int texId, int texX, int texY, FastBitmap part);
+		public abstract void UpdateTexturePart(int texId, int x, int y, FastBitmap part, bool mipmaps);
 		
 		/// <summary> Binds the given texture id so that it can be used for rasterization. </summary>
 		public abstract void BindTexture(int texId);
@@ -84,8 +90,14 @@ namespace ClassicalSharp.GraphicsAPI {
 		/// <summary> Frees all native resources held for the given texture id. </summary>
 		public void DeleteTexture(ref Texture texture) { DeleteTexture(ref texture.ID); }
 		
-		/// <summary> Sets whether fog is currently enabled. </summary>
-		public abstract bool Fog { set; }
+		/// <summary> Enables mipmapping for subsequent texture drawing. </summary>
+		public abstract void EnableMipmaps();
+		
+		/// <summary> Disbles mipmapping for subsequent texture drawing. </summary>
+		public abstract void DisableMipmaps();
+		
+		/// <summary> Gets or sets whether fog is currently enabled. </summary>
+		public abstract bool Fog { get; set; }
 		
 		/// <summary> Sets the fog colour that is blended with final primitive colours. </summary>
 		public abstract void SetFogColour(FastColour col);
@@ -168,20 +180,19 @@ namespace ClassicalSharp.GraphicsAPI {
 		
 		/// <summary> Binds and updates the data of the current dynamic vertex buffer's data.<br/>
 		/// This method also replaces the dynamic vertex buffer's data first with the given vertices before drawing. </summary>
-		public abstract void SetDynamicVbData(int vb, VertexP3fC4b[] vertices, int count);
-		public abstract void SetDynamicVbData(int vb, VertexP3fT2fC4b[] vertices, int count);
+		public abstract void SetDynamicVbData(int vb, IntPtr vertices, int vCount);
 		
 		/// <summary> Draws the specified subset of the vertices in the current vertex buffer as lines. </summary>
 		public abstract void DrawVb_Lines(int verticesCount);
 		
 		/// <summary> Draws the specified subset of the vertices in the current vertex buffer as triangles. </summary>
-		public abstract void DrawVb_IndexedTris(int indicesCount, int startIndex);
+		public abstract void DrawVb_IndexedTris(int verticesCount, int startVertex);
 		
 		/// <summary> Draws the specified subset of the vertices in the current vertex buffer as triangles. </summary>
-		public abstract void DrawVb_IndexedTris(int indicesCount);
+		public abstract void DrawVb_IndexedTris(int verticesCount);
 		
 		/// <summary> Optimised version of DrawIndexedVb for VertexFormat.Pos3fTex2fCol4b </summary>
-		internal abstract void DrawIndexedVb_TrisT2fC4b(int indicesCount, int startIndex);
+		internal abstract void DrawIndexedVb_TrisT2fC4b(int verticesCount, int startVertex);
 		
 		protected static int[] strideSizes = { 16, 24 };
 		
@@ -230,7 +241,8 @@ namespace ClassicalSharp.GraphicsAPI {
 		public string[] ApiInfo;
 		
 		protected virtual void LoadOrthoMatrix(float width, float height) {
-			Matrix4 matrix = Matrix4.CreateOrthographicOffCenter(0, width, height, 0, -10000, 10000);
+			Matrix4 matrix;
+			Matrix4.CreateOrthographicOffCenter(0, width, height, 0, -10000, 10000, out matrix);
 			LoadMatrix(ref matrix);
 		}
 		

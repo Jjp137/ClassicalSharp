@@ -43,27 +43,33 @@ namespace ClassicalSharp {
 		protected class DrawInfo {
 			public VertexP3fT2fC4b[] vertices;
 			public int[] vIndex = new int[6], vCount = new int[6];
-			public int iCount, spriteCount, sIndex, sAdvance;
+			public int spriteCount, sIndex, sAdvance;
+			
+			public int VerticesCount() {
+				int count = spriteCount;
+				for (int i = 0; i < vCount.Length; i++) { count += vCount[i]; }
+				return count;
+			}
 			
 			public void ExpandToCapacity() {
-				int vertCount = iCount / 6 * 4;
-				if (vertices == null || (vertCount + 2) > vertices.Length) {
-					vertices = new VertexP3fT2fC4b[vertCount + 2]; 
+				int vertsCount = VerticesCount();
+				if (vertices == null || (vertsCount + 2) > vertices.Length) {
+					vertices = new VertexP3fT2fC4b[vertsCount + 2]; 
 					// ensure buffer is up to 64 bits aligned for last element
 				}
 				sIndex = 0; 
-				sAdvance = (spriteCount / 6);
+				sAdvance = spriteCount / 4;
 				
-				vIndex[Side.Left]   = (spriteCount / 6) * 4;
-				vIndex[Side.Right]  = vIndex[Side.Left]   + (vCount[Side.Left]   / 6) * 4;
-				vIndex[Side.Front]  = vIndex[Side.Right]  + (vCount[Side.Right]  / 6) * 4;
-				vIndex[Side.Back]   = vIndex[Side.Front]  + (vCount[Side.Front]  / 6) * 4;
-				vIndex[Side.Bottom] = vIndex[Side.Back]   + (vCount[Side.Back]   / 6) * 4;
-				vIndex[Side.Top]    = vIndex[Side.Bottom] + (vCount[Side.Bottom] / 6) * 4;
+				vIndex[Side.Left]   = spriteCount;
+				vIndex[Side.Right]  = vIndex[Side.Left]   + vCount[Side.Left];
+				vIndex[Side.Front]  = vIndex[Side.Right]  + vCount[Side.Right];
+				vIndex[Side.Back]   = vIndex[Side.Front]  + vCount[Side.Front];
+				vIndex[Side.Bottom] = vIndex[Side.Back]   + vCount[Side.Back];
+				vIndex[Side.Top]    = vIndex[Side.Bottom] + vCount[Side.Bottom];
 			}
 			
 			public void ResetState() {
-				iCount = 0; spriteCount = 0; sIndex = 0; sAdvance = 0;
+				spriteCount = 0; sIndex = 0; sAdvance = 0;
 				for (int i = 0; i < Side.Sides; i++) {
 					vIndex[i] = 0; vCount[i] = 0;
 				}
@@ -101,64 +107,65 @@ namespace ClassicalSharp {
 		}
 		
 		void AddSpriteVertices(BlockID block) {
-			int i = atlas.Get1DIndex(info.GetTextureLoc(block, Side.Left));
+			int i = atlas.Get1DIndex(BlockInfo.GetTextureLoc(block, Side.Left));
 			DrawInfo part = normalParts[i];
-			part.spriteCount += 6 * 4;
-			part.iCount += 6 * 4;
+			part.spriteCount += 4 * 4;
 		}
 		
 		void AddVertices(BlockID block, int face) {
-			int i = atlas.Get1DIndex(info.GetTextureLoc(block, face));
-			DrawInfo part = info.Draw[block] == DrawType.Translucent ? translucentParts[i] : normalParts[i];
-			part.iCount += 6;
-			part.vCount[face] += 6;
+			int i = atlas.Get1DIndex(BlockInfo.GetTextureLoc(block, face));
+			DrawInfo part = BlockInfo.Draw[block] == DrawType.Translucent ? translucentParts[i] : normalParts[i];
+			part.vCount[face] += 4;
 		}
 		
 		protected virtual void DrawSprite(int count) {
-			int texId = info.textures[curBlock * Side.Sides + Side.Right];
+			int texId = BlockInfo.textures[curBlock * Side.Sides + Side.Right];
 			int i = texId / elementsPerAtlas1D;
 			float vOrigin = (texId % elementsPerAtlas1D) * invVerElementSize;
-			const float blockHeight = 1;
 			
+			float x1 = X + 2.50f/16, y1 = Y,     z1 = Z + 2.5f/16;
+			float x2 = X + 13.5f/16, y2 = Y + 1, z2 = Z + 13.5f/16;
 			const float u1 = 0, u2 = 15.99f/16f;
 			float v1 = vOrigin, v2 = vOrigin + invVerElementSize * 15.99f/16f;
+			
 			DrawInfo part = normalParts[i];
 			int col = fullBright ? FastColour.WhitePacked : light.LightCol_Sprite_Fast(X, Y, Z);
 			if (tinted) col = TintBlock(curBlock, col);
+			VertexP3fT2fC4b v; v.Colour = col;
 			
 			// Draw Z axis
 			int index = part.sIndex;
-			part.vertices[index + 0] = new VertexP3fT2fC4b(X + 2.50f/16, Y, Z + 2.5f/16, u2, v2, col);
-			part.vertices[index + 1] = new VertexP3fT2fC4b(X + 2.50f/16, Y + blockHeight, Z + 2.5f/16, u2, v1, col);
-			part.vertices[index + 2] = new VertexP3fT2fC4b(X + 13.5f/16, Y + blockHeight, Z + 13.5f/16, u1, v1, col);
-			part.vertices[index + 3] = new VertexP3fT2fC4b(X + 13.5f/16, Y, Z + 13.5f/16, u1, v2, col);
+			v.X = x1; v.Y = y1; v.Z = z1; v.U = u2; v.V = v2; part.vertices[index + 0] = v;
+			          v.Y = y2;                     v.V = v1; part.vertices[index + 1] = v;
+			v.X = x2;           v.Z = z2; v.U = u1;           part.vertices[index + 2] = v;
+			          v.Y = y1;                     v.V = v2; part.vertices[index + 3] = v;
 			
 			// Draw Z axis mirrored
 			index += part.sAdvance;
-			part.vertices[index + 0] = new VertexP3fT2fC4b(X + 13.5f/16, Y, Z + 13.5f/16, u2, v2, col);
-			part.vertices[index + 1] = new VertexP3fT2fC4b(X + 13.5f/16, Y + blockHeight, Z + 13.5f/16, u2, v1, col);
-			part.vertices[index + 2] = new VertexP3fT2fC4b(X + 2.50f/16, Y + blockHeight, Z + 2.5f/16, u1, v1, col);
-			part.vertices[index + 3] = new VertexP3fT2fC4b(X + 2.50f/16, Y, Z + 2.5f/16, u1, v2, col);
+			v.X = x2; v.Y = y1; v.Z = z2; v.U = u2;           part.vertices[index + 0] = v;
+			          v.Y = y2;                     v.V = v1; part.vertices[index + 1] = v;
+			v.X = x1;           v.Z = z1; v.U = u1;           part.vertices[index + 2] = v;
+			          v.Y = y1;                     v.V = v2; part.vertices[index + 3] = v;
 
 			// Draw X axis
 			index += part.sAdvance;
-			part.vertices[index + 0] = new VertexP3fT2fC4b(X + 2.50f/16, Y, Z + 13.5f/16, u2, v2, col);
-			part.vertices[index + 1] = new VertexP3fT2fC4b(X + 2.50f/16, Y + blockHeight, Z + 13.5f/16, u2, v1, col);
-			part.vertices[index + 2] = new VertexP3fT2fC4b(X + 13.5f/16, Y + blockHeight, Z + 2.5f/16, u1, v1, col);
-			part.vertices[index + 3] = new VertexP3fT2fC4b(X + 13.5f/16, Y, Z + 2.5f/16, u1, v2, col);
+			v.X = x1; v.Y = y1; v.Z = z2; v.U = u2;           part.vertices[index + 0] = v;
+			          v.Y = y2;                     v.V = v1; part.vertices[index + 1] = v;
+			v.X = x2;           v.Z = z1; v.U = u1;           part.vertices[index + 2] = v;
+			          v.Y = y1;                     v.V = v2; part.vertices[index + 3] = v;
 			
 			// Draw X axis mirrored
 			index += part.sAdvance;
-			part.vertices[index + 0] = new VertexP3fT2fC4b(X + 13.5f/16, Y, Z + 2.5f/16, u2, v2, col);
-			part.vertices[index + 1] = new VertexP3fT2fC4b(X + 13.5f/16, Y + blockHeight, Z + 2.5f/16, u2, v1, col);
-			part.vertices[index + 2] = new VertexP3fT2fC4b(X + 2.50f/16, Y + blockHeight, Z + 13.5f/16, u1, v1, col);
-			part.vertices[index + 3] = new VertexP3fT2fC4b(X + 2.50f/16, Y, Z + 13.5f/16, u1, v2, col);
+			v.X = x2; v.Y = y1; v.Z = z1; v.U = u2;           part.vertices[index + 0] = v;
+			          v.Y = y2;                     v.V = v1; part.vertices[index + 1] = v;
+			v.X = x1;           v.Z = z2; v.U = u1;           part.vertices[index + 2] = v;
+			          v.Y = y1;                     v.V = v2; part.vertices[index + 3] = v;
 			
 			part.sIndex += 4;
 		}
 		
 		protected int TintBlock(BlockID curBlock, int col) {
-			FastColour fogCol = info.FogColour[curBlock];
+			FastColour fogCol = BlockInfo.FogColour[curBlock];
 			FastColour newCol = FastColour.Unpack(col);
 			newCol *= fogCol;
 			return newCol.Pack();

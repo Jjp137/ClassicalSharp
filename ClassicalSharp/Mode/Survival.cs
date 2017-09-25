@@ -24,7 +24,29 @@ namespace ClassicalSharp.Mode {
 		
 		public SurvivalGameMode() { invCount[8] = 10; } // tnt
 		
-		public bool HandlesKeyDown(Key key) { return false; }
+		public bool HandlesKeyDown(Key key) { return false; }		
+		
+		public bool PickingLeft() {
+			// always play delete animations, even if we aren't picking a block.
+			game.HeldBlockRenderer.ClickAnim(true);
+			byte id = game.Entities.GetClosetPlayer(game.LocalPlayer);
+			return id != EntityList.SelfID && PickEntity(id);
+		}
+		
+		public bool PickingRight() {
+			if (game.Inventory.Selected == Block.RedMushroom) {
+				DepleteInventoryHeld();
+				game.LocalPlayer.Health -= 5;
+				CheckPlayerDied();
+				return true;
+			} else if (game.Inventory.Selected == Block.BrownMushroom) {
+				DepleteInventoryHeld();
+				game.LocalPlayer.Health += 5;
+				if (game.LocalPlayer.Health > 20) game.LocalPlayer.Health = 20;
+				return true;
+			}
+			return false; 
+		}
 
 		public void PickLeft(BlockID old) {
 			Vector3I pos = game.SelectedPos.BlockPos;
@@ -33,8 +55,7 @@ namespace ClassicalSharp.Mode {
 			HandleDelete(old);
 		}
 		
-		public void PickMiddle(BlockID old) {
-		}
+		public void PickMiddle(BlockID old) { }
 		
 		public void PickRight(BlockID old, BlockID block) {
 			int index = game.Inventory.SelectedIndex, offset = game.Inventory.Offset;
@@ -43,7 +64,11 @@ namespace ClassicalSharp.Mode {
 			Vector3I pos = game.SelectedPos.TranslatedPos;
 			game.UpdateBlock(pos.X, pos.Y, pos.Z, block);
 			game.UserEvents.RaiseBlockChanged(pos, old, block);
-			
+			DepleteInventoryHeld();
+		}
+		
+		void DepleteInventoryHeld() {
+			int index = game.Inventory.SelectedIndex, offset = game.Inventory.Offset;
 			invCount[offset + index]--;
 			if (invCount[offset + index] != 0) return;
 			
@@ -52,13 +77,15 @@ namespace ClassicalSharp.Mode {
 			game.Events.RaiseHeldBlockChanged();
 		}
 		
-		public bool PickEntity(byte id) {
-			Entity entity = game.Entities[id];
-			Entity player = game.Entities[EntityList.SelfID];
+		bool PickEntity(byte id) {
+			Entity entity = game.Entities.List[id];
+			LocalPlayer p = game.LocalPlayer;
 			
-			Vector3 delta = player.Position - entity.Position;
+			Vector3 delta = p.Position - entity.Position;
+			if (delta.LengthSquared > p.ReachDistance * p.ReachDistance) return true;
+			
 			delta.Y = 0.0f;
-			delta = Vector3.Normalize(delta);
+			delta = Vector3.Normalize(delta) * 0.5f;
 			delta.Y = -0.5f;
 			
 			entity.Velocity -= delta;
@@ -67,7 +94,7 @@ namespace ClassicalSharp.Mode {
 			entity.Health -= 2;
 			if (entity.Health < 0) {
 				game.Entities.RemoveEntity(id);
-				score += GetScore(entity.ModelName);
+				score += entity.Model.SurivalScore;
 				UpdateScore();
 			}
 			return true;
@@ -135,7 +162,7 @@ namespace ClassicalSharp.Mode {
 				
 				Vector3 pos = Respawn.FindSpawnPosition(game, x, z, fail.Size);
 				fail.SetLocation(LocationUpdate.MakePos(pos, false), false);
-				game.Entities[i] = fail;
+				game.Entities.List[i] = fail;
 			}
 		}
 		
@@ -150,16 +177,6 @@ namespace ClassicalSharp.Mode {
 			for (int i = 0; i < hotbar.Length; i++)
 				hotbar[i] = Block.Air;
 			hotbar[Inventory.BlocksPerRow - 1] = Block.TNT;
-		}
-		
-		
-		int GetScore(string model) {
-			if (model == "sheep" || model == "pig") return 10;
-			if (model == "zombie") return 80;
-			if (model == "spider") return 105;
-			if (model == "skeleton") return 120;
-			if (model == "creeper") return 200;
-			return 5;
 		}
 		
 		void UpdateScore() {
@@ -192,6 +209,11 @@ namespace ClassicalSharp.Mode {
 			}
 			
 			wasOnGround = p.onGround;
+			CheckPlayerDied();
+		}
+		
+		void CheckPlayerDied() {
+			LocalPlayer p = game.LocalPlayer;
 			if (p.Health <= 0 && !showedDeathScreen) {
 				showedDeathScreen = true;
 				game.Gui.SetNewScreen(new DeathScreen(game));

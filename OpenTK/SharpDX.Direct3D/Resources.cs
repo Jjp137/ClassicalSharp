@@ -79,10 +79,6 @@ namespace SharpDX.Direct3D9 {
 			Unlock();
 		}
 		
-		public void SetData<T>( T[] data, int bytes, LockFlags flags ) where T : struct {
-			throw new NotImplementedException();
-		}
-		
 		public void Unlock() {
 			int res = UnlockFunc(comPointer);
 			if( res < 0 ) { throw new SharpDXException( res ); }

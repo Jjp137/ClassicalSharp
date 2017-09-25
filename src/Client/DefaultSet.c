@@ -1,6 +1,6 @@
-#include "BlockID.h"
-#include "BlockEnums.h"
 #include "DefaultSet.h"
+#include "BlockID.h"
+#include "Block.h"
 
 Real32 DefaultSet_Height(BlockID b) {
 	if (b == BlockID_Slab) return 0.5f;

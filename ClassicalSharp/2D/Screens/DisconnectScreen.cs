@@ -57,8 +57,7 @@ namespace ClassicalSharp.Gui.Screens {
 		}
 		
 		public override void OnResize(int width, int height) {
-			for (int i = 0; i < widgets.Length; i++)
-				widgets[i].CalculatePosition();
+			RepositionWidgets(widgets);
 			clearTime = DateTime.UtcNow.AddSeconds(0.5);
 		}
 
@@ -77,7 +76,7 @@ namespace ClassicalSharp.Gui.Screens {
 			return HandleMouseMove(widgets, mouseX, mouseY);
 		}
 		
-		public override bool HandlesMouseScroll(int delta) { return true; }
+		public override bool HandlesMouseScroll(float delta) { return true; }
 		
 		public override bool HandlesMouseUp(int mouseX, int mouseY, MouseButton button) { return true; }
 		
@@ -104,8 +103,7 @@ namespace ClassicalSharp.Gui.Screens {
 		void Redraw(double delta) {
 			gfx.Draw2DQuad(0, 0, game.Width, game.Height, top, bottom);
 			gfx.Texturing = true;
-			for (int i = 0; i < widgets.Length; i++)
-				widgets[i].Render(delta);
+			RenderWidgets(widgets, delta);
 			gfx.Texturing = false;
 		}
 		
@@ -114,7 +112,7 @@ namespace ClassicalSharp.Gui.Screens {
 			string connectString = "Connecting to " + game.IPAddress + ":" + game.Port +  "..";
 			for (int i = 0; i < game.Components.Count; i++)
 				game.Components[i].Reset(game);
-			game.BlockInfo.Reset(game);
+			BlockInfo.Reset(game);
 			
 			game.Gui.SetNewScreen(new LoadingMapScreen(game, connectString, ""));
 			game.Server.Connect(game.IPAddress, game.Port);
@@ -128,11 +126,7 @@ namespace ClassicalSharp.Gui.Screens {
 			return secsLeft == 0 ? "Reconnect" : "Reconnect in " + secsLeft;
 		}
 		
-		protected override void ContextLost() {
-			if (widgets == null) return;
-			for (int i = 0; i < widgets.Length; i++)
-				widgets[i].Dispose();
-		}
+		protected override void ContextLost() { DisposeWidgets(widgets); }
 		
 		protected override void ContextRecreated() {
 			if (gfx.LostContext) return;

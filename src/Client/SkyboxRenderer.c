@@ -1,61 +1,21 @@
 #include "SkyboxRenderer.h"
 #include "Camera.h"
-#include "EventHandler.h"
+#include "Events.h"
 #include "Game.h"
-#include "GameProps.h"
 #include "GraphicsAPI.h"
 #include "GraphicsEnums.h"
-#include "MiscEvents.h"
+#include "Events.h"
 #include "PackedCol.h"
-#include "TextureRec.h"
+#include "2DStructs.h"
 #include "VertexStructs.h"
-#include "WorldEnv.h"
+#include "World.h"
 #include "EnvRenderer.h"
 
 GfxResourceID skybox_tex, skybox_vb = -1;
-#define skybox_count (6 * 4)
-
-IGameComponent SkyboxRenderer_MakeGameComponent(void) {
-	IGameComponent comp = IGameComponent_MakeEmpty();
-	comp.Init = SkyboxRenderer_Init;
-	comp.Free = SkyboxRenderer_Free;
-	comp.OnNewMap = SkyboxRenderer_MakeVb; /* Need to recreate colour component of vertices */
-	comp.Reset = SkyboxRenderer_Reset;
-	return comp;
-}
+#define SKYBOX_COUNT (6 * 4)
 
 bool SkyboxRenderer_ShouldRender(void) {
 	return skybox_tex > 0 && !EnvRenderer_Minimal;
-}
-
-void SkyboxRenderer_Init(void) {
-	EventHandler_RegisterStream(TextureEvents_FileChanged, &SkyboxRenderer_FileChanged);
-	EventHandler_RegisterVoid(TextureEvents_PackChanged, &SkyboxRenderer_TexturePackChanged);
-	EventHandler_RegisterInt32(WorldEvents_EnvVarChanged, &SkyboxRenderer_EnvVariableChanged);
-	EventHandler_RegisterVoid(Gfx_ContextLost, &SkyboxRenderer_ContextLost);
-	EventHandler_RegisterVoid(Gfx_ContextRecreated, &SkyboxRenderer_ContextRecreated);
-}
-
-void SkyboxRenderer_Reset(void) { Gfx_DeleteTexture(&skybox_tex); }
-
-void SkyboxRenderer_Free(void) {
-	Gfx_DeleteTexture(&skybox_tex);
-	SkyboxRenderer_ContextLost();
-
-	EventHandler_UnregisterStream(TextureEvents_FileChanged, &SkyboxRenderer_FileChanged);
-	EventHandler_UnregisterVoid(TextureEvents_PackChanged, &SkyboxRenderer_TexturePackChanged);
-	EventHandler_UnregisterInt32(WorldEvents_EnvVarChanged, &SkyboxRenderer_EnvVariableChanged);
-	EventHandler_UnregisterVoid(Gfx_ContextLost, &SkyboxRenderer_ContextLost);
-	EventHandler_UnregisterVoid(Gfx_ContextRecreated, &SkyboxRenderer_ContextRecreated);
-}
-
-void SkyboxRenderer_EnvVariableChanged(EnvVar envVar) {
-	if (envVar != EnvVar_CloudsCol) return;
-	SkyboxRenderer_MakeVb();
-}
-
-void SkyboxRenderer_TexturePackChanged(void) {
-	Gfx_DeleteTexture(&skybox_tex);
 }
 
 void SkyboxRenderer_FileChanged(Stream* src) {
@@ -81,69 +41,107 @@ void SkyboxRenderer_Render(Real64 deltaTime) {
 	Matrix_RotateX(&rotX, rotation.X); /* Pitch */
 	Matrix_MulBy(&m, &rotX);
 	/* Tilt skybox too. */
-	Matrix_MulBy(&m, &Camera_ActiveCamera->tiltM);
+	Matrix_MulBy(&m, &Camera_TiltM);
 	Gfx_LoadMatrix(&m);
 
 	Gfx_BindVb(skybox_vb);
-	Gfx_DrawVb_IndexedTris(skybox_count * 6 / 4);
+	Gfx_DrawVb_IndexedTris(SKYBOX_COUNT);
 
 	Gfx_SetTexturing(false);
 	Gfx_LoadMatrix(&Game_View);
 	Gfx_SetDepthWrite(true);
 }
 
-void SkyboxRenderer_ContextLost(void) { Gfx_DeleteVb(&skybox_vb); }
-void SkyboxRenderer_ContextRecreated(void) { SkyboxRenderer_MakeVb(); }
-
 void SkyboxRenderer_MakeVb(void) {
 	if (Gfx_LostContext) return;
 	Gfx_DeleteVb(&skybox_vb);
-	VertexP3fT2fC4b vertices[skybox_count];
-	#define extent 1.0f
-	TextureRec rec;
-	PackedCol col = WorldEnv_CloudsCol;
+	VertexP3fT2fC4b vertices[SKYBOX_COUNT];
+	#define pos 1.0f
+	VertexP3fT2fC4b v; v.Colour = WorldEnv_CloudsCol;
 
 	/* Render the front quad */
-	rec = TextureRec_FromRegion(0.25f, 0.5f, 0.25f, 0.5f);
-	VertexP3fT2fC4b_Set(&vertices[ 0],  extent, -extent, -extent, rec.U1, rec.V2, col);
-	VertexP3fT2fC4b_Set(&vertices[ 1], -extent, -extent, -extent, rec.U2, rec.V2, col);
-	VertexP3fT2fC4b_Set(&vertices[ 2], -extent,  extent, -extent, rec.U2, rec.V1, col);
-	VertexP3fT2fC4b_Set(&vertices[ 3],  extent,  extent, -extent, rec.U1, rec.V1, col);
-
+	                        v.Z = -pos;
+	v.X =  pos; v.Y = -pos;             v.U = 0.25f; v.V = 1.00f; vertices[ 0] = v;
+	v.X = -pos;                         v.U = 0.50f;              vertices[ 1] = v;
+	            v.Y =  pos;                          v.V = 0.50f; vertices[ 2] = v;
+	v.X =  pos;                         v.U = 0.25f;              vertices[ 3] = v;
+	
 	/* Render the left quad */
-	rec = TextureRec_FromRegion(0.00f, 0.5f, 0.25f, 0.5f);
-	VertexP3fT2fC4b_Set(&vertices[ 4],  extent, -extent,  extent, rec.U1, rec.V2, col);
-	VertexP3fT2fC4b_Set(&vertices[ 5],  extent, -extent, -extent, rec.U2, rec.V2, col);
-	VertexP3fT2fC4b_Set(&vertices[ 6],  extent,  extent, -extent, rec.U2, rec.V1, col);
-	VertexP3fT2fC4b_Set(&vertices[ 7],  extent,  extent,  extent, rec.U1, rec.V1, col);
-
+	v.X =  pos;
+	            v.Y = -pos; v.Z =  pos; v.U = 0.00f; v.V = 1.00f; vertices[ 4] = v;
+	                        v.Z = -pos; v.U = 0.25f;              vertices[ 5] = v;
+	            v.Y =  pos;                          v.V = 0.50f; vertices[ 6] = v;
+	                        v.Z =  pos; v.U = 0.00f;              vertices[ 7] = v;
+	
 	/* Render the back quad */
-	rec = TextureRec_FromRegion(0.75f, 0.5f, 0.25f, 0.5f);
-	VertexP3fT2fC4b_Set(&vertices[ 8], -extent, -extent,  extent, rec.U1, rec.V2, col);
-	VertexP3fT2fC4b_Set(&vertices[ 9],  extent, -extent,  extent, rec.U2, rec.V2, col);
-	VertexP3fT2fC4b_Set(&vertices[10],  extent,  extent,  extent, rec.U2, rec.V1, col);
-	VertexP3fT2fC4b_Set(&vertices[11], -extent,  extent,  extent, rec.U1, rec.V1, col);
-
+	                        v.Z =  pos;
+	v.X = -pos; v.Y = -pos;             v.U = 0.75f; v.V = 1.00f; vertices[ 8] = v;
+	v.X =  pos;                         v.U = 1.00f;              vertices[ 9] = v;
+	            v.Y =  pos;                          v.V = 0.50f; vertices[10] = v;
+	v.X = -pos;                         v.U = 0.75f;              vertices[11] = v;
+	
 	/* Render the right quad */
-	rec = TextureRec_FromRegion(0.50f, 0.5f, 0.25f, 0.5f);
-	VertexP3fT2fC4b_Set(&vertices[12], -extent, -extent, -extent, rec.U1, rec.V2, col);
-	VertexP3fT2fC4b_Set(&vertices[13], -extent, -extent, extent, rec.U2, rec.V2, col);
-	VertexP3fT2fC4b_Set(&vertices[14], -extent, extent, extent, rec.U2, rec.V1, col);
-	VertexP3fT2fC4b_Set(&vertices[15], -extent, extent, -extent, rec.U1, rec.V1, col);
-
+	v.X = -pos;
+	            v.Y = -pos; v.Z = -pos; v.U = 0.50f; v.V = 1.00f; vertices[12] = v;
+	                        v.Z =  pos; v.U = 0.75f;              vertices[13] = v;
+	            v.Y =  pos;                          v.V = 0.50f; vertices[14] = v;
+	                        v.Z = -pos; v.U = 0.50f;              vertices[15] = v;
+	
 	/* Render the top quad */
-	rec = TextureRec_FromRegion(0.25f, 0.0f, 0.25f, 0.5f);
-	VertexP3fT2fC4b_Set(&vertices[16], -extent, extent, -extent, rec.U2, rec.V2, col);
-	VertexP3fT2fC4b_Set(&vertices[17], -extent, extent, extent, rec.U2, rec.V1, col);
-	VertexP3fT2fC4b_Set(&vertices[18], extent, extent, extent, rec.U1, rec.V1, col);
-	VertexP3fT2fC4b_Set(&vertices[19], extent, extent, -extent, rec.U1, rec.V2, col);
-
+	            v.Y =  pos;
+	v.X = -pos;             v.Z = -pos;                           vertices[16] = v;
+	                        v.Z =  pos;              v.V = 0.00f; vertices[17] = v;
+	v.X =  pos;                         v.U = 0.25f;              vertices[18] = v;
+	                        v.Z = -pos;              v.V = 0.50f; vertices[19] = v;
+	
 	/* Render the bottom quad */
-	rec = TextureRec_FromRegion(0.50f, 0.0f, 0.25f, 0.5f);
-	VertexP3fT2fC4b_Set(&vertices[20], -extent, -extent, -extent, rec.U2, rec.V2, col);
-	VertexP3fT2fC4b_Set(&vertices[21], -extent, -extent,  extent, rec.U2, rec.V1, col);
-	VertexP3fT2fC4b_Set(&vertices[22],  extent, -extent,  extent, rec.U1, rec.V1, col);
-	VertexP3fT2fC4b_Set(&vertices[23],  extent, -extent, -extent, rec.U1, rec.V2, col);
+	            v.Y = -pos;
+	v.X = -pos;             v.Z = -pos; v.U = 0.75f;              vertices[20] = v;
+	                        v.Z =  pos;              v.V = 0.00f; vertices[21] = v;
+	v.X =  pos;                         v.U = 0.50f;              vertices[22] = v;
+	                        v.Z = -pos;              v.V = 0.50f; vertices[23] = v;
 
-	skybox_vb = Gfx_CreateVb(vertices, VertexFormat_P3fT2fC4b, skybox_count);
+	skybox_vb = Gfx_CreateVb(vertices, VertexFormat_P3fT2fC4b, SKYBOX_COUNT);
+}
+
+void SkyboxRenderer_ContextLost(void) { Gfx_DeleteVb(&skybox_vb); }
+void SkyboxRenderer_ContextRecreated(void) { SkyboxRenderer_MakeVb(); }
+
+void SkyboxRenderer_EnvVariableChanged(EnvVar envVar) {
+	if (envVar != EnvVar_CloudsCol) return;
+	SkyboxRenderer_MakeVb();
+}
+
+void SkyboxRenderer_TexturePackChanged(void) {
+	Gfx_DeleteTexture(&skybox_tex);
+}
+
+void SkyboxRenderer_Init(void) {
+	Event_RegisterStream(&TextureEvents_FileChanged, &SkyboxRenderer_FileChanged);
+	Event_RegisterVoid(&TextureEvents_PackChanged, &SkyboxRenderer_TexturePackChanged);
+	Event_RegisterInt32(&WorldEvents_EnvVarChanged, &SkyboxRenderer_EnvVariableChanged);
+	Event_RegisterVoid(&GfxEvents_ContextLost, &SkyboxRenderer_ContextLost);
+	Event_RegisterVoid(&GfxEvents_ContextRecreated, &SkyboxRenderer_ContextRecreated);
+}
+
+void SkyboxRenderer_Reset(void) { Gfx_DeleteTexture(&skybox_tex); }
+
+void SkyboxRenderer_Free(void) {
+	Gfx_DeleteTexture(&skybox_tex);
+	SkyboxRenderer_ContextLost();
+
+	Event_UnregisterStream(&TextureEvents_FileChanged, &SkyboxRenderer_FileChanged);
+	Event_UnregisterVoid(&TextureEvents_PackChanged, &SkyboxRenderer_TexturePackChanged);
+	Event_UnregisterInt32(&WorldEvents_EnvVarChanged, &SkyboxRenderer_EnvVariableChanged);
+	Event_UnregisterVoid(&GfxEvents_ContextLost, &SkyboxRenderer_ContextLost);
+	Event_UnregisterVoid(&GfxEvents_ContextRecreated, &SkyboxRenderer_ContextRecreated);
+}
+
+IGameComponent SkyboxRenderer_MakeGameComponent(void) {
+	IGameComponent comp = IGameComponent_MakeEmpty();
+	comp.Init = SkyboxRenderer_Init;
+	comp.Free = SkyboxRenderer_Free;
+	comp.OnNewMap = SkyboxRenderer_MakeVb; /* Need to recreate colour component of vertices */
+	comp.Reset = SkyboxRenderer_Reset;
+	return comp;
 }

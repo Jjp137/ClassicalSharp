@@ -94,6 +94,9 @@ namespace SharpDX.Direct3D9
 		
 		private delegate int DXSetTextureStageState(IntPtr comPointer, int stage, int type, int value);
 		private DXSetTextureStageState SetTextureStageStateFunc;
+
+		private delegate int DXSetSamplerState(IntPtr comPointer, int sampler, int type, int value);
+		private DXSetSamplerState SetSamplerStateFunc;
 		
 		private delegate int DXDrawPrimitives(IntPtr comPointer, int type, int startVertex, int primitiveCount);
 		private DXDrawPrimitives DrawPrimitivesFunc;
@@ -133,6 +136,7 @@ namespace SharpDX.Direct3D9
 			SetRenderStateFunc = (DXSetRenderState) GetFunc(comPtr, 57, typeof(DXSetRenderState));
 			SetTextureFunc = (DXSetTexture) GetFunc(comPtr, 65, typeof(DXSetTexture));
 			SetTextureStageStateFunc = (DXSetTextureStageState) GetFunc(comPtr, 67, typeof(DXSetTextureStageState));
+			SetSamplerStateFunc = (DXSetSamplerState) GetFunc(comPtr, 69, typeof(DXSetSamplerState));
 			DrawPrimitivesFunc = (DXDrawPrimitives) GetFunc(comPtr, 81, typeof(DXDrawPrimitives));
 			DrawIndexedPrimitivesFunc = (DXDrawIndexedPrimitives) GetFunc(comPtr, 82, typeof(DXDrawIndexedPrimitives));
 			SetVertexFormatFunc = (DXSetVertexFormat) GetFunc(comPtr, 89, typeof(DXSetVertexFormat));
@@ -269,9 +273,8 @@ namespace SharpDX.Direct3D9
 		}
 		
 		public void SetSamplerState(int sampler, SamplerState type, int value) {
-			// TODO: implement this
-			/*int res = Interop.Calli(comPointer, sampler, (int)type, value, (*(IntPtr**)comPointer)[69]);
-            if( res < 0 ) { throw new SharpDXException( res ); }*/
+			int res = SetSamplerStateFunc(comPointer, sampler, (int)type, value);
+            if( res < 0 ) { throw new SharpDXException( res ); }
         }
 		
 		public void DrawPrimitives(PrimitiveType type, int startVertex, int primitiveCount) {

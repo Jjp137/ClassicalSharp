@@ -3,6 +3,7 @@
 using System;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Runtime.InteropServices;
 using System.Threading;
 using OpenTK;
 using SharpDX;
@@ -66,11 +67,12 @@ namespace ClassicalSharp.GraphicsAPI {
 					device = d3d.CreateDevice(adapter, DeviceType.Hardware, windowHandle, createFlags, args);
 				}
 			}
-			
+
+			CustomMipmapsLevels = true;
 			caps = device.Capabilities;
-			viewStack = new MatrixStack(32, device, TransformState.View);
-			projStack = new MatrixStack(4, device, TransformState.Projection);
-			texStack = new MatrixStack(4, device, TransformState.Texture0);
+			viewStack = new MatrixStack(device, TransformState.View);
+			projStack = new MatrixStack(device, TransformState.Projection);
+			texStack = new MatrixStack(device, TransformState.Texture0);
 			SetDefaultRenderStates();
 			InitDynamicBuffers();
 		}
@@ -127,6 +129,7 @@ namespace ClassicalSharp.GraphicsAPI {
 
 		bool fogEnable;
 		public override bool Fog {
+			get { return fogEnable; }
 			set { if (value == fogEnable) return;
 				fogEnable = value; device.SetRenderState(RenderState.FogEnable, value);
 			}
@@ -134,7 +137,7 @@ namespace ClassicalSharp.GraphicsAPI {
 
 		int fogCol, lastFogCol = FastColour.BlackPacked;
 		public override void SetFogColour(FastColour col) {
-			fogCol = col.ToArgb();
+			fogCol = col.Pack();
 			if (fogCol == lastFogCol) return;
 			
 			device.SetRenderState(RenderState.FogColor, fogCol);
@@ -182,25 +185,56 @@ namespace ClassicalSharp.GraphicsAPI {
 			set { if (!value) device.SetTexture(0, null); }
 		}
 
-		protected override int CreateTexture(int width, int height, IntPtr scan0, bool managedPool) {
+		protected override int CreateTexture(int width, int height, IntPtr scan0, bool managedPool, bool mipmaps) {
 			D3D.Texture texture = null;
+			int levels = 1 + (mipmaps ? MipmapsLevels(width, height) : 0);
+
 			if (managedPool) {
-				texture = device.CreateTexture(width, height, 0, Usage.None, Format.A8R8G8B8, Pool.Managed);
+				texture = device.CreateTexture(width, height, levels, Usage.None, Format.A8R8G8B8, Pool.Managed);
 				texture.SetData(0, LockFlags.None, scan0, width * height * 4);
+
+				if (mipmaps) DoMipmaps(texture, 0, 0, width, height, scan0, false);
 			} else {
-				D3D.Texture sys = device.CreateTexture(width, height, 0, Usage.None, Format.A8R8G8B8, Pool.SystemMemory);
+				D3D.Texture sys = device.CreateTexture(width, height, levels, Usage.None, Format.A8R8G8B8, Pool.SystemMemory);
 				sys.SetData(0, LockFlags.None, scan0, width * height * 4);
 
-				texture = device.CreateTexture(width, height, 0, Usage.None, Format.A8R8G8B8, Pool.Default);
+				texture = device.CreateTexture(width, height, levels, Usage.None, Format.A8R8G8B8, Pool.Default);
 				device.UpdateTexture(sys, texture);				
 				sys.Dispose();
 			}
 			return GetOrExpand(ref textures, texture, texBufferSize);
 		}
+
+		unsafe void DoMipmaps(D3D.Texture texture, int x, int y, int width, 
+			int height, IntPtr scan0, bool partial) {
+			IntPtr prev = scan0;
+			int lvls = MipmapsLevels(width, height);
+
+			for (int lvl = 1; lvl <= lvls; lvl++) {
+				x /= 2; y /= 2; 
+				if (width > 1)   width /= 2;
+				if (height > 1) height /= 2;
+				int size = width * height * 4;
+
+				IntPtr cur = Marshal.AllocHGlobal(size);
+				GenMipmaps(width, height, cur, prev);
+
+				if (partial) {
+					texture.SetPartData(lvl, LockFlags.None, cur, x, y, width, height);
+				} else {
+					texture.SetData(lvl, LockFlags.None, cur, size);
+				}
+
+				if (prev != scan0) Marshal.FreeHGlobal(prev);
+				prev = cur;
+			}
+			if (prev != scan0) Marshal.FreeHGlobal(prev);
+		}
 		
-		public override void UpdateTexturePart(int texId, int texX, int texY, FastBitmap part) {
+		public override void UpdateTexturePart(int texId, int x, int y, FastBitmap part, bool mipmaps) {
 			D3D.Texture texture = textures[texId];
-			texture.SetPartData(0, LockFlags.None, part.Scan0, texX, texY, part.Width, part.Height);
+			texture.SetPartData(0, LockFlags.None, part.Scan0, x, y, part.Width, part.Height);
+			if (Mipmaps) DoMipmaps(texture, x, y, part.Width, part.Height, part.Scan0, true);
 		}
 
 		public override void BindTexture(int texId) {
@@ -211,13 +245,25 @@ namespace ClassicalSharp.GraphicsAPI {
 			Delete(textures, ref texId);
 		}
 
+		public override void EnableMipmaps() {
+			if (Mipmaps) {
+				device.SetSamplerState(0, SamplerState.MipFilter, (int)TextureFilter.Linear);
+			}
+		}
+
+		public override void DisableMipmaps() {
+			if (Mipmaps) {
+				device.SetSamplerState(0, SamplerState.MipFilter, (int)TextureFilter.None);
+			}
+		}
+
 		int lastClearCol;
 		public override void Clear() {
 			device.Clear(ClearFlags.Target | ClearFlags.ZBuffer, lastClearCol, 1f, 0);
 		}
 
 		public override void ClearColour(FastColour col) {
-			lastClearCol = col.ToArgb();
+			lastClearCol = col.Pack();
 		}
 
 		public override bool ColourWrite {
@@ -250,8 +296,8 @@ namespace ClassicalSharp.GraphicsAPI {
 		
 		public override int CreateDynamicVb(VertexFormat format, int maxVertices) {
 			int size = maxVertices * strideSizes[(int)format];
-			DataBuffer buffer = device.CreateVertexBuffer(size, Usage.Dynamic,
-			                                              formatMapping[(int)format], Pool.Default);
+			DataBuffer buffer = device.CreateVertexBuffer(size, Usage.Dynamic | Usage.WriteOnly,
+				formatMapping[(int)format], Pool.Default);
 			return GetOrExpand(ref vBuffers, buffer, iBufferSize);
 		}
 		
@@ -266,14 +312,16 @@ namespace ClassicalSharp.GraphicsAPI {
 		
 		public override int CreateVb(IntPtr vertices, VertexFormat format, int count) {
 			int size = count * strideSizes[(int)format];
-			DataBuffer buffer = device.CreateVertexBuffer(size, Usage.None, formatMapping[(int)format], Pool.Managed);
+			DataBuffer buffer = device.CreateVertexBuffer(size, Usage.WriteOnly, 
+				formatMapping[(int)format], Pool.Default);
 			buffer.SetData(vertices, size, LockFlags.None);
 			return GetOrExpand(ref vBuffers, buffer, vBufferSize);
 		}
-		
+
 		public override int CreateIb(IntPtr indices, int indicesCount) {
 			int size = indicesCount * sizeof(ushort);
-			DataBuffer buffer = device.CreateIndexBuffer(size, Usage.None, Format.Index16, Pool.Managed);
+			DataBuffer buffer = device.CreateIndexBuffer(size, Usage.WriteOnly,
+				Format.Index16, Pool.Managed);
 			buffer.SetData(indices, size, LockFlags.None);
 			return GetOrExpand(ref iBuffers, buffer, iBufferSize);
 		}
@@ -287,7 +335,11 @@ namespace ClassicalSharp.GraphicsAPI {
 		}
 
 		int batchStride;
+		VertexFormat batchFormat = (VertexFormat)999;
 		public override void SetBatchFormat(VertexFormat format) {
+			if (format == batchFormat) return;
+			batchFormat = format;
+
 			device.SetVertexFormat(formatMapping[(int)format]);
 			batchStride = strideSizes[(int)format];
 		}
@@ -301,22 +353,22 @@ namespace ClassicalSharp.GraphicsAPI {
 		}
 
 		public override void DrawVb_Lines(int verticesCount) {
-			device.DrawPrimitives(PrimitiveType.LineList, 0, verticesCount / 2);
+			device.DrawPrimitives(PrimitiveType.LineList, 0, verticesCount >> 1);
 		}
 
-		public override void DrawVb_IndexedTris(int indicesCount, int startIndex) {
-			device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, startIndex / 6 * 4,
-			                             indicesCount / 6 * 4, startIndex, indicesCount / 3);
+		public override void DrawVb_IndexedTris(int verticesCount, int startVertex) {
+			device.DrawIndexedPrimitives(PrimitiveType.TriangleList, startVertex, 0,
+				verticesCount, 0, verticesCount >> 1);
 		}
 
-		public override void DrawVb_IndexedTris(int indicesCount) {
+		public override void DrawVb_IndexedTris(int verticesCount) {
 			device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0,
-			                             indicesCount / 6 * 4, 0, indicesCount / 3);
+				verticesCount, 0, verticesCount >> 1);
 		}
 		
-		internal override void DrawIndexedVb_TrisT2fC4b(int indicesCount, int startIndex) {
-			device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, startIndex / 6 * 4,
-			                             indicesCount / 6 * 4, startIndex, indicesCount / 3);
+		internal override void DrawIndexedVb_TrisT2fC4b(int verticesCount, int startVertex) {
+			device.DrawIndexedPrimitives(PrimitiveType.TriangleList, startVertex, 0,
+				verticesCount, 0, verticesCount >> 1);
 		}
 		#endregion
 
@@ -335,7 +387,7 @@ namespace ClassicalSharp.GraphicsAPI {
 
 		public unsafe override void LoadMatrix(ref Matrix4 matrix) {
 			if (curStack == texStack) {
-				matrix.M31 = matrix.M41; // NOTE: this hack fixes the texture movements.
+				matrix.Row2.X = matrix.Row3.X; // NOTE: this hack fixes the texture movements.
 				device.SetTextureStageState(0, TextureStage.TextureTransformFlags, (int)TextureTransform.Count2);
 			}
 			curStack.SetTop(ref matrix);
@@ -368,8 +420,8 @@ namespace ClassicalSharp.GraphicsAPI {
 			Device device;
 			TransformState matrixType;
 
-			public MatrixStack(int capacity, Device device, TransformState matrixType) {
-				stack = new Matrix4[capacity];
+			public MatrixStack(Device device, TransformState matrixType) {
+				stack = new Matrix4[4];
 				stack[0] = Matrix4.Identity;
 				this.device = device;
 				this.matrixType = matrixType;
@@ -432,8 +484,9 @@ namespace ClassicalSharp.GraphicsAPI {
 		
 		bool vsync = false;
 		public override void SetVSync(Game game, bool value) {
-			vsync = value;
 			game.VSync = value;
+			if (vsync == value) return;
+			vsync = value;
 
 			LoseContext(" (toggling VSync)");
 			RecreateDevice(game);
@@ -456,8 +509,8 @@ namespace ClassicalSharp.GraphicsAPI {
 		}
 		
 		void SetDefaultRenderStates() {
-			device.SetRenderState(RenderState.FillMode, (int)FillMode.Solid);
 			FaceCulling = false;
+			VertexFormat batchFormat = (VertexFormat)999;
 			device.SetRenderState(RenderState.ColorVertex, false);
 			device.SetRenderState(RenderState.Lighting, false);
 			device.SetRenderState(RenderState.SpecularEnable, false);
@@ -524,11 +577,11 @@ namespace ClassicalSharp.GraphicsAPI {
 		}
 		
 		protected unsafe override void LoadOrthoMatrix(float width, float height) {
-			Matrix4 matrix = Matrix4.CreateOrthographicOffCenter(0, width, height, 0, -10000, 10000);
+			Matrix4 matrix;
+			Matrix4.CreateOrthographicOffCenter(0, width, height, 0, -10000, 10000, out matrix);
 			const float zN = -10000, zF = 10000;
-			matrix.M33 = 1 / (zN - zF);
-			matrix.M43 = zN / (zN - zF);
-			matrix.M44 = 1;
+			matrix.Row2.Z = 1 / (zN - zF);
+			matrix.Row3.Z = zN / (zN - zF);
 			curStack.SetTop(ref matrix);
 		}
 		

@@ -438,7 +438,7 @@ namespace ClassicalSharp.GraphicsAPI
 		bool glLists = false;
 		int activeList = -1;
 		const int dynamicListId = 1234567891;
-		object dynamicListData = null;
+		IntPtr dynamicListData;
 		
 		public SDL2GLApi() {
 			GLFuncs.LoadEntryPoints();
@@ -448,6 +448,7 @@ namespace ClassicalSharp.GraphicsAPI
 			GLFuncs.GetIntegerv(GetPName.MaxTextureSize, &texDims);
 			texDimensions = texDims;
 			glLists = Options.GetBool(OptionsKey.ForceOldOpenGL, false);
+			CustomMipmapsLevels = !glLists;
 			CheckVboSupport();
 			
 			base.InitDynamicBuffers();
@@ -473,6 +474,7 @@ namespace ClassicalSharp.GraphicsAPI
 				GLFuncs.UseArbVboAddresses();
 			} else {
 				glLists = true;
+				CustomMipmapsLevels = false;
 			}
 		}
 
@@ -587,27 +589,64 @@ namespace ClassicalSharp.GraphicsAPI
 		}
 
 		protected override int CreateTexture(int width, int height, IntPtr scan0, bool managedPool, bool mipmaps) {
-			// TODO: integrate mipmaps
 			int texId = 0;
 			GLFuncs.GenTextures(1, &texId);
 			GLFuncs.BindTexture(TextureTarget.Texture2D, texId);
-			GLFuncs.TexParameteri(TextureTarget.Texture2D, TextureParameterName.MinFilter, (int)TextureFilter.Nearest);
 			GLFuncs.TexParameteri(TextureTarget.Texture2D, TextureParameterName.MagFilter, (int)TextureFilter.Nearest);
 
+			if (mipmaps) {
+				GLFuncs.TexParameteri(TextureTarget.Texture2D, TextureParameterName.MinFilter, (int)TextureFilter.NearestMipmapLinear);
+				if (CustomMipmapsLevels) {
+					GLFuncs.TexParameteri(TextureTarget.Texture2D, TextureParameterName.TextureMaxLevel, MipmapsLevels(width, height));
+				}
+			} else {
+				GLFuncs.TexParameteri(TextureTarget.Texture2D, TextureParameterName.MinFilter, (int)TextureFilter.Nearest);
+			}
+
 			GLFuncs.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba, width, height,
-			                   GlPixelFormat.Bgra, PixelType.UnsignedByte, scan0);
+				GlPixelFormat.Bgra, PixelType.UnsignedByte, scan0);
+
+			if (mipmaps) DoMipmaps(texId, 0, 0, width, height, scan0, false);
 			return texId;
+		}
+
+		unsafe void DoMipmaps(int texId, int x, int y, int width,
+			int height, IntPtr scan0, bool partial) {
+			IntPtr prev = scan0;
+			int lvls = MipmapsLevels(width, height);
+
+			for (int lvl = 1; lvl <= lvls; lvl++) {
+				x /= 2; y /= 2;
+				if (width > 1)   width /= 2;
+				if (height > 1) height /= 2;
+				int size = width * height * 4;
+
+				IntPtr cur = Marshal.AllocHGlobal(size);
+				GenMipmaps(width, height, cur, prev);
+
+				if (partial) {
+					GLFuncs.TexSubImage2D(TextureTarget.Texture2D, lvl, x, y, width, height,
+						GlPixelFormat.Bgra, PixelType.UnsignedByte, cur);
+				} else {
+					GLFuncs.TexImage2D(TextureTarget.Texture2D, lvl, PixelInternalFormat.Rgba, width, height,
+						GlPixelFormat.Bgra, PixelType.UnsignedByte, cur);
+				}
+
+				if (prev != scan0) Marshal.FreeHGlobal(prev);
+				prev = cur;
+			}
+			if (prev != scan0) Marshal.FreeHGlobal(prev);
 		}
 
 		public override void BindTexture(int texture) {
 			GLFuncs.BindTexture(TextureTarget.Texture2D, texture);
 		}
 
-		public override void UpdateTexturePart(int texId, int texX, int texY, FastBitmap part, bool mipmaps) {
-			// TODO: integrate mipmaps
+		public override void UpdateTexturePart(int texId, int x, int y, FastBitmap part, bool mipmaps) {
 			GLFuncs.BindTexture(TextureTarget.Texture2D, texId);
-			GLFuncs.TexSubImage2D(TextureTarget.Texture2D, 0, texX, texY, part.Width, part.Height,
-			                 GlPixelFormat.Bgra, PixelType.UnsignedByte, part.Scan0);
+			GLFuncs.TexSubImage2D(TextureTarget.Texture2D, 0, x, y, part.Width, part.Height,
+				GlPixelFormat.Bgra, PixelType.UnsignedByte, part.Scan0);
+			if (mipmaps) DoMipmaps(texId, x, y, part.Width, part.Height, part.Scan0, true);
 		}
 
 		public override void DeleteTexture(ref int texId) {
@@ -649,7 +688,7 @@ namespace ClassicalSharp.GraphicsAPI
 					GLFuncs.TexCoordPointer(2, PointerType.Float, stride, (IntPtr)((byte*)vertices + 16));
 				}
 
-				GLFuncs.DrawElements(BeginMode.Triangles, count * 6 / 4, DrawElementsType.UnsignedShort, (IntPtr)indicesPtr);
+				GLFuncs.DrawElements(BeginMode.Triangles, (count >> 2) * 6, DrawElementsType.UnsignedShort, (IntPtr)indicesPtr);
 				GLFuncs.EndList();
 				return list;
 			}
@@ -755,37 +794,37 @@ namespace ClassicalSharp.GraphicsAPI
 			GLFuncs.DrawArrays(BeginMode.Lines, 0, verticesCount);
 		}
 
-		public override void DrawVb_IndexedTris(int indicesCount, int startIndex) {
-			if (glLists) { 
-				if (activeList != dynamicListId) { GLFuncs.CallList(activeList); }
-				else { DrawDynamicTriangles(indicesCount, startIndex); }
-				return;
-			}
-			
-			setupBatchFunc_Range(startIndex);
-			GLFuncs.DrawElements(BeginMode.Lines, indicesCount, indexType, IntPtr.Zero);
-		}
-		
-		public override void DrawVb_IndexedTris(int indicesCount) {
+		public override void DrawVb_IndexedTris(int verticesCount, int startVertex) {
 			if (glLists) {
 				if (activeList != dynamicListId) { GLFuncs.CallList(activeList); }
-				else { DrawDynamicTriangles(indicesCount, 0); }
+				else { DrawDynamicTriangles(verticesCount, startVertex); }
+				return;
+			}
+
+			setupBatchFunc_Range(startVertex);
+			GLFuncs.DrawElements(BeginMode.Triangles, (verticesCount >> 2) * 6, indexType, IntPtr.Zero);
+		}
+
+		public override void DrawVb_IndexedTris(int verticesCount) {
+			if (glLists) {
+				if (activeList != dynamicListId) { GLFuncs.CallList(activeList); }
+				else { DrawDynamicTriangles(verticesCount, 0); }
 				return;
 			}
 
 			setupBatchFunc();
-			GLFuncs.DrawElements(BeginMode.Triangles, indicesCount, indexType, IntPtr.Zero);
+			GLFuncs.DrawElements(BeginMode.Triangles, (verticesCount >> 2) * 6, indexType, IntPtr.Zero);
 		}
 		
-		void DrawDynamicLines(int verticesCount) {
+		unsafe void DrawDynamicLines(int verticesCount) {
 			GLFuncs.Begin(BeginMode.Lines);
 			if (batchFormat == VertexFormat.P3fT2fC4b) {
-				VertexP3fT2fC4b[] ptr = (VertexP3fT2fC4b[])dynamicListData;
+				VertexP3fT2fC4b* ptr = (VertexP3fT2fC4b*)dynamicListData;
 				for (int i = 0; i < verticesCount; i += 2) {
 					V(ptr[i + 0]); V(ptr[i + 1]);
 				}
 			} else {
-				VertexP3fC4b[] ptr = (VertexP3fC4b[])dynamicListData;
+				VertexP3fC4b* ptr = (VertexP3fC4b*)dynamicListData;
 				for (int i = 0; i < verticesCount; i += 2) {
 					V(ptr[i + 0]); V(ptr[i + 1]);
 				}
@@ -793,20 +832,16 @@ namespace ClassicalSharp.GraphicsAPI
 			GLFuncs.End();
 		}
 
-		void DrawDynamicTriangles(int verticesCount, int startVertex) {
+		unsafe void DrawDynamicTriangles(int verticesCount, int startVertex) {
 			GLFuncs.Begin(BeginMode.Triangles);
-			// indices -> vertices count
-			verticesCount = verticesCount * 4 / 6;
-			startVertex = startVertex * 4 / 6;
-
 			if (batchFormat == VertexFormat.P3fT2fC4b) {
-				VertexP3fT2fC4b[] ptr = (VertexP3fT2fC4b[])dynamicListData;
+				VertexP3fT2fC4b* ptr = (VertexP3fT2fC4b*)dynamicListData;
 				for (int i = startVertex; i < startVertex + verticesCount; i += 4) {
 					V(ptr[i + 0]); V(ptr[i + 1]); V(ptr[i + 2]);
 					V(ptr[i + 2]); V(ptr[i + 3]); V(ptr[i + 0]);
 				}
 			} else {
-				VertexP3fC4b[] ptr = (VertexP3fC4b[])dynamicListData;
+				VertexP3fC4b* ptr = (VertexP3fC4b*)dynamicListData;
 				for (int i = startVertex; i < startVertex + verticesCount; i += 4) {
 					V(ptr[i + 0]); V(ptr[i + 1]); V(ptr[i + 2]);
 					V(ptr[i + 2]); V(ptr[i + 3]); V(ptr[i + 0]);
@@ -816,7 +851,7 @@ namespace ClassicalSharp.GraphicsAPI
 		}
 
 		int lastPartialList = -1;
-		internal override void DrawIndexedVb_TrisT2fC4b(int indicesCount, int startIndex) {
+		internal override void DrawIndexedVb_TrisT2fC4b(int verticesCount, int startIndex) {
 			// TODO: This renders the whole map, bad performance!! FIX FIX
 			if (glLists) {
 				if (activeList != lastPartialList) {
@@ -825,11 +860,11 @@ namespace ClassicalSharp.GraphicsAPI
 				return;
 			}
 
-			int offset = (startIndex / 6 * 4) * VertexP3fT2fC4b.Size;
+			int offset = startIndex * VertexP3fT2fC4b.Size;
 			GLFuncs.VertexPointer(3, PointerType.Float, VertexP3fT2fC4b.Size, new IntPtr(offset));
 			GLFuncs.ColorPointer(4, PointerType.UnsignedByte, VertexP3fT2fC4b.Size, new IntPtr(offset + 12));
 			GLFuncs.TexCoordPointer(2, PointerType.Float, VertexP3fT2fC4b.Size, new IntPtr(offset + 16));
-			GLFuncs.DrawElements(BeginMode.Triangles, indicesCount, indexType, IntPtr.Zero);
+			GLFuncs.DrawElements(BeginMode.Triangles, (verticesCount >> 2) * 6, indexType, IntPtr.Zero);
 		}
 
 		IntPtr zero = new IntPtr(0), twelve = new IntPtr(12), sixteen = new IntPtr(16);
@@ -844,15 +879,15 @@ namespace ClassicalSharp.GraphicsAPI
 			GLFuncs.ColorPointer(4, PointerType.UnsignedByte, VertexP3fT2fC4b.Size, twelve);
 			GLFuncs.TexCoordPointer(2, PointerType.Float, VertexP3fT2fC4b.Size, sixteen);
 		}
-		
-		void SetupVbPos3fCol4b_Range(int startIndex) {
-			int offset = (startIndex / 6 * 4) * VertexP3fC4b.Size;
+
+		void SetupVbPos3fCol4b_Range(int startVertex) {
+			int offset = startVertex * VertexP3fC4b.Size;
 			GLFuncs.VertexPointer(3, PointerType.Float, VertexP3fC4b.Size, new IntPtr(offset));
 			GLFuncs.ColorPointer(4, PointerType.UnsignedByte, VertexP3fC4b.Size, new IntPtr(offset + 12));
 		}
 
-		void SetupVbPos3fTex2fCol4b_Range(int startIndex) {
-			int offset = (startIndex / 6 * 4) * VertexP3fT2fC4b.Size;
+		void SetupVbPos3fTex2fCol4b_Range(int startVertex) {
+			int offset = startVertex * VertexP3fT2fC4b.Size;
 			GLFuncs.VertexPointer(3, PointerType.Float, VertexP3fT2fC4b.Size, new IntPtr(offset));
 			GLFuncs.ColorPointer(4, PointerType.UnsignedByte, VertexP3fT2fC4b.Size, new IntPtr(offset + 12));
 			GLFuncs.TexCoordPointer(2, PointerType.Float, VertexP3fT2fC4b.Size, new IntPtr(offset + 16));

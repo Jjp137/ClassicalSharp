@@ -39,7 +39,7 @@ namespace ClassicalSharp
 				return new Size(w, h);
 			}
 			set {
-				// TODO: properly implement
+				SDL.SDL_SetWindowSize(this.window, value.Width, value.Height);
 			}
 		}
 

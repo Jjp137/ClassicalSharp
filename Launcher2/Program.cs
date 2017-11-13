@@ -8,7 +8,7 @@ namespace Launcher {
 
 	internal static class Program {
 		
-		public const string AppName = "ClassicalSharp Launcher 0.99.9.3";
+		public const string AppName = "ClassicalSharp Launcher 0.99.9.8";
 		
 		public static string AppDirectory;
 		
@@ -44,7 +44,7 @@ namespace Launcher {
 			string logPath = Path.Combine(AppDirectory, "launcher.log");
 			AppDomain.CurrentDomain.UnhandledException += UnhandledExceptionHandler;
 			ErrorHandler.InstallHandler(logPath);
-			OpenTK.Configuration.SkipPerfCountersHack();			
+			OpenTK.Configuration.SkipPerfCountersHack();
 			LauncherWindow window = new LauncherWindow();
 			window.Run();
 		}

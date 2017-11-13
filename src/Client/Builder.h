@@ -1,5 +1,5 @@
-#ifndef CS_BUILDER_H
-#define CS_BUILDER_H
+#ifndef CC_BUILDER_H
+#define CC_BUILDER_H
 #include "Typedefs.h"
 #include "Block.h"
 #include "PackedCol.h"
@@ -48,8 +48,6 @@ Int32 Builder_ChunkIndex;
 bool Builder_FullBright;
 /* Whether current block being processed is tinted. */
 bool Builder_Tinted;
-/* Completely white colour. */
-PackedCol Builder_WhiteCol;
 
 /* Pointer to current chunk on stack.*/
 BlockID* Builder_Chunk;
@@ -67,8 +65,8 @@ Int32 Builder_ChunkEndX, Builder_ChunkEndZ;
 /* Offset chunk indices for each face. */
 Int32 Builder_Offsets[6];
 /* Part builder data, for both normal and translucent parts.
-The first Atlas1D_MaxAtlasesCount parts are for normal parts, remainder are for translucent parts. */
-Builder1DPart Builder_Parts[Atlas1D_MaxAtlasesCount * 2];
+The first ATLAS1D_MAX_ATLASES_COUNT parts are for normal parts, remainder are for translucent parts. */
+Builder1DPart Builder_Parts[ATLAS1D_MAX_ATLASES_COUNT * 2];
 
 /* Initalises state of this mesh builder. */
 void Builder_Init(void);

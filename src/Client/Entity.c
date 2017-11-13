@@ -47,8 +47,6 @@ void LocationUpdate_MakePosAndOri(LocationUpdate* update, Vector3 pos, Real32 ro
 
 void Entity_Init(Entity* entity) {
 	entity->ModelScale = Vector3_Create1(1.0f);
-	entity->TextureId = -1;
-	entity->MobTextureId = -1;
 	entity->uScale = 1.0f;
 	entity->vScale = 1.0f;
 	UInt8* ptr = entity->ModelNameBuffer;
@@ -66,13 +64,13 @@ void Entity_GetTransform(Entity* entity, Vector3 pos, Vector3 scale) {
 	*m = Matrix_Identity;
 	Matrix tmp;
 
+	Matrix_Scale(&tmp, scale.X, scale.Y, scale.Z);
+	Matrix_MulBy(m, &tmp);
 	Matrix_RotateZ(&tmp, -entity->RotZ * MATH_DEG2RAD);
 	Matrix_MulBy(m, &tmp);
 	Matrix_RotateX(&tmp, -entity->RotX * MATH_DEG2RAD);
 	Matrix_MulBy(m, &tmp);
 	Matrix_RotateY(&tmp, -entity->RotY * MATH_DEG2RAD);
-	Matrix_MulBy(m, &tmp);
-	Matrix_Scale(&tmp, scale.X, scale.Y, scale.Z);
 	Matrix_MulBy(m, &tmp);
 	Matrix_Translate(&tmp, pos.X, pos.Y, pos.Z);
 	Matrix_MulBy(m, &tmp);
@@ -97,7 +95,7 @@ void Entity_ParseScale(Entity* entity, String scale) {
 	entity->ModelScale = Vector3_Create1(value);
 }
 
-void Entity_SetModel(Entity* entity, STRING_TRANSIENT String* model) {
+void Entity_SetModel(Entity* entity, STRING_PURE String* model) {
 	entity->ModelScale = Vector3_Create1(1.0f);
 	entity->ModelBlock = BlockID_Air;
 	String_Clear(&entity->ModelName);
@@ -113,19 +111,19 @@ void Entity_SetModel(Entity* entity, STRING_TRANSIENT String* model) {
 	}
 
 	/* 'giant' model kept for backwards compatibility */
-	String giant = String_FromConstant("giant");
+	String giant = String_FromConst("giant");
 	if (String_CaselessEquals(model, &giant)) {		
-		String_AppendConstant(&entity->ModelName, "humanoid");
+		String_AppendConst(&entity->ModelName, "humanoid");
 		entity->ModelScale = Vector3_Create1(2.0f);
 	} else if (Convert_TryParseUInt8(model, &entity->ModelBlock)) {
-		String_AppendConstant(&entity->ModelName, "block");
+		String_AppendConst(&entity->ModelName, "block");
 	} else {
 		String_AppendString(&entity->ModelName, &name);
 	}
 
 	entity->Model = ModelCache_Get(&entity->ModelName);
 	Entity_ParseScale(entity, scale);
-	entity->MobTextureId = -1;
+	entity->MobTextureId = NULL;
 
 	entity->Model->RecalcProperties(entity);
 	Entity_UpdateModelBounds(entity);
@@ -149,14 +147,16 @@ bool Entity_TouchesAny(AABB* bounds, TouchesAny_Condition condition) {
 	AABB blockBB;
 	Vector3 v;
 
-	/* Order loops so that we minimise cache misses */
+	bbMin.X = max(bbMin.X, 0); bbMax.X = min(bbMax.X, World_MaxX);
+	bbMin.Y = max(bbMin.Y, 0); bbMax.Y = min(bbMax.Y, World_MaxY);
+	bbMin.Z = max(bbMin.Z, 0); bbMax.Z = min(bbMax.Z, World_MaxZ);
+
 	Int32 x, y, z;
 	for (y = bbMin.Y; y <= bbMax.Y; y++) {
 		v.Y = (Real32)y;
 		for (z = bbMin.Z; z <= bbMax.Z; z++) {
 			v.Z = (Real32)z;
 			for (x = bbMin.X; x <= bbMax.X; x++) {
-				if (!World_IsValidPos(x, y, z)) continue;
 				v.X = (Real32)x;
 
 				BlockID block = World_GetBlock(x, y, z);
@@ -360,7 +360,7 @@ String HacksComp_GetFlagValue(String* flag, HacksComp* hacks) {
 }
 
 void HacksComp_ParseHorizontalSpeed(HacksComp* hacks) {
-	String horSpeedFlag = String_FromConstant("horspeed=");
+	String horSpeedFlag = String_FromConst("horspeed=");
 	String speedStr = HacksComp_GetFlagValue(&horSpeedFlag, hacks);
 	if (speedStr.length == 0) return;
 
@@ -370,7 +370,7 @@ void HacksComp_ParseHorizontalSpeed(HacksComp* hacks) {
 }
 
 void HacksComp_ParseMultiSpeed(HacksComp* hacks) {
-	String jumpsFlag = String_FromConstant("jumps=");
+	String jumpsFlag = String_FromConst("jumps=");
 	String jumpsStr = HacksComp_GetFlagValue(&jumpsFlag, hacks);
 	if (jumpsStr.length == 0) return;
 
@@ -451,7 +451,7 @@ void HacksComp_UpdateState(HacksComp* hacks) {
 	hacks->CanBePushed = true;
 
 	/* By default (this is also the case with WoM), we can use hacks. */
-	String excHacks = String_FromConstant("-hax");
+	String excHacks = String_FromConst("-hax");
 	if (String_ContainsString(&hacks->HacksFlags, &excHacks)) {
 		HacksComp_SetAll(hacks, false);
 	}

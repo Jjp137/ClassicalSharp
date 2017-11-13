@@ -17,11 +17,11 @@ void GfxCommon_Free(void) {
 	Gfx_DeleteVb(&GfxCommon_texVb);
 }
 
-void GfxCommon_LoseContext(STRING_TRANSIENT String* reason) {
+void GfxCommon_LoseContext(STRING_PURE String* reason) {
 	Gfx_LostContext = true;
-	String logMsg = String_FromConstant("Lost graphics context:");
-	Platform_Log(logMsg);
-	Platform_Log(*reason);
+	String logMsg = String_FromConst("Lost graphics context:");
+	Platform_Log(&logMsg);
+	Platform_Log(reason);
 
 	Event_RaiseVoid(&GfxEvents_ContextLost);
 	GfxCommon_Free();
@@ -29,8 +29,8 @@ void GfxCommon_LoseContext(STRING_TRANSIENT String* reason) {
 
 void GfxCommon_RecreateContext(void) {
 	Gfx_LostContext = false;
-	String logMsg = String_FromConstant("Recreating graphics context");
-	Platform_Log(logMsg);
+	String logMsg = String_FromConst("Recreating graphics context");
+	Platform_Log(&logMsg);
 
 	Event_RaiseVoid(&GfxEvents_ContextRecreated);
 	GfxCommon_Init();
@@ -47,25 +47,27 @@ void GfxCommon_UpdateDynamicVb_IndexedTris(GfxResourceID vb, void* vertices, Int
 	Gfx_DrawVb_IndexedTris(vCount);
 }
 
-void GfxCommon_Draw2DFlat(Real32 x, Real32 y, Real32 width, Real32 height, 
-	PackedCol col) {
+void GfxCommon_Draw2DFlat(Int32 x, Int32 y, Int32 width, Int32 height, PackedCol col) {
 	VertexP3fC4b quadVerts[4];
-	VertexP3fC4b_Set(&quadVerts[0], x, y, 0, col);
-	VertexP3fC4b_Set(&quadVerts[1], x + width, y, 0, col);
-	VertexP3fC4b_Set(&quadVerts[2], x + width, y + height, 0, col);
-	VertexP3fC4b_Set(&quadVerts[3], x, y + height, 0, col);
+	VertexP3fC4b v; v.Z = 0.0f; v.Col = col;
+
+	v.X = (Real32)x;           v.Y = (Real32)y;            quadVerts[0] = v;
+	v.X = (Real32)(x + width);                             quadVerts[1] = v;
+	                           v.Y = (Real32)(y + height); quadVerts[2] = v;
+	v.X = (Real32)x;                                       quadVerts[3] = v;
 
 	Gfx_SetBatchFormat(VertexFormat_P3fC4b);
 	GfxCommon_UpdateDynamicVb_IndexedTris(GfxCommon_quadVb, quadVerts, 4);
 }
 
-void GfxCommon_Draw2DGradient(Real32 x, Real32 y, Real32 width, Real32 height,
-	PackedCol topCol, PackedCol bottomCol) {
+void GfxCommon_Draw2DGradient(Int32 x, Int32 y, Int32 width, Int32 height, PackedCol topCol, PackedCol bottomCol) {
 	VertexP3fC4b quadVerts[4];
-	VertexP3fC4b_Set(&quadVerts[0], x, y, 0, topCol);
-	VertexP3fC4b_Set(&quadVerts[1], x + width, y, 0, topCol);
-	VertexP3fC4b_Set(&quadVerts[2], x + width, y + height, 0, bottomCol);
-	VertexP3fC4b_Set(&quadVerts[3], x, y + height, 0, bottomCol);
+	VertexP3fC4b v; v.Z = 0.0f;
+
+	v.X = (Real32)x;           v.Y = (Real32)y;            v.Col = topCol;    quadVerts[0] = v;
+	v.X = (Real32)(x + width);                                                quadVerts[1] = v;
+	                           v.Y = (Real32)(y + height); v.Col = bottomCol; quadVerts[2] = v;
+	v.X = (Real32)x;                                                          quadVerts[3] = v;
 
 	Gfx_SetBatchFormat(VertexFormat_P3fC4b);
 	GfxCommon_UpdateDynamicVb_IndexedTris(GfxCommon_quadVb, quadVerts, 4);
@@ -90,7 +92,7 @@ void GfxCommon_Make2DQuad(Texture* tex, PackedCol col, VertexP3fT2fC4b** vertice
 #endif
 
 	VertexP3fT2fC4b* ptr = *vertices;
-	VertexP3fT2fC4b v; v.Z = 0.0f; v.Colour = col;
+	VertexP3fT2fC4b v; v.Z = 0.0f; v.Col = col;
 	v.X = x1; v.Y = y1; v.U = tex->U1; v.V = tex->V1; ptr[0] = v;
 	v.X = x2;           v.U = tex->U2;                ptr[1] = v;
 	v.Y = y2;                         v.V = tex->V2;  ptr[2] = v;
@@ -99,10 +101,10 @@ void GfxCommon_Make2DQuad(Texture* tex, PackedCol col, VertexP3fT2fC4b** vertice
 }
 
 bool gfx_hadFog;
-void GfxCommon_Mode2D(Real32 width, Real32 height) {
+void GfxCommon_Mode2D(Int32 width, Int32 height) {
 	Gfx_SetMatrixMode(MatrixType_Projection);
 	Gfx_PushMatrix();
-	Gfx_LoadOrthoMatrix(width, height);
+	Gfx_LoadOrthoMatrix((Real32)width, (Real32)height);
 	Gfx_SetMatrixMode(MatrixType_Modelview);
 	Gfx_PushMatrix();
 	Gfx_LoadIdentityMatrix();
@@ -125,23 +127,24 @@ void GfxCommon_Mode3D(void) {
 }
 
 GfxResourceID GfxCommon_MakeDefaultIb(void) {
-	UInt16 indices[Gfx_MaxIndices];
-	GfxCommon_MakeIndices(indices, Gfx_MaxIndices);
-	return Gfx_CreateIb(indices, Gfx_MaxIndices);
+	UInt16 indices[GFX_MAX_INDICES];
+	GfxCommon_MakeIndices(indices, GFX_MAX_INDICES);
+	return Gfx_CreateIb(indices, GFX_MAX_INDICES);
 }
 
 void GfxCommon_MakeIndices(UInt16* indices, Int32 iCount) {
 	Int32 element = 0, i;
 
 	for (i = 0; i < iCount; i += 6) {
-		*indices = (UInt16)(element + 0); indices++;
-		*indices = (UInt16)(element + 1); indices++;
-		*indices = (UInt16)(element + 2); indices++;
+		indices[0] = (UInt16)(element + 0);
+		indices[1] = (UInt16)(element + 1);
+		indices[2] = (UInt16)(element + 2);
 
-		*indices = (UInt16)(element + 2); indices++;
-		*indices = (UInt16)(element + 3); indices++;
-		*indices = (UInt16)(element + 0); indices++;
-		element += 4;
+		indices[3] = (UInt16)(element + 2);
+		indices[4] = (UInt16)(element + 3);
+		indices[5] = (UInt16)(element + 0);
+
+		indices += 6; element += 4;
 	}
 }
 

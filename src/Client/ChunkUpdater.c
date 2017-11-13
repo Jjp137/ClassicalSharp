@@ -13,6 +13,7 @@
 #include "Vectors.h"
 #include "World.h"
 #include "Builder.h"
+#include "Utils.h"
 
 void ChunkInfo_Reset(ChunkInfo* chunk, Int32 x, Int32 y, Int32 z) {
 	chunk->CentreX = (UInt16)(x + 8);
@@ -163,7 +164,7 @@ void ChunkUpdater_OnNewMapLoaded(void) {
 
 Int32 ChunkUpdater_AdjustViewDist(Real32 dist) {
 	if (dist < CHUNK_SIZE) dist = CHUNK_SIZE;
-	Int32 viewDist = Math_AdjViewDist(dist);
+	Int32 viewDist = Utils_AdjViewDist(dist);
 	return (viewDist + 24) * (viewDist + 24);
 }
 
@@ -254,7 +255,7 @@ void ChunkUpdater_UpdateChunks(Real64 delta) {
 
 void ChunkUpdater_ResetPartFlags(void) {
 	Int32 i;
-	for (i = 0; i < Atlas1D_MaxAtlasesCount; i++) {
+	for (i = 0; i < ATLAS1D_MAX_ATLASES_COUNT; i++) {
 		MapRenderer_CheckingNormalParts[i] = true;
 		MapRenderer_HasNormalParts[i] = false;
 		MapRenderer_CheckingTranslucentParts[i] = true;
@@ -264,7 +265,7 @@ void ChunkUpdater_ResetPartFlags(void) {
 
 void ChunkUpdater_ResetPartCounts(void) {
 	Int32 i;
-	for (i = 0; i < Atlas1D_MaxAtlasesCount; i++) {
+	for (i = 0; i < ATLAS1D_MAX_ATLASES_COUNT; i++) {
 		MapRenderer_NormalPartsCount[i] = 0;
 		MapRenderer_TranslucentPartsCount[i] = 0;
 	}
@@ -313,7 +314,7 @@ if (parts != NULL) {\
 	ChunkPartInfo* ptr = parts;\
 	for (i = 0; i < cu_atlas1DCount; i++) {\
 		Gfx_DeleteVb(&ptr->VbId);\
-		if (ptr->VerticesCount > 0) {partsCount[i]--; }\
+		if (ptr->HasVertices) { partsCount[i]--; }\
 		ptr += MapRenderer_ChunksCount;\
 	}\
 }
@@ -334,7 +335,7 @@ void ChunkUpdater_DeleteChunk(ChunkInfo* info) {
 if (parts != NULL) {\
 	ChunkPartInfo* ptr = parts;\
 	for (i = 0; i < cu_atlas1DCount; i++) {\
-		if (ptr->VerticesCount > 0) { partsCount[i]++; }\
+		if (ptr->HasVertices) { partsCount[i]++; }\
 		ptr += MapRenderer_ChunksCount;\
 	}\
 }

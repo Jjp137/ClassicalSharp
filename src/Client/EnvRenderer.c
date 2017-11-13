@@ -10,9 +10,10 @@
 #include "Platform.h"
 #include "SkyboxRenderer.h"
 #include "Events.h"
+#include "Utils.h"
 
-GfxResourceID env_cloudsVb = -1, env_skyVb = -1, env_cloudsTex = -1;
-GfxResourceID env_cloudVertices, env_skyVertices;
+GfxResourceID env_cloudsVb, env_skyVb, env_cloudsTex;
+Int32 env_cloudVertices, env_skyVertices;
 
 Real32 EnvRenderer_BlendFactor(Real32 x) {
 	/* return -0.05 + 0.22 * (Math_LogE(x) * 0.25f); */
@@ -48,7 +49,7 @@ void EnvRenderer_BlockOn(Real32* fogDensity, PackedCol* fogCol) {
 void EnvRenderer_RenderMinimal(Real64 deltaTime) {
 	if (World_Blocks == NULL) return;
 
-	PackedCol fogCol = PackedCol_White;
+	PackedCol fogCol = PACKEDCOL_WHITE;
 	Real32 fogDensity = 0.0f;
 	EnvRenderer_BlockOn(&fogDensity, &fogCol);
 	Gfx_ClearColour(fogCol);
@@ -88,7 +89,7 @@ void EnvRenderer_RenderClouds(Real64 deltaTime) {
 	Gfx_SetMatrixMode(MatrixType_Modelview);
 }
 
-void EnvRenderer_RenderMainEnv(Real64 deltaTime) {
+void EnvRenderer_RenderSky(Real64 deltaTime) {
 	Vector3 pos = Game_CurrentCameraPos;
 	Real32 normalY = (Real32)World_Height + 8.0f;
 	Real32 skyY = max(pos.Y + 8.0f, normalY);
@@ -106,12 +107,11 @@ void EnvRenderer_RenderMainEnv(Real64 deltaTime) {
 		Gfx_DrawVb_IndexedTris(env_skyVertices);
 		Gfx_PopMatrix();
 	}
-	EnvRenderer_RenderClouds(deltaTime);
 }
 
 void EnvRenderer_UpdateFog(void) {
 	if (World_Blocks == NULL || EnvRenderer_Minimal) return;
-	PackedCol fogCol = PackedCol_White;
+	PackedCol fogCol = PACKEDCOL_WHITE;
 	Real32 fogDensity = 0.0f;
 	EnvRenderer_BlockOn(&fogDensity, &fogCol);
 
@@ -140,9 +140,12 @@ void EnvRenderer_Render(Real64 deltaTime) {
 	if (EnvRenderer_Minimal) {
 		EnvRenderer_RenderMinimal(deltaTime);
 	} else {
-		if (env_skyVb == -1 || env_cloudsVb == -1) return;
+		if (env_skyVb == 0 || env_cloudsVb == 0) return;
 		if (!SkyboxRenderer_ShouldRender()) {
-			EnvRenderer_RenderMainEnv(deltaTime);
+			EnvRenderer_RenderSky(deltaTime);
+			EnvRenderer_RenderClouds(deltaTime);
+		} else if (WorldEnv_SkyboxClouds) {
+			EnvRenderer_RenderClouds(deltaTime);
 		}
 		EnvRenderer_UpdateFog();
 	}
@@ -151,7 +154,7 @@ void EnvRenderer_Render(Real64 deltaTime) {
 void EnvRenderer_DrawSkyY(Int32 x1, Int32 z1, Int32 x2, Int32 z2, Int32 y, Int32 axisSize, PackedCol col, VertexP3fC4b* vertices) {
 	Int32 endX = x2, endZ = z2, startZ = z1;
 	VertexP3fC4b v;
-	v.Y = (Real32)y; v.Colour = col;
+	v.Y = (Real32)y; v.Col = col;
 
 	for (; x1 < endX; x1 += axisSize) {
 		x2 = x1 + axisSize;
@@ -174,7 +177,7 @@ void EnvRenderer_DrawCloudsY(Int32 x1, Int32 z1, Int32 x2, Int32 z2, Int32 y, In
 	/* adjust range so that largest negative uv coordinate is shifted to 0 or above. */
 	Real32 offset = (Real32)Math_CeilDiv(-x1, 2048);
 	VertexP3fT2fC4b v;
-	v.Y = (Real32)y + 0.1f; v.Colour = col;
+	v.Y = (Real32)y + 0.1f; v.Col = col;
 
 	for (; x1 < endX; x1 += axisSize) {
 		x2 = x1 + axisSize;
@@ -195,7 +198,7 @@ void EnvRenderer_DrawCloudsY(Int32 x1, Int32 z1, Int32 x2, Int32 z2, Int32 y, In
 }
 
 void EnvRenderer_RebuildClouds(Int32 extent, Int32 axisSize) {
-	extent = Math_AdjViewDist(extent);
+	extent = Utils_AdjViewDist(extent);
 	Int32 x1 = -extent, x2 = World_Width + extent;
 	Int32 z1 = -extent, z2 = World_Length + extent;
 	env_cloudVertices = Math_CountVertices(x2 - x1, z2 - z1, axisSize);
@@ -214,7 +217,7 @@ void EnvRenderer_RebuildClouds(Int32 extent, Int32 axisSize) {
 }
 
 void EnvRenderer_RebuildSky(Int32 extent, Int32 axisSize) {
-	extent = Math_AdjViewDist(extent);
+	extent = Utils_AdjViewDist(extent);
 	Int32 x1 = -extent, x2 = World_Width + extent;
 	Int32 z1 = -extent, z2 = World_Length + extent;
 	env_skyVertices = Math_CountVertices(x2 - x1, z2 - z1, axisSize);

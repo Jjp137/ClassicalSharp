@@ -1,5 +1,5 @@
-#ifndef CS_EVENTS_H
-#define CS_EVENTS_H
+#ifndef CC_EVENTS_H
+#define CC_EVENTS_H
 #include "Event.h"
 #include "Typedefs.h"
 /* Contains the various events that are raised by the client.
@@ -38,6 +38,8 @@ Event_Void GfxEvents_ContextRecreated;
 Event_Block UserEvents_BlockChanged;
 /* Raised when when the hack permissions of the player changes. */
 Event_Void UserEvents_HackPermissionsChanged;
+/* Raised when when the held block in hotbar changes. */
+Event_Void UserEvents_HeldBlockChanged;
 
 /* Raised when the block permissions(can place or delete a block) for the player changes. */
 Event_Void BlockEvents_PermissionsChanged;
@@ -67,12 +69,16 @@ typedef Int32 EnvVar;
 #define EnvVar_WeatherFade 7
 #define EnvVar_Weather 8
 #define EnvVar_ExpFog 9
+#define EnvVar_SkyboxHorSpeed 10
+#define EnvVar_SkyboxVerSpeed 11
 
-#define EnvVar_SkyCol 10
-#define EnvVar_CloudsCol 11
-#define EnvVar_FogCol 12
-#define EnvVar_SunCol 13
-#define EnvVar_ShadowCol 14
+#define EnvVar_SkyCol 12
+#define EnvVar_CloudsCol 13
+#define EnvVar_FogCol 14
+#define EnvVar_SunCol 15
+#define EnvVar_ShadowCol 16
+
+
 
 
 /*

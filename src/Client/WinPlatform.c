@@ -1,14 +1,60 @@
 #include "Platform.h"
-#include <Windows.h>
+#include "Stream.h"
+#include "DisplayDevice.h"
+#include "ExtMath.h"
+#include "ErrorHandler.h"
+#include "Drawer2D.h"
 #define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
 
+HDC hdc;
+HBITMAP hbmp;
 HANDLE heap;
+
+UInt8* Platform_NewLine = "\r\n";
+UInt8 Platform_DirectorySeparator = '\\';
+ReturnCode ReturnCode_FileShareViolation = ERROR_SHARING_VIOLATION;
+
 void Platform_Init(void) {
 	heap = GetProcessHeap(); /* TODO: HeapCreate instead? probably not */
+	hdc = CreateCompatibleDC(NULL);
+	if (hdc == NULL) ErrorHandler_Fail("Failed to get screen DC");
+
+	UInt32 deviceNum = 0;
+	/* Get available video adapters and enumerate all monitors */
+	DISPLAY_DEVICEA device;
+	Platform_MemSet(&device, 0, sizeof(DISPLAY_DEVICEA));
+	device.cb = sizeof(DISPLAY_DEVICEA);
+
+	while (EnumDisplayDevicesA(NULL, deviceNum, &device, 0)) {
+		deviceNum++;
+		if ((device.StateFlags & DISPLAY_DEVICE_ATTACHED_TO_DESKTOP) == 0) continue;
+		bool devPrimary = false;
+		DisplayResolution resolution = DisplayResolution_Make(0, 0, 0, 0.0f);
+		DEVMODEA mode;
+		Platform_MemSet(&mode, 0, sizeof(DEVMODEA));
+		mode.dmSize = sizeof(DEVMODEA);
+
+		/* The second function should only be executed when the first one fails (e.g. when the monitor is disabled) */
+		if (EnumDisplaySettingsA(device.DeviceName, ENUM_CURRENT_SETTINGS, &mode) ||
+			EnumDisplaySettingsA(device.DeviceName, ENUM_REGISTRY_SETTINGS, &mode)) {
+			if (mode.dmBitsPerPel > 0) {
+				resolution = DisplayResolution_Make(mode.dmPelsWidth, mode.dmPelsHeight,
+					mode.dmBitsPerPel, (Real32)mode.dmDisplayFrequency);
+				devPrimary = (device.StateFlags & DISPLAY_DEVICE_PRIMARY_DEVICE) != 0;
+			}
+		}
+
+		/* This device has no valid resolution, ignore it */
+		if (resolution.Width == 0 && resolution.Height == 0) continue;
+		if (!devPrimary) continue;
+		DisplayDevice_Default = DisplayDevice_Make(&resolution);
+	}
 }
 
 void Platform_Free(void) {
 	HeapDestroy(heap);
+	DeleteDC(hdc);
 }
 
 void* Platform_MemAlloc(UInt32 numBytes) {
@@ -20,24 +66,15 @@ void Platform_MemFree(void* mem) {
 }
 
 void Platform_MemSet(void* dst, UInt8 value, UInt32 numBytes) {
-	UInt8* dstByte = (UInt8*)dst;
-	/* TODO: massively slow */
-	for (UInt32 i = 0; i < numBytes; i++) {
-		*dstByte++ = value;
-	}
+	memset(dst, value, numBytes);
 }
 
 void Platform_MemCpy(void* dst, void* src, UInt32 numBytes) {
-	UInt8* dstByte = (UInt8*)dst;
-	UInt8* srcByte = (UInt8*)src;
-	/* TODO: massively slow */
-	for (UInt32 i = 0; i < numBytes; i++) {
-		*dstByte++ = *srcByte++;
-	}
+	memcpy(dst, src, numBytes);
 }
 
 
-void Platform_Log(String message) {
+void Platform_Log(STRING_PURE String* message) {
 	/* TODO: log to console */
 }
 
@@ -66,23 +103,23 @@ DateTime Platform_CurrentLocalTime(void) {
 }
 
 
-bool Platform_FileExists(STRING_TRANSIENT String* path) {
+bool Platform_FileExists(STRING_PURE String* path) {
 	UInt32 attribs = GetFileAttributesA(path->buffer);
 	return attribs != INVALID_FILE_ATTRIBUTES && !(attribs & FILE_ATTRIBUTE_DIRECTORY);
 }
 
-bool Platform_DirectoryExists(STRING_TRANSIENT String* path) {
+bool Platform_DirectoryExists(STRING_PURE String* path) {
 	UInt32 attribs = GetFileAttributesA(path->buffer);
 	return attribs != INVALID_FILE_ATTRIBUTES && (attribs & FILE_ATTRIBUTE_DIRECTORY);
 }
 
-ReturnCode Platform_DirectoryCreate(STRING_TRANSIENT String* path) {
+ReturnCode Platform_DirectoryCreate(STRING_PURE String* path) {
 	BOOL success = CreateDirectoryA(path->buffer, NULL);
 	return success ? 0 : GetLastError();
 }
 
 
-ReturnCode Platform_FileOpen(void** file, STRING_TRANSIENT String* path, bool readOnly) {
+ReturnCode Platform_FileOpen(void** file, STRING_PURE String* path, bool readOnly) {
 	UINT32 access = GENERIC_READ;
 	if (!readOnly) access |= GENERIC_WRITE;
 	HANDLE handle = CreateFileA(path->buffer, access, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -91,7 +128,7 @@ ReturnCode Platform_FileOpen(void** file, STRING_TRANSIENT String* path, bool re
 	return handle != INVALID_HANDLE_VALUE ? 0 : GetLastError();
 }
 
-ReturnCode Platform_FileCreate(void** file, STRING_TRANSIENT String* path) {
+ReturnCode Platform_FileCreate(void** file, STRING_PURE String* path) {
 	UINT32 access = GENERIC_READ | GENERIC_WRITE;
 	HANDLE handle = CreateFileA(path->buffer, access, FILE_SHARE_READ, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 	*file = (void*)handle;
@@ -114,7 +151,83 @@ ReturnCode Platform_FileClose(void* file) {
 	return success ? 0 : GetLastError();
 }
 
+ReturnCode Platform_FileSeek(void* file, Int32 offset, Int32 seekType) {
+	DWORD pos;
+	switch (seekType) {
+	case STREAM_SEEKFROM_BEGIN:
+		pos = SetFilePointer(file, offset, NULL, 0); break;
+	case STREAM_SEEKFROM_CURRENT:
+		pos = SetFilePointer(file, offset, NULL, 1); break;
+	case STREAM_SEEKFROM_END:
+		pos = SetFilePointer(file, offset, NULL, 2); break;
+	default:
+		ErrorHandler_Fail("Invalid SeekType provided when seeking file");
+	}
+	return pos == INVALID_SET_FILE_POINTER ? GetLastError() : 0;
+}
+
+UInt32 Platform_FilePosition(void* file) {
+	DWORD pos = SetFilePointer(file, 0, NULL, 1); /* SEEK_CUR */
+	if (pos == INVALID_SET_FILE_POINTER) {
+		ErrorHandler_FailWithCode(GetLastError(), "Getting file position");
+	}
+	return pos;
+}
+
+UInt32 Platform_FileLength(void* file) {
+	DWORD pos = GetFileSize(file, NULL);
+	if (pos == INVALID_FILE_SIZE) {
+		ErrorHandler_FailWithCode(GetLastError(), "Getting file length");
+	}
+	return pos;
+}
+
 
 void Platform_ThreadSleep(UInt32 milliseconds) {
 	Sleep(milliseconds);
+}
+
+
+void Platform_MakeFont(FontDesc* desc) {
+	LOGFONTA font = { 0 };
+	font.lfHeight    = -Math_Ceil(desc->Size * GetDeviceCaps(hdc, LOGPIXELSY) / 72.0f);
+	font.lfUnderline = desc->Style == FONT_STYLE_UNDERLINE;
+	font.lfWeight    = desc->Style == FONT_STYLE_BOLD ? FW_BOLD : FW_NORMAL;
+	font.lfQuality   = ANTIALIASED_QUALITY;
+
+	desc->Handle = CreateFontIndirectA(&font);
+	if (desc->Handle == NULL) ErrorHandler_Fail("Creating font handle failed");
+}
+
+void Platform_FreeFont(FontDesc* desc) {
+	if (!DeleteObject(desc->Handle)) ErrorHandler_Fail("Deleting font handle failed");
+	desc->Handle = NULL;
+}
+
+Size2D Platform_MeasureText(struct DrawTextArgs_* args) {
+	HDC hDC = GetDC(NULL);
+	RECT r = { 0 };
+	DrawTextA(hDC, args->Text.buffer, args->Text.length,
+		&r, DT_CALCRECT | DT_NOPREFIX | DT_SINGLELINE | DT_NOCLIP);
+	return Size2D_Make(r.right, r.bottom);
+}
+
+void Platform_DrawText(struct DrawTextArgs_* args, Int32 x, Int32 y) {
+	HDC hDC = GetDC(NULL);
+	RECT r = { 0 };
+	DrawTextA(hDC, args->Text.buffer, args->Text.length,
+		&r, DT_NOPREFIX | DT_SINGLELINE | DT_NOCLIP);
+}
+
+void Platform_SetBitmap(struct Bitmap_* bmp) {
+	hbmp = CreateBitmap(bmp->Width, bmp->Height, 1, 32, bmp->Scan0);
+	if (hbmp == NULL) ErrorHandler_Fail("Creating bitmap handle failed");
+	/* TODO: Should we be using CreateDIBitmap here? */
+
+	if (!SelectObject(hdc, hbmp)) ErrorHandler_Fail("Selecting bitmap handle");
+}
+
+void Platform_ReleaseBitmap(void) {
+	if (!DeleteObject(hbmp)) ErrorHandler_Fail("Deleting bitmap handle failed");
+	hbmp = NULL;
 }

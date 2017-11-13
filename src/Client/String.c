@@ -2,7 +2,7 @@
 #include "Funcs.h"
 #include "ErrorHandler.h"
 
-String String_FromEmptyBuffer(UInt8* buffer, UInt16 capacity) {
+String String_FromEmptyBuffer(STRING_REF UInt8* buffer, UInt16 capacity) {
 	String str;
 	str.buffer = buffer;
 	str.capacity = capacity;
@@ -10,34 +10,25 @@ String String_FromEmptyBuffer(UInt8* buffer, UInt16 capacity) {
 	return str;
 }
 
-String String_FromRawBuffer(UInt8* buffer, UInt16 capacity) {
+String String_FromRawBuffer(STRING_REF UInt8* buffer, UInt16 capacity) {
 	String str = String_FromEmptyBuffer(buffer, capacity);	
 	Int32 i;
 
-	/* Need to set region occupied by string to NUL for interop with native APIs */
-	for (i = 0; i < capacity + 1; i++) {
-		buffer[i] = 0;
-	}
+	/* Need to set region occupied by string to NULL for interop with native APIs */
+	for (i = 0; i < capacity + 1; i++) { buffer[i] = NULL; }
 	return str;
 }
 
-String String_FromReadonly(const UInt8* buffer) {
+String String_FromReadonly(STRING_REF const UInt8* buffer) {
 	UInt16 length = 0;
-	UInt8 cur = 0;
-	UInt8* ptr = buffer;
+	UInt8* cur = buffer;
+	while ((*cur) != NULL) { cur++; length++; }
 
-	while ((cur = *buffer) != 0) {
-		length++; buffer++;
-	}
-
-	String str = String_FromEmptyBuffer(ptr, length);
+	String str = String_FromEmptyBuffer(buffer, length);
 	str.length = length;
 	return str;
 }
-
-String String_MakeNull(void) {
-	return String_FromEmptyBuffer(NULL, 0);
-}
+String String_MakeNull(void) { return String_FromEmptyBuffer(NULL, 0); }
 
 
 void String_MakeLowercase(STRING_TRANSIENT String* str) {
@@ -49,8 +40,8 @@ void String_MakeLowercase(STRING_TRANSIENT String* str) {
 
 void String_Clear(STRING_TRANSIENT String* str) {
 	Int32 i;
-	for (i = 0; i < str->length; i++) {
-		str->buffer[i] = 0;
+	for (i = 0; i < str->length; i++) { 
+		str->buffer[i] = NULL; 
 	}
 	str->length = 0;
 }
@@ -74,7 +65,7 @@ String String_UNSAFE_Substring(STRING_REF String* str, Int32 offset, Int32 lengt
 }
 
 
-bool String_Equals(STRING_TRANSIENT String* a, STRING_TRANSIENT String* b) {
+bool String_Equals(STRING_PURE String* a, STRING_PURE String* b) {
 	if (a->length != b->length) return false;
 	Int32 i;
 
@@ -84,7 +75,7 @@ bool String_Equals(STRING_TRANSIENT String* a, STRING_TRANSIENT String* b) {
 	return true;
 }
 
-bool String_CaselessEquals(STRING_TRANSIENT String* a, STRING_TRANSIENT String* b) {
+bool String_CaselessEquals(STRING_PURE String* a, STRING_PURE String* b) {
 	if (a->length != b->length) return false;
 	Int32 i;
 
@@ -147,27 +138,27 @@ bool String_AppendPaddedInt32(STRING_TRANSIENT String* str, Int32 num, Int32 min
 	return true;
 }
 
-bool String_AppendConstant(STRING_TRANSIENT String* str, const UInt8* buffer) {
+bool String_AppendConst(STRING_TRANSIENT String* str, const UInt8* toAppend) {
 	UInt8 cur = 0;
 
-	while ((cur = *buffer) != 0) {
+	while ((cur = *toAppend) != 0) {
 		if (!String_Append(str, cur)) return false;
-		buffer++;
+		toAppend++;
 	}
 	return true;
 }
 
-bool String_AppendString(STRING_TRANSIENT String* str, String* buffer) {
+bool String_AppendString(STRING_TRANSIENT String* str, STRING_PURE String* toAppend) {
 	Int32 i;
 
-	for (i = 0; i < buffer->length; i++) {
-		if (!String_Append(str, buffer->buffer[i])) return false;
+	for (i = 0; i < toAppend->length; i++) {
+		if (!String_Append(str, toAppend->buffer[i])) return false;
 	}
 	return true;
 }
 
 
-Int32 String_IndexOf(STRING_TRANSIENT String* str, UInt8 c, Int32 offset) {
+Int32 String_IndexOf(STRING_PURE String* str, UInt8 c, Int32 offset) {
 	Int32 i;
 	for (i = offset; i < str->length; i++) {
 		if (str->buffer[i] == c) return i;
@@ -175,7 +166,7 @@ Int32 String_IndexOf(STRING_TRANSIENT String* str, UInt8 c, Int32 offset) {
 	return -1;
 }
 
-Int32 String_LastIndexOf(STRING_TRANSIENT String* str, UInt8 c) {
+Int32 String_LastIndexOf(STRING_PURE String* str, UInt8 c) {
 	Int32 i;
 	for (i = str->length - 1; i >= 0; i--) {
 		if (str->buffer[i] == c) return i;
@@ -183,12 +174,41 @@ Int32 String_LastIndexOf(STRING_TRANSIENT String* str, UInt8 c) {
 	return -1;
 }
 
-UInt8 String_CharAt(STRING_TRANSIENT String* str, Int32 offset) {
-	if (offset < 0 || offset >= str->length) return 0;
+UInt8 String_CharAt(STRING_PURE String* str, Int32 offset) {
+	if (offset < 0 || offset >= str->length) return NULL;
 	return str->buffer[offset];
 }
 
-Int32 String_IndexOfString(STRING_TRANSIENT String* str, STRING_TRANSIENT String* sub) {
+void String_InsertAt(STRING_TRANSIENT String* str, Int32 offset, UInt8 c) {
+	if (offset < 0 || offset > str->length) {
+		ErrorHandler_Fail("Offset for InsertAt out of range");
+	}
+	if (str->length == str->capacity) {
+		ErrorHandler_Fail("Cannot insert character into full string");
+	}
+
+	Int32 i;
+	for (i = str->length; i > offset; i--) {
+		str->buffer[i] = str->buffer[i - 1];
+	}
+	str->buffer[offset] = c;
+	str->length++;
+}
+
+void String_DeleteAt(STRING_TRANSIENT String* str, Int32 offset) {
+	if (offset < 0 || offset >= str->length) {
+		ErrorHandler_Fail("Offset for DeleteAt out of range");
+	}
+
+	Int32 i;
+	for (i = offset; i < str->length - 1; i++) {
+		str->buffer[i] = str->buffer[i + 1];
+	}
+	str->buffer[str->length - 1] = NULL;
+	str->length--;
+}
+
+Int32 String_IndexOfString(STRING_PURE String* str, STRING_PURE String* sub) {
 	Int32 i, j;
 	/* Special case, sub is an empty string*/
 	if (sub->length == 0) return 0;
@@ -253,7 +273,7 @@ UInt8 Convert_UnicodeToCP437(UInt16 c) {
 	return (UInt8)'?';
 }
 
-bool Convert_TryParseInt32(STRING_TRANSIENT String* str, Int32* value) {
+bool Convert_TryParseInt32(STRING_PURE String* str, Int32* value) {
 	Int32 sum = 0, i = 0;
 	*value = 0;
 
@@ -299,19 +319,19 @@ bool Convert_TryParseInt32(STRING_TRANSIENT String* str, Int32* value) {
 	return true;
 }
 
-bool Convert_TryParseUInt8(STRING_TRANSIENT String* str, UInt8* value) {
+bool Convert_TryParseUInt8(STRING_PURE String* str, UInt8* value) {
 	*value = 0; Int32 tmp;
 	if (!Convert_TryParseInt32(str, &tmp) || tmp < 0 || tmp > UInt8_MaxValue) return false;
 	*value = (UInt8)tmp; return true;
 }
 
-bool Convert_TryParseUInt16(STRING_TRANSIENT String* str, UInt16* value) {
+bool Convert_TryParseUInt16(STRING_PURE String* str, UInt16* value) {
 	*value = 0; Int32 tmp;
 	if (!Convert_TryParseInt32(str, &tmp) || tmp < 0 || tmp > UInt16_MaxValue) return false;
 	*value = (UInt16)tmp; return true;
 }
 
-bool Convert_TryParseReal32(STRING_TRANSIENT String* str, Real32* value) {
+bool Convert_TryParseReal32(STRING_PURE String* str, Real32* value) {
 	Int32 i = 0;
 	*value = 0.0f;
 	bool foundDecimalPoint = false;
@@ -348,16 +368,37 @@ bool Convert_TryParseReal32(STRING_TRANSIENT String* str, Real32* value) {
 	return true;
 }
 
-bool Convert_TryParseBool(STRING_TRANSIENT String* str, bool* value) {
-	String trueStr  = String_FromConstant("true");
+bool Convert_TryParseBool(STRING_PURE String* str, bool* value) {
+	String trueStr  = String_FromConst("true");
 	if (String_CaselessEquals(str, &trueStr)) {
 		*value = true; return true;
 	}
 
-	String falseStr = String_FromConstant("false");
+	String falseStr = String_FromConst("false");
 	if (String_CaselessEquals(str, &falseStr)) {
 		*value = false; return true;
 	}
 
 	*value = false; return false;
+}
+
+#define STRINGSBUFFER_LEN_SHIFT 10
+#define STRINGSBUFFER_LEN_MASK  0x3FFUL
+void StringsBuffer_Get(StringsBuffer* buffer, UInt32 index, STRING_TRANSIENT String* text) {
+	String raw = StringsBuffer_UNSAFE_Get(buffer, index);
+	String_Clear(text);
+	String_AppendString(text, &raw);
+}
+
+String StringsBuffer_UNSAFE_Get(StringsBuffer* buffer, UInt32 index) {
+	if (index >= buffer->Count) ErrorHandler_Fail("Tried to get String past StringsBuffer end");
+
+	UInt32 flags = buffer->FlagsBuffer[index];
+	UInt32 offset = flags >> STRINGSBUFFER_LEN_SHIFT;
+	UInt32 len    = flags  & STRINGSBUFFER_LEN_MASK;
+
+	String raw;
+	raw.buffer = &buffer->TextBuffer[offset];
+	raw.length = len; raw.capacity = len;
+	return raw;
 }

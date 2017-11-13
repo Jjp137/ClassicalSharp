@@ -3,6 +3,8 @@ using System;
 using System.Drawing;
 using System.IO;
 using System.Net;
+using ClassicalSharp.Entities;
+using ClassicalSharp.Generator;
 using ClassicalSharp.Gui.Screens;
 using ClassicalSharp.Network;
 using ClassicalSharp.Textures;
@@ -17,12 +19,12 @@ namespace ClassicalSharp {
 	/// <summary> Represents a connection to either a multiplayer server, or an internal single player server. </summary>
 	public abstract class IServerConnection {
 		
-		public abstract bool IsSinglePlayer { get; }
+		public bool IsSinglePlayer;
 		
 		/// <summary> Opens a connection to the given IP address and port, and prepares the initial state of the client. </summary>
 		public abstract void Connect(IPAddress address, int port);
 		
-		public abstract void SendChat(string text, bool partial);
+		public abstract void SendChat(string text);
 		
 		/// <summary> Informs the server of the client's current position and orientation. </summary>
 		public abstract void SendPosition(Vector3 pos, float rotY, float headX);
@@ -69,10 +71,6 @@ namespace ClassicalSharp {
 			string url = identifier.Substring(3);
 			
 			float contentLengthMB = (contentLength / 1024f / 1024f);
-			string address = url;
-			if (url.StartsWith("https://")) address = url.Substring(8);
-			if (url.StartsWith("http://")) address = url.Substring(7);
-			
 			warning.lines[3] = "Download size: " + contentLengthMB.ToString("F3") + " MB";
 			warning.RedrawText();
 		}
@@ -139,5 +137,45 @@ namespace ClassicalSharp {
 			}
 		}
 		#endregion
+		
+		IMapGenerator gen;
+		internal void BeginGeneration(int width, int height, int length, int seed, IMapGenerator gen) {
+			game.World.Reset();
+			game.WorldEvents.RaiseOnNewMap();
+			
+			GC.Collect();
+			this.gen = gen;
+			game.Gui.SetNewScreen(new GeneratingMapScreen(game, gen));
+			gen.Width = width; gen.Height = height; gen.Length = length; gen.Seed = seed;
+			gen.GenerateAsync(game);
+		}
+		
+		internal void EndGeneration() {
+			game.Gui.SetNewScreen(null);
+			if (gen.Blocks == null) {
+				game.Chat.Add("&cFailed to generate the map.");
+			} else {
+				game.World.SetNewMap(gen.Blocks, gen.Width, gen.Height, gen.Length);
+				gen.Blocks = null;
+				ResetPlayerPosition();
+				
+				game.WorldEvents.RaiseOnNewMapLoaded();
+				gen.ApplyEnv(game.World);
+			}
+			
+			gen = null;
+			GC.Collect();
+		}
+
+		void ResetPlayerPosition() {
+			float x = (game.World.Width  / 2) + 0.5f;
+			float z = (game.World.Length / 2) + 0.5f;
+			Vector3 spawn = Respawn.FindSpawnPosition(game, x, z, game.LocalPlayer.Size);
+			
+			LocationUpdate update = LocationUpdate.MakePosAndOri(spawn, 0, 0, false);
+			game.LocalPlayer.SetLocation(update, false);
+			game.LocalPlayer.Spawn = spawn;
+			game.CurrentCameraPos = game.Camera.GetCameraPos(0);
+		}
 	}
 }

@@ -37,10 +37,10 @@ namespace ClassicalSharp {
 					}
 					
 					tex = drawer.Make2DTexture(bmp, size, 0, 0);
-					drawer.ReducePadding(ref tex, Utils.Floor(font.Size));
+					drawer.ReducePadding(ref tex, Utils.Floor(font.Size), 4);
 					
 					tex.U2 = (float)offset / bmp.Width;
-					tex.Width = (short)offset;
+					tex.Width = (ushort)offset;
 					totalWidth = bmp.Width;
 				}
 			}
@@ -52,7 +52,7 @@ namespace ClassicalSharp {
 		public void Add(int charIndex, VertexP3fT2fC4b[] vertices, ref int index) {
 			int width = widths[charIndex];			
 			Texture part = tex;
-			part.X1 = curX; part.Width = (short)width;
+			part.X1 = curX; part.Width = (ushort)width;
 			part.U1 = (offset + charIndex * fontSize) / (float)totalWidth;
 			part.U2 = part.U1 + width / (float)totalWidth;
 			

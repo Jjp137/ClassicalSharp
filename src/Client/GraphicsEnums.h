@@ -1,7 +1,5 @@
-#ifndef CS_GFXENUMS_H
-#define CS_GFXENUMS_H
-
-typedef Int32 GfxResourceID;
+#ifndef CC_GFXENUMS_H
+#define CC_GFXENUMS_H
 
 /* Vertex data format types*/
 typedef Int32 VertexFormat;

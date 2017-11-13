@@ -1,5 +1,5 @@
-#ifndef CS_MODEL_H
-#define CS_MODEL_H
+#ifndef CC_MODEL_H
+#define CC_MODEL_H
 #include "Typedefs.h"
 #include "Vectors.h"
 #include "PackedCol.h"
@@ -20,13 +20,6 @@ typedef UInt8 RotateOrder;
 #define RotateOrder_ZYX 0
 #define RotateOrder_XZY 1
 #define RotateOrder_YZX 2
-
-/* Skin layout a humanoid skin texture can have. */
-typedef UInt8 SkinType;
-#define SkinType_64x32 0
-#define SkinType_64x64 1
-#define SkinType_64x64Slim 2
-#define SkinType_Invalid 3
 
 /* Describes a vertex within a model. */
 typedef struct ModelVertex_ {

@@ -1,5 +1,5 @@
-#ifndef CS_GFXAPI_H
-#define CS_GFXAPI_H
+#ifndef CC_GFXAPI_H
+#define CC_GFXAPI_H
 #include "Typedefs.h"
 #include "Bitmap.h"
 #include "PackedCol.h"
@@ -12,7 +12,7 @@
 /* Abstracts a 3D graphics rendering API.
    Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 */
-#define ICOUNT(verticesCount) ((verticesCount) / 4 * 6)
+#define ICOUNT(verticesCount) (((verticesCount) >> 2) * 6)
 
 /* Initalises this graphics API. */
 void Gfx_Init(void);
@@ -31,9 +31,9 @@ bool Gfx_Mipmaps;
 bool Gfx_CustomMipmapsLevels;
 
 /* Maximum number of vertices that can be indexed. */
-#define Gfx_MaxIndices (65536 / 4 * 6)
+#define GFX_MAX_INDICES (65536 / 4 * 6)
 /* Maximum number of vertices that can be indexed. */
-#define Gfx_MaxVertex 65536
+#define GFX_MAX_VERTICES 65536
 
 /* Callback invoked when the current context is lost, and is repeatedly invoked until the context can be retrieved. */
 ScheduledTaskCallback LostContextFunction;
@@ -87,7 +87,6 @@ void Gfx_SetAlphaArgBlend(bool enabled);
 void Gfx_Clear(void);
 /* Sets the colour the screen is cleared to when Clear() is called. */
 void Gfx_ClearColour(PackedCol col);
-
 /* Whether depth testing is currently enabled. */
 void Gfx_SetDepthTest(bool enabled);
 /* Sets the depth test compare function that is used when depth testing is enabled. */
@@ -148,7 +147,7 @@ void Gfx_PopMatrix(void);
 void Gfx_LoadOrthoMatrix(Real32 width, Real32 height);
 
 /*Outputs a .png screenshot of the backbuffer to the specified file. */
-void Gfx_TakeScreenshot(String output, Int32 width, Int32 height);
+void Gfx_TakeScreenshot(STRING_PURE String* output, Int32 width, Int32 height);
 /* Adds a warning to game's chat if this graphics API has problems with the current user's GPU. 
 Returns boolean of whether legacy rendering mode is needed. */
 bool Gfx_WarnIfNecessary(void);

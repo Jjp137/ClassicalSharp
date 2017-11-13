@@ -89,13 +89,11 @@
     <Compile Include="2D\Screens\ClickableScreen.cs" />
     <Compile Include="2D\Screens\DeathScreen.cs" />
     <Compile Include="2D\Screens\DisconnectScreen.cs" />
+    <Compile Include="2D\Screens\InventoryScreen.cs" />
     <Compile Include="2D\Screens\Overlays\Overlay.cs" />
     <Compile Include="2D\Screens\Overlays\TexIdsOverlay.cs" />
     <Compile Include="2D\Screens\Overlays\WarningOverlay.cs" />
     <Compile Include="2D\Screens\StatusScreen.cs" />
-    <Compile Include="2D\Screens\Inventory\InventoryScreen.cs" />
-    <Compile Include="2D\Screens\Inventory\InventoryScreen.Input.cs" />
-    <Compile Include="2D\Screens\Inventory\InventoryScreen.Scrolling.cs" />
     <Compile Include="2D\Screens\LoadingMapScreen.cs" />
     <Compile Include="2D\Screens\MenuScreen.cs" />
     <Compile Include="2D\Screens\Menu\ClassicOptionsScreen.cs" />
@@ -124,11 +122,9 @@
     <Compile Include="2D\Utils\FastColour.cs" />
     <Compile Include="2D\Utils\TextAtlas.cs" />
     <Compile Include="2D\Widgets\HotbarWidget.cs" />
-    <Compile Include="2D\Widgets\Chat\AltTextInputWidget.Types.cs" />
     <Compile Include="2D\Widgets\Chat\ChatInputWidget.cs" />
-    <Compile Include="2D\Widgets\Chat\AltTextInputWidget.cs" />
+    <Compile Include="2D\Widgets\Chat\SpecialInputWidget.cs" />
     <Compile Include="2D\Widgets\Chat\TextGroupWidget.cs" />
-    <Compile Include="2D\Widgets\Chat\TextGroupWidget.Formatter.cs" />
     <Compile Include="2D\Widgets\InputWidget.cs" />
     <Compile Include="2D\Widgets\Menu\MenuInputValidator.cs" />
     <Compile Include="2D\Widgets\Menu\MenuInputWidget.cs" />
@@ -137,7 +133,9 @@
     <Compile Include="2D\Widgets\PlayerList\ExtPlayerListWidget.cs" />
     <Compile Include="2D\Widgets\PlayerList\NormalPlayerListWidget.cs" />
     <Compile Include="2D\Widgets\PlayerList\PlayerListWidget.cs" />
+    <Compile Include="2D\Widgets\ScrollbarWidget.cs" />
     <Compile Include="2D\Widgets\SurvivalHotbarWidget.cs" />
+    <Compile Include="2D\Widgets\TableWidget.cs" />
     <Compile Include="2D\Widgets\TextWidget.cs" />
     <Compile Include="2D\Widgets\Widget.cs" />
     <Compile Include="Audio\AudioPlayer.cs" />
@@ -215,10 +213,8 @@
     <Compile Include="Network\Protocols\IProtocol.cs" />
     <Compile Include="Network\Protocols\WoM.cs" />
     <Compile Include="Network\Utils\PingList.cs" />
-    <Compile Include="Particles\CollidableParticle.cs" />
     <Compile Include="Particles\Particle.cs" />
     <Compile Include="Particles\ParticleManager.cs" />
-    <Compile Include="Particles\ParticleSpawner.cs" />
     <Compile Include="Entities\Player.cs" />
     <Compile Include="Game\ChatLog.cs" />
     <Compile Include="Game\Game.cs" />
@@ -337,7 +333,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="2D\Drawing" />
-    <Folder Include="2D\Screens\Inventory" />
     <Folder Include="2D\Screens\Overlays" />
     <Folder Include="2D\Utils" />
     <Folder Include="2D\Screens" />

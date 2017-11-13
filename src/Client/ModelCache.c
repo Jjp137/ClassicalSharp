@@ -8,7 +8,7 @@
 #include "TerrainAtlas.h"
 #include "Drawer.h"
 
-String ModelCache_charPngString = String_FromConstant("char.png");
+String ModelCache_charPngString = String_FromConst("char.png");
 Int32 ModelCache_texCount, ModelCache_modelCount;
 
 void ModelCache_ContextLost(void) {
@@ -16,10 +16,10 @@ void ModelCache_ContextLost(void) {
 }
 
 void ModelCache_ContextRecreated(void) {
-	ModelCache_Vb = Gfx_CreateDynamicVb(VertexFormat_P3fT2fC4b, ModelCache_MaxVertices);
+	ModelCache_Vb = Gfx_CreateDynamicVb(VertexFormat_P3fT2fC4b, MODELCACHE_MAX_VERTICES);
 }
 
-IModel* ModelCache_Get(STRING_TRANSIENT String* name) {
+IModel* ModelCache_Get(STRING_PURE String* name) {
 	Int32 i;
 	for (i = 0; i < ModelCache_modelCount; i++) {
 		CachedModel* m = &ModelCache_Models[i];
@@ -34,7 +34,7 @@ IModel* ModelCache_Get(STRING_TRANSIENT String* name) {
 	return ModelCache_Models[0].Instance;
 }
 
-Int32 ModelCache_GetTextureIndex(STRING_TRANSIENT String* texName) {
+Int32 ModelCache_GetTextureIndex(STRING_PURE String* texName) {
 	Int32 i;
 	for (i = 0; i < ModelCache_texCount; i++) {
 		CachedTexture* tex = &ModelCache_Textures[i];
@@ -43,8 +43,8 @@ Int32 ModelCache_GetTextureIndex(STRING_TRANSIENT String* texName) {
 	return -1;
 }
 
-void ModelCache_Register(STRING_REF const UInt8* name, STRING_TRANSIENT const UInt8* defaultTexName, IModel* instance) {
-	if (ModelCache_modelCount < ModelCache_MaxModels) {
+void ModelCache_Register(STRING_REF const UInt8* name, STRING_PURE const UInt8* defaultTexName, IModel* instance) {
+	if (ModelCache_modelCount < MODELCACHE_MAX_MODELS) {
 		CachedModel model;
 		model.Name = String_FromReadonly(name);
 		model.Instance = instance;
@@ -61,10 +61,10 @@ void ModelCache_Register(STRING_REF const UInt8* name, STRING_TRANSIENT const UI
 }
 
 void ModelCache_RegisterTexture(STRING_REF const UInt8* texName) {
-	if (ModelCache_texCount < ModelCache_MaxModels) {
+	if (ModelCache_texCount < MODELCACHE_MAX_MODELS) {
 		CachedTexture tex;
 		tex.Name = String_FromReadonly(texName);
-		tex.TexID = -1;
+		tex.TexID = NULL;
 		ModelCache_Textures[ModelCache_texCount] = tex;
 		ModelCache_texCount++;
 	} else {
@@ -420,7 +420,7 @@ void SheepModel_DrawModel(Entity* entity) {
 	IModel_DrawRotate(entity->Anim.LeftLegX, 0, 0, Sheep_RightLegBack, false);
 	IModel_UpdateVB();
 
-	String sheep_nofur = String_FromConstant("sheep_nofur");
+	String sheep_nofur = String_FromConst("sheep_nofur");
 	if (String_CaselessEquals(&entity->ModelName, &sheep_nofur)) return;
 	Gfx_BindTexture(ModelCache_Textures[fur_Index].TexID);
 	IModel_DrawRotate(-entity->HeadX * MATH_DEG2RAD, 0, 0, Fur_Head, true);
@@ -440,7 +440,7 @@ IModel* SheepModel_GetInstance(void) {
 	SheepModel.SurvivalScore = 10;
 	SheepModel.NameYOffset = 1.48125f;
 
-	String sheep_fur = String_FromConstant("sheep_fur.png");
+	String sheep_fur = String_FromConst("sheep_fur.png");
 	fur_Index = ModelCache_GetTextureIndex(&sheep_fur);
 	return &SheepModel;
 }
@@ -1229,8 +1229,9 @@ void BlockModel_DrawModel(Entity* p) {
 
 	if (Block_FullBright[BlockModel_block]) {
 		Int32 i;
+		PackedCol white = PACKEDCOL_WHITE;
 		for (i = 0; i < Face_Count; i++) {
-			IModel_Cols[i] = PackedCol_White;
+			IModel_Cols[i] = white;
 		}
 	}
 	if (Block_Draw[BlockModel_block] == DrawType_Gas) return;

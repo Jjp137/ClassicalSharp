@@ -9,16 +9,17 @@ using Android.Graphics;
 namespace ClassicalSharp.Gui.Widgets {
 	public abstract class InputWidget : Widget {
 		
-		public InputWidget(Game game, Font font) : base(game) {
-			Text = new WrappableStringBuffer(Utils.StringLength * MaxLines);
-			lines = new string[MaxLines];
-			lineSizes = new Size[MaxLines];
+		public InputWidget(Game game, Font font, string prefix, int maxLines) : base(game) {
+			Text = new WrappableStringBuffer(Utils.StringLength * maxLines);
+			lines = new string[maxLines];
+			lineSizes = new Size[maxLines];
+			this.font = font;
+			Prefix = prefix;
 			
 			DrawTextArgs args = new DrawTextArgs("_", font, true);
 			caretTex = game.Drawer2D.MakeTextTexture(ref args, 0, 0);
-			caretTex.Width = (short)((caretTex.Width * 3) / 4);
+			caretTex.Width = (ushort)((caretTex.Width * 3) / 4);
 			caretWidth = caretTex.Width; caretHeight = caretTex.Height;
-			this.font = font;
 			
 			if (Prefix == null) return;
 			args = new DrawTextArgs(Prefix, font, true);
@@ -45,17 +46,17 @@ namespace ClassicalSharp.Gui.Widgets {
 		public WrappableStringBuffer Text;
 		
 		/// <summary> The maximum number of lines that may be entered. </summary>
-		public abstract int MaxLines { get; }
+		public abstract int UsedLines { get; }
 		
 		/// <summary> The maximum number of characters that can fit on one line. </summary>
-		public abstract int MaxCharsPerLine { get; }
+		public int MaxCharsPerLine = Utils.StringLength;
 		
 		/// <summary> The prefix string that is always shown before the input text. Can be null. </summary>
-		public abstract string Prefix { get; }
+		public string Prefix;
 		
 		/// <summary> The horizontal offset (in pixels) from the start of the box background
 		/// to the beginning of the input texture. </summary>
-		public abstract int Padding { get; }
+		public int Padding;
 		
 		/// <summary> Whether a caret should be drawn at the position characters 
 		/// are inserted/deleted from the input text. </summary>
@@ -63,12 +64,13 @@ namespace ClassicalSharp.Gui.Widgets {
 		
 		protected string[] lines; // raw text of each line
 		protected Size[] lineSizes; // size of each line in pixels
-		protected int caretCol, caretRow; // coordinates of caret
+		protected int caretX, caretY; // coordinates of caret in lines
 		protected double caretAccumulator;
 		
 		public override void Init() {
-			if (lines.Length > 1) {
-				Text.WordWrap(game.Drawer2D, lines, MaxCharsPerLine);
+			int numLines = UsedLines;
+			if (numLines > 1) {
+				Text.WordWrap(game.Drawer2D, lines, numLines, MaxCharsPerLine);
 			} else {
 				lines[0] = Text.ToString();
 			}
@@ -105,7 +107,7 @@ namespace ClassicalSharp.Gui.Widgets {
 			lineSizes[0].Width = prefixWidth;
 			
 			DrawTextArgs args = new DrawTextArgs(null, font, true);
-			for (int y = 0; y < MaxLines; y++) {
+			for (int y = 0; y < UsedLines; y++) {
 				args.Text = lines[y];
 				lineSizes[y] += game.Drawer2D.MeasureSize(ref args);
 			}
@@ -114,38 +116,39 @@ namespace ClassicalSharp.Gui.Widgets {
 		
 		/// <summary> Calculates the location and size of the caret character </summary>
 		public void UpdateCaret() {
-			if (caret >= Text.Length) caret = -1;
-			Text.GetCoords(caret, lines, out caretCol, out caretRow);
+			int maxChars = UsedLines * MaxCharsPerLine;
+			if (caret >= maxChars) caret = -1;
+			Text.GetCoords(caret, lines, out caretX, out caretY);
 			DrawTextArgs args = new DrawTextArgs(null, font, false);
 			IDrawer2D drawer = game.Drawer2D;
 			caretAccumulator = 0;
 
-			if (caretCol == MaxCharsPerLine) {
-				caretTex.X1 = X + Padding + lineSizes[caretRow].Width;
+			if (caretX == MaxCharsPerLine) {
+				caretTex.X1 = X + Padding + lineSizes[caretY].Width;
 				caretColour = FastColour.Yellow;
-				caretTex.Width = (short)caretWidth;
+				caretTex.Width = (ushort)caretWidth;
 			} else {
-				args.Text = lines[caretRow].Substring(0, caretCol);
+				args.Text = lines[caretY].Substring(0, caretX);
 				Size trimmedSize = drawer.MeasureSize(ref args);
-				if (caretRow == 0) trimmedSize.Width += prefixWidth;
+				if (caretY == 0) trimmedSize.Width += prefixWidth;
 
 				caretTex.X1 = X + Padding + trimmedSize.Width;
 				caretColour = FastColour.Scale(FastColour.White, 0.8f);
 				
-				string line = lines[caretRow];
-				if (caretCol < line.Length) {
-					args.Text = new String(line[caretCol], 1);
+				string line = lines[caretY];
+				if (caretX < line.Length) {
+					args.Text = new String(line[caretX], 1);
 					args.UseShadow = true;
-					caretTex.Width = (short)drawer.MeasureSize(ref args).Width;
+					caretTex.Width = (ushort)drawer.MeasureSize(ref args).Width;
 				} else {
-					caretTex.Width = (short)caretWidth;
+					caretTex.Width = (ushort)caretWidth;
 				}
 			}
-			caretTex.Y1 = lineSizes[0].Height * caretRow + inputTex.Y1 + 2;
+			caretTex.Y1 = lineSizes[0].Height * caretY + inputTex.Y1 + 2;
 			
 			// Update the colour of the caret
-			char code = GetLastColour(caretCol, caretRow);
-			if (code != '\0') caretColour = drawer.Colours[code];
+			char code = GetLastColour(caretX, caretY);
+			if (code != '\0') caretColour = IDrawer2D.Cols[code];
 		}
 		
 		protected void RenderCaret(double delta) {
@@ -160,7 +163,7 @@ namespace ClassicalSharp.Gui.Widgets {
 		/// <remarks> Also updates the dimensions of the widget. </remarks>
 		public virtual void RemakeTexture() {
 			int totalHeight = 0, maxWidth = 0;
-			for (int i = 0; i < MaxLines; i++) {
+			for (int i = 0; i < UsedLines; i++) {
 				totalHeight += lineSizes[i].Height;
 				maxWidth = Math.Max(maxWidth, lineSizes[i].Width);
 			}
@@ -182,7 +185,7 @@ namespace ClassicalSharp.Gui.Widgets {
 					if (lines[i] == null) break;
 					args.Text = lines[i];
 					char lastCol = GetLastColour(0, i);
-					if (!IDrawer2D.IsWhiteColour(lastCol))
+					if (!IDrawer2D.IsWhiteCol(lastCol))
 						args.Text = "&" + lastCol + args.Text;
 					
 					int offset = i == 0 ? prefixWidth : 0;
@@ -200,10 +203,9 @@ namespace ClassicalSharp.Gui.Widgets {
 		
 		protected char GetLastColour(int indexX, int indexY) {
 			int x = indexX;
-			IDrawer2D drawer = game.Drawer2D;
 			for (int y = indexY; y >= 0; y--) {
 				string part = lines[y];
-				char code = drawer.LastColour(part, x);
+				char code = IDrawer2D.LastCol(part, x);
 				if (code != '\0') return code;
 				if (y > 0) x = lines[y - 1].Length;
 			}
@@ -250,8 +252,8 @@ namespace ClassicalSharp.Gui.Widgets {
 		
 		
 		bool TryAppendChar(char c) {
-			int totalChars = MaxCharsPerLine * lines.Length;
-			if (Text.Length == totalChars) return false;
+			int maxChars = UsedLines * MaxCharsPerLine;
+			if (Text.Length >= maxChars) return false;
 			if (!AllowedChar(c)) return false;
 			
 			AppendChar(c);
@@ -354,7 +356,7 @@ namespace ClassicalSharp.Gui.Widgets {
 		bool CheckColour(int index) {
 			if (index < 0) return false;
 			char code = Text.value[index], col = Text.value[index + 1];
-			return (code == '%' || code == '&') && game.Drawer2D.ValidColour(col);
+			return (code == '%' || code == '&') && IDrawer2D.ValidColCode(col);
 		}
 		
 		void DeleteKey() {
@@ -410,15 +412,15 @@ namespace ClassicalSharp.Gui.Widgets {
 		
 		static char[] trimChars = {'\r', '\n', '\v', '\f', ' ', '\t', '\0'};
 		bool OtherKey(Key key) {
-			int totalChars = MaxCharsPerLine * lines.Length;
-			if (key == Key.V && Text.Length < totalChars) {
+			int maxChars = UsedLines * MaxCharsPerLine;
+			if (key == Key.V && Text.Length < maxChars) {
 				string text = null;
 				try {
 					text = game.window.ClipboardText.Trim(trimChars);
 				} catch (Exception ex) {
 					ErrorHandler.LogError("Paste from clipboard", ex);
 					const string warning = "&cError while trying to paste from clipboard.";
-					game.Chat.Add(warning, MessageType.ClientStatus4);
+					game.Chat.Add(warning, MessageType.ClientStatus2);
 					return true;
 				}
 
@@ -432,7 +434,7 @@ namespace ClassicalSharp.Gui.Widgets {
 				} catch (Exception ex) {
 					ErrorHandler.LogError("Copy to clipboard", ex);
 					const string warning = "&cError while trying to copy to clipboard.";
-					game.Chat.Add(warning, MessageType.ClientStatus4);
+					game.Chat.Add(warning, MessageType.ClientStatus2);
 				}
 				return true;
 			}

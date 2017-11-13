@@ -8,31 +8,27 @@
 
 void Atlas2D_UpdateState(Bitmap bmp) {
 	Atlas2D_Bitmap = bmp;
-	Atlas2D_ElementSize = bmp.Width / Atlas2D_ElementsPerRow;
+	Atlas2D_ElementSize = bmp.Width / ATLAS2D_ELEMENTS_PER_ROW;
 	Block_RecalculateSpriteBB();
 }
 
-Int32 Atlas2D_LoadTextureElement_Raw(TextureLoc texLoc, Bitmap* element) {
+GfxResourceID Atlas2D_LoadTextureElement_Raw(TextureLoc texLoc, Bitmap* element) {
 	Int32 size = Atlas2D_ElementSize;
-	Int32 x = texLoc % Atlas2D_ElementsPerRow, y = texLoc / Atlas2D_ElementsPerRow;
+	Int32 x = texLoc % ATLAS2D_ELEMENTS_PER_ROW, y = texLoc / ATLAS2D_ELEMENTS_PER_ROW;
 	Bitmap_CopyBlock(x * size, y * size, 0, 0,
 		&Atlas2D_Bitmap, element, size);
 
 	return Gfx_CreateTexture(element, true, Gfx_Mipmaps);
 }
 
-Int32 Atlas2D_LoadTextureElement(TextureLoc texLoc) {
+GfxResourceID Atlas2D_LoadTextureElement(TextureLoc texLoc) {
 	Int32 size = Atlas2D_ElementSize;
 	Bitmap element;
 
 	/* Try to allocate bitmap on stack if possible */
 	if (size > 64) {
 		Bitmap_Allocate(&element, size, size);
-		if (element.Scan0 == NULL) {
-			ErrorHandler_Fail("Atlas2D_LoadTextureElement - failed to allocate memory");
-		}
-
-		Int32 texId = Atlas2D_LoadTextureElement_Raw(texLoc, &element);
+		GfxResourceID texId = Atlas2D_LoadTextureElement_Raw(texLoc, &element);
 		Platform_MemFree(element.Scan0);
 		return texId;
 	} else {
@@ -64,9 +60,6 @@ void Atlas1D_Make1DTexture(Int32 i, Int32 atlas1DHeight, Int32* index) {
 	Int32 elemSize = Atlas2D_ElementSize;
 	Bitmap atlas1D;
 	Bitmap_Allocate(&atlas1D, elemSize, atlas1DHeight);
-	if (atlas1D.Scan0 == NULL) {
-		ErrorHandler_Fail("Atlas1D_Make1DTexture - failed to allocate memory");
-	}
 
 	Int32 index1D;
 	for (index1D = 0; index1D < Atlas1D_ElementsPerAtlas; index1D++) {
@@ -87,12 +80,12 @@ void Atlas1D_Convert2DTo1D(Int32 atlasesCount, Int32 atlas1DHeight) {
 	UInt8 logBuffer[String_BufferSize(127)];
 	String log = String_FromRawBuffer(logBuffer, 127);
 
-	String_AppendConstant(&log, "Loaded new atlas: ");
+	String_AppendConst(&log, "Loaded new atlas: ");
 	String_AppendInt32(&log, atlasesCount);
-	String_AppendConstant(&log, " bmps, ");
+	String_AppendConst(&log, " bmps, ");
 	String_AppendInt32(&log, Atlas1D_ElementsPerBitmap);
-	String_AppendConstant(&log, " per bmp");
-	Platform_Log(log);
+	String_AppendConst(&log, " per bmp");
+	Platform_Log(&log);
 
 	Int32 index = 0, i;
 	for (i = 0; i < atlasesCount; i++) {
@@ -103,7 +96,7 @@ void Atlas1D_Convert2DTo1D(Int32 atlasesCount, Int32 atlas1DHeight) {
 void Atlas1D_UpdateState(void) {
 	Int32 maxVerticalSize = min(4096, Gfx_MaxTextureDimensions);
 	Int32 elementsPerFullAtlas = maxVerticalSize / Atlas2D_ElementSize;
-	Int32 totalElements = Atlas2D_RowsCount * Atlas2D_ElementsPerRow;
+	Int32 totalElements = ATLAS2D_ROWS_COUNT * ATLAS2D_ELEMENTS_PER_ROW;
 
 	Int32 atlasesCount = Math_CeilDiv(totalElements, elementsPerFullAtlas);
 	Atlas1D_ElementsPerAtlas = min(elementsPerFullAtlas, totalElements);
@@ -118,7 +111,7 @@ Int32 Atlas1D_UsedAtlasesCount(void) {
 	TextureLoc maxTexLoc = 0;
 	Int32 i;
 
-	for (i = 0; i < Block_TexturesCount; i++) {
+	for (i = 0; i < Array_NumElements(Block_Textures); i++) {
 		maxTexLoc = max(maxTexLoc, Block_Textures[i]);
 	}
 	return Atlas1D_Index(maxTexLoc) + 1;

@@ -10,40 +10,58 @@
 #include "VertexStructs.h"
 #include "World.h"
 #include "EnvRenderer.h"
+#include "ExtMath.h"
 
-GfxResourceID skybox_tex, skybox_vb = -1;
+GfxResourceID skybox_tex, skybox_vb;
 #define SKYBOX_COUNT (6 * 4)
 
 bool SkyboxRenderer_ShouldRender(void) {
 	return skybox_tex > 0 && !EnvRenderer_Minimal;
 }
 
+void SkyboxRenderer_TexturePackChanged(void) {
+	Gfx_DeleteTexture(&skybox_tex);
+	WorldEnv_SkyboxClouds = false;
+}
+
 void SkyboxRenderer_FileChanged(Stream* src) {
-	String skybox = String_FromConstant("skybox.png");
+	String skybox = String_FromConst("skybox.png");
+	String useclouds = String_FromConst("useclouds");
+
 	if (String_Equals(&src->Name, &skybox)) {
 		Game_UpdateTexture(&skybox_tex, src, false);
+	} else if (String_Equals(&src->Name, &useclouds)) {
+		WorldEnv_SkyboxClouds = true;
 	}
 }
 
 void SkyboxRenderer_Render(Real64 deltaTime) {
-	if (skybox_vb == -1) return;
+	if (skybox_vb == 0) return;
 	Gfx_SetDepthWrite(false);
 	Gfx_SetTexturing(false);
 	Gfx_BindTexture(skybox_tex);
 	Gfx_SetBatchFormat(VertexFormat_P3fT2fC4b);
 
 	Matrix m = Matrix_Identity;
-	Vector2 rotation = Camera_ActiveCamera->GetCameraOrientation();
-
 	Matrix rotX, rotY;
-	Matrix_RotateY(&rotY, rotation.Y); /* Yaw */
+
+	/* Base skybox rotation */
+	Real32 rotTime = (Real32)(Game_Accumulator * 2 * MATH_PI); /* So speed of 1 rotates whole skybox every second */
+	Matrix_RotateY(&rotY, WorldEnv_SkyboxHorSpeed * rotTime);
 	Matrix_MulBy(&m, &rotY);
-	Matrix_RotateX(&rotX, rotation.X); /* Pitch */
+	Matrix_RotateX(&rotX, WorldEnv_SkyboxVerSpeed * rotTime);
+	Matrix_MulBy(&m, &rotX);
+
+	/* Rotate around camera */
+	Vector2 rotation = Camera_ActiveCamera->GetCameraOrientation();
+	Matrix_RotateY(&rotY, rotation.Y); /* Camera yaw */
+	Matrix_MulBy(&m, &rotY);
+	Matrix_RotateX(&rotX, rotation.X); /* Camera pitch */
 	Matrix_MulBy(&m, &rotX);
 	/* Tilt skybox too. */
 	Matrix_MulBy(&m, &Camera_TiltM);
-	Gfx_LoadMatrix(&m);
 
+	Gfx_LoadMatrix(&m);
 	Gfx_BindVb(skybox_vb);
 	Gfx_DrawVb_IndexedTris(SKYBOX_COUNT);
 
@@ -57,7 +75,7 @@ void SkyboxRenderer_MakeVb(void) {
 	Gfx_DeleteVb(&skybox_vb);
 	VertexP3fT2fC4b vertices[SKYBOX_COUNT];
 	#define pos 1.0f
-	VertexP3fT2fC4b v; v.Colour = WorldEnv_CloudsCol;
+	VertexP3fT2fC4b v; v.Col = WorldEnv_CloudsCol;
 
 	/* Render the front quad */
 	                        v.Z = -pos;
@@ -110,10 +128,6 @@ void SkyboxRenderer_ContextRecreated(void) { SkyboxRenderer_MakeVb(); }
 void SkyboxRenderer_EnvVariableChanged(EnvVar envVar) {
 	if (envVar != EnvVar_CloudsCol) return;
 	SkyboxRenderer_MakeVb();
-}
-
-void SkyboxRenderer_TexturePackChanged(void) {
-	Gfx_DeleteTexture(&skybox_tex);
 }
 
 void SkyboxRenderer_Init(void) {

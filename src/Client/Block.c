@@ -5,17 +5,17 @@
 #include "TerrainAtlas.h"
 #include "Player.h"
 
-TextureLoc Block_TopTex[Block_CpeCount] = { 0,  1,  0,  2, 16,  4, 15, 17, 14, 14,
+TextureLoc Block_TopTex[BLOCK_CPE_COUNT] = { 0,  1,  0,  2, 16,  4, 15, 17, 14, 14,
 30, 30, 18, 19, 32, 33, 34, 21, 22, 48, 49, 64, 65, 66, 67, 68, 69, 70, 71,
 72, 73, 74, 75, 76, 77, 78, 79, 13, 12, 29, 28, 24, 23,  6,  6,  7,  9,  4,
 36, 37, 16, 11, 25, 50, 38, 80, 81, 82, 83, 84, 51, 54, 86, 26, 53, 52, };
 
-TextureLoc Block_SideTex[Block_CpeCount] = { 0,  1,  3,  2, 16,  4, 15, 17, 14, 14,
+TextureLoc Block_SideTex[BLOCK_CPE_COUNT] = { 0,  1,  3,  2, 16,  4, 15, 17, 14, 14,
 30, 30, 18, 19, 32, 33, 34, 20, 22, 48, 49, 64, 65, 66, 67, 68, 69, 70, 71,
 72, 73, 74, 75, 76, 77, 78, 79, 13, 12, 29, 28, 40, 39,  5,  5,  7,  8, 35,
 36, 37, 16, 11, 41, 50, 38, 80, 81, 82, 83, 84, 51, 54, 86, 42, 53, 52, };
 
-TextureLoc Block_BottomTex[Block_CpeCount] = { 0,  1,  2,  2, 16,  4, 15, 17, 14, 14,
+TextureLoc Block_BottomTex[BLOCK_CPE_COUNT] = { 0,  1,  2,  2, 16,  4, 15, 17, 14, 14,
 30, 30, 18, 19, 32, 33, 34, 21, 22, 48, 49, 64, 65, 66, 67, 68, 69, 70, 71,
 72, 73, 74, 75, 76, 77, 78, 79, 13, 12, 29, 28, 56, 55,  6,  6,  7, 10,  4,
 36, 37, 16, 11, 57, 50, 38, 80, 81, 82, 83, 84, 51, 54, 86, 58, 53, 52 };
@@ -33,7 +33,7 @@ void Block_Init(void) {
 	}
 
 	Int32 block;
-	for (block = BlockID_Air; block < Block_Count; block++) {
+	for (block = BlockID_Air; block < BLOCK_COUNT; block++) {
 		Block_ResetProps((BlockID)block);
 	}
 	Block_UpdateCullingAll();
@@ -41,7 +41,7 @@ void Block_Init(void) {
 
 void Block_SetDefaultPerms(void) {
 	Int32 block;
-	for (block = BlockID_Air; block <= Block_MaxDefined; block++) {
+	for (block = BlockID_Air; block <= BLOCK_MAX_DEFINED; block++) {
 		Block_CanPlace[block] = true;
 		Block_CanDelete[block] = true;
 	}
@@ -81,7 +81,7 @@ void Block_SetDrawType(BlockID block, UInt8 draw) {
 }
 
 
-void Block_SplitUppercase(STRING_TRANSIENT String* buffer, STRING_TRANSIENT String* blockNames, Int32 start, Int32 end) {
+void Block_SplitUppercase(STRING_TRANSIENT String* buffer, STRING_PURE String* blockNames, Int32 start, Int32 end) {
 	Int32 i;
 	for (i = start; i < end; i++) {
 		UInt8 c = String_CharAt(blockNames, i);
@@ -101,12 +101,12 @@ String Block_DefaultName(BlockID block) {
 #if USE16_BIT
 	if (block >= 256) return "ID " + block;
 #endif
-	if (block >= Block_CpeCount) {
-		String invalid = String_FromConstant("Invalid");
+	if (block >= BLOCK_CPE_COUNT) {
+		String invalid = String_FromConst("Invalid");
 		return invalid;
 	}
 
-	String blockNames = String_FromConstant(Block_RawNames);
+	String blockNames = String_FromConst(BLOCK_RAW_NAMES);
 	/* Find start and end of this particular block name. */
 	Int32 start = 0, i;
 	for (i = 0; i < block; i++) {
@@ -146,7 +146,7 @@ void Block_ResetProps(BlockID block) {
 	Block_CalcRenderBounds(block);
 	Block_LightOffset[block] = Block_CalcLightOffset(block);
 
-	if (block >= Block_CpeCount) {
+	if (block >= BLOCK_CPE_COUNT) {
 #if USE16_BIT
 		/* give some random texture ids */
 		Block_SetTex((block * 10 + (block % 7) + 20) % 80, Face_YMax, block);
@@ -164,15 +164,20 @@ void Block_ResetProps(BlockID block) {
 	}
 }
 
-Int32 Block_FindID(STRING_TRANSIENT String* name) {
+Int32 Block_FindID(STRING_PURE String* name) {
 	Int32 block;
-	for (block = BlockID_Air; block < Block_Count; block++) {
+	for (block = BlockID_Air; block < BLOCK_COUNT; block++) {
 		if (String_CaselessEquals(&Block_Name[block], name)) return block;
 	}
 	return -1;
 }
 
-bool Block_IsLiquid(BlockID b) { return b >= BlockID_Water && b <= BlockID_StillLava; }
+bool Block_IsLiquid(BlockID b) {
+	CollideType collide = Block_ExtendedCollide[b];
+	return
+		(collide == CollideType_LiquidWater && Block_Draw[b] == DrawType_Translucent) ||
+		(collide == CollideType_LiquidLava  && Block_Draw[b] == DrawType_Transparent);
+}
 
 
 void Block_SetSide(TextureLoc texLoc, BlockID blockId) {
@@ -227,7 +232,7 @@ bool Block_FaceOccluded(BlockID block, BlockID other, Face face) {
 void Block_CalcRenderBounds(BlockID block) {
 	Vector3 min = Block_MinBB[block], max = Block_MaxBB[block];
 
-	if (block >= BlockID_Water && block <= BlockID_StillLava) {
+	if (Block_IsLiquid(block)) {
 		min.X -= 0.1f / 16.0f; max.X -= 0.1f / 16.0f;
 		min.Z -= 0.1f / 16.0f; max.Z -= 0.1f / 16.0f;
 		min.Y -= 1.5f / 16.0f; max.Y -= 1.5f / 16.0f;
@@ -258,7 +263,7 @@ UInt8 Block_CalcLightOffset(BlockID block) {
 
 void Block_RecalculateSpriteBB(void) {
 	Int32 block;
-	for (block = BlockID_Air; block < Block_Count; block++) {
+	for (block = BlockID_Air; block < BLOCK_COUNT; block++) {
 		if (Block_Draw[block] != DrawType_Sprite) continue;
 
 		Block_RecalculateBB((BlockID)block);
@@ -381,11 +386,11 @@ void Block_CalcCulling(BlockID block, BlockID other) {
 
 void Block_UpdateCullingAll(void) {
 	Int32 block, neighbour;
-	for (block = BlockID_Air; block < Block_Count; block++)
+	for (block = BlockID_Air; block < BLOCK_COUNT; block++)
 		Block_CanStretch[block] = 0x3F;
 
-	for (block = BlockID_Air; block < Block_Count; block++) {
-		for (neighbour = BlockID_Air; neighbour < Block_Count; neighbour++) {
+	for (block = BlockID_Air; block < BLOCK_COUNT; block++) {
+		for (neighbour = BlockID_Air; neighbour < BLOCK_COUNT; neighbour++) {
 			Block_CalcCulling((BlockID)block, (BlockID)neighbour);
 		}
 	}
@@ -395,7 +400,7 @@ void Block_UpdateCulling(BlockID block) {
 	Block_CanStretch[block] = 0x3F;
 
 	Int32 other;
-	for (other = BlockID_Air; other < Block_Count; other++) {
+	for (other = BlockID_Air; other < BLOCK_COUNT; other++) {
 		Block_CalcCulling(block, (BlockID)other);
 		Block_CalcCulling((BlockID)other, block);
 	}
@@ -427,8 +432,8 @@ bool Block_IsHidden(BlockID block, BlockID other) {
 void Block_SetHidden(BlockID block, BlockID other, Face face, bool value) {
 	value = Block_IsHidden(block, other) && Block_FaceOccluded(block, other, face) && value;
 	Int32 bit = value ? 1 : 0;
-	Block_Hidden[block * Block_Count + other] &= (UInt8)~(1 << face);
-	Block_Hidden[block * Block_Count + other] |= (UInt8)(bit << face);
+	Block_Hidden[block * BLOCK_COUNT + other] &= (UInt8)~(1 << face);
+	Block_Hidden[block * BLOCK_COUNT + other] |= (UInt8)(bit << face);
 }
 
 bool Block_IsFaceHidden(BlockID block, BlockID other, Face face) {
@@ -448,7 +453,7 @@ BlockID AutoRotate_Find(BlockID block, String* name, const UInt8* suffix) {
 	UInt8 buffer[String_BufferSize(128)];
 	String temp = String_FromRawBuffer(buffer, 128);
 	String_AppendString(&temp, name);
-	String_AppendConstant(&temp, suffix);
+	String_AppendConst(&temp, suffix);
 
 	Int32 rotated = Block_FindID(&temp);
 	if (rotated != -1) return (BlockID)rotated;

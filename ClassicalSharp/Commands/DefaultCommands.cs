@@ -1,6 +1,7 @@
 ﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Text;
 using ClassicalSharp.Renderers;
 using OpenTK.Input;
@@ -87,6 +88,32 @@ namespace ClassicalSharp.Commands {
 				game.Chat.Add("&e/client: &fRender type is now " + args[1] + ".");
 			} else {
 				game.Chat.Add("&e/client: &cUnrecognised render type &f\"" + args[1] + "\"&c.");
+			}
+		}
+	}
+	
+	public sealed class ResolutionCommand : Command {
+		
+		public ResolutionCommand() {
+			Name = "Resolution";
+			Help = new string[] {
+				"&a/client resolution [width] [height]",
+				"&ePrecisely sets the size of the rendered window.",
+			};
+		}
+		
+		public override void Execute(string[] args) {
+			int width, height;
+			if (args.Length < 3) {
+				game.Chat.Add("&e/client: &cYou didn't specify width and height");
+			} else if (!Int32.TryParse(args[1], out width) || !Int32.TryParse(args[2], out height)) {
+				game.Chat.Add("&e/client: &cWidth and height must be integers.");
+			} else if (width <= 0 || height <= 0) {
+				game.Chat.Add("&e/client: &cWidth and height must be above 0.");
+			} else {
+				game.window.ClientSize = new Size(width, height);
+				Options.Set(OptionsKey.WindowWidth, width);
+				Options.Set(OptionsKey.WindowHeight, height);
 			}
 		}
 	}

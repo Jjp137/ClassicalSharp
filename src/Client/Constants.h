@@ -1,5 +1,5 @@
-#ifndef CS_CONSTANTS_H
-#define CS_CONSTANTS_H
+#ifndef CC_CONSTANTS_H
+#define CC_CONSTANTS_H
 /* Defines useful constants.
    Copyright 2017 ClassicalSharp | Licensed under BSD-3
 */
@@ -10,6 +10,7 @@
 
 /* Max number of characters strings can have. */
 #define STRING_SIZE 64
+#define FILENAME_SIZE 260
 
 /* Chunk axis length, in blocks. */
 #define CHUNK_SIZE 16
@@ -43,4 +44,15 @@
 #define Face_YMax 5
 /* Number of faces on a cube. */
 #define Face_Count 6
+
+#define SkinType_64x32 0
+#define SkinType_64x64 1
+#define SkinType_64x64Slim 2
+#define SkinType_Invalid 3
+
+#define FONT_STYLE_NORMAL    0
+#define FONT_STYLE_BOLD      1
+#define FONT_STYLE_UNDERLINE 2
+
+#define DRAWER2D_MAX_COLS 256
 #endif

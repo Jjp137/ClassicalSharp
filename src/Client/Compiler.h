@@ -1,5 +1,5 @@
-#ifndef CS_COMPILER_H
-#define CS_COMPILER_H
+#ifndef CC_COMPILER_H
+#define CC_COMPILER_H
 #include "Typedefs.h"
 /* Compiler-specific attributes and helpers
    Copyright 2017 ClassicalSharp | Licensed under BSD-3
@@ -22,13 +22,4 @@
 
 #define EXPORT_FUNC __declspec(dllexport)
 #define IMPORT_FUNC __declspec(dllimport)
-
-
-/* Indicates that a string argument is discarded after the function has completed.
-Thus it is safe to allocate a string on the stack. */
-#define STRING_TRANSIENT
-
-/* Indicates that a reference to the buffer in a string argument is persisted after the function has completed.
-Thus it is NOT SAFE to allocate a string on the stack. */
-#define STRING_REF
 #endif

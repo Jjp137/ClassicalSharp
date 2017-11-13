@@ -1,5 +1,5 @@
-#ifndef CS_TYPEDEFS_H
-#define CS_TYPEDEFS_H
+#ifndef CC_TYPEDEFS_H
+#define CC_TYPEDEFS_H
 /* Ensures variables are of a fixed size.
    Copyright 2017 ClassicalSharp | Licensed under BSD-3
 */
@@ -42,12 +42,24 @@ typedef UInt8 EntityID;
 typedef UInt8 TextureLoc;
 /* Sides of a block. TODO: Map this to CPE PlayerClicked blockface enums. */
 typedef UInt8 Face;
+/* Skin layout a humanoid skin texture can have. */
+typedef UInt8 SkinType;
+typedef UInt32 ReturnCode;
 
-#define UInt8_MaxValue  ((UInt8)0xFF)
-#define Int16_MaxValue  ((Int16)0x7FFF)
-#define UInt16_MaxValue ((UInt16)0xFFFF)
-#define Int32_MaxValue  ((Int32)0x7FFFFFFFL)
-#define Int32_MinValue  ((Int32)0xFFFFFFFFL)
+typedef struct FontDesc_ { void* Handle; UInt16 Size, Style; } FontDesc;
+
+#define UInt8_MaxValue   ((UInt8)0xFF)
+#define Int16_MaxValue   ((Int16)0x7FFF)
+#define UInt16_MaxValue  ((UInt16)0xFFFF)
+#define Int32_MaxValue   ((Int32)0x7FFFFFFFL)
+#define UInt32_MaxValue  ((UInt32)0xFFFFFFFFUL)
+#define Int32_MinValue   ((Int32)0xFFFFFFFFL)
 
 #define USE_DX true
+
+#if USE_DX
+typedef void* GfxResourceID;
+#else
+typedef Int32 GfxResourceID;
+#endif
 #endif

@@ -38,6 +38,9 @@ namespace ClassicalSharp
 				SDL.SDL_GetWindowSize(this.window, out w, out h);
 				return new Size(w, h);
 			}
+			set {
+				// TODO: properly implement
+			}
 		}
 
 		protected bool exists;

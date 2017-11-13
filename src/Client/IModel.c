@@ -104,9 +104,9 @@ void IModel_SetupState(IModel* model, Entity* entity) {
 
 	IModel_Cols[0] = col;
 	if (!entity->NoShade) {
-		IModel_Cols[1] = PackedCol_Scale(col, PackedCol_ShadeYBottom);
-		IModel_Cols[2] = PackedCol_Scale(col, PackedCol_ShadeZ);
-		IModel_Cols[4] = PackedCol_Scale(col, PackedCol_ShadeX);
+		IModel_Cols[1] = PackedCol_Scale(col, PACKEDCOL_SHADE_YMIN);
+		IModel_Cols[2] = PackedCol_Scale(col, PACKEDCOL_SHADE_Z);
+		IModel_Cols[4] = PackedCol_Scale(col, PACKEDCOL_SHADE_X);
 	} else {
 		IModel_Cols[1] = col; IModel_Cols[2] = col; IModel_Cols[4] = col;
 	}
@@ -139,7 +139,7 @@ void IModel_DrawPart(ModelPart part) {
 	for (i = 0; i < part.Count; i++) {
 		ModelVertex v = *src;
 		dst->X = v.X; dst->Y = v.Y; dst->Z = v.Z;
-		dst->Colour = IModel_Cols[i >> 2];
+		dst->Col = IModel_Cols[i >> 2];
 
 		dst->U = (v.U & UV_POS_MASK) * IModel_uScale - (v.U >> UV_MAX_SHIFT) * 0.01f * IModel_uScale;
 		dst->V = (v.V & UV_POS_MASK) * IModel_vScale - (v.V >> UV_MAX_SHIFT) * 0.01f * IModel_vScale;
@@ -187,7 +187,7 @@ void IModel_DrawRotate(Real32 angleX, Real32 angleY, Real32 angleZ, ModelPart pa
 			t = IModel_cosHead * v.X - IModel_sinHead * v.Z; v.Z = IModel_sinHead * v.X + IModel_cosHead * v.Z; v.X = t; /* Inlined RotY */
 		}
 		dst->X = v.X + x; dst->Y = v.Y + y; dst->Z = v.Z + z;
-		dst->Colour = IModel_Cols[i >> 2];
+		dst->Col = IModel_Cols[i >> 2];
 
 		dst->U = (v.U & UV_POS_MASK) * IModel_uScale - (v.U >> UV_MAX_SHIFT) * 0.01f * IModel_uScale;
 		dst->V = (v.V & UV_POS_MASK) * IModel_vScale - (v.V >> UV_MAX_SHIFT) * 0.01f * IModel_vScale;

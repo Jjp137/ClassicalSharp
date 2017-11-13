@@ -26,7 +26,6 @@ namespace ClassicalSharp {
 		
 		protected FastBitmap fontPixels;
 		protected int boxSize;
-		protected const int italicSize = 8;
 		protected int[] widths = new int[256];
 		
 		void CalculateTextWidths() {
@@ -74,12 +73,11 @@ namespace ClassicalSharp {
 		}
 		
 		void DrawPart(FastBitmap dst, ref DrawTextArgs args, int x, int y, bool shadowCol) {
-			FastColour col = Colours['f'];
+			FastColour col = Cols['f'];
 			if (shadowCol)
 				col = BlackTextShadows ? FastColour.Black : FastColour.Scale(col, 0.25f);
 			FastColour lastCol = col;
 			
-			int xMul = args.Font.Style == FontStyle.Italic ? 1 : 0;
 			int runCount = 0, lastY = -1;
 			string text = args.Text;
 			int point = Utils.Floor(args.Font.Size);
@@ -87,9 +85,8 @@ namespace ClassicalSharp {
 			
 			for (int i = 0; i < text.Length; i++) {
 				char c = text[i];
-				bool isColCode = c == '&' && i < text.Length - 1;
-				if (isColCode && ValidColour(text[i + 1])) {
-					col = Colours[text[i + 1]];
+				if (c == '&' && ValidColCode(text, i + 1)) {
+					col = Cols[text[i + 1]];
 					if (shadowCol)
 						col = BlackTextShadows ? FastColour.Black : FastColour.Scale(col, 0.25f);
 					i++; continue; // Skip over the colour code.
@@ -107,18 +104,17 @@ namespace ClassicalSharp {
 					continue;
 				}
 				
-				DrawRun(dst, x, y, xMul, runCount, coordsPtr, point, lastCol);
+				DrawRun(dst, x, y, runCount, coordsPtr, point, lastCol);
 				lastY = coords >> 4; lastCol = col;
 				for (int j = 0; j < runCount; j++) {
 					x += PaddedWidth(point, widths[coordsPtr[j]]);
 				}
 				coordsPtr[0] = (byte)coords; runCount = 1;
 			}
-			DrawRun(dst, x, y, xMul, runCount, coordsPtr, point, lastCol);
+			DrawRun(dst, x, y, runCount, coordsPtr, point, lastCol);
 		}
 		
-		void DrawRun(FastBitmap dst, int x, int y, int xMul,
-		             int runCount, byte* coords, int point, FastColour col) {
+		void DrawRun(FastBitmap dst, int x, int y, int runCount, byte* coords, int point, FastColour col) {
 			if (runCount == 0) return;
 			int srcY = (coords[0] >> 4) * boxSize;
 			int textHeight = AdjTextSize(point), cellHeight = CellSize(textHeight);
@@ -137,7 +133,6 @@ namespace ClassicalSharp {
 				if (dstY >= dst.Height) return;
 				
 				int* dstRow = dst.GetRowPtr(dstY);
-				int xOffset = xMul * ((textHeight - 1 - yy) / italicSize);
 				for (int i = 0; i < runCount; i++) {
 					int srcX = (coords[i] & 0x0F) * boxSize;
 					int srcWidth = widths[coords[i]], dstWidth = dstWidths[i];
@@ -146,7 +141,7 @@ namespace ClassicalSharp {
 						int fontX = srcX + xx * srcWidth / dstWidth;
 						int src = fontRow[fontX];
 						if ((byte)(src >> 24) == 0) continue;
-						int dstX = x + xx + xOffset;
+						int dstX = x + xx;
 						if (dstX >= dst.Width) break;
 						
 						int pixel = src & ~0xFFFFFF;
@@ -178,9 +173,8 @@ namespace ClassicalSharp {
 				
 				for (int i = 0; i < text.Length; i++) {
 					char c = text[i];
-					bool isColCode = c == '&' && i < text.Length - 1;
-					if (isColCode && ValidColour(text[i + 1])) {
-						col = Colours[text[i + 1]].ToArgb();
+					if (c == '&' && ValidColCode(text, i + 1)) {
+						col = Cols[text[i + 1]].ToArgb();
 						i++; continue; // Skip over the colour code.
 					}
 					if (shadowCol) col = FastColour.Black.ToArgb();
@@ -198,15 +192,14 @@ namespace ClassicalSharp {
 #endif
 
 		protected Size MeasureBitmappedSize(ref DrawTextArgs args) {
-			if (String.IsNullOrEmpty(args.Text)) return Size.Empty;
+			if (EmptyText(args.Text)) return Size.Empty;
 			int textHeight = AdjTextSize(Utils.Floor(args.Font.Size));
 			Size total = new Size(0, CellSize(textHeight));
 			int point = Utils.Floor(args.Font.Size);
 			
 			for (int i = 0; i < args.Text.Length; i++) {
 				char c = args.Text[i];
-				bool isColCode = c == '&' && i < args.Text.Length - 1;
-				if (isColCode && ValidColour(args.Text[i + 1])) {
+				if (c == '&' && ValidColCode(args.Text, i + 1)) {
 					i++; continue; // Skip over the colour code.
 				}
 				
@@ -214,8 +207,6 @@ namespace ClassicalSharp {
 				total.Width += PaddedWidth(point, widths[coords]);
 			}
 			
-			if (args.Font.Style == FontStyle.Italic)
-				total.Width += Utils.CeilDiv(total.Height, italicSize);
 			if (args.UseShadow) {
 				int offset = ShadowOffset(args.Font.Size);
 				total.Width += offset; total.Height += offset;

@@ -1,5 +1,5 @@
-#ifndef CS_OPTIONS_H
-#define CS_OPTIONS_H
+#ifndef CC_OPTIONS_H
+#define CC_OPTIONS_H
 #include "Typedefs.h"
 #include "String.h"
 /* Manages loading and saving options.
@@ -35,6 +35,8 @@ typedef UInt8 FpsLimitMethod;
 #define OptionsKey_Mipmaps "gfx-mipmaps"
 #define OptionsKey_SurvivalMode "game-survivalmode"
 #define OptionsKey_ChatLogging "chat-logging"
+#define OptionsKey_WindowWidth "window-width"
+#define OptionsKey_WindowHeight "window-height"
 
 #define OptionsKey_HacksEnabled "hacks-hacksenabled"
 #define OptionsKey_FieldOfView "hacks-fov"
@@ -68,23 +70,20 @@ typedef UInt8 FpsLimitMethod;
 #define OptionsKey_AllowClassicHacks "nostalgia-hacks"
 #define OptionsKey_ClassicArmModel "nostalgia-classicarm"
 
-#define OPTIONS_LARGESTRS 4
-#define OPTIONS_MEDSTRS 16
-#define OPTIONS_SMALLSTRS 32
-#define OPTIONS_TINYSTRS 64
-#define OPTIONS_COUNT (OPTIONS_LARGESTRS + OPTIONS_MEDSTRS + OPTIONS_SMALLSTRS + OPTIONS_TINYSTRS)
-
-String Options_Keys[OPTIONS_COUNT];
-String Options_Values[OPTIONS_COUNT];
-bool Options_Changed[OPTIONS_COUNT];
+StringsBuffer Options_Keys;
+StringsBuffer Options_Values;
+bool Options_Changed[256];
 
 void Options_Init(void);
+void Options_Free(void);
 
+/* TODO: eliminate this and use STRING_TRANSIENT ARG */
 String Options_Get(const UInt8* key);
 Int32 Options_GetInt(const UInt8* key, Int32 min, Int32 max, Int32 defValue);
 bool Options_GetBool(const UInt8* key, bool defValue);
 Real32 Options_GetFloat(const UInt8* key, Real32 min, Real32 max, Real32 defValue);
+UInt32 Options_GetEnum(const UInt8* key, UInt32 defValue, const UInt8** names, UInt32 namesCount);
 
 void Options_SetInt32(const UInt8* keyRaw, Int32 value);
-void Options_Set(const UInt8* keyRaw, STRING_TRANSIENT String value);
+void Options_Set(const UInt8* keyRaw, STRING_PURE String value);
 #endif

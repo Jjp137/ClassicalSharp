@@ -27,10 +27,8 @@ namespace Launcher.Gui.Widgets {
 			this.font = font;
 			this.titleFont = titleFont;
 			
-			DrawTextArgs args = new DrawTextArgs("IMP", titleFont, true);
-			headerHeight = drawer.MeasureSize(ref args).Height;
-			args = new DrawTextArgs("IMP", font, true);
-			entryHeight = drawer.MeasureSize(ref args).Height;
+			headerHeight = drawer.FontHeight(titleFont, true);
+			entryHeight = drawer.FontHeight(font, true);
 		}
 		
 		public void RecalculateDrawData() {
@@ -63,7 +61,7 @@ namespace Launcher.Gui.Widgets {
 			x += DrawColumn(drawer, "Name",     0, x, filterName)     + 5;
 			x += DrawColumn(drawer, "Players",  1, x, filterPlayers)  + 5;
 			x += DrawColumn(drawer, "Uptime",   2, x, filterUptime)   + 5;
-			x += DrawColumn(drawer, "Software", 3, x, FilterSoftware) + 5;
+			x += DrawColumn(drawer, "Software", 3, x, filterSoftware) + 5;
 			DrawScrollbar(drawer);
 		}
 		

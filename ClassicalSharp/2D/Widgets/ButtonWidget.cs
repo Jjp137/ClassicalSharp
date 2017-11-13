@@ -10,10 +10,11 @@ namespace ClassicalSharp.Gui.Widgets {
 	
 	public delegate void ButtonValueSetter(Game game, string raw);	
 	public delegate string ButtonValueGetter(Game game);	
-	public delegate void ButtonBoolSetter(Game game, bool value);	
 	
 	public sealed class ButtonWidget : Widget {
-		public string OptName;
+		public string OptName;		
+		public ButtonValueGetter GetValue;
+		public ButtonValueSetter SetValue;
 		
 		public ButtonWidget(Game game, Font font) : base(game) {
 			this.font = font;
@@ -41,8 +42,7 @@ namespace ClassicalSharp.Gui.Widgets {
 		internal Font font;
 		
 		public override void Init() {
-			DrawTextArgs args = new DrawTextArgs("I", font, true);
-			defaultHeight = game.Drawer2D.MeasureSize(ref args).Height;
+			defaultHeight = game.Drawer2D.FontHeight(font, true);
 			Height = defaultHeight;
 		}
 		
@@ -57,7 +57,7 @@ namespace ClassicalSharp.Gui.Widgets {
 		public void SetText(string text) {
 			gfx.DeleteTexture(ref texture);
 			Text = text;
-			if (String.IsNullOrEmpty(text)) {
+			if (IDrawer2D.EmptyText(text)) {
 				texture = default(Texture);
 				Width = 0; Height = defaultHeight;
 			} else {
@@ -83,7 +83,7 @@ namespace ClassicalSharp.Gui.Widgets {
 			
 			back.ID = game.UseClassicGui ? game.Gui.GuiClassicTex : game.Gui.GuiTex;
 			back.X1 = X; back.Y1 = Y;
-			back.Width = (short)Width; back.Height = (short)Height;			
+			back.Width = (ushort)Width; back.Height = (ushort)Height;			
 			
 			if (Width == 400) {
 				// Button can be drawn normally
@@ -94,7 +94,7 @@ namespace ClassicalSharp.Gui.Widgets {
 				float scale = (Width / 400f) * 0.5f;
 				gfx.BindTexture(back.ID); // avoid bind twice
 				
-				back.Width = (short)(Width / 2); 
+				back.Width = (ushort)(Width / 2); 
 				back.U1 = 0; back.U2 = uWidth * scale;
 				gfx.Draw2DTexture(ref back, FastColour.White);
 				
@@ -118,8 +118,5 @@ namespace ClassicalSharp.Gui.Widgets {
 			texture.X1 += X - oldX;
 			texture.Y1 += Y - oldY;
 		}
-		
-		public ButtonValueGetter GetValue;
-		public ButtonValueSetter SetValue;
 	}
 }

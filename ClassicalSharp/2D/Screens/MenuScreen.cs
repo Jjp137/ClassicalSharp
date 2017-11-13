@@ -12,17 +12,12 @@ namespace ClassicalSharp.Gui.Screens {
 		}
 		protected Widget[] widgets;
 		protected Font titleFont, regularFont;
-		protected FastColour backCol = new FastColour(60, 60, 60, 160);
-		
+
 		protected int IndexOfWidget(Widget w) {
 			for (int i = 0; i < widgets.Length; i++) {
 				if (widgets[i] == w) return i;
 			}
 			return -1;
-		}
-		
-		protected void RenderMenuBounds() {
-			gfx.Draw2DQuad(0, 0, game.Width, game.Height, backCol);
 		}
 		
 		public override void Render(double delta) {

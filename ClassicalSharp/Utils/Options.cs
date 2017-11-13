@@ -32,6 +32,8 @@ namespace ClassicalSharp {
 		public const string Mipmaps = "gfx-mipmaps";
 		public const string SurvivalMode = "game-survivalmode";
 		public const string ChatLogging = "chat-logging";
+		public const string WindowWidth = "window-width";
+		public const string WindowHeight = "window-height";
 		
 		public const string HacksOn = "hacks-hacksenabled";
 		public const string FieldOfView = "hacks-fov";
@@ -79,6 +81,13 @@ namespace ClassicalSharp {
 		public static List<string> OptionsValues = new List<string>();
 		public static List<string> OptionsChanged = new List<string>();
 		const string Filename = "options.txt";
+		
+		static bool IsChangedOption(string key) {
+			for (int i = 0; i < OptionsChanged.Count; i++) {
+				if (Utils.CaselessEquals(key, OptionsChanged[i])) return true;
+			}
+			return false;
+		}
 		
 		static bool TryGetValue(string key, out string value) {
 			value = null;		
@@ -157,7 +166,7 @@ namespace ClassicalSharp {
 				SetOption(key, value);
 			}
 			
-			if (!OptionsChanged.Contains(key)) {
+			if (!IsChangedOption(key)) {
 				OptionsChanged.Add(key);
 			}
 		}
@@ -204,7 +213,7 @@ namespace ClassicalSharp {
 			// remove all the unchanged options
 			for (int i = OptionsKeys.Count - 1; i >= 0; i--) {
 				string key = OptionsKeys[i];
-				if (OptionsChanged.Contains(key)) continue;
+				if (IsChangedOption(key)) continue;
 				RemoveOption(i);
 			}
 
@@ -220,7 +229,7 @@ namespace ClassicalSharp {
 				if (sepIndex == line.Length) continue;
 				string value = line.Substring(sepIndex, line.Length - sepIndex);
 				
-				if (!OptionsChanged.Contains(key)) {
+				if (!IsChangedOption(key)) {
 					SetOption(key, value);
 				}
 			}

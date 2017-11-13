@@ -1,8 +1,7 @@
 #include "Window.h"
 #include <Windows.h>
 #include "Platform.h"
-#include "Mouse.h"
-#include "Key.h"
+#include "Input.h"
 #include "Events.h"
 #include "String.h"
 
@@ -110,7 +109,7 @@ Key Window_MapKey(WPARAM key) {
 		return Key_F1 + (key - VK_F1);
 	}
 	if (key >= '0' && key <= '9') {
-		return Key_Number0 + (key - '0');
+		return Key_0 + (key - '0');
 	}
 	if (key >= 'A' && key <= 'Z') {
 		return Key_A + (key - 'A');
@@ -418,7 +417,7 @@ LRESULT CALLBACK Window_Procedure(HWND handle, UINT message, WPARAM wParam, LPAR
 }
 
 
-void Window_Create(Int32 x, Int32 y, Int32 width, Int32 height, STRING_TRANSIENT String* title, DisplayDevice* device) {
+void Window_Create(Int32 x, Int32 y, Int32 width, Int32 height, STRING_REF String* title, DisplayDevice* device) {
 	win_Instance = GetModuleHandleA(NULL);
 	/* TODO: UngroupFromTaskbar(); */
 
@@ -440,7 +439,6 @@ void Window_Create(Int32 x, Int32 y, Int32 width, Int32 height, STRING_TRANSIENT
 	if (atom == 0) {
 		ErrorHandler_FailWithCode(GetLastError(), "Failed to register window class");
 	}
-
 	win_Handle = CreateWindowExA(
 		win_StyleEx, atom, title->buffer, win_Style,
 		rect.left, rect.top, RECT_WIDTH(rect), RECT_HEIGHT(rect),
@@ -448,6 +446,10 @@ void Window_Create(Int32 x, Int32 y, Int32 width, Int32 height, STRING_TRANSIENT
 
 	if (win_Handle == NULL) {
 		ErrorHandler_FailWithCode(GetLastError(), "Failed to create window");
+	}
+	win_DC = GetDC(win_Handle);
+	if (win_DC == NULL) {
+		ErrorHandler_FailWithCode(GetLastError(), "Failed to get device context");
 	}
 	win_Exists = true;
 }
@@ -471,6 +473,7 @@ void Window_GetClipboardText(STRING_TRANSIENT String* value) {
 		if (hGlobal == NULL) { CloseClipboard(); return; }
 		LPVOID src = GlobalLock(hGlobal);
 
+		/* TODO: Trim space / tabs from start and end of clipboard text */
 		if (isUnicode) {
 			UInt16* text = (UInt16*)src;
 			while (*text != NULL) {
@@ -489,7 +492,7 @@ void Window_GetClipboardText(STRING_TRANSIENT String* value) {
 	}
 }
 
-void Window_SetClipboardText(STRING_TRANSIENT String* value) {
+void Window_SetClipboardText(STRING_PURE String* value) {
 	/* retry up to 10 times*/
 	Int32 i;
 	value->length = 0;
@@ -657,7 +660,7 @@ Point2D Window_PointToScreen(Point2D p) {
 }
 
 MSG msg;
-void Window_ProcessEvents() {
+void Window_ProcessEvents(void) {
 	while (PeekMessageA(&msg, NULL, 0, 0, 1)) {
 		TranslateMessage(&msg);
 		DispatchMessageA(&msg);
@@ -683,3 +686,98 @@ void Window_SetCursorVisible(bool visible) {
 	win_cursorVisible = visible;
 	ShowCursor(visible ? 1 : 0);
 }
+
+#if !USE_DX
+
+void GLContext_SelectGraphicsMode(GraphicsMode mode) {
+	ColorFormat color = mode.Format;
+
+	PIXELFORMATDESCRIPTOR pfd;
+	Platform_MemSet(&pfd, 0, sizeof(PIXELFORMATDESCRIPTOR));
+	pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
+	pfd.nVersion = 1;
+	pfd.dwFlags = PFD_SUPPORT_OPENGL | PFD_DRAW_TO_WINDOW;
+	/* TODO: PFD_SUPPORT_COMPOSITION FLAG? CHECK IF IT WORKS ON XP */
+	pfd.cColorBits = (UInt8)(color.R + color.G + color.B);
+
+	pfd.iPixelType = color.IsIndexed ? PFD_TYPE_COLORINDEX : PFD_TYPE_RGBA;
+	pfd.cRedBits = (UInt8)color.R;
+	pfd.cGreenBits = (UInt8)color.G;
+	pfd.cBlueBits = (UInt8)color.B;
+	pfd.cAlphaBits = (UInt8)color.A;
+
+	pfd.cDepthBits = (UInt8)mode.Depth;
+	pfd.cStencilBits = (UInt8)mode.Stencil;
+	if (mode.Depth <= 0) pfd.dwFlags |= PFD_DEPTH_DONTCARE;
+	if (mode.Buffers > 1) pfd.dwFlags |= PFD_DOUBLEBUFFER;
+
+	Int32 modeIndex = ChoosePixelFormat(win_DC, &pfd);
+	if (modeIndex == 0) {
+		ErrorHandler_Fail("Requested graphics mode not available");
+	}
+
+	Platform_MemSet(&pfd, 0, sizeof(PIXELFORMATDESCRIPTOR));
+	pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
+	pfd.nVersion = 1;
+
+	DescribePixelFormat(win_DC, modeIndex, pfd.nSize, &pfd);
+	if (!SetPixelFormat(win_DC, modeIndex, &pfd)) {
+		ErrorHandler_FailWithCode(GetLastError(), "SetPixelFormat failed");
+	}
+}
+
+HGLRC GLContext_Handle;
+HDC GLContext_DC;
+typedef BOOL (WINAPI *FN_WGLSWAPINTERVAL)(int interval);
+typedef int (WINAPI *FN_WGLGETSWAPINTERVAL)(void);
+FN_WGLSWAPINTERVAL wglSwapIntervalEXT;
+FN_WGLGETSWAPINTERVAL wglGetSwapIntervalEXT;
+bool GLContext_vSync;
+
+void GLContext_Init(GraphicsMode mode) {
+	GLContext_SelectGraphicsMode(mode);
+	GLContext_Handle = wglCreateContext(win_DC);
+	if (GLContext_Handle == NULL) {
+		GLContext_Handle = wglCreateContext(win_DC);
+	}
+	if (GLContext_Handle == NULL) {
+		ErrorHandler_FailWithCode(GetLastError(), "Failed to create OpenGL context");
+	}
+
+	if (!wglMakeCurrent(win_DC, GLContext_Handle)) {
+		ErrorHandler_FailWithCode(GetLastError(), "Failed to make OpenGL context current");
+	}
+	GLContext_DC = wglGetCurrentDC();
+
+	wglGetSwapIntervalEXT = (FN_WGLGETSWAPINTERVAL)GLContext_GetAddress("wglGetSwapIntervalEXT");
+	wglSwapIntervalEXT = (FN_WGLSWAPINTERVAL)GLContext_GetAddress("wglSwapIntervalEXT");
+	GLContext_vSync = wglGetSwapIntervalEXT != NULL && wglSwapIntervalEXT != NULL;
+}
+
+void GLContext_Update(void) { }
+void GLContext_Free(void) {
+	if (!wglDeleteContext(GLContext_Handle)) {
+		ErrorHandler_FailWithCode(GetLastError(), "Failed to destroy OpenGL context");
+	}
+	GLContext_Handle = NULL;
+}
+
+void* GLContext_GetAddress(const UInt8* function) {
+	void* address = wglGetProcAddress(function);
+	return GLContext_IsInvalidAddress(address) ? NULL : address;
+}
+
+void GLContext_SwapBuffers(void) {
+	if (!SwapBuffers(GLContext_DC)) {
+		ErrorHandler_FailWithCode(GetLastError(), "Failed to swap buffers");
+	}
+}
+
+bool GLContext_GetVSync(void) {
+	return GLContext_vSync && wglGetSwapIntervalEXT();
+}
+
+void GLContext_SetVSync(bool enabled) {
+	if (GLContext_vSync) wglSwapIntervalEXT(enabled ? 1 : 0);
+}
+#endif

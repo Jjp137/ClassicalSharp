@@ -1,5 +1,5 @@
-#ifndef CS_ISOMETRICDRAWER_H
-#define CS_ISOMETRICDRAWER_H
+#ifndef CC_ISOMETRICDRAWER_H
+#define CC_ISOMETRICDRAWER_H
 #include "Typedefs.h"
 #include "GraphicsEnums.h"
 #include "VertexStructs.h"
@@ -8,6 +8,8 @@
    Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 */
 
+/* Maximum number of vertices used to draw a block in isometric way. */
+#define ISOMETRICDRAWER_MAXVERTICES 16
 /* Sets up state for drawing a batch of isometric blocks. */
 void IsometricDrawer_BeginBatch(VertexP3fT2fC4b* vertices, GfxResourceID vb);
 /* Adds a block to the current batch. */

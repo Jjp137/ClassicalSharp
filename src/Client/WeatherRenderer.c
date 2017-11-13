@@ -13,6 +13,7 @@
 #include "Vectors.h"
 #include "VertexStructs.h"
 #include "World.h"
+#include "Particle.h"
 
 GfxResourceID weather_rainTex;
 GfxResourceID weather_snowTex;
@@ -125,15 +126,17 @@ void WeatherRenderer_Render(Real64 deltaTime) {
 	VertexP3fT2fC4b vertices[weather_verticesCount];
 	VertexP3fT2fC4b* ptr = vertices;
 
-	for (Int32 dx = -weather_extent; dx <= weather_extent; dx++) {
-		for (Int32 dz = -weather_extent; dz <= weather_extent; dz++) {
+	Int32 dx, dz;
+	for (dx = -weather_extent; dx <= weather_extent; dx++) {
+		for (dz = -weather_extent; dz <= weather_extent; dz++) {
 			Int32 x = pos.X + dx, z = pos.Z + dz;
 			Real32 y = WeatherRenderer_RainHeight(x, z);
 			Real32 height = pos.Y - y;
 			if (height <= 0) continue;
 
 			if (particles && (weather_accumulator >= 0.25 || moved)) {
-				ParticleManager_AddRainParticle(x, y, z);
+				Vector3 particlePos = Vector3_Create3((Real32)x, y, (Real32)z);
+				Particles_RainSnowEffect(particlePos);
 			}
 
 			Real32 dist = (Real32)dx * (Real32)dx + (Real32)dz * (Real32)dz;
@@ -144,7 +147,7 @@ void WeatherRenderer_Render(Real64 deltaTime) {
 			col.A = (UInt8)alpha;
 
 			/* NOTE: Making vertex is inlined since this is called millions of times. */
-			v.Colour = col;
+			v.Col = col;
 			Real32 worldV = vOffset + (z & 1) / 2.0f - (x & 0x0F) / 16.0f;
 			Real32 v1 = y / 6.0f + worldV, v2 = (y + height) / 6.0f + worldV;
 			Real32 x1 = (Real32)x,       y1 = (Real32)y,            z1 = (Real32)z;
@@ -182,8 +185,8 @@ void WeatherRenderer_Render(Real64 deltaTime) {
 }
 
 void WeatherRenderer_FileChanged(Stream* stream) {
-	String snow = String_FromConstant("snow.png");
-	String rain = String_FromConstant("rain.png");
+	String snow = String_FromConst("snow.png");
+	String rain = String_FromConst("rain.png");
 
 	if (String_Equals(&stream->Name, &snow)) {
 		Game_UpdateTexture(&weather_snowTex, stream, false);

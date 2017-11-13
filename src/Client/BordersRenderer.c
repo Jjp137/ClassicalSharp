@@ -11,8 +11,9 @@
 #include "ExtMath.h"
 #include "Platform.h"
 #include "Funcs.h"
+#include "Utils.h"
 
-GfxResourceID borders_sidesVb = -1, borders_edgesVb = -1;
+GfxResourceID borders_sidesVb, borders_edgesVb;
 GfxResourceID borders_edgeTexId, borders_sideTexId;
 Int32 borders_sidesVertices, borders_edgesVertices;
 bool borders_fullBrightSides, borders_fullBrightEdge;
@@ -22,7 +23,7 @@ TextureLoc borders_lastEdgeTexLoc, borders_lastSideTexLoc;
 
 /* Avoid code duplication in sides and edge rendering */
 #define BordersRenderer_SetupState(block, texId, vb) \
-if (vb == -1) { return; }\
+if (vb == NULL) { return; }\
 \
 Gfx_SetTexturing(true);\
 GfxCommon_SetupAlphaState(Block_Draw[block]);\
@@ -45,7 +46,7 @@ void BordersRenderer_RenderSides(Real64 delta) {
 }
 
 void BordersRenderer_RenderEdges(Real64 delta) {
-	if (borders_edgesVb == -1) return;
+	if (borders_edgesVb == NULL) return;
 	BlockID block = WorldEnv_EdgeBlock;
 	BordersRenderer_SetupState(block, borders_sideTexId, borders_sidesVb);
 
@@ -70,7 +71,7 @@ void BordersRenderer_MakeTexture(GfxResourceID* texId, TextureLoc* lastTexLoc, B
 }
 
 void BordersRenderer_CalculateRects(Int32 extent) {
-	extent = Math_AdjViewDist(extent);
+	extent = Utils_AdjViewDist(extent);
 	borders_rects[0] = Rectangle2D_Make(-extent, -extent, extent + World_Width + extent, extent);
 	borders_rects[1] = Rectangle2D_Make(-extent, World_Length, extent + World_Width + extent, extent);
 
@@ -94,7 +95,7 @@ void BordersRenderer_DrawX(Int32 x, Int32 z1, Int32 z2, Int32 y1, Int32 y2, Int3
 	Int32 endZ = z2, endY = y2, startY = y1;
 	VertexP3fT2fC4b* ptr = *vertices;
 	VertexP3fT2fC4b v;
-	v.X = (Real32)x; v.Colour = col;
+	v.X = (Real32)x; v.Col = col;
 
 	for (; z1 < endZ; z1 += axisSize) {
 		z2 = z1 + axisSize;
@@ -118,7 +119,7 @@ void BordersRenderer_DrawZ(Int32 z, Int32 x1, Int32 x2, Int32 y1, Int32 y2, Int3
 	Int32 endX = x2, endY = y2, startY = y1;
 	VertexP3fT2fC4b* ptr = *vertices;
 	VertexP3fT2fC4b v;
-	v.Z = (Real32)z; v.Colour = col;
+	v.Z = (Real32)z; v.Col = col;
 
 	for (; x1 < endX; x1 += axisSize) {
 		x2 = x1 + axisSize;
@@ -142,7 +143,7 @@ void BordersRenderer_DrawY(Int32 x1, Int32 z1, Int32 x2, Int32 z2, Real32 y, Int
 	Int32 endX = x2, endZ = z2, startZ = z1;
 	VertexP3fT2fC4b* ptr = *vertices;
 	VertexP3fT2fC4b v;
-	v.Y = y + yOffset; v.Colour = col;
+	v.Y = y + yOffset; v.Col = col;
 
 	for (; x1 < endX; x1 += axisSize) {
 		x2 = x1 + axisSize;
@@ -185,7 +186,8 @@ void BordersRenderer_RebuildSides(Int32 y, Int32 axisSize) {
 	VertexP3fT2fC4b* temp = ptr;
 
 	borders_fullBrightSides = Block_FullBright[block];
-	PackedCol col = borders_fullBrightSides ? PackedCol_White : WorldEnv_ShadowCol;
+	PackedCol white = PACKEDCOL_WHITE;
+	PackedCol col = borders_fullBrightSides ? white : WorldEnv_ShadowCol;
 	Block_Tint(col, block)
 
 	for (i = 0; i < 4; i++) {
@@ -227,7 +229,8 @@ void BordersRenderer_RebuildEdges(Int32 y, Int32 axisSize) {
 	VertexP3fT2fC4b* temp = ptr;
 
 	borders_fullBrightEdge = Block_FullBright[block];
-	PackedCol col = borders_fullBrightEdge ? PackedCol_White : WorldEnv_SunCol;
+	PackedCol white = PACKEDCOL_WHITE;
+	PackedCol col = borders_fullBrightEdge ? white : WorldEnv_SunCol;
 	Block_Tint(col, block)
 
 	for (i = 0; i < 4; i++) {

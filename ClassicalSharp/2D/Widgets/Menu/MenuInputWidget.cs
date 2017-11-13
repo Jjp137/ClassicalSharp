@@ -9,7 +9,7 @@ using Android.Graphics;
 namespace ClassicalSharp.Gui.Widgets {
 	public sealed class MenuInputWidget : InputWidget {
 		
-		public MenuInputWidget(Game game, Font font) : base(game, font) { }
+		public MenuInputWidget(Game game, Font font) : base(game, font, null, 1) { }
 		
 		public static MenuInputWidget Create(Game game, int width, int height, string text,
 		                                     Font font, MenuInputValidator validator) {
@@ -17,6 +17,7 @@ namespace ClassicalSharp.Gui.Widgets {
 			input.MinWidth = width;
 			input.MinHeight = height;
 			input.Validator = validator;
+			input.Padding = 3;
 			
 			input.Init();
 			input.Append(text);
@@ -27,10 +28,7 @@ namespace ClassicalSharp.Gui.Widgets {
 		public int MinWidth, MinHeight;
 		public MenuInputValidator Validator;
 		
-		public override int MaxLines { get { return 1; } }
-		public override string Prefix { get { return null; } }
-		public override int Padding { get { return 3; } }
-		public override int MaxCharsPerLine { get { return Utils.StringLength; } }
+		public override int UsedLines { get { return 1; } }
 		
 		public override void Render(double delta) {
 			gfx.Texturing = false;
@@ -85,7 +83,7 @@ namespace ClassicalSharp.Gui.Widgets {
 		protected override bool AllowedChar(char c) {
 			if (c == '&' || !Utils.IsValidInputChar(c, true)) return false;
 			if (!Validator.IsValidChar(c)) return false;
-			if (Text.Length == MaxCharsPerLine) return false;
+			if (Text.Length == UsedLines * MaxCharsPerLine) return false;
 			
 			// See if the new string is in valid format
 			AppendChar(c);

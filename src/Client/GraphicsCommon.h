@@ -1,5 +1,5 @@
-#ifndef CS_GFXCOMMON_H
-#define CS_GFXCOMMON_H
+#ifndef CC_GFXCOMMON_H
+#define CC_GFXCOMMON_H
 #include "Typedefs.h"
 #include "PackedCol.h"
 #include "String.h"
@@ -17,10 +17,9 @@ void GfxCommon_Init(void);
 void GfxCommon_Free(void);
 
 /* Handles a context being lost. */
-void GfxCommon_LoseContext(STRING_TRANSIENT String* reason);
+void GfxCommon_LoseContext(STRING_PURE String* reason);
 /* Handles a context being recreated. */
 void GfxCommon_RecreateContext(void);
-
 
 /* Binds and draws the specified subset of the vertices in the current dynamic vertex buffer
 This method also replaces the dynamic vertex buffer's data first with the given vertices before drawing. */
@@ -31,9 +30,9 @@ void GfxCommon_UpdateDynamicVb_IndexedTris(GfxResourceID vb, void* vertices, Int
 
 GfxResourceID GfxCommon_quadVb;
 /* Draws a 2D flat coloured quad to the screen.*/
-void GfxCommon_Draw2DFlat(Real32 x, Real32 y, Real32 width, Real32 height, PackedCol col);
+void GfxCommon_Draw2DFlat(Int32 x, Int32 y, Int32 width, Int32 height, PackedCol col);
 /* Draws a 2D gradient coloured quad to the screen.*/
-void GfxCommon_Draw2DGradient(Real32 x, Real32 y, Real32 width, Real32 height, 
+void GfxCommon_Draw2DGradient(Int32 x, Int32 y, Int32 width, Int32 height,
 	PackedCol topCol, PackedCol bottomCol);
 
 GfxResourceID GfxCommon_texVb;
@@ -44,7 +43,7 @@ void GfxCommon_Make2DQuad(Texture* tex, PackedCol col, VertexP3fT2fC4b** vertice
 
 /* Updates the various matrix stacks and properties so that the graphics API state
 is suitable for rendering 2D quads and other 2D graphics to. */
-void GfxCommon_Mode2D(Real32 width, Real32 height);
+void GfxCommon_Mode2D(Int32 width, Int32 height);
 /* Updates the various matrix stacks and properties so that the graphics API state
  is suitable for rendering 3D vertices. */
 void GfxCommon_Mode3D(void);

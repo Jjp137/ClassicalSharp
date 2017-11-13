@@ -84,13 +84,7 @@ namespace ClassicalSharp.Network.Protocols {
 			WriteCustomBlockSupportLevel(1);
 			net.SendPacket();
 			game.UseCPEBlocks = true;
-
-			if (supportLevel == 1) {
-				game.Events.RaiseBlockPermissionsChanged();
-			} else {
-				Utils.LogDebug("Server's block support level is {0}, this client only supports level 1.", supportLevel);
-				Utils.LogDebug("You won't be able to see or use blocks from levels above level 1");
-			}
+			game.Events.RaiseBlockPermissionsChanged();
 		}
 		
 		void HandleHoldThis() {
@@ -207,7 +201,6 @@ namespace ClassicalSharp.Network.Protocols {
 			byte blockId = reader.ReadUInt8();
 			bool canPlace = reader.ReadUInt8() != 0;
 			bool canDelete = reader.ReadUInt8() != 0;
-			Inventory inv = game.Inventory;
 			
 			if (blockId == 0) {
 				int count = game.UseCPEBlocks ? Block.CpeCount : Block.OriginalCount;
@@ -313,7 +306,7 @@ namespace ClassicalSharp.Network.Protocols {
 			if (code <= ' ' || code > '~') return; // Control chars, space, extended chars cannot be used
 			if (code == '%' || code == '&') return; // colour code signifiers cannot be used
 			
-			game.Drawer2D.Colours[code] = col;
+			IDrawer2D.Cols[code] = col;
 			game.Events.RaiseColourCodeChanged((char)code);
 		}
 		
@@ -333,7 +326,7 @@ namespace ClassicalSharp.Network.Protocols {
 			byte type = reader.ReadUInt8();
 			int value = reader.ReadInt32();
 			WorldEnv env = game.World.Env;
-			Utils.Clamp(ref value, short.MinValue, short.MaxValue);
+			Utils.Clamp(ref value, -0xFFFFFF, 0xFFFFFF);
 			
 			switch (type) {
 				case 0:
@@ -347,6 +340,7 @@ namespace ClassicalSharp.Network.Protocols {
 				case 3:
 					env.SetCloudsLevel(value); break;
 				case 4:
+					Utils.Clamp(ref value, -0x7FFF, 0x7FFF);
 					game.MaxViewDistance = value <= 0 ? 32768 : value;
 					game.SetViewDistance(game.UserViewDistance, false); break;
 				case 5:
@@ -360,6 +354,10 @@ namespace ClassicalSharp.Network.Protocols {
 					env.SetExpFog(value != 0); break;
 				case 9:
 					env.SetSidesOffset(value); break;
+				case 10:
+					env.SetSkyboxHorSpeed(value / 1024f); break;
+				case 11:
+					env.SetSkyboxVerSpeed(value / 1024f); break;
 			}
 		}
 		

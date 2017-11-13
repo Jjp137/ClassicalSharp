@@ -131,7 +131,6 @@ namespace ClassicalSharp {
 			}
 		}
 
-		float deltaAcc;
 		void MouseWheelChanged(object sender, MouseWheelEventArgs e) {
 			if (game.Gui.ActiveScreen.HandlesMouseScroll(e.Delta)) return;
 			
@@ -139,29 +138,8 @@ namespace ClassicalSharp {
 			bool hotbar = AltDown || ControlDown || ShiftDown;
 			if ((!hotbar && game.Camera.Zoom(e.Delta)) || DoFovZoom(e.Delta) || !inv.CanChangeHeldBlock)
 				return;
-			ScrollHotbar(e.Delta);
-		}
-		
-		void ScrollHotbar(float delta) {
-			Inventory inv = game.Inventory;
-			if (AltDown) {
-				int index = inv.Offset / Inventory.BlocksPerRow;
-				inv.Offset = ScrolledIndex(delta, index) * Inventory.BlocksPerRow;
-			} else {
-				inv.SelectedIndex = ScrolledIndex(delta, inv.SelectedIndex);
-			}
-		}
-		
-		int ScrolledIndex(float delta, int currentIndex) {
-			int steps = Utils.AccumulateWheelDelta(ref deltaAcc, delta);
 			
-			const int blocksPerRow = Inventory.BlocksPerRow;
-			int diff = -steps % blocksPerRow;
-			int index = currentIndex + diff;
-			
-			if (index < 0) index += blocksPerRow;
-			if (index >= blocksPerRow) index -= blocksPerRow;
-			return index;
+			game.Gui.hudScreen.hotbar.HandlesMouseScroll(e.Delta);
 		}
 
 		void KeyPressHandler(object sender, KeyPressEventArgs e) {
@@ -180,12 +158,12 @@ namespace ClassicalSharp {
 			}
 		}
 
-		static int[] viewDistances = { 16, 32, 64, 128, 256, 512, 1024, 2048, 4096 };
+		static int[] normViewDists = new int[] { 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096 };
+		static int[] classicViewDists = new int[] { 8, 32, 128, 512 };
 		Key lastKey;
 		void KeyDownHandler(object sender, KeyboardKeyEventArgs e) {
 			Key key = e.Key;
-			if (SimulateMouse(key, true)) return;
-			
+			if (SimulateMouse(key, true)) return;			
 			
 			if (IsShutdown(key)) {
 				game.Exit();
@@ -212,7 +190,7 @@ namespace ClassicalSharp {
 			if (!Hotkeys.IsHotkey(key, game.Input, out text, out more)) return;
 			
 			if (!more) {
-				game.Server.SendChat(text, false);
+				game.Server.SendChat(text);
 			} else if (game.Gui.activeScreen == null) {
 				game.Gui.hudScreen.OpenTextInputBar(text);
 			}
@@ -260,15 +238,16 @@ namespace ClassicalSharp {
 			} else if (key == Keys[KeyBind.ThirdPerson]) {
 				game.CycleCamera();
 			} else if (key == Keys[KeyBind.ToggleFog]) {
+				int[] viewDists = game.UseClassicOptions ? classicViewDists : normViewDists;
 				if (game.Input.ShiftDown) {
-					CycleDistanceBackwards();
+					CycleDistanceBackwards(viewDists);
 				} else {
-					CycleDistanceForwards();
+					CycleDistanceForwards(viewDists);
 				}
 			} else if (key == Keys[KeyBind.PauseOrExit] && game.World.blocks != null) {
 				game.Gui.SetNewScreen(new PauseScreen(game));
 			} else if (game.Mode.HandlesKeyDown(key)) {
-			} else if (key == Key.F10) {
+			} else if (key == Keys[KeyBind.IDOverlay]) {
 				if (game.Gui.overlays.Count > 0) return true;
 				game.Gui.ShowOverlay(new TexIdsOverlay(game));
 			} else {
@@ -286,24 +265,24 @@ namespace ClassicalSharp {
 			}
 		}
 		
-		void CycleDistanceForwards() {
-			for (int i = 0; i < viewDistances.Length; i++) {
-				int dist = viewDistances[i];
+		void CycleDistanceForwards(int[] viewDists) {		
+			for (int i = 0; i < viewDists.Length; i++) {
+				int dist = viewDists[i];
 				if (dist > game.UserViewDistance) {
 					game.SetViewDistance(dist, true); return;
 				}
 			}
-			game.SetViewDistance(viewDistances[0], true);
+			game.SetViewDistance(viewDists[0], true);
 		}
 		
-		void CycleDistanceBackwards() {
-			for (int i = viewDistances.Length - 1; i >= 0; i--) {
-				int dist = viewDistances[i];
+		void CycleDistanceBackwards(int[] viewDists) {
+			for (int i = viewDists.Length - 1; i >= 0; i--) {
+				int dist = viewDists[i];
 				if (dist < game.UserViewDistance) {
 					game.SetViewDistance(dist, true); return;
 				}
 			}
-			game.SetViewDistance(viewDistances[viewDistances.Length - 1], true);
+			game.SetViewDistance(viewDists[viewDists.Length - 1], true);
 		}
 		
 		float fovIndex = -1;

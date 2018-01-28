@@ -356,17 +356,13 @@ namespace ClassicalSharp.Gui.Screens {
 					// Do we need to move all chat down?
 					int resetIndex = game.Chat.Log.Count - chatLines;
 					if (chatIndex != resetIndex) {
-						chatIndex = resetIndex;
-						ScrollHistory();
+						chatIndex = ClampIndex(resetIndex);
+						ResetChat();
 					}
 				} else if (key == Key.PageUp) {
-					chatIndex -= chatLines;
-					ScrollHistory();
+					ScrollHistoryBy(-chatLines);
 				} else if (key == Key.PageDown) {
-					chatIndex += chatLines;
-					ScrollHistory();
-				} else if (game.Server.SupportsFullCP437 && key == game.Input.Keys[KeyBind.ExtInput]) {
-					altText.SetActive(!altText.Active);
+					ScrollHistoryBy(chatLines);
 				} else {
 					input.HandlesKeyDown(key);
 					UpdateAltTextY();
@@ -384,12 +380,20 @@ namespace ClassicalSharp.Gui.Screens {
 			return true;
 		}
 		
+		public override bool HandlesKeyUp(Key key) {
+			if (!HandlesAllInput) return false;
+			
+			if (game.Server.SupportsFullCP437 && key == game.Input.Keys[KeyBind.ExtInput]) {
+				if (game.window.Focused) altText.SetActive(!altText.Active);
+			}
+			return true;
+		}
+		
 		float chatAcc;
 		public override bool HandlesMouseScroll(float delta) {
 			if (!HandlesAllInput) return false;
 			int steps = Utils.AccumulateWheelDelta(ref chatAcc, delta);
-			chatIndex -= steps;
-			ScrollHistory();
+			ScrollHistoryBy(-steps);
 			return true;
 		}
 		
@@ -447,10 +451,18 @@ namespace ClassicalSharp.Gui.Screens {
 			input.Append(urlOverlay.Metadata);
 		}
 		
-		void ScrollHistory() {
+		int ClampIndex(int index) {
 			int maxIndex = game.Chat.Log.Count - chatLines;
 			int minIndex = Math.Min(0, maxIndex);
-			Utils.Clamp(ref chatIndex, minIndex, maxIndex);
+			Utils.Clamp(ref index, minIndex, maxIndex);
+			return index;
+		}
+		
+		void ScrollHistoryBy(int delta) {
+			int newIndex = ClampIndex(chatIndex + delta);
+			if (newIndex == chatIndex) return;
+			
+			chatIndex = newIndex;
 			ResetChat();
 		}
 		

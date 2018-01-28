@@ -42,8 +42,6 @@ typedef UInt8 EntityID;
 typedef UInt8 TextureLoc;
 /* Sides of a block. TODO: Map this to CPE PlayerClicked blockface enums. */
 typedef UInt8 Face;
-/* Skin layout a humanoid skin texture can have. */
-typedef UInt8 SkinType;
 typedef UInt32 ReturnCode;
 
 typedef struct FontDesc_ { void* Handle; UInt16 Size, Style; } FontDesc;
@@ -60,6 +58,6 @@ typedef struct FontDesc_ { void* Handle; UInt16 Size, Style; } FontDesc;
 #if USE_DX
 typedef void* GfxResourceID;
 #else
-typedef Int32 GfxResourceID;
+typedef UInt32 GfxResourceID;
 #endif
 #endif

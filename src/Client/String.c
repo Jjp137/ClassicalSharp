@@ -1,17 +1,24 @@
 #include "String.h"
 #include "Funcs.h"
 #include "ErrorHandler.h"
+#include "Platform.h"
 
-String String_FromEmptyBuffer(STRING_REF UInt8* buffer, UInt16 capacity) {
+bool Char_IsUpper(UInt8 c) { return c >= 'A' && c <= 'Z'; }
+UInt8 Char_ToLower(UInt8 c) {
+	if (!Char_IsUpper(c)) return c;
+	return (UInt8)(c + ' ');
+}
+
+String String_Init(STRING_REF UInt8* buffer, UInt16 length, UInt16 capacity) {
 	String str;
 	str.buffer = buffer;
+	str.length = length;
 	str.capacity = capacity;
-	str.length = 0;
 	return str;
 }
 
-String String_FromRawBuffer(STRING_REF UInt8* buffer, UInt16 capacity) {
-	String str = String_FromEmptyBuffer(buffer, capacity);	
+String String_InitAndClear(STRING_REF UInt8* buffer, UInt16 capacity) {
+	String str = String_Init(buffer, 0, capacity);	
 	Int32 i;
 
 	/* Need to set region occupied by string to NULL for interop with native APIs */
@@ -19,16 +26,21 @@ String String_FromRawBuffer(STRING_REF UInt8* buffer, UInt16 capacity) {
 	return str;
 }
 
-String String_FromReadonly(STRING_REF const UInt8* buffer) {
+String String_MakeNull(void) { return String_Init(NULL, 0, 0); }
+
+String String_FromRaw(STRING_REF UInt8* buffer, UInt16 capacity) {
 	UInt16 length = 0;
 	UInt8* cur = buffer;
-	while ((*cur) != NULL) { cur++; length++; }
+	while (length < capacity && *cur != NULL) { cur++; length++; }
 
-	String str = String_FromEmptyBuffer(buffer, length);
-	str.length = length;
+	return String_Init(buffer, length, capacity);
+}
+
+String String_FromReadonly(STRING_REF const UInt8* buffer) {
+	String str = String_FromRaw(buffer, UInt16_MaxValue);
+	str.capacity = str.length;
 	return str;
 }
-String String_MakeNull(void) { return String_FromEmptyBuffer(NULL, 0); }
 
 
 void String_MakeLowercase(STRING_TRANSIENT String* str) {
@@ -56,12 +68,7 @@ String String_UNSAFE_Substring(STRING_REF String* str, Int32 offset, Int32 lengt
 	if (offset + length > str->length) {
 		ErrorHandler_Fail("Result substring is out of range");
 	}
-
-	String sub = *str;
-	sub.buffer += offset;
-	sub.length = length; 
-	sub.capacity = length;
-	return sub;
+	return String_Init(str->buffer + offset, (UInt16)length, (UInt16)length);
 }
 
 
@@ -80,8 +87,8 @@ bool String_CaselessEquals(STRING_PURE String* a, STRING_PURE String* b) {
 	Int32 i;
 
 	for (i = 0; i < a->length; i++) {
-		UInt8 aCur = Char_ToLower(a->buffer[i]);
-		UInt8 bCur = Char_ToLower(b->buffer[i]);
+		UInt8 aCur = a->buffer[i]; if (aCur >= 'A' && aCur <= 'Z') { aCur += ' '; }
+		UInt8 bCur = b->buffer[i]; if (bCur >= 'A' && bCur <= 'Z') { bCur += ' '; }
 		if (aCur != bCur) return false;
 	}
 	return true;
@@ -94,6 +101,11 @@ bool String_Append(STRING_TRANSIENT String* str, UInt8 c) {
 	str->buffer[str->length] = c;
 	str->length++;
 	return true;
+}
+
+bool String_AppendBool(STRING_TRANSIENT String* str, bool value) {
+	UInt8* text = value ? "True" : "False";
+	return String_AppendConst(str, text);
 }
 
 Int32 String_MakeInt32(Int32 num, UInt8* numBuffer) {
@@ -125,9 +137,7 @@ bool String_AppendInt32(STRING_TRANSIENT String* str, Int32 num) {
 bool String_AppendPaddedInt32(STRING_TRANSIENT String* str, Int32 num, Int32 minDigits) {
 	UInt8 numBuffer[STRING_INT32CHARS];
 	Int32 i;
-	for (i = 0; i < minDigits; i++) {
-		numBuffer[i] = '0';
-	}
+	for (i = 0; i < minDigits; i++) { numBuffer[i] = '0'; }
 
 	Int32 numLen = String_MakeInt32(num, numBuffer);
 	if (numLen < minDigits) numLen = minDigits;
@@ -153,6 +163,17 @@ bool String_AppendString(STRING_TRANSIENT String* str, STRING_PURE String* toApp
 
 	for (i = 0; i < toAppend->length; i++) {
 		if (!String_Append(str, toAppend->buffer[i])) return false;
+	}
+	return true;
+}
+
+bool String_AppendColorless(STRING_TRANSIENT String* str, STRING_PURE String* toAppend) {
+	Int32 i;
+
+	for (i = 0; i < toAppend->length; i++) {
+		UInt8 c = toAppend->buffer[i];
+		if (c == '&') { i++; continue; } /* Skip over the following colour code */
+		if (!String_Append(str, c)) return false;
 	}
 	return true;
 }
@@ -369,12 +390,12 @@ bool Convert_TryParseReal32(STRING_PURE String* str, Real32* value) {
 }
 
 bool Convert_TryParseBool(STRING_PURE String* str, bool* value) {
-	String trueStr  = String_FromConst("true");
+	String trueStr  = String_FromConst("True");
 	if (String_CaselessEquals(str, &trueStr)) {
 		*value = true; return true;
 	}
 
-	String falseStr = String_FromConst("false");
+	String falseStr = String_FromConst("False");
 	if (String_CaselessEquals(str, &falseStr)) {
 		*value = false; return true;
 	}
@@ -384,6 +405,23 @@ bool Convert_TryParseBool(STRING_PURE String* str, bool* value) {
 
 #define STRINGSBUFFER_LEN_SHIFT 10
 #define STRINGSBUFFER_LEN_MASK  0x3FFUL
+void StringBuffers_Init(StringsBuffer* buffer) {
+	buffer->Count = 0;
+	buffer->TextBuffer  = buffer->DefaultBuffer;
+	buffer->FlagsBuffer = buffer->DefaultFlags;
+	buffer->TextBufferSize   = STRINGSBUFFER_BUFFER_DEF_SIZE;
+	buffer->FlagsBufferElems = STRINGSBUFFER_FLAGS_DEF_ELEMS;
+}
+
+void StringsBuffer_Free(StringsBuffer* buffer) {
+	if (buffer->TextBufferSize > STRINGSBUFFER_BUFFER_DEF_SIZE) {
+		Platform_MemFree(buffer->TextBuffer);
+	}
+	if (buffer->FlagsBufferElems > STRINGSBUFFER_FLAGS_DEF_ELEMS) {
+		Platform_MemFree(buffer->FlagsBuffer);
+	}
+}
+
 void StringsBuffer_Get(StringsBuffer* buffer, UInt32 index, STRING_TRANSIENT String* text) {
 	String raw = StringsBuffer_UNSAFE_Get(buffer, index);
 	String_Clear(text);
@@ -393,12 +431,86 @@ void StringsBuffer_Get(StringsBuffer* buffer, UInt32 index, STRING_TRANSIENT Str
 String StringsBuffer_UNSAFE_Get(StringsBuffer* buffer, UInt32 index) {
 	if (index >= buffer->Count) ErrorHandler_Fail("Tried to get String past StringsBuffer end");
 
-	UInt32 flags = buffer->FlagsBuffer[index];
+	UInt32 flags  = buffer->FlagsBuffer[index];
+	UInt32 offset = flags >> STRINGSBUFFER_LEN_SHIFT;
+	UInt32 len    = flags  & STRINGSBUFFER_LEN_MASK;
+	return String_Init(&buffer->TextBuffer[offset], (UInt16)len, (UInt16)len);
+}
+
+void StringsBuffer_ResizeArray(void** buffer, UInt32 curSize, UInt32 newSize, bool reallocing) {
+	/* We use a statically allocated buffer initally, so can't realloc first time */
+	void* dst;
+	void* cur = *buffer;
+
+	if (!reallocing) {
+		dst = Platform_MemAlloc(newSize);
+		if (dst == NULL) ErrorHandler_Fail("Failed allocating memory for StringsBuffer");
+		Platform_MemCpy(dst, cur, curSize);
+	} else {
+		dst = Platform_MemRealloc(cur, newSize);
+		if (dst == NULL) ErrorHandler_Fail("Failed allocating memory for resizing StringsBuffer");
+	}
+	*buffer = dst;
+}
+
+void StringsBuffer_Add(StringsBuffer* buffer, STRING_PURE String* text) {
+	if (buffer->Count == buffer->FlagsBufferElems) {
+		/* Someone forgot to initalise flags buffer, abort */
+		if (buffer->FlagsBufferElems == 0) {
+			ErrorHandler_Fail("StringsBuffer not properly initalised");
+		}
+		
+		UInt32 curElemSize   = buffer->FlagsBufferElems * sizeof(UInt32);
+		UInt32 newElemsSize  = (buffer->FlagsBufferElems + STRINGSBUFFER_FLAGS_EXPAND_ELEMS) * sizeof(UInt32);
+		bool reallocingElems = buffer->FlagsBufferElems > STRINGSBUFFER_FLAGS_DEF_ELEMS;
+		StringsBuffer_ResizeArray(&buffer->FlagsBuffer, curElemSize, newElemsSize, reallocingElems);
+	}
+
+	UInt32 textOffset = 0;
+	if (buffer->Count > 0) {
+		UInt32 lastFlags  = buffer->FlagsBuffer[buffer->Count - 1];
+		UInt32 lastOffset = lastFlags >> STRINGSBUFFER_LEN_SHIFT;
+		UInt32 lastLen    = lastFlags  & STRINGSBUFFER_LEN_MASK;
+		textOffset = lastOffset + lastLen;
+	}
+
+	if (textOffset + text->length >= buffer->TextBufferSize) {
+		UInt32 curTextSize  = buffer->TextBufferSize;
+		UInt32 newTextSize  = buffer->TextBufferSize + STRINGSBUFFER_BUFFER_EXPAND_SIZE;
+		bool reallocingText = buffer->TextBufferSize > STRINGSBUFFER_BUFFER_DEF_SIZE;
+		StringsBuffer_ResizeArray(&buffer->FlagsBuffer, curTextSize, newTextSize, reallocingText);
+	}
+
+	if (text->length > STRINGSBUFFER_LEN_MASK) {
+		ErrorHandler_Fail("String too big to insert into StringsBuffer");
+	}
+	if (text->length > 0) {
+		Platform_MemCpy(&buffer->TextBuffer[textOffset], text->buffer, text->length);
+	}
+	buffer->FlagsBuffer[buffer->Count] = text->length | (textOffset << STRINGSBUFFER_LEN_SHIFT);
+	buffer->Count++;
+}
+
+void StringsBuffer_Remove(StringsBuffer* buffer, UInt32 index) {
+	if (index >= buffer->Count) ErrorHandler_Fail("Tried to remove String past StringsBuffer end");
+
+	UInt32 flags  = buffer->FlagsBuffer[index];
 	UInt32 offset = flags >> STRINGSBUFFER_LEN_SHIFT;
 	UInt32 len    = flags  & STRINGSBUFFER_LEN_MASK;
 
-	String raw;
-	raw.buffer = &buffer->TextBuffer[offset];
-	raw.length = len; raw.capacity = len;
-	return raw;
+	UInt32 lastFlags  = buffer->FlagsBuffer[buffer->Count - 1];
+	UInt32 lastOffset = lastFlags >> STRINGSBUFFER_LEN_SHIFT;
+	UInt32 lastLen    = lastFlags  & STRINGSBUFFER_LEN_MASK;
+
+	/* Imagine buffer is this: XXYYYYZZZ, and want to delete X */
+	/* Start points to first character of Y */
+	/* End points to last character of Z */
+	UInt32 i, start = offset + len, end = lastOffset + lastLen;
+	for (i = start; i < end; i++) { 
+		buffer->TextBuffer[i - len] = buffer->TextBuffer[i]; 
+	}
+	for (i = index; i < buffer->Count; i++) {
+		buffer->FlagsBuffer[i] = buffer->FlagsBuffer[i + 1];
+	}
+	buffer->Count--;
 }

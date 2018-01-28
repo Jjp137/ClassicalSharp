@@ -1,19 +1,19 @@
 #include "Chat.h"
 #include "Stream.h"
 #include "Platform.h"
-#include "Events.h"
+#include "Event.h"
 #include "Game.h"
 #include "ErrorHandler.h"
 #include "ServerConnection.h"
 
 void ChatLine_Make(ChatLine* line, STRING_TRANSIENT String* text) {
-	String dst = String_FromRawBuffer(line->Buffer, STRING_SIZE);
+	String dst = String_InitAndClearArray(line->Buffer);
 	String_AppendString(&dst, text);
 	line->Received = Platform_CurrentUTCTime();
 }
 
 UInt8 Chat_LogNameBuffer[String_BufferSize(STRING_SIZE)];
-String Chat_LogName = String_EmptyConstArray(Chat_LogNameBuffer);
+String Chat_LogName = String_FromEmptyArray(Chat_LogNameBuffer);
 Stream Chat_LogStream;
 DateTime ChatLog_LastLogDate;
 
@@ -62,7 +62,7 @@ void Chat_OpenLog(DateTime* now) {
 	UInt32 i;
 	for (i = 0; i < 20; i++) {
 		UInt8 pathBuffer[String_BufferSize(FILENAME_SIZE)];
-		String path = String_FromRawBuffer(pathBuffer, FILENAME_SIZE);
+		String path = String_InitAndClearArray(pathBuffer);
 		String_AppendConst(&path, "logs");
 		String_Append(&path, Platform_DirectorySeparator);
 
@@ -90,7 +90,8 @@ void Chat_OpenLog(DateTime* now) {
 	}
 
 	Chat_LogStream.Data = NULL;
-	ErrorHandler_LogError("creating chat log", "Failed to open chat log file after 20 tries, giving up");
+	String failedMsg = String_FromConst("Failed to open chat log file after 20 tries, giving up");
+	ErrorHandler_Log(&failedMsg);
 }
 
 void Chat_AppendLog(STRING_PURE String* text) {
@@ -105,38 +106,33 @@ void Chat_AppendLog(STRING_PURE String* text) {
 	ChatLog_LastLogDate = now;
 	if (Chat_LogStream.Data == NULL) return;
 	UInt8 logBuffer[String_BufferSize(STRING_SIZE * 2)];
-	String str = String_FromRawBuffer(logBuffer, STRING_SIZE * 2);
+	String str = String_InitAndClearArray(logBuffer);
 
 	/* [HH:mm:ss] text */
 	String_Append(&str, '['); String_AppendPaddedInt32(&str, now.Hour,   2);
 	String_Append(&str, ':'); String_AppendPaddedInt32(&str, now.Minute, 2);
 	String_Append(&str, ':'); String_AppendPaddedInt32(&str, now.Second, 2);
 	String_Append(&str, ']'); String_Append(&str, ' ');
+	String_AppendColorless(&str, text);
 
-	Int32 i;
-	for (i = 0; i < text->length; i++) {
-		UInt8 c = text->buffer[i];
-		if (c == '&') { i++; continue; } /* Skip over the following colour code */
-		String_Append(&str, c);
-	}
 	Stream_WriteLine(&Chat_LogStream, &str);
 }
 
-void Chat_Add(STRING_PURE String* text) { Chat_AddOf(text, MessageType_Normal); }
+void Chat_Add(STRING_PURE String* text) { Chat_AddOf(text, MESSAGE_TYPE_NORMAL); }
 void Chat_AddOf(STRING_PURE String* text, MessageType type) {
-	if (type == MessageType_Normal) {
+	if (type == MESSAGE_TYPE_NORMAL) {
 		StringsBuffer_Add(&ChatLog, text);
 		Chat_AppendLog(text);
-	} else if (type >= MessageType_Status1 && type <= MessageType_Status3) {
-		ChatLine_Make(&Chat_Status[type - MessageType_Status1], text);
-	} else if (type >= MessageType_BottomRight1 && type <= MessageType_BottomRight3) {
-		ChatLine_Make(&Chat_BottomRight[type - MessageType_BottomRight1], text);
-	} else if (type == MessageType_Announcement) {
+	} else if (type >= MESSAGE_TYPE_STATUS_1 && type <= MESSAGE_TYPE_STATUS_3) {
+		ChatLine_Make(&Chat_Status[type - MESSAGE_TYPE_STATUS_1], text);
+	} else if (type >= MESSAGE_TYPE_BOTTOMRIGHT_1 && type <= MESSAGE_TYPE_BOTTOMRIGHT_3) {
+		ChatLine_Make(&Chat_BottomRight[type - MESSAGE_TYPE_BOTTOMRIGHT_1], text);
+	} else if (type == MESSAGE_TYPE_ANNOUNCEMENT) {
 		ChatLine_Make(&Chat_Announcement, text);
-	} else if (type >= MessageType_ClientStatus1 && type <= MessageType_ClientStatus3) {
-		ChatLine_Make(&Chat_ClientStatus[type - MessageType_ClientStatus1], text);
+	} else if (type >= MESSAGE_TYPE_CLIENTSTATUS_1 && type <= MESSAGE_TYPE_CLIENTSTATUS_3) {
+		ChatLine_Make(&Chat_ClientStatus[type - MESSAGE_TYPE_CLIENTSTATUS_1], text);
 	}
-	Events_RaiseChatReceived(text, type);
+	Event_RaiseChat(&ChatEvents_ChatReceived, text, type);
 }
 
 void Chat_Reset(void) {

@@ -2,11 +2,13 @@
 #include "Funcs.h"
 #include "Game.h"
 #include "Block.h"
-#include "Events.h"
+#include "Event.h"
+#include "Chat.h"
 
 bool Inventory_CanChangeSelected(void) {
 	if (!Inventory_CanChangeHeldBlock) {
-		//game.Chat.Add("&e/client: &cThe server has forbidden you from changing your held block.");
+		String msg = String_FromConst("&e/client: &cThe server has forbidden you from changing your held block.");
+		Chat_Add(&msg);
 		return false;
 	}
 	return true;
@@ -40,54 +42,53 @@ void Inventory_SetSelectedBlock(BlockID block) {
 }
 
 bool Inventory_IsHackBlock(BlockID b) {
-	return b == BlockID_DoubleSlab || b == BlockID_Bedrock ||
-		b == BlockID_Grass || Block_IsLiquid(b);
+	return b == BLOCK_DOUBLE_SLAB || b == BLOCK_BEDROCK || b == BLOCK_GRASS || Block_IsLiquid[b];
 }
 
 BlockID Inventory_DefaultMapping(Int32 i) {
 #if USE16_BIT
-	if ((i >= Block_CpeCount && i < 256) || i == BlockID_Air) return BlockID_Invalid;
+	if ((i >= Block_CpeCount && i < 256) || i == BLOCK_AIR) return BLOCK_AIR;
 #else
-	if (i >= BLOCK_CPE_COUNT || i == BlockID_Air) return BlockID_Invalid;
+	if (i >= BLOCK_CPE_COUNT || i == BLOCK_AIR) return BLOCK_AIR;
 #endif
 	if (!Game_ClassicMode) return (BlockID)i;
 
 	if (i >= 25 && i <= 40) {
-		return (BlockID)(BlockID_Red + (i - 25));
+		return (BlockID)(BLOCK_RED + (i - 25));
 	}
 	if (i >= 18 && i <= 21) {
-		return (BlockID)(BlockID_Dandelion + (i - 18));
+		return (BlockID)(BLOCK_DANDELION + (i - 18));
 	}
 
 	switch (i) {
 		/* First row */
-	case 3: return BlockID_Cobblestone;
-	case 4: return BlockID_Brick;
-	case 5: return BlockID_Dirt;
-	case 6: return BlockID_Wood;
+	case 3: return BLOCK_COBBLE;
+	case 4: return BLOCK_BRICK;
+	case 5: return BLOCK_DIRT;
+	case 6: return BLOCK_WOOD;
 
 		/* Second row */
-	case 12: return BlockID_Log;
-	case 13: return BlockID_Leaves;
-	case 14: return BlockID_Glass;
-	case 15: return BlockID_Slab;
-	case 16: return BlockID_MossyRocks;
-	case 17: return BlockID_Sapling;
+	case 12: return BLOCK_LOG;
+	case 13: return BLOCK_LEAVES;
+	case 14: return BLOCK_GLASS;
+	case 15: return BLOCK_SLAB;
+	case 16: return BLOCK_MOSSY_ROCKS;
+	case 17: return BLOCK_SAPLING;
 
 		/* Third row */
-	case 22: return BlockID_Sand;
-	case 23: return BlockID_Gravel;
-	case 24: return BlockID_Sponge;
+	case 22: return BLOCK_SAND;
+	case 23: return BLOCK_GRAVEL;
+	case 24: return BLOCK_SPONGE;
 
 		/* Fifth row */
-	case 41: return BlockID_CoalOre;
-	case 42: return BlockID_IronOre;
-	case 43: return BlockID_GoldOre;
-	case 44: return BlockID_DoubleSlab;
-	case 45: return BlockID_Iron;
-	case 46: return BlockID_Gold;
-	case 47: return BlockID_Bookshelf;
-	case 48: return BlockID_TNT;
+	case 41: return BLOCK_COAL_ORE;
+	case 42: return BLOCK_IRON_ORE;
+	case 43: return BLOCK_GOLD_ORE;
+	case 44: return BLOCK_DOUBLE_SLAB;
+	case 45: return BLOCK_IRON;
+	case 46: return BLOCK_GOLD;
+	case 47: return BLOCK_BOOKSHELF;
+	case 48: return BLOCK_TNT;
 	}
 	return (BlockID)i;
 }
@@ -100,7 +101,7 @@ void Inventory_SetDefaultMapping(void) {
 	for (i = 0; i < Array_NumElements(Inventory_Map); i++) {
 		BlockID mapping = Inventory_DefaultMapping(i);
 		if (Game_PureClassic && Inventory_IsHackBlock(mapping)) {
-			mapping = BlockID_Invalid;
+			mapping = BLOCK_AIR;
 		}
 		if (mapping != i) Inventory_Map[i] = mapping;
 	}
@@ -132,7 +133,7 @@ void Inventory_Remove(BlockID block) {
 	Int32 i;
 	for (i = 0; i < Array_NumElements(Inventory_Map); i++) {
 		if (Inventory_Map[i] != block) continue;
-		Inventory_Map[i] = BlockID_Invalid;
+		Inventory_Map[i] = BLOCK_AIR;
 	}
 }
 
@@ -146,12 +147,12 @@ void Inventory_PushToFreeSlots(Int32 i) {
 	}
 
 	for (j = block; j < Array_NumElements(Inventory_Map); j++) {
-		if (Inventory_Map[j] == BlockID_Invalid) {
+		if (Inventory_Map[j] == BLOCK_AIR) {
 			Inventory_Map[j] = block; return;
 		}
 	}
 	for (j = 1; j < block; j++) {
-		if (Inventory_Map[j] == BlockID_Invalid) {
+		if (Inventory_Map[j] == BLOCK_AIR) {
 			Inventory_Map[j] = block; return;
 		}
 	}
@@ -160,14 +161,19 @@ void Inventory_PushToFreeSlots(Int32 i) {
 void Inventory_Insert(Int32 i, BlockID block) {
 	if (Inventory_Map[i] == block) return;
 	/* Need to push the old block to a different slot if different block. */
-	if (Inventory_Map[i] != BlockID_Invalid) Inventory_PushToFreeSlots(i);
+	if (Inventory_Map[i] != BLOCK_AIR) Inventory_PushToFreeSlots(i);
 	Inventory_Map[i] = block;
 }
 
+void Inventory_ResetState(void) {
+	Inventory_SetDefaultMapping();
+	Inventory_CanChangeHeldBlock = true;
+	Inventory_CanPick = true;
+}
 
 IGameComponent Inventory_MakeComponent(void) {
 	IGameComponent comp = IGameComponent_MakeEmpty();
-	comp.Init  = Inventory_SetDefaultMapping;
-	comp.Reset = Inventory_SetDefaultMapping;
+	comp.Init  = Inventory_ResetState;
+	comp.Reset = Inventory_ResetState;
 	return comp;
 }

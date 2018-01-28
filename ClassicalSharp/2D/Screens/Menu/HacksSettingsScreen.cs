@@ -67,6 +67,8 @@ namespace ClassicalSharp.Gui.Screens {
 		static string GetJump(Game g) { return g.LocalPlayer.JumpHeight.ToString("F3"); }
 		static void SetJump(Game g, string v) {
 			g.LocalPlayer.physics.CalculateJumpVelocity(true, Utils.ParseDecimal(v));
+			float jumpVel = g.LocalPlayer.physics.jumpVel;
+			Options.Set(OptionsKey.JumpVelocity, jumpVel.ToString());
 		}		
 		
 		static string GetWOMHacks(Game g) { return GetBool(g.LocalPlayer.Hacks.WOMStyleHacks); }
@@ -170,6 +172,7 @@ namespace ClassicalSharp.Gui.Screens {
 		}
 		
 		protected override void InputClosed() {
+			base.InputClosed();
 			if (widgets[defaultIndex] != null)
 				widgets[defaultIndex].Dispose();
 			widgets[defaultIndex] = null;

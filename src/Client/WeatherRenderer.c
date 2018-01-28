@@ -2,12 +2,11 @@
 #include "Block.h"
 #include "ExtMath.h"
 #include "Funcs.h"
-#include "Events.h"
+#include "Event.h"
 #include "Game.h"
 #include "GraphicsAPI.h"
 #include "GraphicsEnums.h"
 #include "GraphicsCommon.h"
-#include "Events.h"
 #include "PackedCol.h"
 #include "Platform.h"
 #include "Vectors.h"
@@ -42,7 +41,7 @@ Int32 WeatherRenderer_CalcHeightAt(Int32 x, Int32 maxY, Int32 z, Int32 index) {
 	Int32 y = maxY;
 	for (y = maxY; y >= 0; y--) {
 		UInt8 draw = Block_Draw[World_Blocks[mapIndex]];
-		if (!(draw == DrawType_Gas || draw == DrawType_Sprite)) {
+		if (!(draw == DRAW_GAS || draw == DRAW_SPRITE)) {
 			Weather_Heightmap[index] = (Int16)y;
 			return y;
 		}
@@ -64,8 +63,8 @@ Real32 WeatherRenderer_RainHeight(Int32 x, Int32 z) {
 }
 
 void WeatherRenderer_OnBlockChanged(Int32 x, Int32 y, Int32 z, BlockID oldBlock, BlockID newBlock) {
-	bool didBlock = !(Block_Draw[oldBlock] == DrawType_Gas || Block_Draw[oldBlock] == DrawType_Sprite);
-	bool nowBlock = !(Block_Draw[newBlock] == DrawType_Gas || Block_Draw[newBlock] == DrawType_Sprite);
+	bool didBlock = !(Block_Draw[oldBlock] == DRAW_GAS || Block_Draw[oldBlock] == DRAW_SPRITE);
+	bool nowBlock = !(Block_Draw[newBlock] == DRAW_GAS || Block_Draw[newBlock] == DRAW_SPRITE);
 	if (didBlock == nowBlock) return;
 
 	Int32 index = (x * World_Length) + z;
@@ -90,7 +89,7 @@ void WeatherRenderer_ContextLost(void) {
 }
 
 void WeatherRenderer_ContextRecreated(void) {
-	weather_vb = Gfx_CreateDynamicVb(VertexFormat_P3fT2fC4b, weather_verticesCount);
+	weather_vb = Gfx_CreateDynamicVb(VERTEX_FORMAT_P3FT2FC4B, weather_verticesCount);
 }
 
 Real32 WeatherRenderer_AlphaAt(Real32 x) {
@@ -100,11 +99,11 @@ Real32 WeatherRenderer_AlphaAt(Real32 x) {
 }
 
 void WeatherRenderer_Render(Real64 deltaTime) {
-	Weather weather = WorldEnv_Weather;
-	if (weather == Weather_Sunny) return;
+	Int32 weather = WorldEnv_Weather;
+	if (weather == WEATHER_SUNNY) return;
 	if (Weather_Heightmap == NULL) WeatherRenderer_InitHeightmap();
 
-	Gfx_BindTexture(weather == Weather_Rainy ? weather_rainTex : weather_snowTex);
+	Gfx_BindTexture(weather == WEATHER_RAINY ? weather_rainTex : weather_snowTex);
 	Vector3 camPos = Game_CurrentCameraPos;
 	Vector3I pos;
 	Vector3I_Floor(&pos, &camPos);
@@ -115,12 +114,11 @@ void WeatherRenderer_Render(Real64 deltaTime) {
 	pos.Y += 64;
 	pos.Y = max(World_Height, pos.Y);
 
-	Real32 speed = (weather == Weather_Rainy ? 1.0f : 0.2f) * WorldEnv_WeatherSpeed;
+	Real32 speed = (weather == WEATHER_RAINY ? 1.0f : 0.2f) * WorldEnv_WeatherSpeed;
 	Real32 vOffset = (Real32)Game_Accumulator * speed;
 	weather_accumulator += deltaTime;
-	bool particles = weather == Weather_Rainy;
+	bool particles = weather == WEATHER_RAINY;
 
-	Int32 vCount = 0;
 	PackedCol col = WorldEnv_SunCol;
 	VertexP3fT2fC4b v;
 	VertexP3fT2fC4b vertices[weather_verticesCount];
@@ -162,21 +160,20 @@ void WeatherRenderer_Render(Real64 deltaTime) {
 			          v.Y = y2;                       v.V = v2; *ptr = v; ptr++;
 			v.X = x1;           v.Z = z2; v.U = 0.0f;		    *ptr = v; ptr++;
 			          v.Y = y1;                       v.V = v1; *ptr = v; ptr++;
-
-			vCount += 8;
 		}
 	}
 
 	if (particles && (weather_accumulator >= 0.25f || moved)) {
 		weather_accumulator = 0;
 	}
-	if (vCount == 0) return;
+	if (ptr == vertices) return;
 
 	Gfx_SetAlphaTest(false);
 	Gfx_SetDepthWrite(false);
 	Gfx_SetAlphaArgBlend(true);
 
-	Gfx_SetBatchFormat(VertexFormat_P3fT2fC4b);
+	Gfx_SetBatchFormat(VERTEX_FORMAT_P3FT2FC4B);
+	UInt32 vCount = (UInt32)(ptr - vertices) / VertexP3fT2fC4b_Size;
 	GfxCommon_UpdateDynamicVb_IndexedTris(weather_vb, vertices, vCount);
 
 	Gfx_SetAlphaArgBlend(false);

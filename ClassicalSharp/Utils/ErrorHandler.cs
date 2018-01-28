@@ -14,7 +14,7 @@ namespace ClassicalSharp {
 		static string logFile = "crash.log";
 		static string fileName = "crash.log";
 		
-		/// <summary> Adds a handler for when a unhandled exception occurs, unless 
+		/// <summary> Adds a handler for when a unhandled exception occurs, unless
 		/// a debugger is attached to the process in which case this does nothing. </summary>
 		public static void InstallHandler(string logFile) {
 			ErrorHandler.logFile = logFile;
@@ -23,12 +23,12 @@ namespace ClassicalSharp {
 				AppDomain.CurrentDomain.UnhandledException += UnhandledException;
 		}
 		
-		/// <summary> Additional text that should be logged to the log file 
+		/// <summary> Additional text that should be logged to the log file
 		/// when an unhandled exception occurs. </summary>
 		public static string[] AdditionalInfo;
 		
 		static string Format(Exception ex) {
-			return ex.GetType().FullName + ": " + ex.Message 
+			return ex.GetType().FullName + ": " + ex.Message
 				+ Environment.NewLine + ex.StackTrace;
 		}
 
@@ -81,9 +81,15 @@ namespace ClassicalSharp {
 		
 		/// <summary> Logs a handled exception that occured at the specified location to the log file. </summary>
 		public static bool LogError(string location, Exception ex) {
-			string error = ex.GetType().FullName + ": " + ex.Message 
-				+ Environment.NewLine + ex.StackTrace;
+			string error = DescribeException(ex);
+			if (ex.InnerException != null) {
+				error += Environment.NewLine + DescribeException(ex.InnerException);
+			}
 			return LogError(location, error);
+		}
+		
+		static string DescribeException(Exception ex) {
+			return ex.GetType().FullName + ": " + ex.Message + Environment.NewLine + ex.StackTrace;
 		}
 		
 		/// <summary> Logs an error that occured at the specified location to the log file. </summary>

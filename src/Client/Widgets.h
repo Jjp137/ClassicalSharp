@@ -22,13 +22,14 @@ typedef struct TextWidget_ {
 	PackedCol Col;
 } TextWidget;
 
+void TextWidget_Make(TextWidget* widget, FontDesc* font);
 void TextWidget_Create(TextWidget* widget, STRING_PURE String* text, FontDesc* font);
 void TextWidget_SetText(TextWidget* widget, STRING_PURE String* text);
 
 
 typedef void (*ButtonWidget_SetValue)(STRING_TRANSIENT String* raw);
 typedef void (*ButtonWidget_GetValue)(STRING_TRANSIENT String* raw);
-typedef bool (Gui_MouseHandler)(GuiElement* elem, Int32 x, Int32 y, MouseButton btn);
+typedef void (*Gui_MouseHandler)(GuiElement* elem, Int32 x, Int32 y, MouseButton btn);
 typedef struct ButtonWidget_ {
 	Widget Base;
 	Texture Texture;

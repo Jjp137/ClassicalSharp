@@ -2,7 +2,7 @@
 #include <Windows.h>
 #include "Platform.h"
 #include "Input.h"
-#include "Events.h"
+#include "Event.h"
 #include "String.h"
 
 #define win_Style WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN
@@ -14,7 +14,7 @@
 HINSTANCE win_Instance;
 HWND win_Handle;
 HDC win_DC;
-WindowState win_State = WindowState_Normal;
+UInt8 win_State = WINDOW_STATE_NORMAL;
 bool win_Exists, win_Focused;
 bool mouse_outside_window = true;
 bool invisible_since_creation; // Set by WindowsMessage.CREATE and consumed by Visible = true (calls BringWindowToFront).
@@ -42,7 +42,7 @@ void Window_Destroy(void) {
 
 void Window_ResetWindowState(void) {
 	suppress_resize++;
-	Window_SetWindowState(WindowState_Normal);
+	Window_SetWindowState(WINDOW_STATE_NORMAL);
 	Window_ProcessEvents();
 	suppress_resize--;
 }
@@ -58,7 +58,7 @@ void Window_DoSetHiddenBorder(bool value) {
 
 	/* To ensure maximized/minimized windows work correctly, reset state to normal,
 	change the border, then go back to maximized/minimized. */
-	WindowState state = win_State;
+	UInt8 state = win_State;
 	Window_ResetWindowState();
 	DWORD style = WS_CLIPCHILDREN | WS_CLIPSIBLINGS;
 	style |= (value ? WS_POPUP : WS_OVERLAPPEDWINDOW);
@@ -180,7 +180,7 @@ LRESULT CALLBACK Window_Procedure(HWND handle, UINT message, WPARAM wParam, LPAR
 	WORD mouse_x, mouse_y;
 	MouseButton btn;
 	WINDOWPOS* pos;
-	WindowState new_state;
+	UInt8 new_state;
 	UInt8 keyChar;
 	bool pressed, extended, lShiftDown, rShiftDown;
 	Key mappedKey;
@@ -192,7 +192,7 @@ LRESULT CALLBACK Window_Procedure(HWND handle, UINT message, WPARAM wParam, LPAR
 		new_focused_state = LOWORD(wParam) != 0;
 		if (new_focused_state != win_Focused) {
 			win_Focused = new_focused_state;
-			Event_RaiseVoid(&WindowEvents_OnFocusedChanged);
+			Event_RaiseVoid(&WindowEvents_FocusChanged);
 		}
 		break;
 
@@ -211,7 +211,7 @@ LRESULT CALLBACK Window_Procedure(HWND handle, UINT message, WPARAM wParam, LPAR
 			Point2D new_location = Point2D_Make(pos->x, pos->y);
 			if (!Point2D_Equals(Window_GetLocation(), new_location)) {
 				win_Bounds.X = pos->x; win_Bounds.Y = pos->y;
-				Event_RaiseVoid(&WindowEvents_OnMove);
+				Event_RaiseVoid(&WindowEvents_Moved);
 			}
 
 			Size2D new_size = Size2D_Make(pos->cx, pos->cy);
@@ -227,7 +227,7 @@ LRESULT CALLBACK Window_Procedure(HWND handle, UINT message, WPARAM wParam, LPAR
 					SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE | SWP_NOSENDCHANGING);
 
 				if (suppress_resize <= 0) {
-					Event_RaiseVoid(&WindowEvents_OnResize);
+					Event_RaiseVoid(&WindowEvents_Resized);
 				}
 			}
 		}
@@ -247,21 +247,21 @@ LRESULT CALLBACK Window_Procedure(HWND handle, UINT message, WPARAM wParam, LPAR
 	case WM_SIZE:
 		new_state = win_State;
 		switch (wParam) {
-		case SIZE_RESTORED: new_state = WindowState_Normal; break;
-		case SIZE_MINIMIZED: new_state = WindowState_Minimized; break;
-		case SIZE_MAXIMIZED: new_state = win_hiddenBorder ? WindowState_Fullscreen : WindowState_Maximized; break;
+		case SIZE_RESTORED: new_state = WINDOW_STATE_NORMAL; break;
+		case SIZE_MINIMIZED: new_state = WINDOW_STATE_MINIMISED; break;
+		case SIZE_MAXIMIZED: new_state = win_hiddenBorder ? WINDOW_STATE_FULLSCREEN : WINDOW_STATE_MAXIMISED; break;
 		}
 
 		if (new_state != win_State) {
 			win_State = new_state;
-			Event_RaiseVoid(&WindowEvents_OnWindowStateChanged);
+			Event_RaiseVoid(&WindowEvents_WindowStateChanged);
 		}
 		break;
 
 
 	case WM_CHAR:
 		keyChar = Convert_UnicodeToCP437((UInt16)wParam);
-		Event_RaiseInt32(&KeyEvents_KeyPress, keyChar);
+		Event_RaiseInt32(&KeyEvents_Press, keyChar);
 		break;
 
 	case WM_MOUSEMOVE:
@@ -273,14 +273,14 @@ LRESULT CALLBACK Window_Procedure(HWND handle, UINT message, WPARAM wParam, LPAR
 			/* Once we receive a mouse move event, it means that the mouse has re-entered the window. */
 			mouse_outside_window = false;
 			Window_EnableMouseTracking();
-			Event_RaiseVoid(&WindowEvents_OnMouseEnter);
+			Event_RaiseVoid(&WindowEvents_MouseEnter);
 		}
 		break;
 
 	case WM_MOUSELEAVE:
 		mouse_outside_window = true;
 		/* Mouse tracking is disabled automatically by the OS */
-		Event_RaiseVoid(&WindowEvents_OnMouseLeave);
+		Event_RaiseVoid(&WindowEvents_MouseLeave);
 
 		/* Set all mouse buttons to off when user leaves window, prevents them being stuck down. */
 		for (btn = 0; btn < MouseButton_Count; btn++) {
@@ -402,7 +402,7 @@ LRESULT CALLBACK Window_Procedure(HWND handle, UINT message, WPARAM wParam, LPAR
 		break;
 
 	case WM_CLOSE:
-		Event_RaiseVoid(&WindowEvents_OnClosing);
+		Event_RaiseVoid(&WindowEvents_Closing);
 		Window_Destroy();
 		break;
 
@@ -410,7 +410,7 @@ LRESULT CALLBACK Window_Procedure(HWND handle, UINT message, WPARAM wParam, LPAR
 		win_Exists = false;
 		UnregisterClassA(win_ClassName, win_Instance);
 		if (win_DC != NULL) ReleaseDC(win_Handle, win_DC);
-		Event_RaiseVoid(&WindowEvents_OnClosed);
+		Event_RaiseVoid(&WindowEvents_Closed);
 		break;
 	}
 	return DefWindowProcA(handle, message, wParam, lParam);
@@ -594,33 +594,33 @@ void Window_Close(void) {
 	PostMessageA(win_Handle, WM_CLOSE, NULL, NULL);
 }
 
-WindowState Window_GetWindowState(void) { return win_State; }
-void Window_SetWindowState(WindowState value) {
+UInt8 Window_GetWindowState(void) { return win_State; }
+void Window_SetWindowState(UInt8 value) {
 	if (win_State == value) return;
 
 	DWORD command = 0;
 	bool exiting_fullscreen = false;
 
 	switch (value) {
-	case WindowState_Normal:
+	case WINDOW_STATE_NORMAL:
 		command = SW_RESTORE;
 
 		/* If we are leaving fullscreen mode we need to restore the border. */
-		if (win_State == WindowState_Fullscreen)
+		if (win_State == WINDOW_STATE_FULLSCREEN)
 			exiting_fullscreen = true;
 		break;
 
-	case WindowState_Maximized:
+	case WINDOW_STATE_MAXIMISED:
 		/* Reset state to avoid strange interactions with fullscreen/minimized windows. */
 		Window_ResetWindowState();
 		command = SW_MAXIMIZE;
 		break;
 
-	case WindowState_Minimized:
+	case WINDOW_STATE_MINIMISED:
 		command = SW_MINIMIZE;
 		break;
 
-	case WindowState_Fullscreen:
+	case WINDOW_STATE_FULLSCREEN:
 		/* We achieve fullscreen by hiding the window border and sending the MAXIMIZE command.
 		We cannot use the WindowState.Maximized directly, as that will not send the MAXIMIZE
 		command for windows with hidden borders. */

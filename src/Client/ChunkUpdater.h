@@ -2,7 +2,7 @@
 #define CC_CHUNKUPDATER_H
 #include "Typedefs.h"
 #include "Vectors.h"
-#include "Events.h"
+#include "Event.h"
 /* Manages the process of building/deleting chunk meshes.
    Also sorts chunks so nearest chunks are ordered first, and calculates chunk visibility.
    Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
@@ -41,13 +41,9 @@ typedef struct ChunkInfo_ {
 	ChunkPartInfo* TranslucentParts;
 } ChunkInfo;
 
-/* Resets contents of given chunk render info structure. */
 void ChunkInfo_Reset(ChunkInfo* chunk, Int32 x, Int32 y, Int32 z);
-
-/* Centre coordinates of chunk the camera is located in.*/
 Vector3I ChunkUpdater_ChunkPos;
-/* Distance of chunks from the camera. */
-Int32* ChunkUpdater_Distances; /* TODO: Use UInt32s instead of Int32s? */
+UInt32* ChunkUpdater_Distances;
 
 void ChunkUpdater_Init(void);
 void ChunkUpdater_Free(void);

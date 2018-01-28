@@ -3,7 +3,7 @@
 #include "ErrorHandler.h"
 #include "String.h"
 #include "Platform.h"
-#include "Events.h"
+#include "Event.h"
 #include "Random.h"
 #include "Block.h"
 #include "Entity.h"
@@ -50,8 +50,8 @@ void World_SetNewMap(BlockID* blocks, Int32 blocksSize, Int32 width, Int32 heigh
 }
 
 BlockID World_GetPhysicsBlock(Int32 x, Int32 y, Int32 z) {
-	if (x < 0 || x >= World_Width || z < 0 || z >= World_Length || y < 0) return BlockID_Bedrock;
-	if (y >= World_Height) return BlockID_Air;
+	if (x < 0 || x >= World_Width || z < 0 || z >= World_Length || y < 0) return BLOCK_BEDROCK;
+	if (y >= World_Height) return BLOCK_AIR;
 
 	return World_Blocks[World_Pack(x, y, z)];
 }
@@ -59,12 +59,12 @@ BlockID World_GetPhysicsBlock(Int32 x, Int32 y, Int32 z) {
 
 BlockID World_SafeGetBlock(Int32 x, Int32 y, Int32 z) {
 	return World_IsValidPos(x, y, z) ? 
-		World_Blocks[World_Pack(x, y, z)] : BlockID_Air;
+		World_Blocks[World_Pack(x, y, z)] : BLOCK_AIR;
 }
 
 BlockID World_SafeGetBlock_3I(Vector3I p) {
 	return World_IsValidPos(p.X, p.Y, p.Z) ? 
-		World_Blocks[World_Pack(p.X, p.Y, p.Z)] : BlockID_Air;
+		World_Blocks[World_Pack(p.X, p.Y, p.Z)] : BLOCK_AIR;
 }
 
 
@@ -110,8 +110,8 @@ void WorldEnv_Reset(void) {
 	WorldEnv_SidesOffset = -2;
 	WorldEnv_CloudsHeight = -1;
 
-	WorldEnv_EdgeBlock = BlockID_StillWater;
-	WorldEnv_SidesBlock = BlockID_Bedrock;
+	WorldEnv_EdgeBlock = BLOCK_STILL_WATER;
+	WorldEnv_SidesBlock = BLOCK_BEDROCK;
 
 	WorldEnv_CloudsSpeed = 1.0f;
 	WorldEnv_WeatherSpeed = 1.0f;
@@ -123,7 +123,7 @@ void WorldEnv_Reset(void) {
 	WorldEnv_SkyCol = WorldEnv_DefaultSkyCol;
 	WorldEnv_FogCol = WorldEnv_DefaultFogCol;
 	WorldEnv_CloudsCol = WorldEnv_DefaultCloudsCol;
-	WorldEnv_Weather = Weather_Sunny;
+	WorldEnv_Weather = WEATHER_SUNNY;
 	WorldEnv_ExpFog = false;
 }
 
@@ -142,67 +142,67 @@ void WorldEnv_ResetLight(void) {
 
 
 void WorldEnv_SetEdgeBlock(BlockID block) {
-	if (block == BlockID_Invalid) return;
-	WorldEnv_Set(block, WorldEnv_EdgeBlock, EnvVar_EdgeBlock);
+	if (block == BLOCK_INVALID) block = BLOCK_STILL_WATER; /* some server software wrongly uses this value */
+	WorldEnv_Set(block, WorldEnv_EdgeBlock, ENV_VAR_EDGE_BLOCK);
 }
 
 void WorldEnv_SetSidesBlock(BlockID block) {
-	if (block == BlockID_Invalid) return;
-	WorldEnv_Set(block, WorldEnv_SidesBlock, EnvVar_SidesBlock);
+	if (block == BLOCK_INVALID) block = BLOCK_BEDROCK; /* some server software wrongly uses this value */
+	WorldEnv_Set(block, WorldEnv_SidesBlock, ENV_VAR_SIDES_BLOCK);
 }
 
 void WorldEnv_SetEdgeHeight(Int32 height) {
-	WorldEnv_Set(height, WorldEnv_EdgeHeight, EnvVar_EdgeHeight);
+	WorldEnv_Set(height, WorldEnv_EdgeHeight, ENV_VAR_EDGE_HEIGHT);
 }
 
 void WorldEnv_SetSidesOffset(Int32 offset) {
-	WorldEnv_Set(offset, WorldEnv_SidesOffset, EnvVar_SidesOffset);
+	WorldEnv_Set(offset, WorldEnv_SidesOffset, ENV_VAR_SIDES_OFFSET);
 }
 
 void WorldEnv_SetCloudsHeight(Int32 height) {
-	WorldEnv_Set(height, WorldEnv_CloudsHeight, EnvVar_CloudsHeight);
+	WorldEnv_Set(height, WorldEnv_CloudsHeight, ENV_VAR_CLOUDS_HEIGHT);
 }
 
 void WorldEnv_SetCloudsSpeed(Real32 speed) {
-	WorldEnv_Set(speed, WorldEnv_CloudsSpeed, EnvVar_CloudsSpeed);
+	WorldEnv_Set(speed, WorldEnv_CloudsSpeed, ENV_VAR_CLOUDS_SPEED);
 }
 
 
 void WorldEnv_SetWeatherSpeed(Real32 speed) {
-	WorldEnv_Set(speed, WorldEnv_WeatherSpeed, EnvVar_WeatherSpeed);
+	WorldEnv_Set(speed, WorldEnv_WeatherSpeed, ENV_VAR_WEATHER_SPEED);
 }
 
 void WorldEnv_SetWeatherFade(Real32 rate) {
-	WorldEnv_Set(rate, WorldEnv_WeatherFade, EnvVar_WeatherFade);
+	WorldEnv_Set(rate, WorldEnv_WeatherFade, ENV_VAR_WEATHER_FADE);
 }
 
-void WorldEnv_SetWeather(Weather weather) {
-	WorldEnv_Set(weather, WorldEnv_Weather, EnvVar_Weather);
+void WorldEnv_SetWeather(Int32 weather) {
+	WorldEnv_Set(weather, WorldEnv_Weather, ENV_VAR_WEATHER);
 }
 
 void WorldEnv_SetExpFog(bool expFog) {
-	WorldEnv_Set(expFog, WorldEnv_ExpFog, EnvVar_ExpFog);
+	WorldEnv_Set(expFog, WorldEnv_ExpFog, ENV_VAR_EXP_FOG);
 }
 
 void WorldEnv_SetSkyboxHorSpeed(Real32 speed) {
-	WorldEnv_Set(speed, WorldEnv_SkyboxHorSpeed, EnvVar_SkyboxHorSpeed);
+	WorldEnv_Set(speed, WorldEnv_SkyboxHorSpeed, ENV_VAR_SKYBOX_HOR_SPEED);
 }
 
 void WorldEnv_SetSkyboxVerSpeed(Real32 speed) {
-	WorldEnv_Set(speed, WorldEnv_SkyboxVerSpeed, EnvVar_SkyboxVerSpeed);
+	WorldEnv_Set(speed, WorldEnv_SkyboxVerSpeed, ENV_VAR_SKYBOX_VER_SPEED);
 }
 
 
 void WorldEnv_SetSkyCol(PackedCol col) {
-	WorldEnv_SetCol(col, WorldEnv_SkyCol, EnvVar_SkyCol);
+	WorldEnv_SetCol(col, WorldEnv_SkyCol, ENV_VAR_SKY_COL);
 }
 
 void WorldEnv_SetFogCol(PackedCol col) {
-	WorldEnv_SetCol(col, WorldEnv_FogCol, EnvVar_FogCol);
+	WorldEnv_SetCol(col, WorldEnv_FogCol, ENV_VAR_FOG_COL);
 }
 
 void WorldEnv_SetCloudsCol(PackedCol col) {
-	WorldEnv_SetCol(col, WorldEnv_CloudsCol, EnvVar_CloudsCol);
+	WorldEnv_SetCol(col, WorldEnv_CloudsCol, ENV_VAR_CLOUDS_COL);
 }
 
 void WorldEnv_SetSunCol(PackedCol col) {
@@ -211,7 +211,7 @@ void WorldEnv_SetSunCol(PackedCol col) {
 	WorldEnv_SunCol = col;
 	PackedCol_GetShaded(WorldEnv_SunCol, &WorldEnv_SunXSide,
 		&WorldEnv_SunZSide, &WorldEnv_SunYBottom);
-	Event_RaiseInt32(&WorldEvents_EnvVarChanged, EnvVar_SunCol);
+	Event_RaiseInt32(&WorldEvents_EnvVarChanged, ENV_VAR_SUN_COL);
 }
 
 void WorldEnv_SetShadowCol(PackedCol col) {
@@ -220,7 +220,7 @@ void WorldEnv_SetShadowCol(PackedCol col) {
 	WorldEnv_ShadowCol = col;
 	PackedCol_GetShaded(WorldEnv_ShadowCol, &WorldEnv_ShadowXSide,
 		&WorldEnv_ShadowZSide, &WorldEnv_ShadowYBottom);
-	Event_RaiseInt32(&WorldEvents_EnvVarChanged, EnvVar_ShadowCol);
+	Event_RaiseInt32(&WorldEvents_EnvVarChanged, ENV_VAR_SHADOW_COL);
 }
 
 #define Respawn_NotFound -10000.0f
@@ -244,7 +244,7 @@ Real32 Respawn_HighestFreeY(AABB* bb) {
 				Vector3_Add(&blockBB.Min, &pos, &Block_MinBB[block]);
 				Vector3_Add(&blockBB.Max, &pos, &Block_MaxBB[block]);
 
-				if (Block_Collide[block] != CollideType_Solid) continue;
+				if (Block_Collide[block] != COLLIDE_SOLID) continue;
 				if (!AABB_Intersects(bb, &blockBB)) continue;
 				if (blockBB.Max.Y > spawnY) blockBB.Max.Y = spawnY;
 			}

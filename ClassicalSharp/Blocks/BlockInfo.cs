@@ -67,29 +67,24 @@ namespace ClassicalSharp {
 	/// <remarks> e.g. blocks light, height, texture IDs, etc. </remarks>
 	public static partial class BlockInfo {
 		
-		public static bool IsLiquid(BlockID block) {
-			byte collide = ExtendedCollide[block];
-			return 
-				(collide == CollideType.LiquidWater && Draw[block] == DrawType.Translucent) ||
-				(collide == CollideType.LiquidLava  && Draw[block] == DrawType.Transparent);
-		}
-
+		public static bool[] IsLiquid = new bool[Block.Count];
 		public static bool[] BlocksLight = new bool[Block.Count];
 		public static bool[] FullBright = new bool[Block.Count];
 		public static string[] Name = new string[Block.Count];
 		public static FastColour[] FogColour = new FastColour[Block.Count];
-		public static float[] FogDensity = new float[Block.Count];		
-		public static byte[] Collide = new byte[Block.Count];		
-		public static byte[] ExtendedCollide = new byte[Block.Count];		
-		public static float[] SpeedMultiplier = new float[Block.Count];		
+		public static float[] FogDensity = new float[Block.Count];
+		public static byte[] Collide = new byte[Block.Count];
+		public static byte[] ExtendedCollide = new byte[Block.Count];
+		public static float[] SpeedMultiplier = new float[Block.Count];
 		public static byte[] LightOffset = new byte[Block.Count];
-		public static byte[] Draw = new byte[Block.Count];		
-		public static uint[] DefinedCustomBlocks = new uint[Block.Count >> 5];		
-		public static SoundType[] DigSounds = new SoundType[Block.Count];		
-		public static SoundType[] StepSounds = new SoundType[Block.Count];		
-		public static bool[] CanPlace = new bool[Block.Count];		
-		public static bool[] CanDelete = new bool[Block.Count];		
+		public static byte[] Draw = new byte[Block.Count];
+		public static uint[] DefinedCustomBlocks = new uint[Block.Count >> 5];
+		public static SoundType[] DigSounds = new SoundType[Block.Count];
+		public static SoundType[] StepSounds = new SoundType[Block.Count];
+		public static bool[] CanPlace = new bool[Block.Count];
+		public static bool[] CanDelete = new bool[Block.Count];
 		public static bool[] Tinted = new bool[Block.Count];
+		public static byte[] SpriteOffset = new byte[Block.Count];
 		
 		/// <summary> Gets whether the given block has an opaque draw type and is also a full tile block. </summary>
 		/// <remarks> Full tile block means Min of (0, 0, 0) and max of (1, 1, 1). </remarks>
@@ -123,10 +118,18 @@ namespace ClassicalSharp {
 			CanPlace[Block.Bedrock]    = false; CanDelete[Block.Bedrock]    = false;
 		}
 		
+		static void RecalcIsLiquid(BlockID block) {
+			byte collide = ExtendedCollide[block];
+			IsLiquid[block] =
+				(collide == CollideType.LiquidWater && Draw[block] == DrawType.Translucent) ||
+				(collide == CollideType.LiquidLava  && Draw[block] == DrawType.Transparent);
+		}
+		
 		public static void SetCollide(BlockID block, byte collide) {
 			// necessary for cases where servers redefined core blocks before extended types were introduced
 			collide = DefaultSet.MapOldCollide(block, collide);
 			ExtendedCollide[block] = collide;
+			RecalcIsLiquid(block);
 			
 			// Reduce extended collision types to their simpler forms
 			if (collide == CollideType.Ice) collide = CollideType.Solid;
@@ -141,6 +144,7 @@ namespace ClassicalSharp {
 			if (draw == DrawType.Opaque && Collide[block] != CollideType.Solid)
 				draw = DrawType.Transparent;
 			Draw[block] = draw;
+			RecalcIsLiquid(block);
 			
 			FullOpaque[block] = draw == DrawType.Opaque
 				&& MinBB[block] == Vector3.Zero && MaxBB[block] == Vector3.One;
@@ -157,6 +161,7 @@ namespace ClassicalSharp {
 			SpeedMultiplier[block] = 1;
 			Name[block] = DefaultName(block);
 			Tinted[block] = false;
+			SpriteOffset[block] = 0;
 			
 			Draw[block] = DefaultSet.Draw(block);
 			if (Draw[block] == DrawType.Sprite) {
@@ -208,9 +213,9 @@ namespace ClassicalSharp {
 			// Find start and end of this particular block name
 			int start = 0;
 			for (int i = 0; i < block; i++)
-				start = Block.Names.IndexOf(' ', start) + 1;
-			int end = Block.Names.IndexOf(' ', start);
-			if (end == -1) end = Block.Names.Length;
+				start = Block.RawNames.IndexOf(' ', start) + 1;
+			int end = Block.RawNames.IndexOf(' ', start);
+			if (end == -1) end = Block.RawNames.Length;
 			
 			buffer.Clear();
 			SplitUppercase(buffer, start, end);
@@ -220,9 +225,9 @@ namespace ClassicalSharp {
 		static void SplitUppercase(StringBuffer buffer, int start, int end) {
 			int index = 0;
 			for (int i = start; i < end; i++) {
-				char c = Block.Names[i];
+				char c = Block.RawNames[i];
 				bool upper = Char.IsUpper(c) && i > start;
-				bool nextLower = i < end - 1 && !Char.IsUpper(Block.Names[i + 1]);
+				bool nextLower = i < end - 1 && !Char.IsUpper(Block.RawNames[i + 1]);
 				
 				if (upper && nextLower) {
 					buffer.Append(ref index, ' ');

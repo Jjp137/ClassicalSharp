@@ -1,10 +1,9 @@
 #include "SkyboxRenderer.h"
 #include "Camera.h"
-#include "Events.h"
+#include "Event.h"
 #include "Game.h"
 #include "GraphicsAPI.h"
 #include "GraphicsEnums.h"
-#include "Events.h"
 #include "PackedCol.h"
 #include "2DStructs.h"
 #include "VertexStructs.h"
@@ -40,7 +39,7 @@ void SkyboxRenderer_Render(Real64 deltaTime) {
 	Gfx_SetDepthWrite(false);
 	Gfx_SetTexturing(false);
 	Gfx_BindTexture(skybox_tex);
-	Gfx_SetBatchFormat(VertexFormat_P3fT2fC4b);
+	Gfx_SetBatchFormat(VERTEX_FORMAT_P3FT2FC4B);
 
 	Matrix m = Matrix_Identity;
 	Matrix rotX, rotY;
@@ -66,7 +65,7 @@ void SkyboxRenderer_Render(Real64 deltaTime) {
 	Gfx_DrawVb_IndexedTris(SKYBOX_COUNT);
 
 	Gfx_SetTexturing(false);
-	Gfx_LoadMatrix(&Game_View);
+	Gfx_LoadMatrix(&Gfx_View);
 	Gfx_SetDepthWrite(true);
 }
 
@@ -119,14 +118,14 @@ void SkyboxRenderer_MakeVb(void) {
 	v.X =  pos;                         v.U = 0.50f;              vertices[22] = v;
 	                        v.Z = -pos;              v.V = 0.50f; vertices[23] = v;
 
-	skybox_vb = Gfx_CreateVb(vertices, VertexFormat_P3fT2fC4b, SKYBOX_COUNT);
+	skybox_vb = Gfx_CreateVb(vertices, VERTEX_FORMAT_P3FT2FC4B, SKYBOX_COUNT);
 }
 
 void SkyboxRenderer_ContextLost(void) { Gfx_DeleteVb(&skybox_vb); }
 void SkyboxRenderer_ContextRecreated(void) { SkyboxRenderer_MakeVb(); }
 
-void SkyboxRenderer_EnvVariableChanged(EnvVar envVar) {
-	if (envVar != EnvVar_CloudsCol) return;
+void SkyboxRenderer_EnvVariableChanged(Int32 envVar) {
+	if (envVar != ENV_VAR_CLOUDS_COL) return;
 	SkyboxRenderer_MakeVb();
 }
 

@@ -12,30 +12,17 @@
 #include <d3d9caps.h>
 #include <d3d9types.h>
 
-/* Maximum number of matrices that go on a stack. */
-#define MatrixStack_Capacity 4
-typedef struct MatrixStack_ {
-	/* Raw array of matrices.*/
-	Matrix Stack[MatrixStack_Capacity];
-	/* Current active matrix. */
-	Int32 Index;
-	/* Type of transformation this stack is for. */
-	D3DTRANSFORMSTATETYPE Type;
-} MatrixStack;
-
-
 D3DFORMAT d3d9_depthFormats[6] = { D3DFMT_D32, D3DFMT_D24X8, D3DFMT_D24S8, D3DFMT_D24X4S4, D3DFMT_D16, D3DFMT_D15S1 };
 D3DFORMAT d3d9_viewFormats[4] = { D3DFMT_X8R8G8B8, D3DFMT_R8G8B8, D3DFMT_R5G6B5, D3DFMT_X1R5G5B5 };
 D3DBLEND d3d9_blendFuncs[6] = { D3DBLEND_ZERO, D3DBLEND_ONE, D3DBLEND_SRCALPHA, D3DBLEND_INVSRCALPHA, D3DBLEND_DESTALPHA, D3DBLEND_INVDESTALPHA };
 D3DCMPFUNC d3d9_compareFuncs[8] = { D3DCMP_ALWAYS, D3DCMP_NOTEQUAL, D3DCMP_NEVER, D3DCMP_LESS, D3DCMP_LESSEQUAL, D3DCMP_EQUAL, D3DCMP_GREATEREQUAL, D3DCMP_GREATER };
 D3DFOGMODE d3d9_modes[3] = { D3DFOG_LINEAR, D3DFOG_EXP, D3DFOG_EXP2 };
-Int32 d3d9_formatMappings[2] = { D3DFVF_XYZ | D3DFVF_DIFFUSE, D3DFVF_XYZ | D3DFVF_DIFFUSE | D3DFVF_TEX2 };
+UInt32 d3d9_formatMappings[2] = { D3DFVF_XYZ | D3DFVF_DIFFUSE, D3DFVF_XYZ | D3DFVF_DIFFUSE | D3DFVF_TEX2 };
 
 bool d3d9_vsync;
 IDirect3D9* d3d;
 IDirect3DDevice9* device;
-MatrixStack* curStack;
-MatrixStack viewStack, projStack, texStack;
+D3DTRANSFORMSTATETYPE curMatrix;
 DWORD createFlags = D3DCREATE_HARDWARE_VERTEXPROCESSING;
 D3DFORMAT d3d9_viewFormat, d3d9_depthFormat;
 
@@ -65,8 +52,8 @@ void D3D9_FreeResource(GfxResourceID* resource) {
 	*resource = NULL;
 	if (refCount <= 0) return;
 
-	UInt8 logMsgBuffer[String_BufferSize(127)];
-	String logMsg = String_FromRawBuffer(logMsgBuffer, 127);
+	UInt8 logMsgBuffer[String_BufferSize(STRING_SIZE * 2)];
+	String logMsg = String_InitAndClearArray(logMsgBuffer);
 	String_AppendConst(&logMsg, "D3D9 Resource has outstanding references! ID: ");
 	String_AppendInt32(&logMsg, id);
 	Platform_Log(&logMsg);
@@ -168,16 +155,10 @@ void Gfx_Init(void) {
 	Gfx_MaxTextureDimensions = min(caps.MaxTextureWidth, caps.MaxTextureHeight);
 
 	Gfx_CustomMipmapsLevels = true;
-	viewStack.Type = D3DTS_VIEW;
-	projStack.Type = D3DTS_PROJECTION;
-	texStack.Type = D3DTS_TEXTURE0;
 	D3D9_SetDefaultRenderStates();
 	GfxCommon_Init();
 }
-
-void Gfx_Free(void) {
-	GfxCommon_Free();
-}
+void Gfx_Free(void) { GfxCommon_Free(); }
 
 void D3D9_SetTextureData(IDirect3DTexture9* texture, Bitmap* bmp, Int32 lvl) {
 	D3DLOCKED_RECT rect;
@@ -352,7 +333,7 @@ void Gfx_SetFogEnd(Real32 value) {
 }
 
 D3DFOGMODE d3d9_fogTableMode = D3DFOG_NONE;
-void Gfx_SetFogMode(Fog fogMode) {
+void Gfx_SetFogMode(Int32 fogMode) {
 	D3DFOGMODE mode = d3d9_modes[fogMode];
 	if (mode == d3d9_fogTableMode) return;
 
@@ -376,7 +357,7 @@ void Gfx_SetAlphaTest(bool enabled) {
 
 D3DCMPFUNC d3d9_alphaTestFunc = 0;
 Int32 d3d9_alphaTestRef = 0;
-void Gfx_SetAlphaTestFunc(CompareFunc compareFunc, Real32 refValue) {
+void Gfx_SetAlphaTestFunc(Int32 compareFunc, Real32 refValue) {
 	d3d9_alphaTestFunc = d3d9_compareFuncs[compareFunc];
 	D3D9_SetRenderState(d3d9_alphaTestFunc, D3DRS_ALPHAFUNC, "D3D9_SetAlphaTest_Func");
 	d3d9_alphaTestRef = (Int32)(refValue * 255);
@@ -393,7 +374,7 @@ void Gfx_SetAlphaBlending(bool enabled) {
 
 D3DBLEND d3d9_srcBlendFunc = 0;
 D3DBLEND d3d9_dstBlendFunc = 0;
-void Gfx_SetAlphaBlendFunc(BlendFunc srcBlendFunc, BlendFunc dstBlendFunc) {
+void Gfx_SetAlphaBlendFunc(Int32 srcBlendFunc, Int32 dstBlendFunc) {
 	d3d9_srcBlendFunc = d3d9_blendFuncs[srcBlendFunc];
 	D3D9_SetRenderState(d3d9_srcBlendFunc, D3DRS_SRCBLEND, "D3D9_SetAlphaBlendFunc_Src");
 	d3d9_dstBlendFunc = d3d9_blendFuncs[dstBlendFunc];
@@ -425,7 +406,7 @@ void Gfx_SetDepthTest(bool enabled) {
 }
 
 D3DCMPFUNC d3d9_depthTestFunc = 0;
-void Gfx_SetDepthTestFunc(CompareFunc compareFunc) {
+void Gfx_SetDepthTestFunc(Int32 compareFunc) {
 	d3d9_depthTestFunc = d3d9_compareFuncs[compareFunc];
 	D3D9_SetRenderState(d3d9_alphaTestFunc, D3DRS_ZFUNC, "D3D9_SetDepthTestFunc");
 }
@@ -442,7 +423,7 @@ void Gfx_SetDepthWrite(bool enabled) {
 }
 
 
-GfxResourceID Gfx_CreateDynamicVb(VertexFormat vertexFormat, Int32 maxVertices) {
+GfxResourceID Gfx_CreateDynamicVb(Int32 vertexFormat, Int32 maxVertices) {
 	Int32 size = maxVertices * Gfx_strideSizes[vertexFormat];
 	IDirect3DVertexBuffer9* vbuffer;
 	ReturnCode hresult = IDirect3DDevice9_CreateVertexBuffer(device, size, D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, 
@@ -462,7 +443,7 @@ void D3D9_SetVbData(IDirect3DVertexBuffer9* buffer, void* data, Int32 size, cons
 	ErrorHandler_CheckOrFail(hresult, unlockMsg);
 }
 
-GfxResourceID Gfx_CreateVb(void* vertices, VertexFormat vertexFormat, Int32 count) {
+GfxResourceID Gfx_CreateVb(void* vertices, Int32 vertexFormat, Int32 count) {
 	Int32 size = count * Gfx_strideSizes[vertexFormat];
 	IDirect3DVertexBuffer9* vbuffer;
 	ReturnCode hresult = IDirect3DDevice9_CreateVertexBuffer(device, size, D3DUSAGE_WRITEONLY,
@@ -510,8 +491,8 @@ void Gfx_BindIb(GfxResourceID ib) {
 void Gfx_DeleteVb(GfxResourceID* vb) { D3D9_FreeResource(vb); }
 void Gfx_DeleteIb(GfxResourceID* ib) { D3D9_FreeResource(ib); }
 
-VertexFormat d3d9_batchFormat = -1;
-void Gfx_SetBatchFormat(VertexFormat format) {
+Int32 d3d9_batchFormat = -1;
+void Gfx_SetBatchFormat(Int32 format) {
 	if (format == d3d9_batchFormat) return;
 	d3d9_batchFormat = format;
 
@@ -553,80 +534,46 @@ void Gfx_DrawIndexedVb_TrisT2fC4b(Int32 verticesCount, Int32 startVertex) {
 }
 
 
-void Gfx_SetMatrixMode(MatrixType matrixType) {
-	if (matrixType == MatrixType_Projection) {
-		curStack = &projStack;
-	} else if (matrixType == MatrixType_Modelview) {
-		curStack = &viewStack;
-	} else if (matrixType == MatrixType_Texture) {
-		curStack = &texStack;
+void Gfx_SetMatrixMode(Int32 matrixType) {
+	if (matrixType == MATRIX_TYPE_PROJECTION) {
+		curMatrix = D3DTS_PROJECTION;
+	} else if (matrixType == MATRIX_TYPE_MODELVIEW) {
+		curMatrix = D3DTS_VIEW;
+	} else if (matrixType == MATRIX_TYPE_TEXTURE) {
+		curMatrix = D3DTS_TEXTURE0;
 	}
 }
 
 void Gfx_LoadMatrix(Matrix* matrix) {
-	if (curStack == &texStack) {
+	if (curMatrix == D3DTS_TEXTURE0) {
 		matrix->Row2.X = matrix->Row3.X; /* NOTE: this hack fixes the texture movements. */
 		IDirect3DDevice9_SetTextureStageState(device, 0, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_COUNT2);
 	}
 
-	Int32 idx = curStack->Index;
-	curStack->Stack[idx] = *matrix;
-	
-	ReturnCode hresult = IDirect3DDevice9_SetTransform(device, curStack->Type, &curStack->Stack[idx]);
+	if (Gfx_LostContext) return;
+	ReturnCode hresult = IDirect3DDevice9_SetTransform(device, curMatrix, matrix);
 	ErrorHandler_CheckOrFail(hresult, "D3D9_LoadMatrix");
 }
 
 void Gfx_LoadIdentityMatrix(void) {
-	if (curStack == &texStack) {
+	if (curMatrix == D3DTS_TEXTURE0) {
 		IDirect3DDevice9_SetTextureStageState(device, 0, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_DISABLE);
 	}
 
-	Int32 idx = curStack->Index;
-	curStack->Stack[idx] = Matrix_Identity;
-
-	ReturnCode hresult = IDirect3DDevice9_SetTransform(device, curStack->Type, &curStack->Stack[idx]);
+	if (Gfx_LostContext) return;
+	ReturnCode hresult = IDirect3DDevice9_SetTransform(device, curMatrix, &Matrix_Identity);
 	ErrorHandler_CheckOrFail(hresult, "D3D9_LoadIdentityMatrix");
-}
-
-void Gfx_MultiplyMatrix(Matrix* matrix) {
-	Int32 idx = curStack->Index;
-	Matrix_Mul(&curStack->Stack[idx], matrix, &curStack->Stack[idx]);
-
-	ReturnCode hresult = IDirect3DDevice9_SetTransform(device, curStack->Type, &curStack->Stack[idx]);
-	ErrorHandler_CheckOrFail(hresult, "D3D9_MultiplyMatrix");
-}
-
-void Gfx_PushMatrix(void) {
-	Int32 idx = curStack->Index;
-	if (idx == MatrixStack_Capacity) {
-		ErrorHandler_Fail("Unable to push matrix, at capacity already");
-	}
-
-	curStack->Stack[idx + 1] = curStack->Stack[idx]; /* mimic GL behaviour */
-	curStack->Index++; /* exact same, we don't need to update DirectX state. */
-}
-
-void Gfx_PopMatrix(void) {
-	Int32 idx = curStack->Index;
-	if (idx == 0) {
-		ErrorHandler_Fail("Unable to pop matrix, at 0 already");
-	}
-
-	curStack->Index--; idx--;
-	ReturnCode hresult = IDirect3DDevice9_SetTransform(device, curStack->Type, &curStack->Stack[idx]);
-	ErrorHandler_CheckOrFail(hresult, "D3D9_PopMatrix");
 }
 
 #define d3d9_zN -10000.0f
 #define d3d9_zF 10000.0f
-void Gfx_LoadOrthoMatrix(Real32 width, Real32 height) {
-	Matrix matrix;
-	Matrix_OrthographicOffCenter(&matrix, 0.0f, width, height, 0.0f, d3d9_zN, d3d9_zF);
-
-	matrix.Row2.Y = 1.0f / (d3d9_zN - d3d9_zF);
-	matrix.Row2.Z = d3d9_zN / (d3d9_zN - d3d9_zF);
-	matrix.Row3.Z = 1.0f;
-	Gfx_LoadMatrix(&matrix);
+void Gfx_CalcOrthoMatrix(Real32 width, Real32 height, Matrix* matrix) {
+	Matrix_OrthographicOffCenter(matrix, 0.0f, width, height, 0.0f, d3d9_zN, d3d9_zF);
+	matrix->Row2.Z = 1.0f / (d3d9_zN - d3d9_zF);
+	matrix->Row3.Z = d3d9_zN / (d3d9_zN - d3d9_zF);
+}
+void Gfx_CalcPerspectiveMatrix(Real32 fov, Real32 aspect, Real32 zNear, Real32 zFar, Matrix* matrix) {
+	Matrix_PerspectiveFieldOfView(matrix, fov, aspect, zNear, zFar);
 }
 
 

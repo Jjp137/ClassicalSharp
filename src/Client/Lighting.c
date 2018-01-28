@@ -6,6 +6,7 @@
 #include "World.h"
 /* Manages lighting through a simple heightmap, where each block is either in sun or shadow. */
 
+Int16* Lighting_heightmap;
 PackedCol shadow, shadowZSide, shadowXSide, shadowYBottom;
 #define Lighting_Pack(x, z) ((x) + World_Width * (z))
 
@@ -21,10 +22,10 @@ void Lighting_SetShadow(PackedCol col) {
 		&shadowZSide, &shadowYBottom);
 }
 
-void Lighting_EnvVariableChanged(EnvVar envVar) {
-	if (envVar == EnvVar_SunCol) {
+void Lighting_EnvVariableChanged(Int32 envVar) {
+	if (envVar == ENV_VAR_SUN_COL) {
 		Lighting_SetSun(WorldEnv_SunCol);
-	} else if (envVar == EnvVar_ShadowCol) {
+	} else if (envVar == ENV_VAR_SHADOW_COL) {
 		Lighting_SetShadow(WorldEnv_ShadowCol);
 	}
 }
@@ -36,7 +37,7 @@ Int32 Lighting_CalcHeightAt(Int32 x, Int32 maxY, Int32 z, Int32 index) {
 	for (y = maxY; y >= 0; y--) {
 		BlockID block = World_Blocks[mapIndex];
 		if (Block_BlocksLight[block]) {
-			Int32 offset = (Block_LightOffset[block] >> Face_YMax) & 1;
+			Int32 offset = (Block_LightOffset[block] >> FACE_YMAX) & 1;
 			Lighting_heightmap[index] = (Int16)(y - offset);
 			return y - offset;
 		}
@@ -96,8 +97,8 @@ void Lighting_Refresh(void) {
 void Lighting_UpdateLighting(Int32 x, Int32 y, Int32 z, BlockID oldBlock, BlockID newBlock, Int32 index, Int32 lightH) {
 	bool didBlock = Block_BlocksLight[oldBlock];
 	bool nowBlocks = Block_BlocksLight[newBlock];
-	Int32 oldOffset = (Block_LightOffset[oldBlock] >> Face_YMax) & 1;
-	Int32 newOffset = (Block_LightOffset[newBlock] >> Face_YMax) & 1;
+	Int32 oldOffset = (Block_LightOffset[oldBlock] >> FACE_YMAX) & 1;
+	Int32 newOffset = (Block_LightOffset[newBlock] >> FACE_YMAX) & 1;
 
 	/* Two cases we need to handle here: */
 	if (didBlock == nowBlocks) {
@@ -116,7 +117,7 @@ void Lighting_UpdateLighting(Int32 x, Int32 y, Int32 z, BlockID oldBlock, BlockI
 	} else if (y == lightH && oldOffset == 0) {
 		/* For a solid block on top of an upside down slab, they will both have the same light height. */
 		/* So we need to account for this particular case. */
-		BlockID above = y == (World_Height - 1) ? BlockID_Air : World_GetBlock(x, y + 1, z);
+		BlockID above = y == (World_Height - 1) ? BLOCK_AIR : World_GetBlock(x, y + 1, z);
 		if (Block_BlocksLight[above]) return;
 
 		if (nowBlocks) {
@@ -129,7 +130,7 @@ void Lighting_UpdateLighting(Int32 x, Int32 y, Int32 z, BlockID oldBlock, BlockI
 
 
 bool Lighting_Needs(BlockID block, BlockID other) {
-	return Block_Draw[block] != DrawType_Opaque || Block_Draw[other] != DrawType_Gas;
+	return Block_Draw[block] != DRAW_OPAQUE || Block_Draw[other] != DRAW_GAS;
 }
 
 void Lighting_ResetNeighourChunk(Int32 cx, Int32 cy, Int32 cz, BlockID block, Int32 y, Int32 index, Int32 nY) {
@@ -138,7 +139,7 @@ void Lighting_ResetNeighourChunk(Int32 cx, Int32 cy, Int32 cz, BlockID block, In
 	/* Update if any blocks in the chunk are affected by light change. */
 	for (; y >= minY; y--) {
 		BlockID other = World_Blocks[index];
-		bool affected = y == nY ? Lighting_Needs(block, other) : Block_Draw[other] != DrawType_Gas;
+		bool affected = y == nY ? Lighting_Needs(block, other) : Block_Draw[other] != DRAW_GAS;
 		if (affected) { MapRenderer_RefreshChunk(cx, cy, cz); return; }
 		index -= World_OneY;
 	}
@@ -251,7 +252,7 @@ bool Lighting_CalculateHeightmapCoverage(Int32 x1, Int32 z1, Int32 xCount, Int32
 				x += curRunCount; mapIndex += curRunCount; index += curRunCount;
 
 				if (x < xCount && Block_BlocksLight[World_Blocks[mapIndex]]) {
-					Int32 lightOffset = (Block_LightOffset[World_Blocks[mapIndex]] >> Face_YMax) & 1;
+					Int32 lightOffset = (Block_LightOffset[World_Blocks[mapIndex]] >> FACE_YMAX) & 1;
 					Lighting_heightmap[heightmapIndex + x] = (short)(y - lightOffset);
 					elemsLeft--;
 					skip[index] = 0;

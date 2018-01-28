@@ -179,6 +179,7 @@
   <ItemGroup>
     <ClInclude Include="2DStructs.h" />
     <ClInclude Include="AABB.h" />
+    <ClInclude Include="AsyncDownloader.h" />
     <ClInclude Include="AxisLinesRenderer.h" />
     <ClInclude Include="BlockID.h" />
     <ClInclude Include="Block.h" />
@@ -189,21 +190,21 @@
     <ClInclude Include="Compiler.h" />
     <ClInclude Include="Constants.h" />
     <ClInclude Include="DateTime.h" />
-    <ClInclude Include="DefaultSet.h" />
     <ClInclude Include="Bitmap.h" />
     <ClInclude Include="DisplayDevice.h" />
     <ClInclude Include="Drawer.h" />
     <ClInclude Include="Drawer2D.h" />
     <ClInclude Include="Entity.h" />
+    <ClInclude Include="EntityComponents.h" />
     <ClInclude Include="EnvRenderer.h" />
     <ClInclude Include="ErrorHandler.h" />
     <ClInclude Include="Event.h" />
-    <ClInclude Include="Events.h" />
     <ClInclude Include="Formats.h" />
     <ClInclude Include="FrustumCulling.h" />
     <ClInclude Include="Deflate.h" />
     <ClInclude Include="GameMode.h" />
     <ClInclude Include="Gui.h" />
+    <ClInclude Include="Hotkeys.h" />
     <ClInclude Include="IModel.h" />
     <ClInclude Include="Input.h" />
     <ClInclude Include="Intersection.h" />
@@ -223,6 +224,7 @@
     <ClInclude Include="PickedPosRenderer.h" />
     <ClInclude Include="Player.h" />
     <ClInclude Include="Screens.h" />
+    <ClInclude Include="Searcher.h" />
     <ClInclude Include="SelectionBox.h" />
     <ClInclude Include="ServerConnection.h" />
     <ClInclude Include="SkyboxRenderer.h" />
@@ -266,11 +268,11 @@
     <ClCompile Include="ChunkUpdater.c" />
     <ClCompile Include="D3D9Api.c" />
     <ClCompile Include="DateTime.c" />
-    <ClCompile Include="DefaultSet.c" />
     <ClCompile Include="Bitmap.c" />
     <ClCompile Include="DisplayDevice.c" />
     <ClCompile Include="Drawer.c" />
     <ClCompile Include="Drawer2D.c" />
+    <ClCompile Include="EntityComponents.c" />
     <ClCompile Include="EnvRenderer.c" />
     <ClCompile Include="Event.c" />
     <ClCompile Include="ExtMath.c" />
@@ -278,6 +280,7 @@
     <ClCompile Include="Game.c" />
     <ClCompile Include="GameMode.c" />
     <ClCompile Include="Gui.c" />
+    <ClCompile Include="Hotkeys.c" />
     <ClCompile Include="Inventory.c" />
     <ClCompile Include="MapGenerator.c" />
     <ClCompile Include="FrustumCulling.c" />
@@ -295,7 +298,6 @@
     <ClCompile Include="OpenGLApi.c" />
     <ClCompile Include="Options.c" />
     <ClCompile Include="PackedCol.c" />
-    <ClCompile Include="Funcs.c" />
     <ClCompile Include="GraphicsCommon.c" />
     <ClCompile Include="Matrix.c" />
     <ClCompile Include="Noise.c" />
@@ -303,9 +305,11 @@
     <ClCompile Include="Physics.c" />
     <ClCompile Include="PickedPosRenderer.c" />
     <ClCompile Include="Picking.c" />
+    <ClCompile Include="Player.c" />
     <ClCompile Include="Program.c" />
     <ClCompile Include="Random.c" />
     <ClCompile Include="Screens.c" />
+    <ClCompile Include="Searcher.c" />
     <ClCompile Include="SelectionBox.c" />
     <ClCompile Include="ServerConnection.c" />
     <ClCompile Include="SkyboxRenderer.c" />

@@ -35,11 +35,11 @@ void MapRenderer_CheckWeather(Real64 deltaTime) {
 	Vector3I_Floor(&coords, &pos);
 
 	BlockID block = World_SafeGetBlock_3I(coords);
-	bool outside = !World_IsValidPos_3I(coords);
-	inTranslucent = Block_Draw[block] == DrawType_Translucent || (pos.Y < WorldEnv_EdgeHeight && outside);
+	bool outside = coords.X < 0 || coords.Y < 0 || coords.Z < 0 || coords.X >= World_Width || coords.Z >= World_Length;
+	inTranslucent = Block_Draw[block] == DRAW_TRANSLUCENT || (pos.Y < WorldEnv_EdgeHeight && outside);
 
 	/* If we are under water, render weather before to blend properly */
-	if (!inTranslucent || WorldEnv_Weather == Weather_Sunny) return;
+	if (!inTranslucent || WorldEnv_Weather == WEATHER_SUNNY) return;
 	Gfx_SetAlphaBlending(true);
 	WeatherRenderer_Render(deltaTime);
 	Gfx_SetAlphaBlending(false);
@@ -101,8 +101,7 @@ void MapRenderer_RenderNormalBatch(UInt32 batch) {
 			Gfx_DrawIndexedVb_TrisT2fC4b(part.YMinCount, offset);
 			Game_Vertices += part.YMinCount;
 		} else if (drawYMax) {
-			offset += part.YMinCount;
-			Gfx_DrawIndexedVb_TrisT2fC4b(part.YMaxCount, offset);
+			Gfx_DrawIndexedVb_TrisT2fC4b(part.YMaxCount, offset + part.YMinCount);
 			Game_Vertices += part.YMaxCount;
 		}
 
@@ -127,7 +126,7 @@ void MapRenderer_RenderNormalBatch(UInt32 batch) {
 
 void MapRenderer_RenderNormal(Real64 deltaTime) {
 	if (MapRenderer_Chunks == NULL) return;
-	Gfx_SetBatchFormat(VertexFormat_P3fT2fC4b);
+	Gfx_SetBatchFormat(VERTEX_FORMAT_P3FT2FC4B);
 	Gfx_SetTexturing(true);
 	Gfx_SetAlphaTest(true);
 
@@ -212,7 +211,7 @@ void MapRenderer_RenderTranslucent(Real64 deltaTime) {
 
 	/* First fill depth buffer */
 	UInt32 vertices = Game_Vertices;
-	Gfx_SetBatchFormat(VertexFormat_P3fT2fC4b);
+	Gfx_SetBatchFormat(VERTEX_FORMAT_P3FT2FC4B);
 	Gfx_SetTexturing(false);
 	Gfx_SetAlphaBlending(false);
 	Gfx_SetColourWrite(false);
@@ -244,7 +243,7 @@ void MapRenderer_RenderTranslucent(Real64 deltaTime) {
 
 	Gfx_SetDepthWrite(true);
 	/* If we weren't under water, render weather after to blend properly */
-	if (!inTranslucent && WorldEnv_Weather != Weather_Sunny) {
+	if (!inTranslucent && WorldEnv_Weather != WEATHER_SUNNY) {
 		Gfx_SetAlphaTest(true);
 		WeatherRenderer_Render(deltaTime);
 		Gfx_SetAlphaTest(false);

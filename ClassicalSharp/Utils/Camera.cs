@@ -71,10 +71,10 @@ namespace ClassicalSharp {
 		}
 		
 		public override void GetProjection(out Matrix4 m) {
-			float fovy = game.Fov * Utils.Deg2Rad;
+			float fov = game.Fov * Utils.Deg2Rad;
 			float aspectRatio = (float)game.Width / game.Height;
 			float zNear = game.Graphics.MinZNear;
-			Matrix4.CreatePerspectiveFieldOfView(fovy, aspectRatio, zNear, game.ViewDistance, out m);
+			game.Graphics.CalcPerspectiveMatrix(fov, aspectRatio, zNear, game.ViewDistance, out m);
 		}
 		
 		public override void GetPickedBlock(PickedPos pos) {
@@ -222,9 +222,9 @@ namespace ClassicalSharp {
 			Vector3 camPos = player.EyePosition;
 			camPos.Y += bobbingVer;
 			
-			double adjHeadY = player.HeadYRadians + Math.PI / 2;
-			camPos.X += bobbingHor * (float)Math.Sin(adjHeadY);
-			camPos.Z -= bobbingHor * (float)Math.Cos(adjHeadY);
+			double headY = player.HeadYRadians;
+			camPos.X += bobbingHor * (float)Math.Cos(headY);
+			camPos.Z += bobbingHor * (float)Math.Sin(headY);
 			return camPos;
 		}
 	}

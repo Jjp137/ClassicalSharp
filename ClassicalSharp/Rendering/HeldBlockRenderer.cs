@@ -43,7 +43,7 @@ namespace ClassicalSharp.Renderers {
 		}
 		
 		public void Render(double delta) {
-			if (game.Camera.IsThirdPerson || !game.ShowBlockInHand) return;
+			if (!game.ShowBlockInHand) return;
 
 			float lastSwingY = swingY; swingY = 0;
 			block = game.Inventory.Selected;
@@ -51,12 +51,21 @@ namespace ClassicalSharp.Renderers {
 			game.Graphics.SetMatrixMode(MatrixType.Projection);
 			game.Graphics.LoadMatrix(ref heldBlockProj);
 			game.Graphics.SetMatrixMode(MatrixType.Modelview);
+			Matrix4 view = game.Graphics.View;
 			SetMatrix();
 			
 			ResetHeldState();
 			DoAnimation(delta, lastSwingY);
-			SetBaseOffset();
+			SetBaseOffset();			
+			if (!game.Camera.IsThirdPerson) RenderModel();
 			
+			game.Graphics.View = view;
+			game.Graphics.SetMatrixMode(MatrixType.Projection);
+			game.Graphics.LoadMatrix(ref game.Graphics.Projection);
+			game.Graphics.SetMatrixMode(MatrixType.Modelview);
+		}
+		
+		void RenderModel() {
 			game.Graphics.FaceCulling = true;
 			game.Graphics.Texturing = true;
 			game.Graphics.SetupAlphaState(BlockInfo.Draw[block]);
@@ -76,11 +85,6 @@ namespace ClassicalSharp.Renderers {
 			game.Graphics.RestoreAlphaState(BlockInfo.Draw[block]);
 			game.Graphics.DepthTest = true;
 			game.Graphics.FaceCulling = false;
-			
-			game.Graphics.LoadMatrix(ref game.View);
-			game.Graphics.SetMatrixMode(MatrixType.Projection);
-			game.Graphics.LoadMatrix(ref game.Projection);
-			game.Graphics.SetMatrixMode(MatrixType.Modelview);
 		}
 		
 		static Vector3 nOffset = new Vector3(0.56f, -0.72f, -0.72f);
@@ -92,7 +96,7 @@ namespace ClassicalSharp.Renderers {
 			Matrix4 m, lookAt;
 			Matrix4.LookAt(eyePos, eyePos - Vector3.UnitZ, Vector3.UnitY, out lookAt);
 			Matrix4.Mult(out m, ref lookAt, ref game.Camera.tiltM);
-			game.Graphics.LoadMatrix(ref m);
+			game.Graphics.View = m;
 		}
 		
 		void ResetHeldState() {
@@ -109,6 +113,8 @@ namespace ClassicalSharp.Renderers {
 			held.ModelBlock = block;
 			held.SkinType = p.SkinType;
 			held.TextureId = p.TextureId;
+			held.uScale = p.uScale;
+			held.vScale = p.vScale;
 		}
 		
 		void SetBaseOffset() {
@@ -123,10 +129,10 @@ namespace ClassicalSharp.Renderers {
 		}
 		
 		void ProjectionChanged(object sender, EventArgs e) {
+			float fov = 70 * Utils.Deg2Rad;
 			float aspectRatio = (float)game.Width / game.Height;
 			float zNear = game.Graphics.MinZNear;
-			Matrix4.CreatePerspectiveFieldOfView(70 * Utils.Deg2Rad,
-			                                     aspectRatio, zNear, game.ViewDistance, out heldBlockProj);
+			game.Graphics.CalcPerspectiveMatrix(fov, aspectRatio, zNear, game.ViewDistance, out heldBlockProj);
 		}
 
 		
@@ -217,9 +223,8 @@ namespace ClassicalSharp.Renderers {
 		}
 	}
 	
-	/// <summary> Skeleton implementation of a player entity so we can reuse
-	/// block model rendering code. </summary>
-	internal class FakePlayer : Player {
+	/// <summary> Skeleton implementation of player entity so we can reuse block model rendering code. </summary>
+	class FakePlayer : Player {
 		
 		public FakePlayer(Game game) : base(game) {
 			NoShade = true;

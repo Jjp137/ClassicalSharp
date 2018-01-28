@@ -41,7 +41,7 @@ namespace ClassicalSharp.Network {
 		internal CPESupport cpeData;
 		internal bool receivedFirstPosition;
 		internal byte[] needRemoveNames = new byte[256 >> 3];
-		int netTicks, pingTicks;
+		int pingTicks;
 		
 		public override void Connect(IPAddress address, int port) {
 			socket = new Socket(address.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
@@ -132,18 +132,20 @@ namespace ClassicalSharp.Network {
 		
 		void CoreTick() {
 			CheckAsyncResources();
-			wom.Tick();			
-			if (!receivedFirstPosition) return;
+			wom.Tick();
 			
-			LocalPlayer player = game.LocalPlayer;
-			classic.WritePosition(player.Position, player.HeadY, player.HeadX);
-			pingTicks++;
+			if (receivedFirstPosition) {				
+				LocalPlayer player = game.LocalPlayer;
+				classic.WritePosition(player.Position, player.HeadY, player.HeadX);
+			}
 			
+			pingTicks++;		
 			if (pingTicks >= 20 && cpeData.twoWayPing) {
 				cpe.WriteTwoWayPing(false, PingList.NextTwoWayPingData());
 				pingTicks = 0;
 			}
-			SendPacket();
+			
+			if (writer.index > 0) SendPacket();
 		}
 		
 		/// <summary> Sets the incoming packet handler for the given packet id. </summary>

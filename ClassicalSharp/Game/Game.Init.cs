@@ -119,7 +119,7 @@ namespace ClassicalSharp {
 			Graphics.DepthTestFunc(CompareFunc.LessEqual);
 			//Graphics.DepthWrite = true;
 			Graphics.AlphaBlendFunc(BlendFunc.SourceAlpha, BlendFunc.InvSourceAlpha);
-			Graphics.AlphaTestFunc(CompareFunc.Greater, 0.5f);
+			Graphics.AlphaTestFunc(CompareFunc.Greater, 0.5f);			
 			Culling = new FrustumCulling();
 			Picking = new PickedPosRenderer(); Components.Add(Picking);
 			AudioPlayer = new AudioPlayer(); Components.Add(AudioPlayer);
@@ -210,7 +210,7 @@ namespace ClassicalSharp {
 			TabAutocomplete = Options.GetBool(OptionsKey.TabAutocomplete, false);
 			FontName = Options.Get(OptionsKey.FontName) ?? "Arial";
 			if (ClassicMode) FontName = "Arial";
-			
+
 			try {
 				using (Font f = new Font(FontName, 16)) { }
 			} catch (Exception) {
@@ -222,7 +222,7 @@ namespace ClassicalSharp {
 		ScheduledTask entTask;
 		void InitScheduledTasks() {
 			const double defTicks = 1.0 / 20;
-			double netTicks = Server.IsSinglePlayer ? (1.0 / 20) : (1.0 / 60);
+			const double netTicks = 1.0 / 60;
 			
 			AddScheduledTask(30, AsyncDownloader.PurgeOldEntriesTask);
 			AddScheduledTask(netTicks, Server.Tick);

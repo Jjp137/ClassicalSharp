@@ -61,12 +61,6 @@
     <Filter Include="Source Files\Map">
       <UniqueIdentifier>{cb26e83f-9153-4964-9dc2-13502fbb1d1b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\Events">
-      <UniqueIdentifier>{a912f0d5-3ceb-4e7e-ba4e-28170c634047}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Events">
-      <UniqueIdentifier>{03efa5de-9e49-4185-bb40-fa5e5a2846e6}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Header Files\TexturePack">
       <UniqueIdentifier>{b5bd9aed-4b11-4f9f-86da-3187d3f4f260}</UniqueIdentifier>
     </Filter>
@@ -170,9 +164,6 @@
     </ClInclude>
     <ClInclude Include="String.h">
       <Filter>Header Files\Utils</Filter>
-    </ClInclude>
-    <ClInclude Include="DefaultSet.h">
-      <Filter>Header Files\Blocks</Filter>
     </ClInclude>
     <ClInclude Include="BlockID.h">
       <Filter>Header Files\Blocks</Filter>
@@ -321,12 +312,6 @@
     <ClInclude Include="DisplayDevice.h">
       <Filter>Header Files\Platform\Window</Filter>
     </ClInclude>
-    <ClInclude Include="Event.h">
-      <Filter>Header Files\Events</Filter>
-    </ClInclude>
-    <ClInclude Include="Events.h">
-      <Filter>Header Files\Events</Filter>
-    </ClInclude>
     <ClInclude Include="Window.h">
       <Filter>Header Files\Platform\Window</Filter>
     </ClInclude>
@@ -384,6 +369,21 @@
     <ClInclude Include="ServerConnection.h">
       <Filter>Header Files\Network</Filter>
     </ClInclude>
+    <ClInclude Include="AsyncDownloader.h">
+      <Filter>Header Files\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="Event.h">
+      <Filter>Header Files\Game</Filter>
+    </ClInclude>
+    <ClInclude Include="Hotkeys.h">
+      <Filter>Header Files\Game</Filter>
+    </ClInclude>
+    <ClInclude Include="EntityComponents.h">
+      <Filter>Header Files\Entities</Filter>
+    </ClInclude>
+    <ClInclude Include="Searcher.h">
+      <Filter>Header Files\Math</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Noise.c">
@@ -394,9 +394,6 @@
     </ClCompile>
     <ClCompile Include="String.c">
       <Filter>Source Files\Utils</Filter>
-    </ClCompile>
-    <ClCompile Include="DefaultSet.c">
-      <Filter>Source Files\Blocks</Filter>
     </ClCompile>
     <ClCompile Include="Block.c">
       <Filter>Source Files\Blocks</Filter>
@@ -427,9 +424,6 @@
     </ClCompile>
     <ClCompile Include="VertexStructs.c">
       <Filter>Source Files\Math</Filter>
-    </ClCompile>
-    <ClCompile Include="Funcs.c">
-      <Filter>Source Files\Utils</Filter>
     </ClCompile>
     <ClCompile Include="PackedCol.c">
       <Filter>Source Files\2D\Utils</Filter>
@@ -515,9 +509,6 @@
     <ClCompile Include="DisplayDevice.c">
       <Filter>Source Files\Platform\Window</Filter>
     </ClCompile>
-    <ClCompile Include="Event.c">
-      <Filter>Source Files\Events</Filter>
-    </ClCompile>
     <ClCompile Include="WinWindow.c">
       <Filter>Source Files\Platform</Filter>
     </ClCompile>
@@ -595,6 +586,21 @@
     </ClCompile>
     <ClCompile Include="ServerConnection.c">
       <Filter>Source Files\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="Event.c">
+      <Filter>Source Files\Game</Filter>
+    </ClCompile>
+    <ClCompile Include="Hotkeys.c">
+      <Filter>Source Files\Game</Filter>
+    </ClCompile>
+    <ClCompile Include="EntityComponents.c">
+      <Filter>Source Files\Entities</Filter>
+    </ClCompile>
+    <ClCompile Include="Player.c">
+      <Filter>Source Files\Entities</Filter>
+    </ClCompile>
+    <ClCompile Include="Searcher.c">
+      <Filter>Source Files\Math</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

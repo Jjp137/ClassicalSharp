@@ -54,7 +54,7 @@ void TextWidget_Reposition(Widget* elem) {
 	widget->Texture.Y += elem->Y - oldY;
 }
 
-void TextWidget_Create(TextWidget* widget, STRING_TRANSIENT String* text, FontDesc* font) {
+void TextWidget_Make(TextWidget* widget, FontDesc* font) {
 	Widget_Init(&widget->Base);
 	PackedCol col = PACKEDCOL_WHITE;
 	widget->Col = col;
@@ -65,7 +65,14 @@ void TextWidget_Create(TextWidget* widget, STRING_TRANSIENT String* text, FontDe
 	widget->Base.Base.Free   = TextWidget_Free;
 }
 
-void TextWidget_SetText(TextWidget* widget, STRING_TRANSIENT String* text) {
+void TextWidget_Create(TextWidget* widget, STRING_PURE String* text, FontDesc* font) {
+	TextWidget_Make(widget, font);
+	GuiElement* elem = &widget->Base.Base;
+	elem->Init(elem);
+	TextWidget_SetText(widget, text);
+}
+
+void TextWidget_SetText(TextWidget* widget, STRING_PURE String* text) {
 	Gfx_DeleteTexture(&widget->Texture.ID);
 	Widget* elem = (Widget*)widget;
 	if (Drawer2D_IsEmptyText(text)) {
@@ -401,7 +408,7 @@ void HotbarWidget_Free(GuiElement* elem) { }
 bool HotbarWidget_HandlesKeyDown(GuiElement* elem, Key key) {
 	if (key >= Key_1 && key <= Key_9) {
 		Int32 index = key - Key_1;
-		if (KeyBind_GetPressed(KeyBind_HotbarSwitching)) {
+		if (KeyBind_IsPressed(KeyBind_HotbarSwitching)) {
 			/* Pick from first to ninth row */
 			Inventory_SetOffset(index * INVENTORY_BLOCKS_PER_HOTBAR);
 			HotbarWidget* widget = (HotbarWidget*)elem;
@@ -436,7 +443,7 @@ bool HotbarWidget_HandlesMouseDown(GuiElement* elem, Int32 x, Int32 y, MouseButt
 	Widget* w = (Widget*)elem;
 	if (btn != MouseButton_Left || !Gui_Contains(w->X, w->Y, w->Width, w->Height, x, y)) return false;
 	Screen* screen = Gui_GetActiveScreen();
-	if (screen != InventoryScreen_Unsafe_RawPointer) return false;
+	if (screen != InventoryScreen_UNSAFE_RawPointer) return false;
 
 	HotbarWidget* widget = (HotbarWidget*)elem;
 	Int32 width  = (Int32)(widget->ElemSize * widget->BorderSize);
@@ -562,7 +569,6 @@ void TableWidget_UpdatePos(TableWidget* widget) {
 	TableWidget_UpdateDescTexPos(widget);
 }
 
-#define TABLE_NAME_LEN 128
 void TableWidget_RecreateDescTex(TableWidget* widget) {
 	if (widget->SelectedIndex == widget->LastCreatedIndex) return;
 	if (widget->ElementsCount == 0) return;
@@ -571,8 +577,8 @@ void TableWidget_RecreateDescTex(TableWidget* widget) {
 	Gfx_DeleteTexture(&widget->DescTex.ID);
 	if (widget->SelectedIndex == -1) return;
 
-	UInt8 descBuffer[String_BufferSize(TABLE_NAME_LEN)];
-	String desc = String_FromRawBuffer(descBuffer, TABLE_NAME_LEN);
+	UInt8 descBuffer[String_BufferSize(STRING_SIZE * 2)];
+	String desc = String_InitAndClearArray(descBuffer);
 	BlockID block = widget->Elements[widget->SelectedIndex];
 	TableWidget_MakeBlockDesc(&desc, block);
 
@@ -583,7 +589,7 @@ void TableWidget_RecreateDescTex(TableWidget* widget) {
 }
 
 bool TableWidget_Show(BlockID block) {
-	if (block == BlockID_Invalid) return false;
+	if (block == BLOCK_AIR) return false;
 
 	if (block < BLOCK_CPE_COUNT) {
 		Int32 count = Game_UseCPEBlocks ? BLOCK_CPE_COUNT : BLOCK_ORIGINAL_COUNT;
@@ -643,7 +649,7 @@ void TableWidget_Render(GuiElement* elem, Real64 delta) {
 			size, size, Table_TopSelCol, Table_BottomSelCol);
 	}
 	Gfx_SetTexturing(true);
-	Gfx_SetBatchFormat(VertexFormat_P3fT2fC4b);
+	Gfx_SetBatchFormat(VERTEX_FORMAT_P3FT2FC4B);
 
 	VertexP3fT2fC4b vertices[TABLE_MAX_VERTICES];
 	IsometricDrawer_BeginBatch(vertices, widget->VB);
@@ -684,7 +690,7 @@ void TableWidget_Free(GuiElement* elem) {
 void TableWidget_Recreate(GuiElement* elem) {
 	TableWidget* widget = (TableWidget*)elem;
 	elem->Free(elem);
-	widget->VB = Gfx_CreateDynamicVb(VertexFormat_P3fT2fC4b, TABLE_MAX_VERTICES);
+	widget->VB = Gfx_CreateDynamicVb(VERTEX_FORMAT_P3FT2FC4B, TABLE_MAX_VERTICES);
 	TableWidget_RecreateDescTex(widget);
 }
 
@@ -850,7 +856,7 @@ void SpecialInputWidget_UpdateColString(SpecialInputWidget* widget) {
 		if (Drawer2D_Cols[i].A > 0) count++;
 	}
 
-	widget->ColString = String_FromRawBuffer(widget->ColBuffer, DRAWER2D_MAX_COLS * 4);
+	widget->ColString = String_InitAndClearArray(widget->ColBuffer);
 	String* buffer = &widget->ColString;
 	Int32 index = 0;
 	for (i = ' '; i <= '~'; i++) {
@@ -972,7 +978,7 @@ Size2D SpecialInputWidget_CalculateContentSize(SpecialInputTab* e, Size2D* sizes
 
 void SpecialInputWidget_MeasureContentSizes(SpecialInputWidget* widget, SpecialInputTab* e, Size2D* sizes) {
 	UInt8 buffer[String_BufferSize(STRING_SIZE)];
-	String s = String_FromRawBuffer(buffer, e->CharsPerItem);
+	String s = String_InitAndClear(buffer, e->CharsPerItem);
 	DrawTextArgs args; DrawTextArgs_Make(&args, &s, &widget->Font, false);
 
 	Int32 i, j;
@@ -986,7 +992,7 @@ void SpecialInputWidget_MeasureContentSizes(SpecialInputWidget* widget, SpecialI
 
 void SpecialInputWidget_DrawContent(SpecialInputWidget* widget, SpecialInputTab* e, Int32 yOffset) {
 	UInt8 buffer[String_BufferSize(STRING_SIZE)];
-	String s = String_FromRawBuffer(buffer, e->CharsPerItem);
+	String s = String_InitAndClear(buffer, e->CharsPerItem);
 	DrawTextArgs args; DrawTextArgs_Make(&args, &s, &widget->Font, false);
 
 	Int32 i, j, wrap = e->ItemsPerRow;
@@ -1191,7 +1197,7 @@ void InputWidget_RemakeTexture(InputWidget* widget) {
 
 		/* Colour code goes to next line */
 		if (!Drawer2D_IsWhiteCol(lastCol)) {
-			String tmp = String_FromRawBuffer(tmpBuffer, STRING_SIZE + 2);
+			String tmp = String_InitAndClearArray(tmpBuffer);
 			String_Append(&tmp, '&'); String_Append(&tmp, lastCol);
 			String_AppendString(&tmp, &args.Text);
 			args.Text = tmp;
@@ -1379,7 +1385,7 @@ bool InputWidget_OtherKey(InputWidget* widget, Key key) {
 	Int32 maxChars = widget->GetMaxLines() * widget->MaxCharsPerLine;
 	if (key == Key_V && widget->Text.length < maxChars) {
 		UInt8 textBuffer[String_BufferSize(INPUTWIDGET_MAX_LINES * STRING_SIZE)];
-		String text = String_FromRawBuffer(textBuffer, INPUTWIDGET_MAX_LINES * STRING_SIZE);
+		String text = String_InitAndClearArray(textBuffer);
 		Window_GetClipboardText(&text);
 
 		if (text.length == 0) return true;

@@ -1,5 +1,4 @@
 #include "Block.h"
-#include "DefaultSet.h"
 #include "Funcs.h"
 #include "ExtMath.h"
 #include "TerrainAtlas.h"
@@ -33,7 +32,7 @@ void Block_Init(void) {
 	}
 
 	Int32 block;
-	for (block = BlockID_Air; block < BLOCK_COUNT; block++) {
+	for (block = BLOCK_AIR; block < BLOCK_COUNT; block++) {
 		Block_ResetProps((BlockID)block);
 	}
 	Block_UpdateCullingAll();
@@ -41,41 +40,50 @@ void Block_Init(void) {
 
 void Block_SetDefaultPerms(void) {
 	Int32 block;
-	for (block = BlockID_Air; block <= BLOCK_MAX_DEFINED; block++) {
+	for (block = BLOCK_AIR; block <= BLOCK_MAX_DEFINED; block++) {
 		Block_CanPlace[block] = true;
 		Block_CanDelete[block] = true;
 	}
 
-	Block_CanPlace[BlockID_Air] = false;        Block_CanDelete[BlockID_Air] = false;
-	Block_CanPlace[BlockID_Lava] = false;       Block_CanDelete[BlockID_Lava] = false;
-	Block_CanPlace[BlockID_Water] = false;      Block_CanDelete[BlockID_Water] = false;
-	Block_CanPlace[BlockID_StillLava] = false;  Block_CanDelete[BlockID_StillLava] = false;
-	Block_CanPlace[BlockID_StillWater] = false; Block_CanDelete[BlockID_StillWater] = false;
-	Block_CanPlace[BlockID_Bedrock] = false;    Block_CanDelete[BlockID_Bedrock] = false;
+	Block_CanPlace[BLOCK_AIR] = false;        Block_CanDelete[BLOCK_AIR] = false;
+	Block_CanPlace[BLOCK_LAVA] = false;       Block_CanDelete[BLOCK_LAVA] = false;
+	Block_CanPlace[BLOCK_WATER] = false;      Block_CanDelete[BLOCK_WATER] = false;
+	Block_CanPlace[BLOCK_STILL_LAVA] = false;  Block_CanDelete[BLOCK_STILL_LAVA] = false;
+	Block_CanPlace[BLOCK_STILL_WATER] = false; Block_CanDelete[BLOCK_STILL_WATER] = false;
+	Block_CanPlace[BLOCK_BEDROCK] = false;    Block_CanDelete[BLOCK_BEDROCK] = false;
+}
+
+void Block_RecalcIsLiquid(BlockID b) {
+	UInt8 collide = Block_ExtendedCollide[b];
+	Block_IsLiquid[b] =
+		(collide == COLLIDE_LIQUID_WATER && Block_Draw[b] == DRAW_TRANSLUCENT) ||
+		(collide == COLLIDE_LIQUID_LAVA  && Block_Draw[b] == DRAW_TRANSPARENT);
 }
 
 void Block_SetCollide(BlockID block, UInt8 collide) {
 	/* necessary for cases where servers redefined core blocks before extended types were introduced. */
 	collide = DefaultSet_MapOldCollide(block, collide);
 	Block_ExtendedCollide[block] = collide;
+	Block_RecalcIsLiquid(block);
 
 	/* Reduce extended collision types to their simpler forms. */
-	if (collide == CollideType_Ice) collide = CollideType_Solid;
-	if (collide == CollideType_SlipperyIce) collide = CollideType_Solid;
+	if (collide == COLLIDE_ICE) collide = COLLIDE_SOLID;
+	if (collide == COLLIDE_SLIPPERY_ICE) collide = COLLIDE_SOLID;
 
-	if (collide == CollideType_LiquidWater) collide = CollideType_Liquid;
-	if (collide == CollideType_LiquidLava) collide = CollideType_Liquid;
+	if (collide == COLLIDE_LIQUID_WATER) collide = COLLIDE_LIQUID;
+	if (collide == COLLIDE_LIQUID_LAVA) collide = COLLIDE_LIQUID;
 	Block_Collide[block] = collide;
 }
 
 void Block_SetDrawType(BlockID block, UInt8 draw) {
-	if (draw == DrawType_Opaque && Block_Collide[block] != CollideType_Solid) {
-		draw = DrawType_Transparent;
+	if (draw == DRAW_OPAQUE && Block_Collide[block] != COLLIDE_SOLID) {
+		draw = DRAW_TRANSPARENT;
 	}
 	Block_Draw[block] = draw;
+	Block_RecalcIsLiquid(block);
 
 	Vector3 zero = Vector3_Zero, one = Vector3_One;
-	Block_FullOpaque[block] = draw == DrawType_Opaque
+	Block_FullOpaque[block] = draw == DRAW_OPAQUE
 		&& Vector3_Equals(&Block_MinBB[block], &zero)
 		&& Vector3_Equals(&Block_MaxBB[block], &one);
 }
@@ -115,7 +123,7 @@ String Block_DefaultName(BlockID block) {
 	Int32 end = String_IndexOf(&blockNames, ' ', start);
 	if (end == -1) end = blockNames.length;
 
-	String buffer = String_FromRawBuffer(Block_NamePtr(block), STRING_SIZE);
+	String buffer = String_InitAndClear(Block_NamePtr(block), STRING_SIZE);
 	Block_SplitUppercase(&buffer, &blockNames, start, end);
 	return buffer;
 }
@@ -128,12 +136,13 @@ void Block_ResetProps(BlockID block) {
 	Block_SetCollide(block, DefaultSet_Collide(block));
 	Block_DigSounds[block] = DefaultSet_DigSound(block);
 	Block_StepSounds[block] = DefaultSet_StepSound(block);
-	Block_SpeedMultiplier[block] = 1;
+	Block_SpeedMultiplier[block] = 1.0f;
 	Block_Name[block] = Block_DefaultName(block);
 	Block_Tinted[block] = false;
+	Block_SpriteOffset[block] = 0;
 
 	Block_Draw[block] = DefaultSet_Draw(block);
-	if (Block_Draw[block] == DrawType_Sprite) {
+	if (Block_Draw[block] == DRAW_SPRITE) {
 		Block_MinBB[block] = Vector3_Create3(2.50f / 16.0f, 0.0f, 2.50f / 16.0f);
 		Block_MaxBB[block] = Vector3_Create3(13.5f / 16.0f, 1.0f, 13.5f / 16.0f);
 	} else {
@@ -149,69 +158,62 @@ void Block_ResetProps(BlockID block) {
 	if (block >= BLOCK_CPE_COUNT) {
 #if USE16_BIT
 		/* give some random texture ids */
-		Block_SetTex((block * 10 + (block % 7) + 20) % 80, Face_YMax, block);
-		Block_SetTex((block * 8 + (block & 5) + 5) % 80, Face_YMin, block);
+		Block_SetTex((block * 10 + (block % 7) + 20) % 80, FACE_YMAX, block);
+		Block_SetTex((block * 8 + (block & 5) + 5) % 80, FACE_YMIN, block);
 		Block_SetSide((block * 4 + (block / 4) + 4) % 80, block);
 #else
-		Block_SetTex(0, Face_YMax, block);
-		Block_SetTex(0, Face_YMin, block);
+		Block_SetTex(0, FACE_YMAX, block);
+		Block_SetTex(0, FACE_YMIN, block);
 		Block_SetSide(0, block);
 #endif
 	} else {
-		Block_SetTex(Block_TopTex[block], Face_YMax, block);
-		Block_SetTex(Block_BottomTex[block], Face_YMin, block);
+		Block_SetTex(Block_TopTex[block], FACE_YMAX, block);
+		Block_SetTex(Block_BottomTex[block], FACE_YMIN, block);
 		Block_SetSide(Block_SideTex[block], block);
 	}
 }
 
 Int32 Block_FindID(STRING_PURE String* name) {
 	Int32 block;
-	for (block = BlockID_Air; block < BLOCK_COUNT; block++) {
+	for (block = BLOCK_AIR; block < BLOCK_COUNT; block++) {
 		if (String_CaselessEquals(&Block_Name[block], name)) return block;
 	}
 	return -1;
 }
 
-bool Block_IsLiquid(BlockID b) {
-	CollideType collide = Block_ExtendedCollide[b];
-	return
-		(collide == CollideType_LiquidWater && Block_Draw[b] == DrawType_Translucent) ||
-		(collide == CollideType_LiquidLava  && Block_Draw[b] == DrawType_Transparent);
-}
-
 
 void Block_SetSide(TextureLoc texLoc, BlockID blockId) {
-	Int32 index = blockId * Face_Count;
-	Block_Textures[index + Face_XMin] = texLoc;
-	Block_Textures[index + Face_XMax] = texLoc;
-	Block_Textures[index + Face_ZMin] = texLoc;
-	Block_Textures[index + Face_ZMax] = texLoc;
+	Int32 index = blockId * FACE_COUNT;
+	Block_Textures[index + FACE_XMIN] = texLoc;
+	Block_Textures[index + FACE_XMAX] = texLoc;
+	Block_Textures[index + FACE_ZMIN] = texLoc;
+	Block_Textures[index + FACE_ZMAX] = texLoc;
 }
 
 void Block_SetTex(TextureLoc texLoc, Face face, BlockID blockId) {
-	Block_Textures[blockId * Face_Count + face] = texLoc;
+	Block_Textures[blockId * FACE_COUNT + face] = texLoc;
 }
 
 void Block_GetTextureRegion(BlockID block, Face face, Vector2* min, Vector2* max) {
 	Vector3 bbMin = Block_MinBB[block], bbMax = Block_MaxBB[block];
 
 	switch (face) {
-	case Face_XMin:
-	case Face_XMax:
+	case FACE_XMIN:
+	case FACE_XMAX:
 		min->X = bbMin.Z; min->Y = bbMin.Y;
 		max->X = bbMax.Z; max->Y = bbMax.Y;
-		if (Block_IsLiquid(block)) max->Y -= 1.5f / 16.0f;
+		if (Block_IsLiquid[block]) max->Y -= 1.5f / 16.0f;
 		break;
 
-	case Face_ZMin:
-	case Face_ZMax:
+	case FACE_ZMIN:
+	case FACE_ZMAX:
 		min->X = bbMin.X; min->Y = bbMin.Y;
 		max->X = bbMax.X; max->Y = bbMax.Y;
-		if (Block_IsLiquid(block)) max->Y -= 1.5f / 16.0f;
+		if (Block_IsLiquid[block]) max->Y -= 1.5f / 16.0f;
 		break;
 
-	case Face_YMax:
-	case Face_YMin:
+	case FACE_YMAX:
+	case FACE_YMIN:
 		min->X = bbMin.X; min->Y = bbMin.Z;
 		max->X = bbMax.X; max->Y = bbMax.Z;
 		break;
@@ -232,11 +234,11 @@ bool Block_FaceOccluded(BlockID block, BlockID other, Face face) {
 void Block_CalcRenderBounds(BlockID block) {
 	Vector3 min = Block_MinBB[block], max = Block_MaxBB[block];
 
-	if (Block_IsLiquid(block)) {
+	if (Block_IsLiquid[block]) {
 		min.X -= 0.1f / 16.0f; max.X -= 0.1f / 16.0f;
 		min.Z -= 0.1f / 16.0f; max.Z -= 0.1f / 16.0f;
 		min.Y -= 1.5f / 16.0f; max.Y -= 1.5f / 16.0f;
-	} else if (Block_Draw[block] == DrawType_Translucent && Block_Collide[block] != CollideType_Solid) {
+	} else if (Block_Draw[block] == DRAW_TRANSLUCENT && Block_Collide[block] != COLLIDE_SOLID) {
 		min.X += 0.1f / 16.0f; max.X += 0.1f / 16.0f;
 		min.Z += 0.1f / 16.0f; max.Z += 0.1f / 16.0f;
 		min.Y -= 0.1f / 16.0f; max.Y -= 0.1f / 16.0f;
@@ -249,22 +251,22 @@ UInt8 Block_CalcLightOffset(BlockID block) {
 	Int32 flags = 0xFF;
 	Vector3 min = Block_MinBB[block], max = Block_MaxBB[block];
 
-	if (min.X != 0) flags &= ~(1 << Face_XMin);
-	if (max.X != 1) flags &= ~(1 << Face_XMax);
-	if (min.Z != 0) flags &= ~(1 << Face_ZMin);
-	if (max.Z != 1) flags &= ~(1 << Face_ZMax);
+	if (min.X != 0) flags &= ~(1 << FACE_XMIN);
+	if (max.X != 1) flags &= ~(1 << FACE_XMAX);
+	if (min.Z != 0) flags &= ~(1 << FACE_ZMIN);
+	if (max.Z != 1) flags &= ~(1 << FACE_ZMAX);
 
-	if ((min.Y != 0 && max.Y == 1) && Block_Draw[block] != DrawType_Gas) {
-		flags &= ~(1 << Face_YMax);
-		flags &= ~(1 << Face_YMin);
+	if ((min.Y != 0 && max.Y == 1) && Block_Draw[block] != DRAW_GAS) {
+		flags &= ~(1 << FACE_YMAX);
+		flags &= ~(1 << FACE_YMIN);
 	}
 	return (UInt8)flags;
 }
 
 void Block_RecalculateSpriteBB(void) {
 	Int32 block;
-	for (block = BlockID_Air; block < BLOCK_COUNT; block++) {
-		if (Block_Draw[block] != DrawType_Sprite) continue;
+	for (block = BLOCK_AIR; block < BLOCK_COUNT; block++) {
+		if (Block_Draw[block] != DRAW_SPRITE) continue;
 
 		Block_RecalculateBB((BlockID)block);
 	}
@@ -325,7 +327,7 @@ Real32 Block_GetSpriteBB_RightX(Int32 size, Int32 tileX, Int32 tileY, Bitmap* bm
 void Block_RecalculateBB(BlockID block) {
 	Bitmap* bmp = &Atlas2D_Bitmap;
 	Int32 elemSize = Atlas2D_ElementSize;
-	TextureLoc texLoc = Block_GetTexLoc(block, Face_XMax);
+	TextureLoc texLoc = Block_GetTexLoc(block, FACE_XMAX);
 	Int32 texX = texLoc & 0x0F, texY = texLoc >> 4;
 
 	Real32 topY = Block_GetSpriteBB_TopY(elemSize, texX, texY, bmp);
@@ -357,40 +359,40 @@ void Block_SetZStretch(BlockID block, bool stretch) {
 void Block_CalcCulling(BlockID block, BlockID other) {
 	Vector3 bMin = Block_MinBB[block], bMax = Block_MaxBB[block];
 	Vector3 oMin = Block_MinBB[other], oMax = Block_MaxBB[other];
-	if (Block_IsLiquid(block)) bMax.Y -= 1.5f / 16;
-	if (Block_IsLiquid(other)) oMax.Y -= 1.5f / 16;
+	if (Block_IsLiquid[block]) bMax.Y -= 1.5f / 16.0f;
+	if (Block_IsLiquid[other]) oMax.Y -= 1.5f / 16.0f;
 
-	if (Block_Draw[block] == DrawType_Sprite) {
-		Block_SetHidden(block, other, Face_XMin, true);
-		Block_SetHidden(block, other, Face_XMax, true);
-		Block_SetHidden(block, other, Face_ZMin, true);
-		Block_SetHidden(block, other, Face_ZMax, true);
-		Block_SetHidden(block, other, Face_YMin, oMax.Y == 1);
-		Block_SetHidden(block, other, Face_YMax, bMax.Y == 1);
+	if (Block_Draw[block] == DRAW_SPRITE) {
+		Block_SetHidden(block, other, FACE_XMIN, true);
+		Block_SetHidden(block, other, FACE_XMAX, true);
+		Block_SetHidden(block, other, FACE_ZMIN, true);
+		Block_SetHidden(block, other, FACE_ZMAX, true);
+		Block_SetHidden(block, other, FACE_YMIN, oMax.Y == 1.0f);
+		Block_SetHidden(block, other, FACE_YMAX, bMax.Y == 1.0f);
 	} else {
-		Block_SetXStretch(block, bMin.X == 0 && bMax.X == 1);
-		Block_SetZStretch(block, bMin.Z == 0 && bMax.Z == 1);
-		bool bothLiquid = Block_IsLiquid(block) && Block_IsLiquid(other);
+		Block_SetXStretch(block, bMin.X == 0 && bMax.X == 1.0f);
+		Block_SetZStretch(block, bMin.Z == 0 && bMax.Z == 1.0f);
+		bool bothLiquid = Block_IsLiquid[block] && Block_IsLiquid[other];
 
-		Block_SetHidden(block, other, Face_XMin, oMax.X == 1 && bMin.X == 0);
-		Block_SetHidden(block, other, Face_XMax, oMin.X == 0 && bMax.X == 1);
-		Block_SetHidden(block, other, Face_ZMin, oMax.Z == 1 && bMin.Z == 0);
-		Block_SetHidden(block, other, Face_ZMax, oMin.Z == 0 && bMax.Z == 1);
+		Block_SetHidden(block, other, FACE_XMIN, oMax.X == 1.0f && bMin.X == 0.0f);
+		Block_SetHidden(block, other, FACE_XMAX, oMin.X == 0.0f && bMax.X == 1.0f);
+		Block_SetHidden(block, other, FACE_ZMIN, oMax.Z == 1.0f && bMin.Z == 0.0f);
+		Block_SetHidden(block, other, FACE_ZMAX, oMin.Z == 0.0f && bMax.Z == 1.0f);
 
-		Block_SetHidden(block, other, Face_YMin,
-			bothLiquid || (oMax.Y == 1 && bMin.Y == 0));
-		Block_SetHidden(block, other, Face_YMax,
-			bothLiquid || (oMin.Y == 0 && bMax.Y == 1));
+		Block_SetHidden(block, other, FACE_YMIN,
+			bothLiquid || (oMax.Y == 1.0f && bMin.Y == 0.0f));
+		Block_SetHidden(block, other, FACE_YMAX,
+			bothLiquid || (oMin.Y == 0.0f && bMax.Y == 1.0f));
 	}
 }
 
 void Block_UpdateCullingAll(void) {
 	Int32 block, neighbour;
-	for (block = BlockID_Air; block < BLOCK_COUNT; block++)
+	for (block = BLOCK_AIR; block < BLOCK_COUNT; block++)
 		Block_CanStretch[block] = 0x3F;
 
-	for (block = BlockID_Air; block < BLOCK_COUNT; block++) {
-		for (neighbour = BlockID_Air; neighbour < BLOCK_COUNT; neighbour++) {
+	for (block = BLOCK_AIR; block < BLOCK_COUNT; block++) {
+		for (neighbour = BLOCK_AIR; neighbour < BLOCK_COUNT; neighbour++) {
 			Block_CalcCulling((BlockID)block, (BlockID)neighbour);
 		}
 	}
@@ -400,7 +402,7 @@ void Block_UpdateCulling(BlockID block) {
 	Block_CanStretch[block] = 0x3F;
 
 	Int32 other;
-	for (other = BlockID_Air; other < BLOCK_COUNT; other++) {
+	for (other = BLOCK_AIR; other < BLOCK_COUNT; other++) {
 		Block_CalcCulling(block, (BlockID)other);
 		Block_CalcCulling((BlockID)other, block);
 	}
@@ -408,24 +410,24 @@ void Block_UpdateCulling(BlockID block) {
 
 bool Block_IsHidden(BlockID block, BlockID other) {
 	/* Sprite blocks can never hide faces. */
-	if (Block_Draw[block] == DrawType_Sprite) return false;
+	if (Block_Draw[block] == DRAW_SPRITE) return false;
 
 	/* NOTE: Water is always culled by lava. */
-	if ((block == BlockID_Water || block == BlockID_StillWater)
-		&& (other == BlockID_Lava || other == BlockID_StillLava))
+	if ((block == BLOCK_WATER || block == BLOCK_STILL_WATER)
+		&& (other == BLOCK_LAVA || other == BLOCK_STILL_LAVA))
 		return true;
 
 	/* All blocks (except for say leaves) cull with themselves. */
-	if (block == other) return Block_Draw[block] != DrawType_TransparentThick;
+	if (block == other) return Block_Draw[block] != DRAW_TRANSPARENT_THICK;
 
 	/* An opaque neighbour (asides from lava) culls the face. */
-	if (Block_Draw[other] == DrawType_Opaque && !Block_IsLiquid(other)) return true;
-	if (Block_Draw[block] != DrawType_Translucent || Block_Draw[other] != DrawType_Translucent) return false;
+	if (Block_Draw[other] == DRAW_OPAQUE && !Block_IsLiquid[other]) return true;
+	if (Block_Draw[block] != DRAW_TRANSLUCENT || Block_Draw[other] != DRAW_TRANSLUCENT) return false;
 
 	/* e.g. for water / ice, don't need to draw water. */
 	UInt8 bType = Block_Collide[block], oType = Block_Collide[other];
-	bool canSkip = (bType == CollideType_Solid && oType == CollideType_Solid)
-		|| bType != CollideType_Solid;
+	bool canSkip = (bType == COLLIDE_SOLID && oType == COLLIDE_SOLID)
+		|| bType != COLLIDE_SOLID;
 	return canSkip;
 }
 
@@ -450,8 +452,8 @@ bool Block_IsFaceHidden(BlockID block, BlockID other, Face face) {
 #define AR_EQ2(s, x, y) (s.length >= 2 && Char_ToLower(s.buffer[0]) == x && Char_ToLower(s.buffer[1]) == y)
 
 BlockID AutoRotate_Find(BlockID block, String* name, const UInt8* suffix) {
-	UInt8 buffer[String_BufferSize(128)];
-	String temp = String_FromRawBuffer(buffer, 128);
+	UInt8 buffer[String_BufferSize(STRING_SIZE * 2)];
+	String temp = String_InitAndClearArray(buffer);
 	String_AppendString(&temp, name);
 	String_AppendConst(&temp, suffix);
 
@@ -483,7 +485,7 @@ BlockID AutoRotate_RotateVertical(BlockID block, String* name, Vector3 offset) {
 
 BlockID AutoRotate_RotateOther(BlockID block, String* name, Vector3 offset) {
 	/* Fence type blocks */
-	if (AutoRotate_Find(BlockID_Invalid, name, "-UD") == BlockID_Invalid) {
+	if (AutoRotate_Find(BLOCK_INVALID, name, "-UD") == BLOCK_INVALID) {
 		Real32 headY = LocalPlayer_Instance.Base.Base.HeadY;
 		headY = LocationUpdate_Clamp(headY);
 
@@ -496,11 +498,11 @@ BlockID AutoRotate_RotateOther(BlockID block, String* name, Vector3 offset) {
 
 	/* Thin pillar type blocks */
 	Face face = Game_SelectedPos.ClosestFace;
-	if (face == Face_YMax || face == Face_YMin)
+	if (face == FACE_YMAX || face == FACE_YMIN)
 		return AutoRotate_Find(block, name, "-UD");
-	if (face == Face_XMax || face == Face_XMin)
+	if (face == FACE_XMAX || face == FACE_XMIN)
 		return AutoRotate_Find(block, name, "-WE");
-	if (face == Face_ZMax || face == Face_ZMin)
+	if (face == FACE_ZMAX || face == FACE_ZMIN)
 		return AutoRotate_Find(block, name, "-NS");
 	return block;
 }
@@ -556,4 +558,113 @@ BlockID AutoRotate_RotateBlock(BlockID block) {
 		return AutoRotate_RotateOther(block, &baseName, offset);
 	}
 	return block;
+}
+
+
+Real32 DefaultSet_Height(BlockID b) {
+	if (b == BLOCK_SLAB) return 0.5f;
+	if (b == BLOCK_COBBLE_SLAB) return 0.5f;
+	if (b == BLOCK_SNOW) return 0.25f;
+	return 1.0f;
+}
+
+bool DefaultSet_FullBright(BlockID b) {
+	return b == BLOCK_LAVA || b == BLOCK_STILL_LAVA
+		|| b == BLOCK_MAGMA || b == BLOCK_FIRE;
+}
+
+Real32 DefaultSet_FogDensity(BlockID b) {
+	if (b == BLOCK_WATER || b == BLOCK_STILL_WATER)
+		return 0.1f;
+	if (b == BLOCK_LAVA || b == BLOCK_STILL_LAVA)
+		return 1.8f;
+	return 0.0f;
+}
+
+PackedCol DefaultSet_FogColour(BlockID b) {
+	if (b == BLOCK_WATER || b == BLOCK_STILL_WATER)
+		return PackedCol_Create3(5, 5, 51);
+	if (b == BLOCK_LAVA || b == BLOCK_STILL_LAVA)
+		return PackedCol_Create3(153, 25, 0);
+	return PackedCol_Create4(0, 0, 0, 0);
+}
+
+UInt8 DefaultSet_Collide(BlockID b) {
+	if (b == BLOCK_ICE) return COLLIDE_ICE;
+	if (b == BLOCK_WATER || b == BLOCK_STILL_WATER)
+		return COLLIDE_LIQUID_WATER;
+	if (b == BLOCK_LAVA || b == BLOCK_STILL_LAVA)
+		return COLLIDE_LIQUID_LAVA;
+
+	if (b == BLOCK_SNOW || b == BLOCK_AIR || DefaultSet_Draw(b) == DRAW_SPRITE)
+		return COLLIDE_GAS;
+	return COLLIDE_SOLID;
+}
+
+UInt8 DefaultSet_MapOldCollide(BlockID b, UInt8 collide) {
+	if (b == BLOCK_ICE && collide == COLLIDE_SOLID)
+		return COLLIDE_ICE;
+	if ((b == BLOCK_WATER || b == BLOCK_STILL_WATER) && collide == COLLIDE_LIQUID)
+		return COLLIDE_LIQUID_WATER;
+	if ((b == BLOCK_LAVA || b == BLOCK_STILL_LAVA) && collide == COLLIDE_LIQUID)
+		return COLLIDE_LIQUID_LAVA;
+	return collide;
+}
+
+bool DefaultSet_BlocksLight(BlockID b) {
+	return !(b == BLOCK_GLASS || b == BLOCK_LEAVES
+		|| b == BLOCK_AIR || DefaultSet_Draw(b) == DRAW_SPRITE);
+}
+
+UInt8 DefaultSet_StepSound(BlockID b) {
+	if (b == BLOCK_GLASS) return SOUND_STONE;
+	if (b == BLOCK_ROPE) return SOUND_CLOTH;
+	if (DefaultSet_Draw(b) == DRAW_SPRITE) return SOUND_NONE;
+	return DefaultSet_DigSound(b);
+}
+
+UInt8 DefaultSet_Draw(BlockID b) {
+	if (b == BLOCK_AIR || b == BLOCK_INVALID) return DRAW_GAS;
+	if (b == BLOCK_LEAVES) return DRAW_TRANSPARENT_THICK;
+
+	if (b == BLOCK_ICE || b == BLOCK_WATER || b == BLOCK_STILL_WATER)
+		return DRAW_TRANSLUCENT;
+	if (b == BLOCK_GLASS || b == BLOCK_LEAVES)
+		return DRAW_TRANSPARENT;
+
+	if (b >= BLOCK_DANDELION && b <= BLOCK_RED_SHROOM)
+		return DRAW_SPRITE;
+	if (b == BLOCK_SAPLING || b == BLOCK_ROPE || b == BLOCK_FIRE)
+		return DRAW_SPRITE;
+	return DRAW_OPAQUE;
+}
+
+UInt8 DefaultSet_DigSound(BlockID b) {
+	if (b >= BLOCK_RED && b <= BLOCK_WHITE)
+		return SOUND_CLOTH;
+	if (b >= BLOCK_LIGHT_PINK && b <= BLOCK_TURQUOISE)
+		return SOUND_CLOTH;
+	if (b == BLOCK_IRON || b == BLOCK_GOLD)
+		return SOUND_METAL;
+
+	if (b == BLOCK_BOOKSHELF || b == BLOCK_WOOD || b == BLOCK_LOG || b == BLOCK_CRATE || b == BLOCK_FIRE)
+		return SOUND_WOOD;
+
+	if (b == BLOCK_ROPE) return SOUND_CLOTH;
+	if (b == BLOCK_SAND) return SOUND_SAND;
+	if (b == BLOCK_SNOW) return SOUND_SNOW;
+	if (b == BLOCK_GLASS) return SOUND_GLASS;
+	if (b == BLOCK_DIRT || b == BLOCK_GRAVEL)
+		return SOUND_GRAVEL;
+
+	if (b == BLOCK_GRASS || b == BLOCK_SAPLING || b == BLOCK_TNT || b == BLOCK_LEAVES || b == BLOCK_SPONGE)
+		return SOUND_GRASS;
+
+	if (b >= BLOCK_DANDELION && b <= BLOCK_RED_SHROOM)
+		return SOUND_GRASS;
+	if (b >= BLOCK_WATER && b <= BLOCK_STILL_LAVA)
+		return SOUND_NONE;
+	if (b >= BLOCK_STONE && b <= BLOCK_STONE_BRICK)
+		return SOUND_STONE;
+	return SOUND_NONE;
 }

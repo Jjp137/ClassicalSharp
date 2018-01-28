@@ -128,9 +128,9 @@ namespace ClassicalSharp {
 		
 		void UpdateViewMatrix() {
 			Graphics.SetMatrixMode(MatrixType.Modelview);
-			Camera.GetView(out View);
-			Graphics.LoadMatrix(ref View);
-			Culling.CalcFrustumEquations(ref Projection, ref View);
+			Camera.GetView(out Graphics.View);
+			Graphics.LoadMatrix(ref Graphics.View);
+			Culling.CalcFrustumEquations(ref Graphics.Projection, ref Graphics.View);
 		}
 		
 		void Render3D(double delta, float t) {
@@ -147,6 +147,7 @@ namespace ClassicalSharp {
 			MapRenderer.RenderNormal(delta);
 			MapBordersRenderer.RenderSides(delta);
 			
+			Entities.DrawShadows();
 			if (SelectedPos.Valid && !HideGui) {
 				Picking.UpdateState(SelectedPos);
 				Picking.Render(delta);
@@ -165,12 +166,10 @@ namespace ClassicalSharp {
 			
 			// Need to render again over top of translucent block, as the selection outline
 			// is drawn without writing to the depth buffer
-			if (SelectedPos.Valid && !HideGui
-			    && BlockInfo.Draw[SelectedPos.Block] == DrawType.Translucent) {
+			if (SelectedPos.Valid && !HideGui && BlockInfo.Draw[SelectedPos.Block] == DrawType.Translucent) {
 				Picking.Render(delta);
 			}
 			
-			Entities.DrawShadows();
 			SelectionManager.Render(delta);
 			Entities.RenderHoveredNames(Graphics, delta);
 			
@@ -217,10 +216,10 @@ namespace ClassicalSharp {
 		
 		public void UpdateProjection() {
 			DefaultFov = Options.GetInt(OptionsKey.FieldOfView, 1, 150, 70);
-			Camera.GetProjection(out Projection);
+			Camera.GetProjection(out Graphics.Projection);
 			
 			Graphics.SetMatrixMode(MatrixType.Projection);
-			Graphics.LoadMatrix(ref Projection);
+			Graphics.LoadMatrix(ref Graphics.Projection);
 			Graphics.SetMatrixMode(MatrixType.Modelview);
 			Events.RaiseProjectionChanged();
 		}
@@ -331,7 +330,7 @@ namespace ClassicalSharp {
 			if (BlockInfo.Draw[block] == DrawType.Gas) return false;
 			if (BlockInfo.Draw[block] == DrawType.Sprite) return true;
 			
-			if (BlockInfo.Collide[block] != CollideType.Liquid) return true;		
+			if (BlockInfo.Collide[block] != CollideType.Liquid) return true;
 			return ModifiableLiquids && BlockInfo.CanPlace[block] && BlockInfo.CanDelete[block];
 		}
 		
@@ -363,6 +362,11 @@ namespace ClassicalSharp {
 		}
 		
 		public bool ValidateBitmap(string file, Bitmap bmp) {
+			if (bmp == null) {
+				Chat.Add("&cError loading " + file + " from the texture pack.");
+				return false;
+			}
+			
 			int maxSize = Graphics.MaxTextureDimensions;
 			if (bmp.Width > maxSize || bmp.Height > maxSize) {
 				Chat.Add("&cUnable to use " + file + " from the texture pack.");

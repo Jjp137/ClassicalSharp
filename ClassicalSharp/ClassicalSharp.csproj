@@ -129,10 +129,7 @@
     <Compile Include="2D\Widgets\Menu\MenuInputValidator.cs" />
     <Compile Include="2D\Widgets\Menu\MenuInputWidget.cs" />
     <Compile Include="2D\Widgets\ButtonWidget.cs" />
-    <Compile Include="2D\Widgets\PlayerList\ClassicPlayerListWidget.cs" />
-    <Compile Include="2D\Widgets\PlayerList\ExtPlayerListWidget.cs" />
-    <Compile Include="2D\Widgets\PlayerList\NormalPlayerListWidget.cs" />
-    <Compile Include="2D\Widgets\PlayerList\PlayerListWidget.cs" />
+    <Compile Include="2D\Widgets\PlayerListWidget.cs" />
     <Compile Include="2D\Widgets\ScrollbarWidget.cs" />
     <Compile Include="2D\Widgets\SurvivalHotbarWidget.cs" />
     <Compile Include="2D\Widgets\TableWidget.cs" />
@@ -148,7 +145,7 @@
     <Compile Include="Blocks\BlockInfo.Culling.cs" />
     <Compile Include="Blocks\BlockInfo.Atlas.cs" />
     <Compile Include="Blocks\DefaultSet.cs" />
-    <Compile Include="Commands\SinglePlayerCommands.cs" />
+    <Compile Include="Commands\Commands.cs" />
     <Compile Include="Entities\Components\IInterpComponent.cs" />
     <Compile Include="Entities\Mobs\AI.cs" />
     <Compile Include="Entities\Components\AnimatedComponent.cs" />
@@ -224,8 +221,6 @@
     <Compile Include="GraphicsAPI\Direct3D9Api.cs" />
     <Compile Include="GraphicsAPI\IGraphicsApi.cs" />
     <Compile Include="GraphicsAPI\OpenGLApi.cs" />
-    <Compile Include="Commands\Command.cs" />
-    <Compile Include="Commands\DefaultCommands.cs" />
     <Compile Include="GraphicsAPI\VertexFormats.cs" />
     <Compile Include="Hotkeys\HotkeyList.cs" />
     <Compile Include="Hotkeys\LwjglToKey.cs" />
@@ -340,7 +335,6 @@
     <Folder Include="2D\Widgets" />
     <Folder Include="2D\Widgets\Menu" />
     <Folder Include="2D\Widgets\Chat" />
-    <Folder Include="2D\Widgets\PlayerList" />
     <Folder Include="Blocks" />
     <Folder Include="Entities\Components" />
     <Folder Include="Entities\Mobs" />

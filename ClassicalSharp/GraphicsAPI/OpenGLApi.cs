@@ -253,8 +253,12 @@ namespace ClassicalSharp.GraphicsAPI {
 		
 		public override int CreateVb(IntPtr vertices, VertexFormat format, int count) {
 			if (glLists) {
+				// We need to setup client state properly when building the list
+				VertexFormat curFormat = batchFormat;
+				SetBatchFormat(format);
 				int list = GL.GenLists(1);
 				GL.NewList(list, 0x1300);
+				count &= ~0x01; // Need to get rid of the 1 extra element, see comment in chunk mesh builder for why
 				
 				const int maxIndices = 65536 / 4 * 6;
 				ushort* indicesPtr = stackalloc ushort[maxIndices];
@@ -269,6 +273,7 @@ namespace ClassicalSharp.GraphicsAPI {
 				
 				GL.DrawElements(BeginMode.Triangles, (count >> 2) * 6, DrawElementsType.UnsignedShort, (IntPtr)indicesPtr);
 				GL.EndList();
+				SetBatchFormat(curFormat);
 				return list;
 			}
 			
@@ -492,18 +497,9 @@ namespace ClassicalSharp.GraphicsAPI {
 		public override void LoadIdentityMatrix() {
 			GL.LoadIdentity();
 		}
-		
-		public override void PushMatrix() {
-			GL.PushMatrix();
-		}
-		
-		public override void PopMatrix() {
-			GL.PopMatrix();
-		}
-		
-		public override void MultiplyMatrix(ref Matrix4 matrix) {
-			fixed(Single* ptr = &matrix.Row0.X)
-				GL.MultMatrixf(ptr);
+
+		public override void CalcOrthoMatrix(float width, float height, out Matrix4 matrix) {
+			Matrix4.CreateOrthographicOffCenter(0, width, height, 0, -10000, 10000, out matrix);
 		}
 		
 		#endregion

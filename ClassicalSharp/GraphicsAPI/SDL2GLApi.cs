@@ -914,17 +914,8 @@ namespace ClassicalSharp.GraphicsAPI
 			GLFuncs.LoadIdentity();
 		}
 
-		public override void PushMatrix() {
-			GLFuncs.PushMatrix();
-		}
-
-		public override void PopMatrix() {
-			GLFuncs.PopMatrix();
-		}
-
-		public override void MultiplyMatrix(ref Matrix4 matrix) {
-			fixed (Single* ptr = &matrix.Row0.X)
-				GLFuncs.MultMatrixf(ptr);
+		public override void CalcOrthoMatrix(float width, float height, out Matrix4 matrix) {
+			Matrix4.CreateOrthographicOffCenter(0, width, height, 0, -10000, 10000, out matrix);
 		}
 
 		#endregion

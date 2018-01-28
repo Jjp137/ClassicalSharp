@@ -42,7 +42,7 @@ namespace ClassicalSharp.Gui.Screens {
 		}
 		
 		double accumulator;
-		int frames, totalSeconds;
+		int frames;
 		
 		void UpdateStatus(double delta) {
 			frames++;
@@ -50,7 +50,6 @@ namespace ClassicalSharp.Gui.Screens {
 			if (accumulator < 1) return;
 			
 			int index = 0;
-			totalSeconds++;
 			int fps = (int)(frames / accumulator);
 			
 			statusBuffer.Clear()
@@ -163,7 +162,7 @@ namespace ClassicalSharp.Gui.Screens {
 				if (fly) statusBuffer.Append(ref index, "Fly ON   ");
 				
 				bool speed = (speeding || halfSpeeding) &&
-					(hacks.CanSpeed || hacks.MaxSpeedMultiplier > 1);
+					(hacks.CanSpeed || hacks.BaseHorSpeed > 1);
 				if (speed) statusBuffer.Append(ref index, "Speed ON   ");
 				if (noclip) statusBuffer.Append(ref index, "Noclip ON   ");
 				hackStates.SetText(statusBuffer.ToString());

@@ -9,7 +9,7 @@
 #include "Block.h"
 #include "Platform.h"
 #include "SkyboxRenderer.h"
-#include "Events.h"
+#include "Event.h"
 #include "Utils.h"
 
 GfxResourceID env_cloudsVb, env_skyVb, env_cloudsTex;
@@ -70,42 +70,43 @@ void EnvRenderer_RenderClouds(Real64 deltaTime) {
 	Real64 time = Game_Accumulator;
 	Real32 offset = (Real32)(time / 2048.0f * 0.6f * WorldEnv_CloudsSpeed);
 
-	Gfx_SetMatrixMode(MatrixType_Texture);
+	Gfx_SetMatrixMode(MATRIX_TYPE_TEXTURE);
 	Matrix matrix = Matrix_Identity; matrix.Row3.X = offset; /* translate X axis */
 	Gfx_LoadMatrix(&matrix);
-	Gfx_SetMatrixMode(MatrixType_Modelview);
+	Gfx_SetMatrixMode(MATRIX_TYPE_MODELVIEW);
 
 	Gfx_SetAlphaTest(true);
 	Gfx_SetTexturing(true);
 	Gfx_BindTexture(env_cloudsTex);
-	Gfx_SetBatchFormat(VertexFormat_P3fT2fC4b);
+	Gfx_SetBatchFormat(VERTEX_FORMAT_P3FT2FC4B);
 	Gfx_BindVb(env_cloudsVb);
 	Gfx_DrawVb_IndexedTris(env_cloudVertices);
 	Gfx_SetAlphaTest(false);
 	Gfx_SetTexturing(false);
 
-	Gfx_SetMatrixMode(MatrixType_Texture);
+	Gfx_SetMatrixMode(MATRIX_TYPE_TEXTURE);
 	Gfx_LoadIdentityMatrix();
-	Gfx_SetMatrixMode(MatrixType_Modelview);
+	Gfx_SetMatrixMode(MATRIX_TYPE_MODELVIEW);
 }
 
 void EnvRenderer_RenderSky(Real64 deltaTime) {
 	Vector3 pos = Game_CurrentCameraPos;
 	Real32 normalY = (Real32)World_Height + 8.0f;
 	Real32 skyY = max(pos.Y + 8.0f, normalY);
-	Gfx_SetBatchFormat(VertexFormat_P3fC4b);
+	Gfx_SetBatchFormat(VERTEX_FORMAT_P3FC4B);
 	Gfx_BindVb(env_skyVb);
 
 	if (skyY == normalY) {
 		Gfx_DrawVb_IndexedTris(env_skyVertices);
 	} else {
-		Matrix m = Matrix_Identity;
-		m.Row3.Y = skyY - normalY; /* Y translation matrix */
+		Matrix m = Gfx_View;
+		Real32 dy = skyY - normalY; /* inlined Y translation matrix multiply */
+		m.Row3.X += dy * m.Row1.X; m.Row3.Y += dy * m.Row1.Y;
+		m.Row3.Z += dy * m.Row1.Z; m.Row3.W += dy * m.Row1.W;
 
-		Gfx_PushMatrix();
-		Gfx_MultiplyMatrix(&m);
+		Gfx_LoadMatrix(&m);
 		Gfx_DrawVb_IndexedTris(env_skyVertices);
-		Gfx_PopMatrix();
+		Gfx_LoadMatrix(&Gfx_View);
 	}
 }
 
@@ -116,10 +117,10 @@ void EnvRenderer_UpdateFog(void) {
 	EnvRenderer_BlockOn(&fogDensity, &fogCol);
 
 	if (fogDensity != 0.0f) {
-		Gfx_SetFogMode(Fog_Exp);
+		Gfx_SetFogMode(FOG_EXP);
 		Gfx_SetFogDensity(fogDensity);
 	} else if (WorldEnv_ExpFog) {
-		Gfx_SetFogMode(Fog_Exp);
+		Gfx_SetFogMode(FOG_EXP);
 		/* f = 1-z/end   f = e^(-dz)
 		   solve for f = 0.01 gives:
 		   e^(-dz)=0.01 --> -dz=ln(0.01)
@@ -129,7 +130,7 @@ void EnvRenderer_UpdateFog(void) {
 		Real32 density = -Math_LogE(0.01f) / (Game_ViewDistance * 0.99f);
 		Gfx_SetFogDensity(density);
 	} else {
-		Gfx_SetFogMode(Fog_Linear);
+		Gfx_SetFogMode(FOG_LINEAR);
 		Gfx_SetFogEnd(Game_ViewDistance);
 	}
 	Gfx_ClearColour(fogCol);
@@ -140,7 +141,7 @@ void EnvRenderer_Render(Real64 deltaTime) {
 	if (EnvRenderer_Minimal) {
 		EnvRenderer_RenderMinimal(deltaTime);
 	} else {
-		if (env_skyVb == 0 || env_cloudsVb == 0) return;
+		if (env_skyVb == NULL || env_cloudsVb == NULL) return;
 		if (!SkyboxRenderer_ShouldRender()) {
 			EnvRenderer_RenderSky(deltaTime);
 			EnvRenderer_RenderClouds(deltaTime);
@@ -211,7 +212,7 @@ void EnvRenderer_RebuildClouds(Int32 extent, Int32 axisSize) {
 	}
 
 	EnvRenderer_DrawCloudsY(x1, z1, x2, z2, WorldEnv_CloudsHeight, axisSize, WorldEnv_CloudsCol, ptr);
-	env_cloudsVb = Gfx_CreateVb(ptr, VertexFormat_P3fT2fC4b, env_cloudVertices);
+	env_cloudsVb = Gfx_CreateVb(ptr, VERTEX_FORMAT_P3FT2FC4B, env_cloudVertices);
 
 	if (env_cloudVertices > 4096) Platform_MemFree(ptr);
 }
@@ -231,7 +232,7 @@ void EnvRenderer_RebuildSky(Int32 extent, Int32 axisSize) {
 
 	Int32 height = max((World_Height + 2) + 6, WorldEnv_CloudsHeight + 6);
 	EnvRenderer_DrawSkyY(x1, z1, x2, z2, height, axisSize, WorldEnv_SkyCol, ptr);
-	env_skyVb = Gfx_CreateVb(ptr, VertexFormat_P3fC4b, env_skyVertices);
+	env_skyVb = Gfx_CreateVb(ptr, VERTEX_FORMAT_P3FC4B, env_skyVertices);
 
 	if (env_skyVertices > 4096) Platform_MemFree(ptr);
 }
@@ -271,16 +272,16 @@ void EnvRenderer_ResetAllEnv(void) {
 	EnvRenderer_ContextRecreated();
 }
 
-void EnvRenderer_EnvVariableChanged(EnvVar envVar) {
+void EnvRenderer_EnvVariableChanged(Int32 envVar) {
 	if (EnvRenderer_Minimal) return;
 
-	if (envVar == EnvVar_SkyCol) {
+	if (envVar == ENV_VAR_SKY_COL) {
 		EnvRenderer_ResetSky();
-	} else if (envVar == EnvVar_FogCol) {
+	} else if (envVar == ENV_VAR_FOG_COL) {
 		EnvRenderer_UpdateFog();
-	} else if (envVar == EnvVar_CloudsCol) {
+	} else if (envVar == ENV_VAR_CLOUDS_COL) {
 		EnvRenderer_ResetClouds();
-	} else if (envVar == EnvVar_CloudsHeight) {
+	} else if (envVar == ENV_VAR_CLOUDS_HEIGHT) {
 		EnvRenderer_ResetSky();
 		EnvRenderer_ResetClouds();
 	}

@@ -19,6 +19,7 @@ namespace ClassicalSharp.GraphicsAPI {
 		/// <summary> Sets whether texturing is applied when rasterizing primitives. </summary>
 		public abstract bool Texturing { set; }
 		
+		public Matrix4 Projection, View;
 		internal float MinZNear = 0.1f;
 		readonly FastBitmap bmpBuffer = new FastBitmap();
 		
@@ -206,17 +207,6 @@ namespace ClassicalSharp.GraphicsAPI {
 		/// <summary> Sets the current matrix to the identity matrix. </summary>
 		public abstract void LoadIdentityMatrix();
 		
-		/// <summary> Multplies the current matrix by the given matrix, then
-		/// sets the current matrix to the result of the multiplication. </summary>
-		public abstract void MultiplyMatrix(ref Matrix4 matrix);
-		
-		/// <summary> Gets the top matrix the current matrix stack and pushes it to the stack. </summary>
-		public abstract void PushMatrix();
-		
-		/// <summary> Removes the top matrix from the current matrix stack, then
-		/// sets the current matrix to the new top matrix of the stack. </summary>
-		public abstract void PopMatrix();
-		
 		/// <summary> Outputs a .png screenshot of the backbuffer to the specified file. </summary>
 		public abstract void TakeScreenshot(string output, int width, int height);
 		
@@ -240,10 +230,9 @@ namespace ClassicalSharp.GraphicsAPI {
 		internal abstract void MakeApiInfo();		
 		public string[] ApiInfo;
 		
-		protected virtual void LoadOrthoMatrix(float width, float height) {
-			Matrix4 matrix;
-			Matrix4.CreateOrthographicOffCenter(0, width, height, 0, -10000, 10000, out matrix);
-			LoadMatrix(ref matrix);
+		public abstract void CalcOrthoMatrix(float width, float height, out Matrix4 matrix);
+		public virtual void CalcPerspectiveMatrix(float fov, float aspect, float zNear, float zFar, out Matrix4 matrix) {
+			Matrix4.CreatePerspectiveFieldOfView(fov, aspect, zNear, zFar, out matrix);
 		}
 		
 		/// <summary> Sets the appropriate alpha testing/blending states necessary to render the given block. </summary>

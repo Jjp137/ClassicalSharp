@@ -16,7 +16,7 @@ void Particle_DoRender(Vector2* size, Vector3* pos, TextureRec* rec, PackedCol c
 	Vector3 centre = *pos; centre.Y += sY;
 	VertexP3fT2fC4b* ptr = *vertices;
 
-	Matrix* view = &Game_View;
+	Matrix* view = &Gfx_View;
 	Real32 aX, aY, aZ, bX, bY, bZ;
 	aX = view->Row0.X * sX; aY = view->Row1.X * sX; aZ = view->Row2.X * sX; /* right * size.X * 0.5f */
 	bX = view->Row0.Y * sY; bY = view->Row1.Y * sY; bZ = view->Row2.Y * sY; /* up    * size.Y * 0.5f */
@@ -43,8 +43,8 @@ void Particle_Reset(Particle* p, Vector3 pos, Vector3 velocity, Real32 lifetime)
 }
 
 bool Particle_CanPass(BlockID block, bool throughLiquids) {
-	DrawType draw = Block_Draw[block];
-	return draw == DrawType_Gas || draw == DrawType_Sprite || (throughLiquids && Block_IsLiquid(block));
+	UInt8 draw = Block_Draw[block];
+	return draw == DRAW_GAS || draw == DRAW_SPRITE || (throughLiquids && Block_IsLiquid[block]);
 }
 
 bool Particle_CollideHor(Vector3* nextPos, BlockID block) {
@@ -58,7 +58,7 @@ bool Particle_CollideHor(Vector3* nextPos, BlockID block) {
 BlockID Particle_GetBlock(Int32 x, Int32 y, Int32 z) {
 	if (World_IsValidPos(x, y, z)) { return World_GetBlock(x, y, z); }
 
-	if (y >= WorldEnv_EdgeHeight) return BlockID_Air;
+	if (y >= WorldEnv_EdgeHeight) return BLOCK_AIR;
 	if (y >= WorldEnv_SidesHeight) return WorldEnv_EdgeBlock;
 	return WorldEnv_SidesBlock;
 }
@@ -125,28 +125,26 @@ bool RainParticle_Tick(RainParticle* p, Real64 delta) {
 	return p->Base.HitTerrain || dies;
 }
 
-Vector2 Rain_Big = { 1.00f / 16.0f, 1.00f / 16.0f };
-Vector2 Rain_Small = { 0.75f / 16.0f, 0.75f / 16.0f };
-Vector2 Rain_Tiny = { 0.50f / 16.0f, 0.50f / 16.0f };
 TextureRec Rain_Rec = { 2.0f / 128.0f, 14.0f / 128.0f, 3.0f / 128.0f, 2.0f / 128.0f };
 void RainParticle_Render(RainParticle* p, Real32 t, VertexP3fT2fC4b** vertices) {
 	Vector3 pos;
 	Vector3_Lerp(&pos, &p->Base.LastPos, &p->Base.NextPos, t);
-	Vector2* size = p->Big ? &Rain_Big : (p->Tiny ? &Rain_Tiny : &Rain_Small);
+	Vector2 size; size.X = (Real32)p->Base.Size * 0.015625f; size.Y = size.X;
 
 	Int32 x = Math_Floor(pos.X), y = Math_Floor(pos.Y), z = Math_Floor(pos.Z);
 	PackedCol col = World_IsValidPos(x, y, z) ? Lighting_Col(x, y, z) : Lighting_Outside;
-	Particle_DoRender(size, &pos, &Rain_Rec, col, vertices);
+	Particle_DoRender(&size, &pos, &Rain_Rec, col, vertices);
 }
 
 bool TerrainParticle_Tick(TerrainParticle* p, Real64 delta) {
 	return Particle_PhysicsTick(&p->Base, 5.4f, true, delta);
 }
 
-Vector2 Terrain_Size = { 1.0f / 8.0f, 1.0f / 8.0f };
 void TerrainParticle_Render(TerrainParticle* p, Real32 t, VertexP3fT2fC4b** vertices) {
 	Vector3 pos;
 	Vector3_Lerp(&pos, &p->Base.LastPos, &p->Base.NextPos, t);
+	Vector2 size; size.X = (Real32)p->Base.Size * 0.015625f; size.Y = size.X;
+
 	PackedCol col = PACKEDCOL_WHITE;
 	if (!Block_FullBright[p->Block]) {
 		Int32 x = Math_Floor(pos.X), y = Math_Floor(pos.Y), z = Math_Floor(pos.Z);
@@ -159,7 +157,7 @@ void TerrainParticle_Render(TerrainParticle* p, Real32 t, VertexP3fT2fC4b** vert
 		col.G = (UInt8)(col.G * tintCol.G / 255);
 		col.B = (UInt8)(col.B * tintCol.B / 255);
 	}
-	Particle_DoRender(&Terrain_Size, &pos, &p->Rec, col, vertices);
+	Particle_DoRender(&size, &pos, &p->Rec, col, vertices);
 }
 
 
@@ -181,7 +179,7 @@ void Particles_FileChanged(Stream* stream) {
 
 void Particles_ContextLost(void) { Gfx_DeleteVb(&Particles_VB); }
 void Particles_ContextRecreated(void) {
-	Particles_VB = Gfx_CreateDynamicVb(VertexFormat_P3fT2fC4b, PARTICLES_MAX * 4);
+	Particles_VB = Gfx_CreateDynamicVb(VERTEX_FORMAT_P3FT2FC4B, PARTICLES_MAX * 4);
 }
 
 void Particles_Init(void) {
@@ -275,7 +273,7 @@ void Particles_Render(Real64 delta, Real32 t) {
 	Gfx_SetTexturing(true);
 	Gfx_SetAlphaTest(true);
 
-	Gfx_SetBatchFormat(VertexFormat_P3fT2fC4b);
+	Gfx_SetBatchFormat(VERTEX_FORMAT_P3FT2FC4B);
 	Terrain_Render(t);
 	Rain_Render(t);
 
@@ -327,12 +325,12 @@ void Particles_Tick(ScheduledTask* task) {
 }
 
 void Particles_BreakBlockEffect(Vector3I coords, BlockID oldBlock, BlockID block) {
-	if (block != BlockID_Air) return;
+	if (block != BLOCK_AIR) return;
 	block = oldBlock;
 
 	Vector3 worldPos;
 	Vector3I_ToVector3(&worldPos, &coords);
-	TextureLoc texLoc = Block_GetTexLoc(block, Face_XMin);
+	TextureLoc texLoc = Block_GetTexLoc(block, FACE_XMIN);
 	Int32 texIndex;
 	TextureRec baseRec = Atlas1D_TexRec(texLoc, 1, &texIndex);
 	Real32 uScale = (1.0f / 16.0f), vScale = (1.0f / 16.0f) * Atlas1D_InvElementSize;
@@ -388,6 +386,8 @@ void Particles_BreakBlockEffect(Vector3I coords, BlockID oldBlock, BlockID block
 				p->Rec = rec;
 				p->TexLoc = (TextureLoc)texLoc;
 				p->Block = block;
+				Int32 type = Random_Range(&rnd, 0, 30);
+				p->Base.Size = (UInt8)(type >= 28 ? 12 : (type >= 25 ? 10 : 8));
 			}
 }
 
@@ -410,8 +410,8 @@ void Particles_RainSnowEffect(Vector3 pos) {
 		Rain_Count++;
 
 		Vector3_Add(&pos, &startPos, &offset);
-		Particle_Reset(&p->Base, pos, velocity, 40.0f);		
-		p->Big  = Random_Range(&rnd, 0, 20) >= 18;
-		p->Tiny = Random_Range(&rnd, 0, 30) >= 28;
+		Particle_Reset(&p->Base, pos, velocity, 40.0f);
+		Int32 type = Random_Range(&rnd, 0, 30);
+		p->Base.Size = (UInt8)(type >= 28 ? 2 : (type >= 25 ? 4 : 3));
 	}
 }

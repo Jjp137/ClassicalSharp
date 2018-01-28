@@ -1,6 +1,6 @@
 #include "ChunkUpdater.h"
 #include "Constants.h"
-#include "Events.h"
+#include "Event.h"
 #include "ExtMath.h"
 #include "FrustumCulling.h"
 #include "Funcs.h"
@@ -30,13 +30,12 @@ Int32 cu_chunksTarget = 12;
 #define cu_targetTime ((1.0 / 30) + 0.01)
 Vector3 cu_lastCamPos;
 Real32 cu_lastHeadY, cu_lastHeadX;
-Int32 cu_atlas1DCount;
 Int32 cu_elementsPerBitmap;
 
-void ChunkUpdater_EnvVariableChanged(EnvVar envVar) {
-	if (envVar == EnvVar_SunCol || envVar == EnvVar_ShadowCol) {
+void ChunkUpdater_EnvVariableChanged(Int32 envVar) {
+	if (envVar == ENV_VAR_SUN_COL || envVar == ENV_VAR_SHADOW_COL) {
 		ChunkUpdater_Refresh();
-	} else if (envVar == EnvVar_EdgeHeight || envVar == EnvVar_SidesOffset) {
+	} else if (envVar == ENV_VAR_EDGE_HEIGHT || envVar == ENV_VAR_SIDES_OFFSET) {
 		Int32 oldClip = Builder_EdgeLevel;
 		Builder_SidesLevel = max(0, WorldEnv_SidesHeight);
 		Builder_EdgeLevel = max(0, WorldEnv_EdgeHeight);
@@ -130,7 +129,7 @@ void ChunkUpdater_PerformAllocations(void) {
 	ChunkUpdater_Distances = Platform_MemAlloc(MapRenderer_ChunksCount * sizeof(Int32));
 	if (ChunkUpdater_Distances == NULL) ErrorHandler_Fail("ChunkUpdater - failed to allocate chunk distances");
 
-	UInt32 partsSize = MapRenderer_ChunksCount * (sizeof(ChunkPartInfo) * cu_atlas1DCount);
+	UInt32 partsSize = MapRenderer_ChunksCount * (sizeof(ChunkPartInfo) * MapRenderer_1DUsedCount);
 	MapRenderer_PartsBuffer = Platform_MemAlloc(partsSize);
 	if (MapRenderer_PartsBuffer == NULL) ErrorHandler_Fail("ChunkUpdater - failed to allocate chunk parts buffer");
 	Platform_MemSet(MapRenderer_PartsBuffer, 0, partsSize);
@@ -312,7 +311,7 @@ void ChunkUpdater_ClearChunkCache(void) {
 #define ChunkUpdater_DeleteParts(parts, partsCount)\
 if (parts != NULL) {\
 	ChunkPartInfo* ptr = parts;\
-	for (i = 0; i < cu_atlas1DCount; i++) {\
+	for (i = 0; i < MapRenderer_1DUsedCount; i++) {\
 		Gfx_DeleteVb(&ptr->VbId);\
 		if (ptr->HasVertices) { partsCount[i]--; }\
 		ptr += MapRenderer_ChunksCount;\
@@ -334,7 +333,7 @@ void ChunkUpdater_DeleteChunk(ChunkInfo* info) {
 #define ChunkUpdater_AddParts(parts, partsCount)\
 if (parts != NULL) {\
 	ChunkPartInfo* ptr = parts;\
-	for (i = 0; i < cu_atlas1DCount; i++) {\
+	for (i = 0; i < MapRenderer_1DUsedCount; i++) {\
 		if (ptr->HasVertices) { partsCount[i]++; }\
 		ptr += MapRenderer_ChunksCount;\
 	}\
@@ -357,31 +356,20 @@ void ChunkUpdater_BuildChunk(ChunkInfo* info, Int32* chunkUpdates) {
 }
 
 void ChunkUpdater_QuickSort(Int32 left, Int32 right) {
-	ChunkInfo** values = MapRenderer_SortedChunks;
-	Int32* keys = ChunkUpdater_Distances;
+	ChunkInfo** values = MapRenderer_SortedChunks; ChunkInfo* value;
+	Int32* keys = ChunkUpdater_Distances;          Int32 key;
 	while (left < right) {
 		Int32 i = left, j = right;
 		Int32 pivot = keys[(i + j) / 2];
+
 		/* partition the list */
 		while (i <= j) {
 			while (pivot > keys[i]) i++;
 			while (pivot < keys[j]) j--;
-
-			if (i <= j) {
-				Int32 key = keys[i]; keys[i] = keys[j]; keys[j] = key;
-				ChunkInfo* value = values[i]; values[i] = values[j]; values[j] = value;
-				i++; j--;
-			}
+			QuickSort_Swap_KV_Maybe();
 		}
-
 		/* recurse into the smaller subset */
-		if (j - left <= right - i) {
-			if (left < j) ChunkUpdater_QuickSort(left, j);
-			left = i;
-		} else {
-			if (i < right) ChunkUpdater_QuickSort(i, right);
-			right = j;
-		}
+		QuickSort_Recurse(ChunkUpdater_QuickSort)
 	}
 }
 

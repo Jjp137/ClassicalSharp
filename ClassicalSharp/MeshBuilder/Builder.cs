@@ -143,7 +143,8 @@ namespace ClassicalSharp {
 			
 			ChunkPartInfo info;
 			fixed (VertexP3fT2fC4b* ptr = part.vertices) {
-				info.VbId = gfx.CreateVb((IntPtr)ptr, VertexFormat.P3fT2fC4b, vertCount);
+				// add an extra element to fix crashing on some GPUs
+				info.VbId = gfx.CreateVb((IntPtr)ptr, VertexFormat.P3fT2fC4b, vertCount + 1);
 			}
 			info.VerticesCount = vertCount;
 			
@@ -154,13 +155,6 @@ namespace ClassicalSharp {
 			info.BottomCount = (ushort)part.vCount[Side.Bottom];
 			info.TopCount =    (ushort)part.vCount[Side.Top];
 			info.SpriteCount = part.spriteCount;
-			
-			info.LeftIndex =   (ushort)(info.SpriteCount);
-			info.RightIndex =  (ushort)(info.LeftIndex   + info.LeftCount);
-			info.FrontIndex =  (ushort)(info.RightIndex  + info.RightCount);
-			info.BackIndex =   (ushort)(info.FrontIndex  + info.FrontCount);
-			info.BottomIndex = (ushort)(info.BackIndex   + info.BackCount);
-			info.TopIndex =    (ushort)(info.BottomIndex + info.BottomCount);
 			
 			// Lazy initalize part arrays so we can save time in MapRenderer for chunks that only contain 1 or 2 part types.
 			if (parts == null)
@@ -312,9 +306,7 @@ namespace ClassicalSharp {
 	}
 	
 	public struct ChunkPartInfo {
-		
 		public int VbId, VerticesCount, SpriteCount;
-		public ushort LeftIndex, RightIndex, FrontIndex, BackIndex, BottomIndex, TopIndex;
 		public ushort LeftCount, RightCount, FrontCount, BackCount, BottomCount, TopCount;
 	}
 }

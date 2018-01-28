@@ -4,6 +4,9 @@
 #include "Input.h"
 #include "GameStructs.h"
 #include "GraphicsEnums.h"
+#include "String.h"
+#include "VertexStructs.h"
+#include "Texture.h"
 /* Describes and manages 2D GUI elements on screen.
    Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 */
@@ -38,7 +41,7 @@ typedef struct GuiElement_ {
 	/* Returns whether this GUI element handles the mouse being scrolled. */
 	bool (*HandlesMouseScroll)(struct GuiElement_* elem, Real32 delta);
 } GuiElement;
-void GuiElement_Init(GuiElement* elem);
+void GuiElement_Reset(GuiElement* elem);
 
 struct Screen_;
 /* Represents a container of widgets and other 2D elements. May cover entire window. */
@@ -55,10 +58,8 @@ typedef struct Screen_ {
 	bool RenderHUDOver;
 	/* Called when the game window is resized. */
 	void (*OnResize)(struct Screen_* screen);
-	void (*OnContextLost)(struct Screen_* screen);
-	void (*OnContextRecreated)(struct Screen_* screen);
 } Screen;
-void Screen_Init(Screen* screen);
+void Screen_Reset(Screen* screen);
 
 struct Widget_;
 /* Represents an individual 2D gui component. */
@@ -102,4 +103,15 @@ void Gui_RefreshHud(void);
 void Gui_ShowOverlay(Screen* overlay);
 void Gui_RenderGui(Real64 delta);
 void Gui_OnResize(void);
+
+#define TEXTATLAS_MAX_WIDTHS 16
+typedef struct TextAtlas_ {
+	Texture Tex;
+	Int32 Widths[TEXTATLAS_MAX_WIDTHS];
+	Int32 Offset, CurX, TotalWidth, FontSize;
+} TextAtlas;
+void TextAtlas_Make(TextAtlas* atlas, STRING_PURE String* chars, FontDesc* font, STRING_PURE String* prefix);
+void TextAtlas_Free(TextAtlas* atlas);
+void TextAtlas_Add(TextAtlas* atlas, Int32 charI, VertexP3fT2fC4b** vertices);
+void TextAtlas_AddInt(TextAtlas* atlas, Int32 value, VertexP3fT2fC4b** vertices);
 #endif

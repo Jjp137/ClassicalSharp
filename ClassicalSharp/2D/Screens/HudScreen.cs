@@ -30,10 +30,16 @@ namespace ClassicalSharp.Gui.Screens {
 				gfx.Texturing = false;
 			}
 			if (game.HideGui) return;
-			
 			bool showMinimal = game.Gui.ActiveScreen.BlocksWorld;
-			if (chat.HandlesAllInput && !game.PureClassic)
+			
+			if (playerList == null && !showMinimal) {
+				gfx.Texturing = true;
+				DrawCrosshairs();
+				gfx.Texturing = false;
+			}			
+			if (chat.HandlesAllInput && !game.PureClassic) {
 				chat.RenderBackground();
+			}
 			
 			gfx.Texturing = true;
 			if (!showMinimal) hotbar.Render(delta);
@@ -48,8 +54,6 @@ namespace ClassicalSharp.Gui.Screens {
 				}
 			}
 			
-			if (playerList == null && !showMinimal)
-				DrawCrosshairs();
 			gfx.Texturing = false;
 		}
 		
@@ -82,16 +86,10 @@ namespace ClassicalSharp.Gui.Screens {
 			hotbar.Dispose();
 			hotbar.Init();
 			
-			if (!hadPlayerList) return;
-			
-			if (game.UseClassicTabList) {
-				playerList = new ClassicPlayerListWidget(game, playerFont);
-			} else if (game.Server.UsingExtPlayerList) {
-				playerList = new ExtPlayerListWidget(game, playerFont);
-			} else {
-				playerList = new NormalPlayerListWidget(game, playerFont);
-			}
-			
+			if (!hadPlayerList) return;		
+			bool extended = game.Server.UsingExtPlayerList && !game.UseClassicTabList;
+			playerList = new PlayerListWidget(game, playerFont, !extended);
+
 			playerList.Init();
 			playerList.RecalcYOffset();
 			playerList.Reposition();
@@ -155,9 +153,7 @@ namespace ClassicalSharp.Gui.Screens {
 				return true;
 			}
 			
-			if (chat.HandlesKeyDown(key))
-				return true;
-			return hotbar.HandlesKeyDown(key);
+			return chat.HandlesKeyDown(key) || hotbar.HandlesKeyDown(key);
 		}
 		
 		public override bool HandlesKeyUp(Key key) {
@@ -170,8 +166,7 @@ namespace ClassicalSharp.Gui.Screens {
 				}
 			}
 			
-			if (chat.HandlesAllInput) return true;
-			return hotbar.HandlesKeyUp(key);
+			return chat.HandlesKeyUp(key) || hotbar.HandlesKeyUp(key);
 		}
 		
 		public void OpenTextInputBar(string text) {

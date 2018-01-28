@@ -6,6 +6,8 @@
 #include "GraphicsCommon.h"
 #include "Funcs.h"
 #define WIN32_LEAN_AND_MEAN
+#define NOMCX
+#define NOIME
 #include <Windows.h>
 #include <GL/gl.h>
 
@@ -21,7 +23,6 @@ typedef void (APIENTRY *FN_GLDELETEBUFFERS) (GLsizei n, const GLuint *buffers);
 typedef void (APIENTRY *FN_GLGENBUFFERS) (GLsizei n, GLuint *buffers);
 typedef void (APIENTRY *FN_GLBUFFERDATA) (GLenum target, const void* size, const void *data, GLenum usage);
 typedef void (APIENTRY *FN_GLBUFFERSUBDATA) (GLenum target, const void* offset, const void* size, const void *data);
-/* TODO: NEED TO ASSIGN THESE TO VALID PROC ADDRESSES */
 FN_GLBINDBUFFER glBindBuffer;
 FN_GLDELETEBUFFERS glDeleteBuffers;
 FN_GLGENBUFFERS glGenBuffers;
@@ -47,20 +48,20 @@ void GL_CheckVboSupport(void) {
 
 	/* Supported in core since 1.5 */
 	if ((major > 1) || (major == 1 && minor >= 5)) {
-		glBindBuffer = (FN_GLBINDBUFFER)GLContext_GetAddress("glBindBuffer");
+		glBindBuffer    = (FN_GLBINDBUFFER)GLContext_GetAddress("glBindBuffer");
 		glDeleteBuffers = (FN_GLDELETEBUFFERS)GLContext_GetAddress("glDeleteBuffers");
-		glGenBuffers = (FN_GLGENBUFFERS)GLContext_GetAddress("glGenBuffers");
-		glBufferData = (FN_GLBUFFERDATA)GLContext_GetAddress("glBufferData");
+		glGenBuffers    = (FN_GLGENBUFFERS)GLContext_GetAddress("glGenBuffers");
+		glBufferData    = (FN_GLBUFFERDATA)GLContext_GetAddress("glBufferData");
 		glBufferSubData = (FN_GLBUFFERSUBDATA)GLContext_GetAddress("glBufferSubData");
 		return;
 	}
 
 	String vboExt = String_FromConst("GL_ARB_vertex_buffer_object");
 	if (String_ContainsString(&extensions, &vboExt)) {
-		glBindBuffer = (FN_GLBINDBUFFER)GLContext_GetAddress("glBindBufferARB");
+		glBindBuffer    = (FN_GLBINDBUFFER)GLContext_GetAddress("glBindBufferARB");
 		glDeleteBuffers = (FN_GLDELETEBUFFERS)GLContext_GetAddress("glDeleteBuffersARB");
-		glGenBuffers = (FN_GLGENBUFFERS)GLContext_GetAddress("glGenBuffersARB");
-		glBufferData = (FN_GLBUFFERDATA)GLContext_GetAddress("glBufferDataARB");
+		glGenBuffers    = (FN_GLGENBUFFERS)GLContext_GetAddress("glGenBuffersARB");
+		glBufferData    = (FN_GLBUFFERDATA)GLContext_GetAddress("glBufferDataARB");
 		glBufferSubData = (FN_GLBUFFERSUBDATA)GLContext_GetAddress("glBufferSubDataARB");
 	} else {
 		gl_lists = true;
@@ -72,7 +73,7 @@ void Gfx_Init(void) {
 	GraphicsMode mode = GraphicsMode_MakeDefault();
 	GLContext_Init(mode);
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &Gfx_MaxTextureDimensions);
-	gl_lists = Options_GetBool(OptionsKey_ForceOldOpenGL, false);
+	gl_lists = Options_GetBool(OPTION_FORCE_OLD_OPENGL, false);
 	Gfx_CustomMipmapsLevels = !gl_lists;
 
 	GL_CheckVboSupport();
@@ -196,8 +197,8 @@ void Gfx_SetFogEnd(Real32 value) {
 	gl_lastFogEnd = value;
 }
 
-Fog gl_lastFogMode = -1;
-void Gfx_SetFogMode(Fog mode) {
+Int32 gl_lastFogMode = -1;
+void Gfx_SetFogMode(Int32 mode) {
 	if (mode == gl_lastFogMode) return;
 	glFogi(GL_FOG_MODE, gl_fogModes[mode]);
 	gl_lastFogMode = mode;
@@ -206,12 +207,12 @@ void Gfx_SetFogMode(Fog mode) {
 
 void Gfx_SetFaceCulling(bool enabled) { GL_TOGGLE(GL_CULL_FACE); }
 void Gfx_SetAlphaTest(bool enabled) { GL_TOGGLE(GL_ALPHA_TEST); }
-void Gfx_SetAlphaTestFunc(CompareFunc func, Real32 value) {
+void Gfx_SetAlphaTestFunc(Int32 func, Real32 value) {
 	glAlphaFunc(gl_compare[func], value);
 }
 
 void Gfx_SetAlphaBlending(bool enabled) { GL_TOGGLE(GL_BLEND); }
-void Gfx_SetAlphaBlendFunc(BlendFunc srcFunc, BlendFunc dstFunc) {
+void Gfx_SetAlphaBlendFunc(Int32 srcFunc, Int32 dstFunc) {
 	glBlendFunc(gl_blend[srcFunc], gl_blend[dstFunc]);
 }
 void Gfx_SetAlphaArgBlend(bool enabled) { }
@@ -237,7 +238,7 @@ void Gfx_SetDepthWrite(bool enabled) {
 }
 
 void Gfx_SetDepthTest(bool enabled) { GL_TOGGLE(GL_DEPTH_TEST); }
-void Gfx_SetDepthTestFunc(CompareFunc compareFunc) {
+void Gfx_SetDepthTestFunc(Int32 compareFunc) {
 	glDepthFunc(gl_compare[compareFunc]);
 }
 
@@ -249,7 +250,7 @@ GfxResourceID GL_GenAndBind(GLenum target) {
 	return id;
 }
 
-GfxResourceID Gfx_CreateDynamicVb(VertexFormat vertexFormat, Int32 maxVertices) {
+GfxResourceID Gfx_CreateDynamicVb(Int32 vertexFormat, Int32 maxVertices) {
 	if (gl_lists) return gl_DYNAMICLISTID;
 	Int32 id = GL_GenAndBind(GL_ARRAY_BUFFER);
 	UInt32 sizeInBytes = maxVertices * Gfx_strideSizes[vertexFormat];
@@ -258,23 +259,28 @@ GfxResourceID Gfx_CreateDynamicVb(VertexFormat vertexFormat, Int32 maxVertices) 
 }
 
 #define gl_MAXINDICES ICOUNT(65536)
-GfxResourceID Gfx_CreateVb(void* vertices, VertexFormat vertexFormat, Int32 count) {
+GfxResourceID Gfx_CreateVb(void* vertices, Int32 vertexFormat, Int32 count) {
 	if (gl_lists) {
+		/* We need to setup client state properly when building the list */
+		Int32 curFormat = gl_batchFormat;
+		Gfx_SetBatchFormat(vertexFormat);
 		Int32 list = glGenLists(1);
 		glNewList(list, GL_COMPILE);
+		count &= ~0x01; /* Need to get rid of the 1 extra element, see comment in chunk mesh builder for why */
 
 		UInt16 indices[GFX_MAX_INDICES];
 		GfxCommon_MakeIndices(indices, ICOUNT(count));
 
-		Int32 stride = vertexFormat == VertexFormat_P3fT2fC4b ? VertexP3fT2fC4b_Size : VertexP3fC4b_Size;
+		Int32 stride = vertexFormat == VERTEX_FORMAT_P3FT2FC4B ? VertexP3fT2fC4b_Size : VertexP3fC4b_Size;
 		glVertexPointer(3, GL_FLOAT, stride, vertices);
 		glColorPointer(4, GL_UNSIGNED_BYTE, stride, (void*)((UInt8*)vertices + 12));
-		if (vertexFormat == VertexFormat_P3fT2fC4b) {
+		if (vertexFormat == VERTEX_FORMAT_P3FT2FC4B) {
 			glTexCoordPointer(2, GL_FLOAT, stride, (void*)((UInt8*)vertices + 16));
 		}
 
 		glDrawElements(GL_TRIANGLES, ICOUNT(count), GL_UNSIGNED_SHORT, indices);
 		glEndList();
+		Gfx_SetBatchFormat(curFormat);
 		return list;
 	}
 
@@ -328,7 +334,7 @@ typedef void (*GL_SetupVBRangeFunc)(Int32 startVertex);
 GL_SetupVBFunc gl_setupVBFunc;
 GL_SetupVBRangeFunc gl_setupVBRangeFunc;
 Int32 gl_batchStride;
-VertexFormat gl_batchFormat = -1;
+Int32 gl_batchFormat = -1;
 
 void GL_SetupVbPos3fCol4b(void) {
 	glVertexPointer(3, GL_FLOAT, VertexP3fC4b_Size, (void*)0);
@@ -354,16 +360,16 @@ void GL_SetupVbPos3fTex2fCol4b_Range(Int32 startVertex) {
 	glTexCoordPointer(2, GL_FLOAT, VertexP3fT2fC4b_Size, (void*)(offset + 16));
 }
 
-void Gfx_SetBatchFormat(VertexFormat vertexFormat) {
+void Gfx_SetBatchFormat(Int32 vertexFormat) {
 	if (vertexFormat == gl_batchFormat) return;
 
-	if (gl_batchFormat == VertexFormat_P3fT2fC4b) {
+	if (gl_batchFormat == VERTEX_FORMAT_P3FT2FC4B) {
 		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 	}
 	gl_batchFormat = vertexFormat;
 	gl_batchStride = Gfx_strideSizes[vertexFormat];
 
-	if (vertexFormat == VertexFormat_P3fT2fC4b) {
+	if (vertexFormat == VERTEX_FORMAT_P3FT2FC4B) {
 		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 		gl_setupVBFunc = GL_SetupVbPos3fTex2fCol4b;
 		gl_setupVBRangeFunc = GL_SetupVbPos3fTex2fCol4b_Range;
@@ -399,7 +405,7 @@ void GL_V24(VertexP3fT2fC4b v) {
 void GL_DrawDynamicLines(Int32 verticesCount) {
 	glBegin(GL_LINES);
 	Int32 i;
-	if (gl_batchFormat == VertexFormat_P3fT2fC4b) {
+	if (gl_batchFormat == VERTEX_FORMAT_P3FT2FC4B) {
 		VertexP3fT2fC4b* ptr = (VertexP3fT2fC4b*)gl_dynamicListData;
 		for (i = 0; i < verticesCount; i += 2) {
 			GL_V24(ptr[i + 0]); GL_V24(ptr[i + 1]);
@@ -416,7 +422,7 @@ void GL_DrawDynamicLines(Int32 verticesCount) {
 void GL_DrawDynamicTriangles(Int32 verticesCount, Int32 startVertex) {
 	glBegin(GL_TRIANGLES);
 	Int32 i;
-	if (gl_batchFormat == VertexFormat_P3fT2fC4b) {
+	if (gl_batchFormat == VERTEX_FORMAT_P3FT2FC4B) {
 		VertexP3fT2fC4b* ptr = (VertexP3fT2fC4b*)gl_dynamicListData;
 		for (i = startVertex; i < startVertex + verticesCount; i += 4) {
 			GL_V24(ptr[i + 0]); GL_V24(ptr[i + 1]); GL_V24(ptr[i + 2]);
@@ -480,8 +486,8 @@ void Gfx_DrawIndexedVb_TrisT2fC4b(Int32 verticesCount, Int32 startVertex) {
 }
 
 
-MatrixType gl_lastMatrixType = 0;
-void Gfx_SetMatrixMode(MatrixType matrixType) {
+Int32 gl_lastMatrixType = 0;
+void Gfx_SetMatrixMode(Int32 matrixType) {
 	if (matrixType == gl_lastMatrixType) return;
 	glMatrixMode(gl_matrixModes[matrixType]);
 	gl_lastMatrixType = matrixType;
@@ -489,14 +495,12 @@ void Gfx_SetMatrixMode(MatrixType matrixType) {
 
 void Gfx_LoadMatrix(Matrix* matrix) { glLoadMatrixf((Real32*)matrix); }
 void Gfx_LoadIdentityMatrix(void) { glLoadIdentity(); }
-void Gfx_MultiplyMatrix(Matrix* matrix) { glMultMatrixf((Real32*)matrix); }
-void Gfx_PushMatrix(void) { glPushMatrix(); }
-void Gfx_PopMatrix(void) { glPopMatrix(); }
 
-void Gfx_LoadOrthoMatrix(Real32 width, Real32 height) {
-	Matrix matrix;
-	Matrix_OrthographicOffCenter(&matrix, 0.0f, width, height, 0.0f, -10000.0f, 10000.0f);
-	Gfx_LoadMatrix(&matrix);
+void Gfx_CalcOrthoMatrix(Real32 width, Real32 height, Matrix* matrix) {
+	Matrix_OrthographicOffCenter(matrix, 0.0f, width, height, 0.0f, -10000.0f, 10000.0f);
+}
+void Gfx_CalcPerspectiveMatrix(Real32 fov, Real32 aspect, Real32 zNear, Real32 zFar, Matrix* matrix) {
+	Matrix_PerspectiveFieldOfView(matrix, fov, aspect, zNear, zFar);
 }
 
 

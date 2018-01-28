@@ -144,10 +144,22 @@ namespace ClassicalSharp.Textures {
 		}
 		
 		unsafe void DrawAnimation(AnimationData data, int texId, int size) {
+			if (size <= 128) {
+				byte* temp = stackalloc byte[size * size * 4];
+				DrawAnimationCore(data, texId, size, temp);
+			} else {
+				// cannot allocate memory on the stack for very big animation.png frames
+				byte[] temp = new byte[size * size * 4];
+				fixed (byte* ptr = temp) {
+					DrawAnimationCore(data, texId, size, ptr);
+				}
+			}
+		}
+		
+		unsafe void DrawAnimationCore(AnimationData data, int texId, int size, byte* temp) {
 			TerrainAtlas1D atlas = game.TerrainAtlas1D;			
 			int index = atlas.Get1DIndex(texId);
-			int rowNum = atlas.Get1DRowId(texId);			
-			byte* temp = stackalloc byte[size * size * 4];
+			int rowNum = atlas.Get1DRowId(texId);						
 			animPart.SetData(size, size, size * 4, (IntPtr)temp, false);
 			
 			if (data == null) {
@@ -195,16 +207,22 @@ namespace ClassicalSharp.Textures {
 			public int Tick, TickDelay;
 		}
 		
-		const string format = "&cOne of the animation frames for tile ({0}, {1}) " +
-			"is at coordinates outside animations.png";
+		const string format = "&cSome of the animation frames for tile ({0}, {1}) are at coordinates outside animations.png";
+		const string terrainFormat = "&cAnimation frames for tile ({0}, {1}) are bigger than the size of a tile in terrain.png";
 		void ValidateAnimations() {
 			validated = true;
+			int tileSize = game.TerrainAtlas.TileSize;
 			for (int i = animations.Count - 1; i >= 0; i--) {
 				AnimationData a = animations[i];
+				if (a.FrameSize > tileSize) {
+					game.Chat.Add(String.Format(terrainFormat, a.TileX, a.TileY));
+					animations.RemoveAt(i);
+					continue;
+				}
+				
 				int maxY = a.FrameY + a.FrameSize;
 				int maxX = a.FrameX + a.FrameSize * a.StatesCount;
-				if (maxX <= animsBuffer.Width && maxY <= animsBuffer.Height)
-					continue;
+				if (maxX <= animsBuffer.Width && maxY <= animsBuffer.Height) continue;
 				
 				game.Chat.Add(String.Format(format, a.TileX, a.TileY));
 				animations.RemoveAt(i);

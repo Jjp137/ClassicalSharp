@@ -5,14 +5,17 @@
 #include "Chat.h"
 #include "Block.h"
 #include "Random.h"
-#include "Events.h"
+#include "Event.h"
+#include "AsyncDownloader.h"
+#include "Player.h"
 
 UInt8 ServerConnection_ServerNameBuffer[String_BufferSize(STRING_SIZE)];
-String ServerConnection_ServerName = String_EmptyConstArray(ServerConnection_ServerNameBuffer);
+String ServerConnection_ServerName = String_FromEmptyArray(ServerConnection_ServerNameBuffer);
 UInt8 ServerConnection_ServerMOTDBuffer[String_BufferSize(STRING_SIZE)];
-String ServerConnection_ServerMOTD = String_EmptyConstArray(ServerConnection_ServerMOTDBuffer);
+String ServerConnection_ServerMOTD = String_FromEmptyArray(ServerConnection_ServerMOTDBuffer);
 UInt8 ServerConnection_AppNameBuffer[String_BufferSize(STRING_SIZE)];
-String ServerConnection_AppName = String_EmptyConstArray(ServerConnection_AppNameBuffer);
+String ServerConnection_AppName = String_FromEmptyArray(ServerConnection_AppNameBuffer);
+Int32 ServerConnection_Ticks;
 
 void ServerConnection_ResetState(void) {
 	ServerConnection_Disconnected = false;
@@ -33,7 +36,10 @@ void SPConnection_Connect(STRING_PURE String* ip, Int32 port) {
 		Block_CanPlace[i]  = true;
 		Block_CanDelete[i] = true;
 	}
-	game.AsyncDownloader.DownloadSkin(game.LocalPlayer.SkinName, game.LocalPlayer.SkinName);
+
+	Player* player = &LocalPlayer_Instance.Base;
+	String skin = String_FromRawArray(player->SkinNameRaw);
+	AsyncDownloader_DownloadSkin(&skin, &skin);
 	Event_RaiseVoid(&BlockEvents_PermissionsChanged);
 	
 	Random rnd; Random_InitFromCurrentTime(&rnd);
@@ -43,8 +49,8 @@ void SPConnection_Connect(STRING_PURE String* ip, Int32 port) {
 
 UInt8 SPConnection_LastCol = NULL;
 void SPConnection_AddChat(STRING_PURE String* text) {
-	UInt8 tmpBuffer[STRING_SIZE * 2];
-	String tmp = String_FromRawBuffer(tmpBuffer, STRING_SIZE * 2);
+	UInt8 tmpBuffer[String_BufferSize(STRING_SIZE * 2)];
+	String tmp = String_InitAndClearArray(tmpBuffer);
 	/* Prepend colour codes for subsequent lines of multi-line chat */
 	if (!Drawer2D_IsWhiteCol(SPConnection_LastCol)) {
 		String_Append(&tmp, '&');
@@ -86,8 +92,11 @@ void SPConnection_SendPlayerClick(MouseButton button, bool isDown, EntityID targ
 
 void SPConnection_Tick(ScheduledTask* task) {
 	if (ServerConnection_Disconnected) return;
-	Physics_Tick();
-	ServerConnection_CheckAsyncResources();
+	if ((ServerConnection_Ticks % 3) == 0) {
+		Physics_Tick();
+		ServerConnection_CheckAsyncResources();
+	}
+	ServerConnection_Ticks++;
 }
 
 void SPConnection_Free(void) { Physics_Free(); }

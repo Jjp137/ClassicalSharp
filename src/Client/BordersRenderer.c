@@ -6,7 +6,7 @@
 #include "GraphicsAPI.h"
 #include "GraphicsCommon.h"
 #include "GraphicsEnums.h"
-#include "Events.h"
+#include "Event.h"
 #include "TerrainAtlas.h"
 #include "ExtMath.h"
 #include "Platform.h"
@@ -30,7 +30,7 @@ GfxCommon_SetupAlphaState(Block_Draw[block]);\
 Gfx_EnableMipmaps();\
 \
 Gfx_BindTexture(texId);\
-Gfx_SetBatchFormat(VertexFormat_P3fT2fC4b);\
+Gfx_SetBatchFormat(VERTEX_FORMAT_P3FT2FC4B);\
 Gfx_BindVb(vb);
 
 #define BordersRenderer_ResetState(block) \
@@ -62,7 +62,7 @@ void BordersRenderer_RenderEdges(Real64 delta) {
 
 
 void BordersRenderer_MakeTexture(GfxResourceID* texId, TextureLoc* lastTexLoc, BlockID block) {
-	TextureLoc texLoc = Block_GetTexLoc(block, Face_YMax);
+	TextureLoc texLoc = Block_GetTexLoc(block, FACE_YMAX);
 	if (texLoc == *lastTexLoc || Gfx_LostContext) return;
 	*lastTexLoc = texLoc;
 
@@ -166,7 +166,7 @@ void BordersRenderer_DrawY(Int32 x1, Int32 z1, Int32 x2, Int32 z2, Real32 y, Int
 void BordersRenderer_RebuildSides(Int32 y, Int32 axisSize) {
 	BlockID block = WorldEnv_SidesBlock;
 	borders_sidesVertices = 0;
-	if (Block_Draw[block] == DrawType_Gas) return;
+	if (Block_Draw[block] == DRAW_GAS) return;
 
 	Int32 i;
 	for (i = 0; i < 4; i++) {
@@ -205,14 +205,14 @@ void BordersRenderer_RebuildSides(Int32 y, Int32 axisSize) {
 	BordersRenderer_DrawX(0, 0, World_Length, y1, y2, axisSize, col, &temp);
 	BordersRenderer_DrawX(World_Width, 0, World_Length, y1, y2, axisSize, col, &temp);
 
-	borders_sidesVb = Gfx_CreateVb(v, VertexFormat_P3fT2fC4b, borders_sidesVertices);
+	borders_sidesVb = Gfx_CreateVb(v, VERTEX_FORMAT_P3FT2FC4B, borders_sidesVertices);
 	if (borders_sidesVertices > 4096) Platform_MemFree(ptr);
 }
 
 void BordersRenderer_RebuildEdges(Int32 y, Int32 axisSize) {
 	BlockID block = WorldEnv_EdgeBlock;
 	borders_edgesVertices = 0;
-	if (Block_Draw[block] == DrawType_Gas) return;
+	if (Block_Draw[block] == DRAW_GAS) return;
 
 	Int32 i;
 	for (i = 0; i < 4; i++) {
@@ -239,7 +239,7 @@ void BordersRenderer_RebuildEdges(Int32 y, Int32 axisSize) {
 			borders_HorOffset(block), borders_YOffset(block), &temp);
 	}
 
-	borders_edgesVb = Gfx_CreateVb(ptr, VertexFormat_P3fT2fC4b, borders_edgesVertices);
+	borders_edgesVb = Gfx_CreateVb(ptr, VERTEX_FORMAT_P3FT2FC4B, borders_edgesVertices);
 	if (borders_edgesVertices > 4096) Platform_MemFree(ptr);
 }
 
@@ -274,18 +274,18 @@ void BordersRenderer_ResetSidesAndEdges(void) {
 	BordersRenderer_ContextRecreated();
 }
 
-void BordersRenderer_EnvVariableChanged(EnvVar envVar) {
-	if (envVar == EnvVar_EdgeBlock) {
+void BordersRenderer_EnvVariableChanged(Int32 envVar) {
+	if (envVar == ENV_VAR_EDGE_BLOCK) {
 		BordersRenderer_MakeTexture(&borders_edgeTexId, &borders_lastEdgeTexLoc, WorldEnv_EdgeBlock);
 		BordersRenderer_ResetEdges();
-	} else if (envVar == EnvVar_SidesBlock) {
+	} else if (envVar == ENV_VAR_SIDES_BLOCK) {
 		BordersRenderer_MakeTexture(&borders_sideTexId, &borders_lastSideTexLoc, WorldEnv_SidesBlock);
 		BordersRenderer_ResetSides();
-	} else if (envVar == EnvVar_EdgeHeight || envVar == EnvVar_SidesOffset) {
+	} else if (envVar == ENV_VAR_EDGE_HEIGHT || envVar == ENV_VAR_SIDES_OFFSET) {
 		BordersRenderer_ResetSidesAndEdges();
-	} else if (envVar == EnvVar_SunCol) {
+	} else if (envVar == ENV_VAR_SUN_COL) {
 		BordersRenderer_ResetEdges();
-	} else if (envVar == EnvVar_ShadowCol) {
+	} else if (envVar == ENV_VAR_SHADOW_COL) {
 		BordersRenderer_ResetSides();
 	}
 }

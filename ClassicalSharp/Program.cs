@@ -74,8 +74,8 @@ namespace ClassicalSharp {
 			SDL.SDL_GetDesktopDisplayMode(0, out mode);
 
 			Options.Load();
-			width  = Options.GetInt(OptionsKey.WindowWidth,  0, 65536, 0);
-			height = Options.GetInt(OptionsKey.WindowHeight, 0, 65536, 0);
+			width  = Options.GetInt(OptionsKey.WindowWidth,  0, mode.w, 0);
+			height = Options.GetInt(OptionsKey.WindowHeight, 0, mode.h, 0);
 
 			// No custom resolution has been set
 			if (width == 0 || height == 0) {

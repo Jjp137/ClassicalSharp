@@ -142,11 +142,11 @@
     <Filter Include="Source Files\Network">
       <UniqueIdentifier>{9e70549b-2798-4372-b887-876f8403a7ff}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Blocks">
-      <UniqueIdentifier>{f693e3de-8aee-440f-9edc-61544d2f7f79}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Header Files\Math">
       <UniqueIdentifier>{7a7adf1b-3c7f-4c3b-833b-656e2e61a2a2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Blocks">
+      <UniqueIdentifier>{f693e3de-8aee-440f-9edc-61544d2f7f79}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -254,9 +254,6 @@
     </ClInclude>
     <ClInclude Include="WeatherRenderer.h">
       <Filter>Header Files\Rendering\Env</Filter>
-    </ClInclude>
-    <ClInclude Include="DateTime.h">
-      <Filter>Header Files\Utils</Filter>
     </ClInclude>
     <ClInclude Include="MapRenderer.h">
       <Filter>Header Files\Rendering\Map</Filter>
@@ -531,9 +528,6 @@
       <Filter>Source Files\Game</Filter>
     </ClCompile>
     <ClCompile Include="Options.c">
-      <Filter>Source Files\Utils</Filter>
-    </ClCompile>
-    <ClCompile Include="DateTime.c">
       <Filter>Source Files\Utils</Filter>
     </ClCompile>
     <ClCompile Include="Deflate.c">

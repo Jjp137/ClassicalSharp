@@ -45,6 +45,11 @@ namespace ClassicalSharp {
 		
 		public bool ChangeTerrainAtlas(Bitmap atlas) {
 			if (!ValidateBitmap("terrain.png", atlas)) return false;
+			if (atlas.Width != atlas.Height) {
+				Chat.Add("&cUnable to use terrain.png from the texture pack.");
+				Chat.Add("&c Its width is not the same as its height.");
+				return false;
+			}
 			if (Graphics.LostContext) return false;
 			
 			LoadAtlas(atlas);
@@ -239,7 +244,7 @@ namespace ClassicalSharp {
 			WorldEvents.RaiseOnNewMap();
 			
 			World.blocks = null;
-			Drawer2D.InitColours();
+			IDrawer2D.InitCols();
 			BlockInfo.Reset(this);
 			TexturePack.ExtractDefault(this);
 			Gui.SetNewScreen(new DisconnectScreen(this, title, reason));

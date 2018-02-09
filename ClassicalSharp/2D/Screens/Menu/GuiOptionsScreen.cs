@@ -12,7 +12,6 @@ namespace ClassicalSharp.Gui.Screens {
 			base.Init();
 			ContextRecreated();
 			MakeValidators();
-			MakeDescriptions();
 		}
 		
 		protected override void ContextRecreated() {
@@ -27,7 +26,7 @@ namespace ClassicalSharp.Gui.Screens {
 				MakeOpt(1, -150, "Clickable chat",      onClick, GetClickable, SetClickable),
 				MakeOpt(1, -100, "Chat scale",          onClick, GetChatScale, SetChatScale),
 				MakeOpt(1, -50, "Chat lines",           onClick, GetChatlines, SetChatlines),
-				MakeOpt(1, 0, "Use font",               onClick, GetUseFont,   SetUseFont),
+				MakeOpt(1, 0, "Use system font",        onClick, GetUseFont,   SetUseFont),
 				MakeOpt(1, 50, "Font",                  onClick, GetFont,      SetFont),
 				
 				MakeBack(false, titleFont, SwitchOptions),
@@ -86,24 +85,15 @@ namespace ClassicalSharp.Gui.Screens {
 		}
 		
 		void HandleFontChange() {
-			int selIndex = IndexOfWidget(selectedWidget);
+			int selIndex = IndexOfWidget(selectedButton);
 			game.Events.RaiseChatFontChanged();
-			base.Dispose();
-			base.Init();
+			Recreate();
 			game.Gui.RefreshHud();
 			
-			for (int i = 0; i < widgets.Length; i++) {
-				if (widgets[i] == null || !(widgets[i] is ButtonWidget)) {
-					widgets[i] = null; continue;
-				}
-				
-				ButtonWidget btn = widgets[i] as ButtonWidget;
-				btn.font = titleFont;
-				btn.SetText(btn.Text);
+			if (selIndex >= 0) {
+				selectedButton = (ButtonWidget)widgets[selIndex];
+				if (selectedButton != null) selectedButton.Active = true;
 			}
-			
-			if (selIndex >= 0)
-				selectedWidget = (ButtonWidget)widgets[selIndex];
 		}
 		
 		void MakeValidators() {
@@ -119,14 +109,6 @@ namespace ClassicalSharp.Gui.Screens {
 				new IntegerValidator(0, 30),
 				new BooleanValidator(),
 				new StringValidator(),
-			};
-		}
-		
-		void MakeDescriptions() {
-			descriptions = new string[widgets.Length][];
-			descriptions[8] = new string[] {
-				"&eWhether a system font is used instead of default.png for drawing text",
-				"&fThe default system font used is Arial.",
 			};
 		}
 	}

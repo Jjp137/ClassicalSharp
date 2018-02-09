@@ -199,19 +199,8 @@ namespace ClassicalSharp.Network.Protocols {
 		
 		void HandleSetBlockPermission() {
 			byte blockId = reader.ReadUInt8();
-			bool canPlace = reader.ReadUInt8() != 0;
-			bool canDelete = reader.ReadUInt8() != 0;
-			
-			if (blockId == 0) {
-				int count = game.UseCPEBlocks ? Block.CpeCount : Block.OriginalCount;
-				for (int i = 1; i < count; i++) {
-					BlockInfo.CanPlace[i] = canPlace;
-					BlockInfo.CanDelete[i] = canDelete;
-				}
-			} else {
-				BlockInfo.CanPlace[blockId] = canPlace;
-				BlockInfo.CanDelete[blockId] = canDelete;
-			}
+			BlockInfo.CanPlace[blockId]  = reader.ReadUInt8() != 0;
+			BlockInfo.CanDelete[blockId] = reader.ReadUInt8() != 0;
 			game.Events.RaiseBlockPermissionsChanged();
 		}
 		
@@ -303,8 +292,9 @@ namespace ClassicalSharp.Network.Protocols {
 			                                reader.ReadUInt8(), reader.ReadUInt8());
 			byte code = reader.ReadUInt8();
 			
-			if (code <= ' ' || code > '~') return; // Control chars, space, extended chars cannot be used
-			if (code == '%' || code == '&') return; // colour code signifiers cannot be used
+			// disallow space, null, and colour code specifiers
+			if (code == '\0' || code == ' ' || code == 0xFF) return;
+			if (code == '%' || code == '&') return;
 			
 			IDrawer2D.Cols[code] = col;
 			game.Events.RaiseColourCodeChanged((char)code);
@@ -315,7 +305,7 @@ namespace ClassicalSharp.Network.Protocols {
 			if (!game.UseServerTextures) return;
 			
 			if (url == "") {
-				TexturePack.ExtractDefault(game);
+				if (game.World.TextureUrl != null) TexturePack.ExtractDefault(game);
 			} else if (Utils.IsUrlPrefix(url, 0)) {
 				net.RetrieveTexturePack(url);
 			}

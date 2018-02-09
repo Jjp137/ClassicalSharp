@@ -246,6 +246,19 @@ Int32 String_IndexOfString(STRING_PURE String* str, STRING_PURE String* sub) {
 	return -1;
 }
 
+Int32 String_Compare(STRING_PURE String* a, STRING_PURE String* b) {
+	Int32 minLen = min(a->length, b->length);
+	Int32 i;
+	for (i = 0; i < minLen; i++) {
+		if (a->buffer[i] == b->buffer[i]) continue;
+		return a->buffer[i] < b->buffer[i] ? 1 : -1;
+	}
+
+	/* all chars are equal here - same string, or a substring */
+	if (a->length == b->length) return 0;
+	return a->length < b->length ? 1 : -1;
+}
+
 
 #define Convert_ControlCharsCount 32
 UInt16 Convert_ControlChars[Convert_ControlCharsCount] = {
@@ -405,21 +418,26 @@ bool Convert_TryParseBool(STRING_PURE String* str, bool* value) {
 
 #define STRINGSBUFFER_LEN_SHIFT 10
 #define STRINGSBUFFER_LEN_MASK  0x3FFUL
-void StringBuffers_Init(StringsBuffer* buffer) {
-	buffer->Count = 0;
+void StringsBuffer_Init(StringsBuffer* buffer) {
+	StringsBuffer_UNSAFE_Reset(buffer);
 	buffer->TextBuffer  = buffer->DefaultBuffer;
 	buffer->FlagsBuffer = buffer->DefaultFlags;
-	buffer->TextBufferSize   = STRINGSBUFFER_BUFFER_DEF_SIZE;
+	buffer->TextBufferElems  = STRINGSBUFFER_BUFFER_DEF_SIZE;
 	buffer->FlagsBufferElems = STRINGSBUFFER_FLAGS_DEF_ELEMS;
 }
 
 void StringsBuffer_Free(StringsBuffer* buffer) {
-	if (buffer->TextBufferSize > STRINGSBUFFER_BUFFER_DEF_SIZE) {
+	if (buffer->TextBufferElems > STRINGSBUFFER_BUFFER_DEF_SIZE) {
 		Platform_MemFree(buffer->TextBuffer);
 	}
 	if (buffer->FlagsBufferElems > STRINGSBUFFER_FLAGS_DEF_ELEMS) {
 		Platform_MemFree(buffer->FlagsBuffer);
 	}
+}
+
+void StringsBuffer_UNSAFE_Reset(StringsBuffer* buffer) {
+	buffer->Count     = 0;
+	buffer->UsedElems = 0;
 }
 
 void StringsBuffer_Get(StringsBuffer* buffer, UInt32 index, STRING_TRANSIENT String* text) {
@@ -466,29 +484,25 @@ void StringsBuffer_Add(StringsBuffer* buffer, STRING_PURE String* text) {
 		StringsBuffer_ResizeArray(&buffer->FlagsBuffer, curElemSize, newElemsSize, reallocingElems);
 	}
 
-	UInt32 textOffset = 0;
-	if (buffer->Count > 0) {
-		UInt32 lastFlags  = buffer->FlagsBuffer[buffer->Count - 1];
-		UInt32 lastOffset = lastFlags >> STRINGSBUFFER_LEN_SHIFT;
-		UInt32 lastLen    = lastFlags  & STRINGSBUFFER_LEN_MASK;
-		textOffset = lastOffset + lastLen;
-	}
-
-	if (textOffset + text->length >= buffer->TextBufferSize) {
-		UInt32 curTextSize  = buffer->TextBufferSize;
-		UInt32 newTextSize  = buffer->TextBufferSize + STRINGSBUFFER_BUFFER_EXPAND_SIZE;
-		bool reallocingText = buffer->TextBufferSize > STRINGSBUFFER_BUFFER_DEF_SIZE;
-		StringsBuffer_ResizeArray(&buffer->FlagsBuffer, curTextSize, newTextSize, reallocingText);
-	}
-
 	if (text->length > STRINGSBUFFER_LEN_MASK) {
 		ErrorHandler_Fail("String too big to insert into StringsBuffer");
 	}
+
+	UInt32 textOffset = buffer->UsedElems;
+	if (textOffset + text->length >= buffer->TextBufferElems) {
+		UInt32 curTextSize  = buffer->TextBufferElems;
+		UInt32 newTextSize  = buffer->TextBufferElems + STRINGSBUFFER_BUFFER_EXPAND_SIZE;
+		bool reallocingText = buffer->TextBufferElems > STRINGSBUFFER_BUFFER_DEF_SIZE;
+		StringsBuffer_ResizeArray(&buffer->FlagsBuffer, curTextSize, newTextSize, reallocingText);
+	}
+
 	if (text->length > 0) {
 		Platform_MemCpy(&buffer->TextBuffer[textOffset], text->buffer, text->length);
 	}
 	buffer->FlagsBuffer[buffer->Count] = text->length | (textOffset << STRINGSBUFFER_LEN_SHIFT);
+
 	buffer->Count++;
+	buffer->UsedElems += text->length;
 }
 
 void StringsBuffer_Remove(StringsBuffer* buffer, UInt32 index) {
@@ -498,19 +512,17 @@ void StringsBuffer_Remove(StringsBuffer* buffer, UInt32 index) {
 	UInt32 offset = flags >> STRINGSBUFFER_LEN_SHIFT;
 	UInt32 len    = flags  & STRINGSBUFFER_LEN_MASK;
 
-	UInt32 lastFlags  = buffer->FlagsBuffer[buffer->Count - 1];
-	UInt32 lastOffset = lastFlags >> STRINGSBUFFER_LEN_SHIFT;
-	UInt32 lastLen    = lastFlags  & STRINGSBUFFER_LEN_MASK;
-
-	/* Imagine buffer is this: XXYYYYZZZ, and want to delete X */
+	/* Imagine buffer is this: AAXXYYZZ, and want to delete X */
 	/* Start points to first character of Y */
-	/* End points to last character of Z */
-	UInt32 i, start = offset + len, end = lastOffset + lastLen;
+	/* End points to character past last character of Z */
+	UInt32 i, start = offset + len, end = buffer->UsedElems;
 	for (i = start; i < end; i++) { 
 		buffer->TextBuffer[i - len] = buffer->TextBuffer[i]; 
 	}
 	for (i = index; i < buffer->Count; i++) {
 		buffer->FlagsBuffer[i] = buffer->FlagsBuffer[i + 1];
 	}
+
 	buffer->Count--;
+	buffer->UsedElems -= len;
 }

@@ -3,6 +3,7 @@
 #include "ExtMath.h"
 #include "TerrainAtlas.h"
 #include "Player.h"
+#include "Game.h"
 
 TextureLoc Block_TopTex[BLOCK_CPE_COUNT] = { 0,  1,  0,  2, 16,  4, 15, 17, 14, 14,
 30, 30, 18, 19, 32, 33, 34, 21, 22, 48, 49, 64, 65, 66, 67, 68, 69, 70, 71,
@@ -45,12 +46,12 @@ void Block_SetDefaultPerms(void) {
 		Block_CanDelete[block] = true;
 	}
 
-	Block_CanPlace[BLOCK_AIR] = false;        Block_CanDelete[BLOCK_AIR] = false;
-	Block_CanPlace[BLOCK_LAVA] = false;       Block_CanDelete[BLOCK_LAVA] = false;
-	Block_CanPlace[BLOCK_WATER] = false;      Block_CanDelete[BLOCK_WATER] = false;
+	Block_CanPlace[BLOCK_AIR] = false;         Block_CanDelete[BLOCK_AIR] = false;
+	Block_CanPlace[BLOCK_LAVA] = false;        Block_CanDelete[BLOCK_LAVA] = false;
+	Block_CanPlace[BLOCK_WATER] = false;       Block_CanDelete[BLOCK_WATER] = false;
 	Block_CanPlace[BLOCK_STILL_LAVA] = false;  Block_CanDelete[BLOCK_STILL_LAVA] = false;
 	Block_CanPlace[BLOCK_STILL_WATER] = false; Block_CanDelete[BLOCK_STILL_WATER] = false;
-	Block_CanPlace[BLOCK_BEDROCK] = false;    Block_CanDelete[BLOCK_BEDROCK] = false;
+	Block_CanPlace[BLOCK_BEDROCK] = false;     Block_CanDelete[BLOCK_BEDROCK] = false;
 }
 
 void Block_RecalcIsLiquid(BlockID b) {
@@ -362,6 +363,7 @@ void Block_CalcCulling(BlockID block, BlockID other) {
 	if (Block_IsLiquid[block]) bMax.Y -= 1.5f / 16.0f;
 	if (Block_IsLiquid[other]) oMax.Y -= 1.5f / 16.0f;
 
+	Block_Hidden[block * BLOCK_COUNT + other] = 0; /* set all faces 'not hidden' */
 	if (Block_Draw[block] == DRAW_SPRITE) {
 		Block_SetHidden(block, other, FACE_XMIN, true);
 		Block_SetHidden(block, other, FACE_XMAX, true);
@@ -433,9 +435,7 @@ bool Block_IsHidden(BlockID block, BlockID other) {
 
 void Block_SetHidden(BlockID block, BlockID other, Face face, bool value) {
 	value = Block_IsHidden(block, other) && Block_FaceOccluded(block, other, face) && value;
-	Int32 bit = value ? 1 : 0;
-	Block_Hidden[block * BLOCK_COUNT + other] &= (UInt8)~(1 << face);
-	Block_Hidden[block * BLOCK_COUNT + other] |= (UInt8)(bit << face);
+	Block_Hidden[block * BLOCK_COUNT + other] |= (UInt8)(value << face);
 }
 
 bool Block_IsFaceHidden(BlockID block, BlockID other, Face face) {

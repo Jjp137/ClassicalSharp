@@ -72,23 +72,22 @@ namespace ClassicalSharp {
 		// defer getting the targeted entity as it's a costly operation
 		internal int pickingId = -1;
 		internal void ButtonStateChanged(MouseButton button, bool pressed) {
-			if (buttonsDown[(int)button]) {
-				if (pickingId == -1) {
-					pickingId = game.Entities.GetClosetPlayer(game.LocalPlayer);
-				}
-				
-				game.Server.SendPlayerClick(button, false, (byte)pickingId, game.SelectedPos);
-				buttonsDown[(int)button] = false;
+			if (pressed) {
+				// Can send multiple Pressed events
+				ButtonStateUpdate(button, true);
+			} else {
+				if (!buttonsDown[(int)button]) return;
+				ButtonStateUpdate(button, false);
+			}
+		}
+		
+		void ButtonStateUpdate(MouseButton button, bool pressed) {
+			if (pickingId == -1) {
+				pickingId = game.Entities.GetClosetPlayer(game.LocalPlayer);
 			}
 			
-			if (pressed) {
-				if (pickingId == -1) {
-					pickingId = game.Entities.GetClosetPlayer(game.LocalPlayer);
-				}
-				
-				game.Server.SendPlayerClick(button, true, (byte)pickingId, game.SelectedPos);
-				buttonsDown[(int)button] = true;
-			}
+			game.Server.SendPlayerClick(button, pressed, (byte)pickingId, game.SelectedPos);
+			buttonsDown[(int)button] = pressed;
 		}
 		
 		internal void ScreenChanged(Screen oldScreen, Screen newScreen) {
@@ -127,8 +126,7 @@ namespace ClassicalSharp {
 		}
 
 		void MouseMove(object sender, MouseMoveEventArgs e) {
-			if (!game.Gui.ActiveScreen.HandlesMouseMove(e.X, e.Y)) {
-			}
+			game.Gui.ActiveScreen.HandlesMouseMove(e.X, e.Y);
 		}
 
 		void MouseWheelChanged(object sender, MouseWheelEventArgs e) {
@@ -144,18 +142,17 @@ namespace ClassicalSharp {
 
 		void KeyPressHandler(object sender, KeyPressEventArgs e) {
 			char key = e.KeyChar;
-			if (!game.Gui.ActiveScreen.HandlesKeyPress(key)) {
-			}
+			game.Gui.ActiveScreen.HandlesKeyPress(key);
 		}
 		
 		void KeyUpHandler(object sender, KeyboardKeyEventArgs e) {
 			Key key = e.Key;
 			if (SimulateMouse(key, false)) return;
 			
-			if (!game.Gui.ActiveScreen.HandlesKeyUp(key)) {
-				if (key == Keys[KeyBind.ZoomScrolling])
-					SetFOV(game.DefaultFov, false);
+			if (key == Keys[KeyBind.ZoomScrolling]) {
+				SetFOV(game.DefaultFov, false);
 			}
+			game.Gui.ActiveScreen.HandlesKeyUp(key);
 		}
 
 		static int[] normViewDists = new int[] { 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096 };
@@ -163,7 +160,7 @@ namespace ClassicalSharp {
 		Key lastKey;
 		void KeyDownHandler(object sender, KeyboardKeyEventArgs e) {
 			Key key = e.Key;
-			if (SimulateMouse(key, true)) return;			
+			if (SimulateMouse(key, true)) return;
 			
 			if (IsShutdown(key)) {
 				game.Exit();
@@ -265,7 +262,7 @@ namespace ClassicalSharp {
 			}
 		}
 		
-		void CycleDistanceForwards(int[] viewDists) {		
+		void CycleDistanceForwards(int[] viewDists) {
 			for (int i = 0; i < viewDists.Length; i++) {
 				int dist = viewDists[i];
 				if (dist > game.UserViewDistance) {

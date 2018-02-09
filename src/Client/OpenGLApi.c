@@ -6,6 +6,7 @@
 #include "GraphicsCommon.h"
 #include "Funcs.h"
 #define WIN32_LEAN_AND_MEAN
+#define NOSERVICE
 #define NOMCX
 #define NOIME
 #include <Windows.h>
@@ -155,7 +156,7 @@ void Gfx_BindTexture(GfxResourceID texId) {
 }
 
 void Gfx_DeleteTexture(GfxResourceID* texId) {
-	if (*texId <= 0) return;
+	if (*texId == NULL) return;
 	glDeleteTextures(1, texId);
 	*texId = NULL;
 }
@@ -312,7 +313,7 @@ void Gfx_BindIb(GfxResourceID ib) {
 }
 
 void Gfx_DeleteVb(GfxResourceID* vb) {
-	if (*vb <= 0) return;
+	if (*vb == NULL) return;
 
 	if (gl_lists) { 
 		if (*vb != gl_DYNAMICLISTID) glDeleteLists(*vb, 1); 
@@ -323,7 +324,7 @@ void Gfx_DeleteVb(GfxResourceID* vb) {
 }
 
 void Gfx_DeleteIb(GfxResourceID* ib) {
-	if (gl_lists || *ib <= 0) return;
+	if (gl_lists || *ib == NULL) return;
 	glDeleteBuffers(1, ib);
 	*ib = NULL;
 }

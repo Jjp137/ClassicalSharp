@@ -2,6 +2,7 @@
 using System;
 using System.Drawing;
 using ClassicalSharp;
+using Launcher.Web;
 using Launcher.Gui.Views;
 using Launcher.Gui.Widgets;
 using OpenTK.Input;
@@ -11,22 +12,46 @@ namespace Launcher.Gui.Screens {
 		
 		const int tableX = 10, tableY = 50;
 		ServersView view;
+		FetchServersTask fetchTask;
+		FetchFlagsTask flagsTask;
 		
 		public ServersScreen(LauncherWindow game) : base(game) {
 			enterIndex = 3;
 			view = new ServersView(game);
-			widgets = view.widgets;
+			widgets = view.widgets;		
+			flagsTask = new FetchFlagsTask();
+			FetchFlags(game);
+		}
+		
+		void FetchFlags(LauncherWindow game) {
+			int oldCount = FetchFlagsTask.DownloadedCount;
+			bool wasFetching = oldCount < FetchFlagsTask.Flags.Count;
+			for (int i = 0; i < game.Servers.Count; i++) {
+				flagsTask.AsyncGetFlag(game.Servers[i].Flag);
+			}
+			
+			int count = FetchFlagsTask.Flags.Count;
+			flagsTask.Game = game;
+			if (wasFetching || oldCount == count) return;
+			flagsTask.RunAsync(game);
 		}
 		
 		public override void Tick() {
 			base.Tick();
-			if (fetchingList) CheckFetchStatus();
+			if (fetchTask != null) CheckFetchStatus();
+			flagsTask.Tick();
 			
 			TableWidget table = (TableWidget)widgets[view.tableIndex];
 			if (!game.Window.Mouse[MouseButton.Left]) {
 				table.DraggingColumn = -1;
 				table.DraggingScrollbar = false;
 				table.mouseOffset = 0;
+			}
+			
+			if (flagsTask.PendingRedraw) {
+				table.RedrawFlags();
+				game.Dirty = true;
+				flagsTask.PendingRedraw = false;
 			}
 		}
 		
@@ -134,12 +159,10 @@ namespace Launcher.Gui.Screens {
 			game.ConnectToServer(table.servers, Get(view.hashIndex));
 		}
 		
-		bool fetchingList = false;
 		void RefreshList(int mouseX, int mouseY) {
-			if (fetchingList) return;
-			fetchingList = true;
-			game.Session.FetchServersAsync();
-
+			if (fetchTask != null) return;
+			fetchTask = new FetchServersTask();
+			fetchTask.RunAsync(game);
 			view.RefreshText = "&eWorking..";
 			Resize();
 		}
@@ -187,10 +210,16 @@ namespace Launcher.Gui.Screens {
 		}
 		
 		void CheckFetchStatus() {
-			if (!game.Session.Done) return;
-			fetchingList = false;
+			fetchTask.Tick();
+			if (!fetchTask.Completed) return;
 			
-			view.RefreshText = game.Session.Exception == null ? "Refresh" : "&cFailed";
+			if (fetchTask.Success) {
+				game.Servers = fetchTask.Servers;
+				FetchFlags(game);
+			}
+						
+			view.RefreshText = fetchTask.Success ? "Refresh" : "&cFailed";
+			fetchTask = null;
 			Resize();
 			
 			// needed to ensure 'highlighted server hash' is over right entry after refresh

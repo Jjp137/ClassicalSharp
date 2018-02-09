@@ -13,6 +13,7 @@
 #include "Platform.h"
 #include "WordWrap.h"
 #include "ServerConnection.h"
+#include "Event.h"
 
 void Widget_SetLocation(Widget* widget, Anchor horAnchor, Anchor verAnchor, Int32 xOffset, Int32 yOffset) {
 	widget->HorAnchor = horAnchor; widget->VerAnchor = verAnchor;
@@ -502,13 +503,6 @@ Int32 Table_Height(TableWidget* widget) {
 	return min(widget->RowsCount, TABLE_MAX_ROWS_DISPLAYED) * widget->BlockSize + 10 + 40;
 }
 
-/* These were sourced by taking a screenshot of vanilla
-   Then using paint to extract the colour components
-   Then using wolfram alpha to solve the glblendfunc equation */
-PackedCol Table_TopBackCol    = PACKEDCOL_CONST( 34,  34,  34, 168);
-PackedCol Table_BottomBackCol = PACKEDCOL_CONST( 57,  57, 104, 202);
-PackedCol Table_TopSelCol     = PACKEDCOL_CONST(255, 255, 255, 142);
-PackedCol Table_BottomSelCol  = PACKEDCOL_CONST(255, 255, 255, 192);
 #define TABLE_MAX_VERTICES (8 * 10 * ISOMETRICDRAWER_MAXVERTICES)
 
 bool TableWidget_GetCoords(TableWidget* widget, Int32 i, Int32* winX, Int32* winY) {
@@ -630,10 +624,19 @@ void TableWidget_Init(GuiElement* elem) {
 	elem->Recreate(elem);
 }
 
-void TableWidget_Render(GuiElement* elem, Real64 delta) {
+void TableWidget_Render(GuiElement* elem, Real64 delta) {	
+	/* These were sourced by taking a screenshot of vanilla
+	Then using paint to extract the colour components
+	Then using wolfram alpha to solve the glblendfunc equation */
+	PackedCol topBackCol    = PACKEDCOL_CONST( 34,  34,  34, 168);
+	PackedCol bottomBackCol = PACKEDCOL_CONST( 57,  57, 104, 202);
+	PackedCol topSelCol     = PACKEDCOL_CONST(255, 255, 255, 142);
+	PackedCol bottomSelCol  = PACKEDCOL_CONST(255, 255, 255, 192);
+
 	TableWidget* widget = (TableWidget*)elem;
 	GfxCommon_Draw2DGradient(Table_X(widget), Table_Y(widget),
-		Table_Width(widget), Table_Height(widget), Table_TopBackCol, Table_BottomBackCol);
+		Table_Width(widget), Table_Height(widget), topBackCol, bottomBackCol);
+
 	if (widget->RowsCount > TABLE_MAX_ROWS_DISPLAYED) {
 		GuiElement* scroll = &widget->Scroll.Base.Base;
 		scroll->Render(scroll, delta);
@@ -646,7 +649,7 @@ void TableWidget_Render(GuiElement* elem, Real64 delta) {
 		Real32 off = blockSize * 0.1f;
 		Int32 size = (Int32)(blockSize + off * 2);
 		GfxCommon_Draw2DGradient((Int32)(x - off), (Int32)(y - off), 
-			size, size, Table_TopSelCol, Table_BottomSelCol);
+			size, size, topSelCol, bottomSelCol);
 	}
 	Gfx_SetTexturing(true);
 	Gfx_SetBatchFormat(VERTEX_FORMAT_P3FT2FC4B);
@@ -850,16 +853,15 @@ void TableWidget_OnInventoryChanged(TableWidget* widget) {
 
 
 void SpecialInputWidget_UpdateColString(SpecialInputWidget* widget) {
-	Int32 count = 0, i;
-	for (i = ' '; i <= '~'; i++) {
+	UInt32 count = 0, i;
+	for (i = 0; i < DRAWER2D_MAX_COLS; i++) {
 		if (i >= 'A' && i <= 'F') continue;
 		if (Drawer2D_Cols[i].A > 0) count++;
 	}
 
 	widget->ColString = String_InitAndClearArray(widget->ColBuffer);
 	String* buffer = &widget->ColString;
-	Int32 index = 0;
-	for (i = ' '; i <= '~'; i++) {
+	for (i = 0; i < DRAWER2D_MAX_COLS; i++) {
 		if (i >= 'A' && i <= 'F') continue;
 		if (Drawer2D_Cols[i].A == 0) continue;
 
@@ -1236,7 +1238,7 @@ void InputWidget_Clear(InputWidget* widget) {
 	Gfx_DeleteTexture(&widget->InputTex.ID);
 }
 
-bool InputWidget_AllowedChar(InputWidget* widget, UInt8 c) {
+bool InputWidget_AllowedChar(GuiElement* elem, UInt8 c) {
 	return Utils_IsValidInputChar(c, ServerConnection_SupportsFullCP437);
 }
 
@@ -1253,7 +1255,7 @@ void InputWidget_AppendChar(InputWidget* widget, UInt8 c) {
 bool InputWidget_TryAppendChar(InputWidget* widget, UInt8 c) {
 	Int32 maxChars = widget->GetMaxLines() * widget->MaxCharsPerLine;
 	if (widget->Text.length >= maxChars) return false;
-	if (!InputWidget_AllowedChar(widget, c)) return false;
+	if (!widget->AllowedChar(&widget->Base.Base, c)) return false;
 
 	InputWidget_AppendChar(widget, c);
 	return true;
@@ -1510,6 +1512,7 @@ void InputWidget_Create(InputWidget* widget, FontDesc* font, STRING_REF String* 
 	widget->Prefix = *prefix;
 	widget->CaretPos = -1;
 	widget->MaxCharsPerLine = STRING_SIZE;
+	widget->AllowedChar = InputWidget_AllowedChar;
 
 	widget->Base.Base.Init     = InputWidget_Init;
 	widget->Base.Base.Free     = InputWidget_Free;
@@ -1533,4 +1536,653 @@ void InputWidget_Create(InputWidget* widget, FontDesc* font, STRING_REF String* 
 	Size2D size = Drawer2D_MeasureText(&args);
 	widget->PrefixWidth  = (UInt16)size.Width;  widget->Base.Width  = size.Width;
 	widget->PrefixHeight = (UInt16)size.Height; widget->Base.Height = size.Height;
+}
+
+
+bool MenuInputValidator_AlwaysValidChar(MenuInputValidator* validator, UInt8 c) { return true; }
+bool MenuInputValidator_AlwaysValidString(MenuInputValidator* validator, STRING_PURE String* s) { return true; }
+
+void HexColourValidator_GetRange(MenuInputValidator* validator, STRING_TRANSIENT String* range) {
+	String_AppendConst(range, "&7(#000000 - #FFFFFF)");
+}
+
+bool HexColourValidator_IsValidChar(MenuInputValidator* validator, UInt8 c) {
+	return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f');
+}
+
+bool HexColourValidator_IsValidString(MenuInputValidator* validator, STRING_PURE String* s) {
+	return s->length <= 6;
+}
+
+bool HexColourValidator_IsValidValue(MenuInputValidator* validator, STRING_PURE String* s) {
+	PackedCol col;
+	return PackedCol_TryParseHex(s, &col);
+}
+
+MenuInputValidator MenuInputValidator_Hex(void) {
+	MenuInputValidator validator;
+	validator.GetRange      = HexColourValidator_GetRange;
+	validator.IsValidChar   = HexColourValidator_IsValidChar;
+	validator.IsValidString = HexColourValidator_IsValidString;
+	validator.IsValidValue  = HexColourValidator_IsValidValue;
+	return validator;
+}
+
+void IntegerValidator_GetRange(MenuInputValidator* validator, STRING_TRANSIENT String* range) {
+	String_AppendConst(range, "&7(");
+	String_AppendInt32(range, validator->Meta_Int[0]);
+	String_AppendConst(range, " - ");
+	String_AppendInt32(range, validator->Meta_Int[1]);
+	String_AppendConst(range, ")");
+}
+
+bool IntegerValidator_IsValidChar(MenuInputValidator* validator, UInt8 c) {
+	return (c >= '0' && c <= '9') || c == '-';
+}
+
+bool IntegerValidator_IsValidString(MenuInputValidator* validator, STRING_PURE String* s) {
+	Int32 value;
+	if (s->length == 1 && s->buffer[0] == '-') return true; /* input is just a minus sign */
+	return Convert_TryParseInt32(s, &value);
+}
+
+bool IntegerValidator_IsValidValue(MenuInputValidator* validator, STRING_PURE String* s) {
+	Int32 value;
+	if (!Convert_TryParseInt32(s, &value)) return false;
+
+	Int32 min = validator->Meta_Int[0], max = validator->Meta_Int[1];
+	return min <= value && value <= max;
+}
+
+MenuInputValidator MenuInputValidator_Integer(Int32 min, Int32 max) {
+	MenuInputValidator validator;
+	validator.GetRange      = IntegerValidator_GetRange;
+	validator.IsValidChar   = IntegerValidator_IsValidChar;
+	validator.IsValidString = IntegerValidator_IsValidString;
+	validator.IsValidValue  = IntegerValidator_IsValidValue;
+
+	validator.Meta_Int[0] = min;
+	validator.Meta_Int[1] = max;
+	return validator;
+}
+
+void SeedValidator_GetRange(MenuInputValidator* validator, STRING_TRANSIENT String* range) {
+	String_AppendConst(range, "&7(an integer)");
+}
+
+MenuInputValidator MenuInputValidator_Seed(void) {
+	MenuInputValidator validator = MenuInputValidator_Integer(Int32_MinValue, Int32_MaxValue);
+	validator.GetRange = SeedValidator_GetRange;
+	return validator;
+}
+
+void RealValidator_GetRange(MenuInputValidator* validator, STRING_TRANSIENT String* range) {
+	String_AppendConst(range, "&7(");
+	String_AppendReal32(range, validator->Meta_Real[0]);
+	String_AppendConst(range, " - ");
+	String_AppendReal32(range, validator->Meta_Real[1]);
+	String_AppendConst(range, ")");
+}
+
+bool RealValidator_IsValidChar(MenuInputValidator* validator, UInt8 c) {
+	return (c >= '0' && c <= '9') || c == '-' || c == '.' || c == ',';
+}
+
+bool RealValidator_IsValidString(MenuInputValidator* validator, STRING_PURE String* s) {
+	Real32 value;
+	if (s->length == 1 && RealValidator_IsValidChar(validator, s->buffer[0])) return true;
+	return Convert_TryParseReal32(s, &value);
+}
+
+bool RealValidator_IsValidValue(MenuInputValidator* validator, STRING_PURE String* s) {
+	Real32 value;
+	if (!Convert_TryParseReal32(s, &value)) return false;
+	Real32 min = validator->Meta_Real[0], max = validator->Meta_Real[1];
+	return min <= value && value <= max;
+}
+
+MenuInputValidator MenuInputValidator_Real(Real32 min, Real32 max) {
+	MenuInputValidator validator;
+	validator.GetRange      = RealValidator_GetRange;
+	validator.IsValidChar   = RealValidator_IsValidChar;
+	validator.IsValidString = RealValidator_IsValidString;
+	validator.IsValidValue  = RealValidator_IsValidValue;
+	validator.Meta_Real[0] = min;
+	validator.Meta_Real[1] = max;
+	return validator;
+}
+
+void PathValidator_GetRange(MenuInputValidator* validator, STRING_TRANSIENT String* range) {
+	String_AppendConst(range, "&7(Enter name)");
+}
+
+bool PathValidator_IsValidChar(MenuInputValidator* validator, UInt8 c) {
+	return !(c == '/' || c == '\\' || c == '?' || c == '*' || c == ':'
+		|| c == '<' || c == '>' || c == '|' || c == '"' || c == '.');
+}
+
+MenuInputValidator MenuInputValidator_Path(void) {
+	MenuInputValidator validator;
+	validator.GetRange      = PathValidator_GetRange;
+	validator.IsValidChar   = PathValidator_IsValidChar;
+	validator.IsValidString = MenuInputValidator_AlwaysValidString;
+	validator.IsValidValue  = MenuInputValidator_AlwaysValidString;
+	return validator;
+}
+
+void BooleanInputValidator_GetRange(MenuInputValidator* validator, STRING_TRANSIENT String* range) {
+	String_AppendConst(range, "&7(yes or no)");
+}
+
+MenuInputValidator MenuInputValidator_Boolean(void) {
+	MenuInputValidator validator;
+	validator.GetRange      = BooleanInputValidator_GetRange;
+	validator.IsValidChar   = MenuInputValidator_AlwaysValidChar;
+	validator.IsValidString = MenuInputValidator_AlwaysValidString;
+	validator.IsValidValue  = MenuInputValidator_AlwaysValidString;
+	return validator;
+}
+
+MenuInputValidator MenuInputValidator_Enum(const UInt8** names, UInt32 namesCount) {
+	MenuInputValidator validator = MenuInputValidator_Boolean();
+	validator.Meta_Ptr[0] = names;
+	validator.Meta_Ptr[1] = (void*)namesCount; /* TODO: Need to handle void* size < 32 bits?? */
+	return validator;
+}
+
+void StringValidator_GetRange(MenuInputValidator* validator, STRING_TRANSIENT String* range) {
+	String_AppendConst(range, "&7(Enter text)");
+}
+
+bool StringValidator_IsValidChar(MenuInputValidator* validator, UInt8 c) {
+	return c != '&' && Utils_IsValidInputChar(c, true);
+}
+
+bool StringValidator_IsValidString(MenuInputValidator* validator, STRING_PURE String* s) {
+	return s->length <= STRING_SIZE;
+}
+
+MenuInputValidator MenuInputValidator_String(void) {
+	MenuInputValidator validator;
+	validator.GetRange       = StringValidator_GetRange;
+	validator.IsValidChar    = StringValidator_IsValidChar;
+	validator.IsValidString  = StringValidator_IsValidString;
+	validator.IsValidValue   = StringValidator_IsValidString;
+	return validator;
+}
+
+
+void MenuInputWidget_Render(GuiElement* elem, Real64 delta) {
+	Widget* elemW = (Widget*)elem;
+	PackedCol backCol = PACKEDCOL_CONST(30, 30, 30, 200);
+	Gfx_SetTexturing(false);
+	GfxCommon_Draw2DFlat(elemW->X, elemW->Y, elemW->Width, elemW->Height, backCol);
+	Gfx_SetTexturing(true);
+
+	InputWidget* widget = (InputWidget*)elem;
+	Texture_Render(&widget->InputTex);
+	InputWidget_RenderCaret(widget, delta);
+}
+
+void MenuInputWidget_RemakeTexture(GuiElement* elem) {
+	Widget* elemW = (Widget*)elem;
+	MenuInputWidget* widget = (MenuInputWidget*)elem;
+
+	DrawTextArgs args;
+	DrawTextArgs_Make(&args, &widget->Base.Lines[0], &widget->Base.Font, false);
+	Size2D size = Drawer2D_MeasureText(&args);
+	widget->Base.CaretAccumulator = 0.0;
+
+	UInt8 rangeBuffer[String_BufferSize(STRING_SIZE)];
+	String range = String_InitAndClearArray(rangeBuffer);
+	MenuInputValidator* validator = &widget->Validator;
+	validator->GetRange(validator, &range);
+
+	/* Ensure we don't have 0 text height */
+	if (size.Height == 0) {
+		args.Text = range;
+		size.Height = Drawer2D_MeasureText(&args).Height;
+		args.Text = widget->Base.Lines[0];
+	}
+
+	elemW->Width  = max(size.Width,  widget->MinWidth);
+	elemW->Height = max(size.Height, widget->MinHeight);
+	Size2D adjSize = size; adjSize.Width = elemW->Width;
+
+	Bitmap bmp; Bitmap_AllocatePow2(&bmp, adjSize.Width, adjSize.Height);
+	Drawer2D_Begin(&bmp);
+	Drawer2D_DrawText(&args, widget->Base.Padding, 0);
+
+	args.Text = range;
+	Size2D hintSize = Drawer2D_MeasureText(&args);
+	Int32 hintX = adjSize.Width - hintSize.Width;
+	if (size.Width + 3 < hintX) {
+		Drawer2D_DrawText(&args, hintX, 0);
+	}
+
+	Drawer2D_End();
+	Texture* tex = &widget->Base.InputTex;
+	*tex = Drawer2D_Make2DTexture(&bmp, adjSize, 0, 0);
+
+	elemW->Reposition(elemW);
+	tex->X = elemW->X; tex->Y = elemW->Y;
+	if (size.Height < widget->MinHeight) {
+		tex->Y += widget->MinHeight / 2 - size.Height / 2;
+	}
+}
+
+bool MenuInputWidget_AllowedChar(GuiElement* elem, UInt8 c) {
+	if (c == '&' || !Utils_IsValidInputChar(c, true)) return false;
+	MenuInputWidget* widget = (MenuInputWidget*)elem;
+	InputWidget* elemW = (InputWidget*)elem;
+	MenuInputValidator* validator = &widget->Validator;
+
+	if (!validator->IsValidChar(validator, c)) return false;
+	Int32 maxChars = elemW->GetMaxLines() * elemW->MaxCharsPerLine;
+	if (elemW->Text.length == maxChars) return false;
+
+	/* See if the new string is in valid format */
+	InputWidget_AppendChar(elemW, c);
+	bool valid = validator->IsValidString(validator, &elemW->Text);
+	InputWidget_DeleteChar(elemW);
+	return valid;
+}
+
+Int32 MenuInputWidget_GetMaxLines(void) { return 1; }
+void MenuInputWidget_Create(MenuInputWidget* widget, Int32 width, Int32 height, STRING_PURE String* text, FontDesc* font, MenuInputValidator* validator) {
+	InputWidget_Create(&widget->Base, font, NULL);
+	widget->MinWidth = width;
+	widget->MinHeight = height;
+	widget->Validator = *validator;
+
+	widget->Base.Padding = 3;	
+	widget->Base.Text = String_InitAndClearArray(widget->TextBuffer);
+	widget->Base.GetMaxLines   = MenuInputWidget_GetMaxLines;
+	widget->Base.AllowedChar   = MenuInputWidget_AllowedChar;
+	widget->Base.RemakeTexture = MenuInputWidget_RemakeTexture;
+
+	GuiElement* elem = &widget->Base.Base.Base;
+	elem->Render = MenuInputWidget_Render;
+	elem->Init(elem);
+	InputWidget_AppendString(&widget->Base, text);
+}
+
+
+#define GROUP_NAME_ID UInt16_MaxValue
+#define LIST_COLUMN_PADDING 5
+#define LIST_BOUNDS_SIZE 10
+#define LIST_NAMES_PER_COLUMN 16
+
+Texture PlayerListWidget_DrawName(PlayerListWidget* widget, STRING_PURE String* name) {
+	UInt8 tmpBuffer[String_BufferSize(STRING_SIZE)];
+	String tmp;
+	if (Game_PureClassic) {
+		tmp = String_InitAndClearArray(tmpBuffer);
+		String_AppendColorless(&tmp, name);
+	} else {
+		tmp = *name;
+	}
+
+	DrawTextArgs args; DrawTextArgs_Make(&args, &tmp, &widget->Font, !widget->Classic);
+	Texture tex = Drawer2D_MakeTextTexture(&args, 0, 0);
+	Drawer2D_ReducePadding_Tex(&tex, widget->Font.Size, 3);
+	return tex;
+}
+
+
+Int32 PlayerListWidget_HighlightedName(PlayerListWidget* widget, Int32 mouseX, Int32 mouseY) {
+	Int32 i;
+	for (i = 0; i < widget->NamesCount; i++) {
+		if (!Texture_IsValid(&widget->Textures[i]) || widget->IDs[i] == GROUP_NAME_ID) continue;
+
+		Texture t = widget->Textures[i];
+		if (Gui_Contains(t.X, t.Y, t.Width, t.Height, mouseX, mouseY)) return i;
+	}
+	return -1;
+}
+
+void PlayerListWidget_GetNameUnder(PlayerListWidget* widget, Int32 mouseX, Int32 mouseY, STRING_TRANSIENT String* name) {
+	String_Clear(name);
+	Int32 i = PlayerListWidget_HighlightedName(widget, mouseX, mouseY);
+	if (i == -1) return;
+
+	String player = TabList_UNSAFE_GetPlayer(widget->IDs[i]);
+	String_AppendString(name, &player);
+}
+
+void PlayerListWidget_UpdateTableDimensions(PlayerListWidget* widget) {
+	Int32 width = widget->XMax - widget->XMin, height = widget->YHeight;
+	widget->Base.X = (widget->XMin                ) - LIST_BOUNDS_SIZE;
+	widget->Base.Y = (Game_Height / 2 - height / 2) - LIST_BOUNDS_SIZE;
+	widget->Base.Width  = width  + LIST_BOUNDS_SIZE * 2;
+	widget->Base.Height = height + LIST_BOUNDS_SIZE * 2;
+}
+
+Int32 PlayerListWidget_GetColumnWidth(PlayerListWidget* widget, Int32 column) {
+	Int32 i = column * LIST_NAMES_PER_COLUMN;
+	Int32 maxWidth = 0;
+	Int32 maxIndex = min(widget->NamesCount, i + LIST_NAMES_PER_COLUMN);
+
+	for (; i < maxIndex; i++) {
+		maxWidth = max(maxWidth, widget->Textures[i].Width);
+	}
+	return maxWidth + LIST_COLUMN_PADDING + widget->ElementOffset;
+}
+
+Int32 PlayerListWidget_GetColumnHeight(PlayerListWidget* widget, Int32 column) {
+	Int32 i = column * LIST_NAMES_PER_COLUMN;
+	Int32 total = 0;
+	Int32 maxIndex = min(widget->NamesCount, i + LIST_NAMES_PER_COLUMN);
+
+	for (; i < maxIndex; i++) {
+		total += widget->Textures[i].Height + 1;
+	}
+	return total;
+}
+
+void PlayerListWidget_SetColumnPos(PlayerListWidget* widget, Int32 column, Int32 x, Int32 y) {
+	Int32 i = column * LIST_NAMES_PER_COLUMN;
+	Int32 maxIndex = min(widget->NamesCount, i + LIST_NAMES_PER_COLUMN);
+
+	for (; i < maxIndex; i++) {
+		Texture tex = widget->Textures[i];
+		tex.X = (Int16)x; tex.Y = (Int16)(y - 10);
+
+		y += tex.Height + 1;
+		/* offset player names a bit, compared to group name */
+		if (!widget->Classic && widget->IDs[i] != GROUP_NAME_ID) {
+			tex.X += (Int16)widget->ElementOffset;
+		}
+		widget->Textures[i] = tex;
+	}
+}
+
+void PlayerListWidget_RepositionColumns(PlayerListWidget* widget) {
+	Int32 width = 0, centreX = Game_Width / 2;
+	widget->YHeight = 0;
+
+	Int32 col, columns = Math_CeilDiv(widget->NamesCount, LIST_NAMES_PER_COLUMN);
+	for (col = 0; col < columns; col++) {
+		width += PlayerListWidget_GetColumnWidth(widget, col);
+		Int32 colHeight = PlayerListWidget_GetColumnHeight(widget, col);
+		widget->YHeight = max(colHeight, widget->YHeight);
+	}
+
+	if (width < 480) width = 480;
+	widget->XMin = centreX - width / 2;
+	widget->XMax = centreX + width / 2;
+
+	Int32 x = widget->XMin, y = Game_Height / 2 - widget->YHeight / 2;
+	for (col = 0; col < columns; col++) {
+		PlayerListWidget_SetColumnPos(widget, col, x, y);
+		x += PlayerListWidget_GetColumnWidth(widget, col);
+	}
+}
+
+void PlayerListWidget_RecalcYOffset(PlayerListWidget* widget) {
+	Int32 yPosition = Game_Height / 4 - widget->Base.Height / 2;
+	widget->Base.YOffset = -max(0, yPosition);
+}
+
+void PlayerListWidget_Reposition(Widget* elem) {
+	Int32 oldX = elem->X, oldY = elem->Y;
+	Widget_DoReposition(elem);
+	PlayerListWidget* widget = (PlayerListWidget*)elem;
+
+	Int32 i;
+	for (i = 0; i < widget->NamesCount; i++) {
+		widget->Textures[i].X += elem->X - oldX;
+		widget->Textures[i].Y += elem->Y - oldY;
+	}
+}
+
+void PlayerListWidget_AddName(PlayerListWidget* widget, EntityID id, Int32 index) {
+	/* insert at end of list */
+	if (index == -1) { index = widget->NamesCount; widget->NamesCount++; }
+
+	String name = TabList_UNSAFE_GetList(id);
+	widget->IDs[index]      = id;
+	widget->Textures[index] = PlayerListWidget_DrawName(widget, &name);
+}
+
+void PlayerListWidget_DeleteAt(PlayerListWidget* widget, Int32 i) {
+	Texture tex = widget->Textures[i];
+	Gfx_DeleteTexture(&tex.ID);
+
+	for (; i < widget->NamesCount - 1; i++) {
+		widget->IDs[i]      = widget->IDs[i + 1];
+		widget->Textures[i] = widget->Textures[i + 1];
+	}
+
+	widget->IDs[widget->NamesCount] = 0;
+	widget->Textures[widget->NamesCount] = Texture_MakeInvalid();
+	widget->NamesCount--;
+}
+
+void PlayerListWidget_DeleteGroup(PlayerListWidget* widget, Int32* i) {
+	PlayerListWidget_DeleteAt(widget, *i);
+	(*i)--;
+}
+
+void PlayerListWidget_AddGroup(PlayerListWidget* widget, UInt16 id, Int32* index) {
+	Int32 i;
+	for (i = Array_NumElements(widget->IDs) - 1; i > (*index); i--) {
+		widget->IDs[i] = widget->IDs[i - 1];
+		widget->Textures[i] = widget->Textures[i - 1];
+	}
+
+	String group = TabList_UNSAFE_GetGroup(id);
+	widget->IDs[*index] = GROUP_NAME_ID;
+	widget->Textures[*index] = PlayerListWidget_DrawName(widget, &group);
+
+	(*index)++;
+	widget->NamesCount++;
+}
+
+Int32 PlayerListWidget_GetGroupCount(PlayerListWidget* widget, UInt16 id, Int32 idx) {
+	String group = TabList_UNSAFE_GetGroup(id);
+	Int32 count = 0;
+
+	while (idx < widget->NamesCount) {
+		String curGroup = TabList_UNSAFE_GetGroup(widget->IDs[idx]);
+		if (!String_CaselessEquals(&group, &curGroup)) return count;
+		idx++; count++;
+	}
+	return count;
+}
+
+Int32 PlayerListWidget_PlayerCompare(UInt16 x, UInt16 y) {
+	UInt8 xRank = TabList_GroupRanks[x];
+	UInt8 yRank = TabList_GroupRanks[y];
+	if (xRank != yRank) return (xRank < yRank ? 1 : -1);
+
+	UInt8 xNameBuffer[String_BufferSize(STRING_SIZE)];
+	String xName    = String_InitAndClearArray(xNameBuffer);
+	String xNameRaw = TabList_UNSAFE_GetList(x);
+	String_AppendColorless(&xName, &xNameRaw);
+
+	UInt8 yNameBuffer[String_BufferSize(STRING_SIZE)];
+	String yName    = String_InitAndClearArray(yNameBuffer);
+	String yNameRaw = TabList_UNSAFE_GetList(y);
+	String_AppendColorless(&yName, &yNameRaw);
+
+	return String_Compare(&xName, &yName);
+}
+
+Int32 PlayerListWidget_GroupCompare(UInt16 x, UInt16 y) {
+	UInt8 xGroupBuffer[String_BufferSize(STRING_SIZE)];
+	String xGroup    = String_InitAndClearArray(xGroupBuffer);
+	String xGroupRaw = TabList_UNSAFE_GetGroup(x);
+	String_AppendColorless(&xGroup, &xGroupRaw);
+
+	UInt8 yGroupBuffer[String_BufferSize(STRING_SIZE)];
+	String yGroup    = String_InitAndClearArray(yGroupBuffer);
+	String yGroupRaw = TabList_UNSAFE_GetGroup(y);
+	String_AppendColorless(&yGroup, &yGroupRaw);
+
+	return String_Compare(&xGroup, &yGroup);
+}
+
+PlayerListWidget* List_SortObj;
+Int32 (*List_SortCompare)(UInt16 x, UInt16 y);
+void PlayerListWidget_QuickSort(Int32 left, Int32 right) {
+	Texture* values = List_SortObj->Textures; Texture value;
+	UInt16* keys = List_SortObj->IDs;         UInt16 key;
+	while (left < right) {
+		Int32 i = left, j = right;
+		UInt16 pivot = keys[(i + j) / 2];
+
+		/* partition the list */
+		while (i <= j) {
+			while (List_SortCompare(pivot, keys[i]) > 0) i++;
+			while (List_SortCompare(pivot, keys[j]) < 0) j--;
+			QuickSort_Swap_KV_Maybe();
+		}
+		/* recurse into the smaller subset */
+		QuickSort_Recurse(PlayerListWidget_QuickSort)
+	}
+}
+
+void PlayerListWidget_SortEntries(PlayerListWidget* widget) {
+	if (widget->NamesCount == 0) return;
+	List_SortObj = widget;
+	if (widget->Classic) {
+		List_SortCompare = PlayerListWidget_PlayerCompare;
+		PlayerListWidget_QuickSort(0, widget->NamesCount - 1);
+		return;
+	}
+
+	/* Sort the list into groups */
+	Int32 i;
+	for (i = 0; i < widget->NamesCount; i++) {
+		if (widget->IDs[i] != GROUP_NAME_ID) continue;
+		PlayerListWidget_DeleteGroup(widget, &i);
+	}
+	List_SortCompare = PlayerListWidget_GroupCompare;
+	PlayerListWidget_QuickSort(0, widget->NamesCount - 1);
+
+	/* Sort the entries in each group */
+	i = 0;
+	List_SortCompare = PlayerListWidget_PlayerCompare;
+	while (i < widget->NamesCount) {
+		UInt16 id = widget->IDs[i];
+		PlayerListWidget_AddGroup(widget, id, &i);
+		Int32 count = PlayerListWidget_GetGroupCount(widget, id, i);
+		PlayerListWidget_QuickSort(i, i + (count - 1));
+		i += count;
+	}
+}
+
+void PlayerListWidget_SortAndReposition(PlayerListWidget* widget) {
+	PlayerListWidget_SortEntries(widget);
+	PlayerListWidget_RepositionColumns(widget);
+	PlayerListWidget_UpdateTableDimensions(widget);
+	PlayerListWidget_RecalcYOffset(widget);
+	PlayerListWidget_Reposition(&widget->Base);
+}
+
+void PlayerListWidget_TabEntryAdded(void* obj, EntityID id) {
+	PlayerListWidget* widget = (PlayerListWidget*)obj;
+	PlayerListWidget_AddName(widget, id, -1);
+	PlayerListWidget_SortAndReposition(widget);
+}
+
+void PlayerListWidget_TabEntryChanged(void* obj, EntityID id) {
+	PlayerListWidget* widget = (PlayerListWidget*)obj;
+	Int32 i;
+	for (i = 0; i < widget->NamesCount; i++) {
+		if (widget->IDs[i] != id) continue;
+
+		Texture tex = widget->Textures[i];
+		Gfx_DeleteTexture(&tex.ID);
+		PlayerListWidget_AddName(widget, id, i);
+		PlayerListWidget_SortAndReposition(widget);
+		return;
+	}
+}
+
+void PlayerListWidget_TabEntryRemoved(void* obj, EntityID id) {
+	PlayerListWidget* widget = (PlayerListWidget*)obj;
+	Int32 i;
+	for (i = 0; i < widget->NamesCount; i++) {
+		if (widget->IDs[i] != id) continue;
+		PlayerListWidget_DeleteAt(widget, i);
+		PlayerListWidget_SortAndReposition(widget);
+		return;
+	}
+}
+
+void PlayerListWidget_Init(GuiElement* elem) {
+	PlayerListWidget* widget = (PlayerListWidget*)elem;
+	Int32 id;
+	for (id = 0; id < TABLIST_MAX_NAMES; id++) {
+		if (!TabList_Valid((EntityID)id)) continue;
+		PlayerListWidget_AddName(widget, (EntityID)id, -1);
+	}
+	PlayerListWidget_SortAndReposition(widget);
+
+	String msg = String_FromConst("Connected players:");
+	TextWidget_Create(&widget->Overview, &msg, &widget->Font);
+	Widget_SetLocation(&widget->Overview.Base, ANCHOR_CENTRE, ANCHOR_LEFT_OR_TOP, 0, 0);
+
+	Event_RegisterEntityID(&TabListEvents_Added,   widget, PlayerListWidget_TabEntryAdded);
+	Event_RegisterEntityID(&TabListEvents_Changed, widget, PlayerListWidget_TabEntryChanged);
+	Event_RegisterEntityID(&TabListEvents_Removed, widget, PlayerListWidget_TabEntryRemoved);
+}
+
+void PlayerListWidget_Render(GuiElement* elem, Real64 delta) {
+	PlayerListWidget* widget = (PlayerListWidget*)elem;
+	Widget* elemW = &widget->Base;
+	TextWidget* overview = &widget->Overview;
+	PackedCol topCol = PACKEDCOL_CONST(0, 0, 0, 180);
+	PackedCol bottomCol = PACKEDCOL_CONST(50, 50, 50, 205);
+
+	Gfx_SetTexturing(false);
+	Int32 offset = overview->Base.Height + 10;
+	Int32 height = max(300, elemW->Height + overview->Base.Height);
+	GfxCommon_Draw2DGradient(elemW->X, elemW->Y - offset, elemW->Width, elemW->Height, topCol, bottomCol);
+
+	Gfx_SetTexturing(true);
+	overview->Base.YOffset = elemW->Y - offset + 5;
+	overview->Base.Reposition(&overview->Base);
+	overview->Base.Base.Render(&overview->Base.Base, delta);
+
+	Int32 i, highlightedI = PlayerListWidget_HighlightedName(widget, Mouse_X, Mouse_Y);
+	for (i = 0; i < widget->NamesCount; i++) {
+		if (!Texture_IsValid(&widget->Textures[i])) continue;
+
+		Texture tex = widget->Textures[i];
+		if (i == highlightedI) tex.X += 4;
+		Texture_Render(&tex);
+	}
+}
+
+void PlayerListWidget_Free(GuiElement* elem) {
+	PlayerListWidget* widget = (PlayerListWidget*)elem;
+	Int32 i;
+	for (i = 0; i < widget->NamesCount; i++) {
+		Gfx_DeleteTexture(&widget->Textures[i].ID);
+	}
+
+	elem = &widget->Overview.Base.Base;
+	elem->Free(elem);
+
+	Event_UnregisterEntityID(&TabListEvents_Added,   widget, PlayerListWidget_TabEntryAdded);
+	Event_UnregisterEntityID(&TabListEvents_Changed, widget, PlayerListWidget_TabEntryChanged);
+	Event_UnregisterEntityID(&TabListEvents_Removed, widget, PlayerListWidget_TabEntryRemoved);
+}
+
+void PlayerListWidget_Create(PlayerListWidget* widget, FontDesc* font, bool classic) {
+	Widget_Init(&widget->Base);
+	widget->NamesCount = 0;
+
+	widget->Base.Base.Init     = PlayerListWidget_Init;
+	widget->Base.Base.Free     = PlayerListWidget_Free;
+	widget->Base.Reposition    = PlayerListWidget_Reposition;
+
+	widget->Base.HorAnchor = ANCHOR_CENTRE;
+	widget->Base.VerAnchor = ANCHOR_CENTRE;
+	widget->Font = *font;
+	widget->Classic = classic;
+	widget->ElementOffset = classic ? 0 : 10;
 }

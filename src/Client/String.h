@@ -1,7 +1,6 @@
 #ifndef CC_STRING_H
 #define CC_STRING_H
 #include "Typedefs.h"
-#include "Compiler.h"
 /* Implements operations for a string.
    Also implements conversions betweens strings and numbers.
    Also implements converting code page 437 indices to/from unicode.
@@ -71,6 +70,7 @@ void String_DeleteAt(STRING_TRANSIENT String* str, Int32 offset);
 Int32 String_IndexOfString(STRING_PURE String* str, STRING_PURE String* sub);
 #define String_ContainsString(str, sub) (String_IndexOfString(str, sub) >= 0)
 #define String_StartsWith(str, sub) (String_IndexOfString(str, sub) == 0)
+Int32 String_Compare(STRING_PURE String* a, STRING_PURE String* b);
 
 UInt16 Convert_CP437ToUnicode(UInt8 c);
 UInt8 Convert_UnicodeToCP437(UInt16 c);
@@ -85,17 +85,17 @@ bool Convert_TryParseBool(STRING_PURE String* str, bool* value);
 #define STRINGSBUFFER_FLAGS_DEF_ELEMS 256
 #define STRINGSBUFFER_FLAGS_EXPAND_ELEMS 512
 typedef struct StringsBuffer_ {
-	UInt8* TextBuffer;
-	UInt32 TextBufferSize;
+	UInt8* TextBuffer; 
 	UInt32* FlagsBuffer;
-	UInt32 FlagsBufferElems;
-	UInt32 Count;
+	UInt32 TextBufferElems, FlagsBufferElems;
+	UInt32 Count, UsedElems;
 	UInt8 DefaultBuffer[STRINGSBUFFER_BUFFER_DEF_SIZE];
 	UInt32 DefaultFlags[STRINGSBUFFER_FLAGS_DEF_ELEMS];
 } StringsBuffer;
 
-void StringBuffers_Init(StringsBuffer* buffer);
+void StringsBuffer_Init(StringsBuffer* buffer);
 void StringsBuffer_Free(StringsBuffer* buffer);
+void StringsBuffer_UNSAFE_Reset(StringsBuffer* buffer);
 void StringsBuffer_Get(StringsBuffer* buffer, UInt32 index, STRING_TRANSIENT String* text);
 STRING_REF String StringsBuffer_UNSAFE_Get(StringsBuffer* buffer, UInt32 index);
 void StringsBuffer_Add(StringsBuffer* buffer, STRING_PURE String* text);

@@ -80,12 +80,12 @@ namespace ClassicalSharp {
 		
 		public void SetLogName(string name) {
 			if (logName != null) return;
-			StringBuffer buffer = new StringBuffer(name.Length);
-			int len = 0;
 			
+			name = Utils.StripColours(name);
+			StringBuffer buffer = new StringBuffer(name.Length);
+
 			for (int i = 0; i < name.Length; i++) {
-				if (Allowed(name[i]))
-					buffer.Append(ref len, name[i]);
+				if (Allowed(name[i])) buffer.Append(name[i]);
 			}
 			logName = buffer.ToString();
 		}
@@ -115,13 +115,13 @@ namespace ClassicalSharp {
 			
 			if (32 + text.Length > logBuffer.Capacity)
 				logBuffer = new StringBuffer(32 + text.Length);
-			int index = 0;
+			
 			logBuffer.Clear() // [HH:mm:ss] text
-				.Append(ref index, '[').AppendPaddedNum(ref index, 2, now.Hour)
-				.Append(ref index, ':').AppendPaddedNum(ref index, 2, now.Minute)
-				.Append(ref index, ':').AppendPaddedNum(ref index, 2, now.Second)
-				.Append(ref index, "] ").AppendColourless(ref index, text)
-				.Append(ref index, Environment.NewLine);
+				.Append('[').AppendPaddedNum(2, now.Hour)
+				.Append(':').AppendPaddedNum(2, now.Minute)
+				.Append(':').AppendPaddedNum(2, now.Second)
+				.Append("] ").AppendColourless(text)
+				.Append(Environment.NewLine);
 			writer.Write(logBuffer.value, 0, logBuffer.Length);
 		}
 		

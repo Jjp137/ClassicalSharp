@@ -8,7 +8,7 @@ using Launcher.Web;
 namespace Launcher.Gui.Widgets {
 
 	internal struct TableEntry {
-		public string Hash, Name, Players, Uptime, Software, RawUptime;
+		public string Hash, Name, Players, Uptime, Software, RawUptime, Flag;
 		public int Y, Height;
 		public bool Featured;
 	}
@@ -49,6 +49,7 @@ namespace Launcher.Gui.Widgets {
 				tableEntry.Uptime = MakeUptime(e.Uptime);
 				tableEntry.RawUptime = e.Uptime;
 				tableEntry.Featured = e.Featured;
+				tableEntry.Flag = e.Flag;
 				
 				entries[index] = tableEntry;
 				usedEntries[index] = tableEntry;
@@ -126,8 +127,8 @@ namespace Launcher.Gui.Widgets {
 		}
 		
 		
-		public int[] ColumnWidths = new int[] { 340, 65, 65, 140 };
-		public int[] DesiredColumnWidths = new int[] { 340, 65, 65, 140 };
+		public int[] ColumnWidths = new int[] { 320, 65, 65, 140 };
+		public int[] DesiredColumnWidths = new int[] { 320, 65, 65, 140 };
 
 		public void SetDrawData(IDrawer2D drawer, Font font, Font titleFont,
 		                        Anchor horAnchor, Anchor verAnchor, int x, int y) {
@@ -136,8 +137,8 @@ namespace Launcher.Gui.Widgets {
 		}
 		
 		public void RecalculateDrawData() { view.RecalculateDrawData(); }
-		
 		public void RedrawData(IDrawer2D drawer) { view.RedrawData(drawer); }
+		public void RedrawFlags() { view.DrawFlags(); }
 		
 		public override void Redraw(IDrawer2D drawer) {
 			RecalculateDrawData();
@@ -159,7 +160,7 @@ namespace Launcher.Gui.Widgets {
 		}
 		
 		void SelectHeader(int mouseX, int mouseY) {
-			int x = X;		
+			int x = X + 15;	
 			for (int i = 0; i < ColumnWidths.Length; i++) {
 				x += ColumnWidths[i] + 10;
 				if (mouseX >= x - 8 && mouseX < x + 8) {
@@ -171,7 +172,7 @@ namespace Launcher.Gui.Widgets {
 		}
 		
 		void TrySortColumns(int mouseX) {
-			int x = X;
+			int x = X + TableView.flagPadding;
 			if (mouseX >= x && mouseX < x + ColumnWidths[0]) {
 				SortEntries(nameComp, false); return;
 			}

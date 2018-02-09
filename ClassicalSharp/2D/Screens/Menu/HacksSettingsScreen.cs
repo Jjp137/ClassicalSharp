@@ -99,6 +99,8 @@ namespace ClassicalSharp.Gui.Screens {
 		static string GetFOV(Game g) { return g.Fov.ToString(); }
 		static void SetFOV(Game g, string v) {
 			g.Fov = Int32.Parse(v);
+			if (g.ZoomFov > g.Fov) g.ZoomFov = g.Fov;
+			
 			Options.Set(OptionsKey.FieldOfView, v);
 			g.UpdateProjection();
 		}
@@ -185,7 +187,7 @@ namespace ClassicalSharp.Gui.Screens {
 		
 		void DefaultButtonClick(Game game, Widget widget, MouseButton btn, int x, int y) {
 			if (btn != MouseButton.Left) return;
-			int index = IndexOfWidget(targetWidget);
+			int index = IndexOfWidget(activeButton);
 			string defValue = defaultValues[index];
 			
 			input.Clear();

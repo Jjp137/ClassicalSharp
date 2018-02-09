@@ -139,7 +139,7 @@ namespace ClassicalSharp.Gui.Widgets {
 		public string GetSelected(int mouseX, int mouseY) {
 			for (int i = 0; i < Textures.Length; i++) {
 				Texture tex = Textures[i];
-				if (tex.IsValid && tex.Bounds.Contains(mouseX, mouseY))
+				if (tex.IsValid && GuiElement.Contains(tex.X, tex.Y, tex.Width, tex.Height, mouseX, mouseY))
 					return GetUrl(i, mouseX) ?? lines[i];
 			}
 			return null;
@@ -158,33 +158,39 @@ namespace ClassicalSharp.Gui.Widgets {
 			return null;
 		}
 		
+		Texture MakeTexture(int index, string text) {
+			DrawTextArgs args = new DrawTextArgs(text, font, true);
+			LinkFlags prevFlags = index > 0 ? linkData[index - 1].flags : 0;
+			Texture tex;
+			
+			if (game.ClassicMode || NextToken(text, 0, ref prevFlags) == -1) {
+				tex = game.Drawer2D.MakeTextTexture(ref args, 0, 0);
+			} else {
+				tex = DrawAdvanced(ref args, index, text);
+			}
+
+			game.Drawer2D.ReducePadding(ref tex, Utils.Floor(args.Font.Size), 3);
+			return tex;
+		}
 		
 		public void SetText(int index, string text) {
 			gfx.DeleteTexture(ref Textures[index]);
-			DrawTextArgs args = new DrawTextArgs(text, font, true);
 			linkData[index] = default(LinkData);
-			LinkFlags prevFlags = index > 0 ? linkData[index - 1].flags : 0;
+			Texture tex;
 			
 			if (!IDrawer2D.EmptyText(text)) {
-				Texture tex = NextToken(text, 0, ref prevFlags) == -1 ? DrawSimple(ref args) :
-					DrawAdvanced(ref args, index, text);
-				game.Drawer2D.ReducePadding(ref tex, Utils.Floor(args.Font.Size), 3);
-				
-				tex.X1 = CalcPos(HorizontalAnchor, XOffset, tex.Width, game.Width);
-				tex.Y1 = CalcY(index, tex.Height);
-				Textures[index] = tex;
+				tex = MakeTexture(index, text);
 				lines[index] = text;
 			} else {
-				int height = PlaceholderHeight[index] ? defaultHeight : 0;
-				int y = CalcY(index, height);
-				Textures[index] = new Texture(-1, 0, y, 0, height, 0, 0);
+				tex = new Texture(-1, 0, 0, 0, 0, 0, 0);
+				tex.Height = (ushort)(PlaceholderHeight[index] ? defaultHeight : 0);
 				lines[index] = null;
 			}
+			
+			tex.X1 = CalcPos(HorizontalAnchor, XOffset, tex.Width, game.Width);
+			tex.Y1 = CalcY(index, tex.Height);
+			Textures[index] = tex;
 			UpdateDimensions();
-		}
-		
-		Texture DrawSimple(ref DrawTextArgs args) {
-			return game.Drawer2D.MakeTextTexture(ref args, 0, 0);
 		}
 		
 		unsafe Texture DrawAdvanced(ref DrawTextArgs args, int index, string text) {

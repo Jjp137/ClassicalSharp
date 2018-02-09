@@ -286,15 +286,16 @@ void Entities_RenderHoveredNames(Real64 delta) {
 	if (hadFog) Gfx_SetFog(true);
 }
 
-void Entities_ContextLost(void) {
+void Entities_ContextLost(void* obj) {
 	UInt32 i;
 	for (i = 0; i < ENTITIES_MAX_COUNT; i++) {
 		if (Entities_List[i] == NULL) continue;
 		Entities_List[i]->VTABLE->ContextLost(Entities_List[i]);
 	}
+	Gfx_DeleteTexture(&ShadowComponent_ShadowTex);
 }
 
-void Entities_ContextRecreated(void) {
+void Entities_ContextRecreated(void* obj) {
 	UInt32 i;
 	for (i = 0; i < ENTITIES_MAX_COUNT; i++) {
 		if (Entities_List[i] == NULL) continue;
@@ -302,7 +303,7 @@ void Entities_ContextRecreated(void) {
 	}
 }
 
-void Entities_ChatFontChanged(void) {
+void Entities_ChatFontChanged(void* obj) {
 	UInt32 i;
 	for (i = 0; i < ENTITIES_MAX_COUNT; i++) {
 		if (Entities_List[i] == NULL) continue;
@@ -312,9 +313,9 @@ void Entities_ChatFontChanged(void) {
 }
 
 void Entities_Init(void) {
-	Event_RegisterVoid(&GfxEvents_ContextLost, Entities_ContextLost);
-	Event_RegisterVoid(&GfxEvents_ContextRecreated, Entities_ContextRecreated);
-	Event_RegisterVoid(&ChatEvents_FontChanged, Entities_ChatFontChanged);
+	Event_RegisterVoid(&GfxEvents_ContextLost,      NULL, Entities_ContextLost);
+	Event_RegisterVoid(&GfxEvents_ContextRecreated, NULL, Entities_ContextRecreated);
+	Event_RegisterVoid(&ChatEvents_FontChanged,     NULL, Entities_ChatFontChanged);
 
 	Entities_NameMode = Options_GetEnum(OPTION_NAMES_MODE, NAME_MODE_HOVERED,
 		NameMode_Names, Array_NumElements(NameMode_Names));
@@ -332,9 +333,9 @@ void Entities_Free(void) {
 		Entities_Remove((EntityID)i);
 	}
 
-	Event_UnregisterVoid(&GfxEvents_ContextLost, Entities_ContextLost);
-	Event_UnregisterVoid(&GfxEvents_ContextRecreated, Entities_ContextRecreated);
-	Event_UnregisterVoid(&ChatEvents_FontChanged, Entities_ChatFontChanged);
+	Event_UnregisterVoid(&GfxEvents_ContextLost,      NULL, Entities_ContextLost);
+	Event_UnregisterVoid(&GfxEvents_ContextRecreated, NULL, Entities_ContextRecreated);
+	Event_UnregisterVoid(&ChatEvents_FontChanged,     NULL, Entities_ChatFontChanged);
 
 	if (ShadowComponent_ShadowTex != NULL) {
 		Gfx_DeleteTexture(&ShadowComponent_ShadowTex);
@@ -391,4 +392,48 @@ void Entities_DrawShadows(void) {
 	Gfx_SetDepthWrite(true);
 	Gfx_SetAlphaBlending(false);
 	Gfx_SetTexturing(false);
+}
+
+bool TabList_Valid(EntityID id) {
+	return TabList_PlayerNames[id] > 0 || TabList_ListNames[id] > 0 || TabList_GroupNames[id] > 0;
+}
+
+bool TabList_Remove(EntityID id) {
+	if (!TabList_Valid(id)) return false;
+
+	StringsBuffer_Remove(&TabList_Buffer, TabList_PlayerNames[id]); TabList_PlayerNames[id] = 0;
+	StringsBuffer_Remove(&TabList_Buffer, TabList_ListNames[id]);   TabList_ListNames[id]   = 0; 
+	StringsBuffer_Remove(&TabList_Buffer, TabList_GroupNames[id]);  TabList_GroupNames[id]  = 0;
+	TabList_GroupRanks[id] = 0;
+	return true;
+}
+
+void TabList_Set(EntityID id, STRING_PURE String* player, STRING_PURE String* list, STRING_PURE String* group, UInt8 rank) {
+	UInt8 playerNameBuffer[String_BufferSize(STRING_SIZE)];
+	String playerName = String_InitAndClearArray(playerNameBuffer);
+	String_AppendColorless(&playerName, player);
+
+	TabList_PlayerNames[id] = TabList_Buffer.Count; StringsBuffer_Add(&TabList_Buffer, &playerName);
+	TabList_ListNames[id] = TabList_Buffer.Count;   StringsBuffer_Add(&TabList_Buffer, list);
+	TabList_GroupNames[id] = TabList_Buffer.Count;  StringsBuffer_Add(&TabList_Buffer, group);
+	TabList_GroupRanks[id] = rank;
+}
+
+void TabList_Init(void) { StringsBuffer_Init(&TabList_Buffer); }
+void TabList_Free(void) { StringsBuffer_Free(&TabList_Buffer); }
+void TabList_Reset(void) {
+	Platform_MemSet(TabList_PlayerNames, 0, sizeof(TabList_PlayerNames));
+	Platform_MemSet(TabList_ListNames,   0, sizeof(TabList_ListNames));
+	Platform_MemSet(TabList_GroupNames,  0, sizeof(TabList_GroupNames));
+	Platform_MemSet(TabList_GroupRanks,  0, sizeof(TabList_GroupRanks));
+	/* TODO: Should we be trying to free the buffer here? */
+	StringsBuffer_UNSAFE_Reset(&TabList_Buffer);
+}
+
+IGameComponent TabList_MakeComponent(void) {
+	IGameComponent comp = IGameComponent_MakeEmpty();
+	comp.Init = TabList_Init;
+	comp.Free = TabList_Free;
+	comp.Reset = TabList_Reset;
+	return comp;
 }

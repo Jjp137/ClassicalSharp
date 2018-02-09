@@ -106,11 +106,12 @@ namespace ClassicalSharp {
 		}
 
 		public static void SetDefaultPerms() {
-			for (int block = Block.Stone; block <= Block.MaxDefinedBlock; block++) {
+			for (int block = Block.Air; block <= Block.MaxDefinedBlock; block++) {
 				CanPlace[block] = true;
 				CanDelete[block] = true;
 			}
 			
+			CanPlace[Block.Air]        = false; CanDelete[Block.Air]        = false;
 			CanPlace[Block.Lava]       = false; CanDelete[Block.Lava]       = false;
 			CanPlace[Block.Water]      = false; CanDelete[Block.Water]      = false;
 			CanPlace[Block.StillLava]  = false; CanDelete[Block.StillLava]  = false;
@@ -223,17 +224,16 @@ namespace ClassicalSharp {
 		}
 		
 		static void SplitUppercase(StringBuffer buffer, int start, int end) {
-			int index = 0;
 			for (int i = start; i < end; i++) {
 				char c = Block.RawNames[i];
 				bool upper = Char.IsUpper(c) && i > start;
 				bool nextLower = i < end - 1 && !Char.IsUpper(Block.RawNames[i + 1]);
 				
 				if (upper && nextLower) {
-					buffer.Append(ref index, ' ');
-					buffer.Append(ref index, Char.ToLower(c));
+					buffer.Append(' ');
+					buffer.Append(Char.ToLower(c));
 				} else {
-					buffer.Append(ref index, c);
+					buffer.Append(c);
 				}
 			}
 		}

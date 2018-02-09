@@ -6,6 +6,7 @@
 #include "String.h"
 #include "BlockID.h"
 #include "Constants.h"
+#include "Entity.h"
 /* Contains all 2D widget implementations.
    Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 */
@@ -29,7 +30,7 @@ void TextWidget_SetText(TextWidget* widget, STRING_PURE String* text);
 
 typedef void (*ButtonWidget_SetValue)(STRING_TRANSIENT String* raw);
 typedef void (*ButtonWidget_GetValue)(STRING_TRANSIENT String* raw);
-typedef void (*Gui_MouseHandler)(GuiElement* elem, Int32 x, Int32 y, MouseButton btn);
+typedef bool (*Gui_MouseHandler)(GuiElement* elem, Int32 x, Int32 y, MouseButton btn);
 typedef struct ButtonWidget_ {
 	Widget Base;
 	Texture Texture;
@@ -128,6 +129,7 @@ typedef struct InputWidget_ {
 	Int32 Padding, MaxCharsPerLine;
 	void (*RemakeTexture)(GuiElement* elem);  /* Remakes the raw texture containing all the chat lines. Also updates dimensions. */
 	void (*OnPressedEnter)(GuiElement* elem); /* Invoked when the user presses enter. */
+	bool (*AllowedChar)(GuiElement* elem, UInt8 c);
 
 	String Text;
 	String Lines[INPUTWIDGET_MAX_LINES];     /* raw text of each line */
@@ -157,6 +159,48 @@ void InputWidget_Clear(InputWidget* widget);
 void InputWidget_AppendString(InputWidget* widget, STRING_PURE String* text);
 /* Appends a single character to current text buffer. May recreate the native texture. */
 void InputWidget_Append(InputWidget* widget, UInt8 c);
+
+
+typedef struct MenuInputValidator_ {
+	void (*GetRange)(struct MenuInputValidator_* validator, STRING_TRANSIENT String* range);
+	bool (*IsValidChar)(struct MenuInputValidator_* validator, UInt8 c);
+	bool (*IsValidString)(struct MenuInputValidator_* validator, STRING_PURE String* s);
+	bool (*IsValidValue)(struct MenuInputValidator_* validator, STRING_PURE String* s);
+
+	union {
+		void* Meta_Ptr[2];
+		Int32 Meta_Int[2];
+		Real32 Meta_Real[2];
+	};
+} MenuInputValidator;
+
+MenuInputValidator MenuInputValidator_Hex(void);
+MenuInputValidator MenuInputValidator_Integer(Int32 min, Int32 max);
+MenuInputValidator MenuInputValidator_Seed(void);
+MenuInputValidator MenuInputValidator_Real(Real32 min, Real32 max);
+MenuInputValidator MenuInputValidator_Path(void);
+MenuInputValidator MenuInputValidator_Boolean(void);
+MenuInputValidator MenuInputValidator_Enum(const UInt8** names, UInt32 namesCount);
+MenuInputValidator MenuInputValidator_String(void);
+
+typedef struct MenuInputWidget_ {
+	InputWidget Base;
+	Int32 MinWidth, MinHeight;
+	MenuInputValidator Validator;
+	UInt8 TextBuffer[String_BufferSize(STRING_SIZE)];
+} MenuInputWidget;
+
+void MenuInputWidget_Create(MenuInputWidget* widget, Int32 width, Int32 height, STRING_PURE String* text, FontDesc* font, MenuInputValidator* validator);
+
+
+typedef struct ChatInputWidget_ {
+	InputWidget Base;
+	Int32 TypingLogPos;
+	UInt8 TextBuffer[String_BufferSize(INPUTWIDGET_MAX_LINES * STRING_SIZE)];
+	UInt8 OrigBuffer[String_BufferSize(INPUTWIDGET_MAX_LINES * STRING_SIZE)];
+} ChatInputWidget;
+
+void ChatInputWidget_Create(ChatInputWidget* widget, FontDesc* font);
 
 
 /* "part1" "> part2" type urls */
@@ -191,4 +235,20 @@ void TextGroupWidget_PushUpAndReplaceLast(TextGroupWidget* widget, STRING_PURE S
 Int32 TextGroupWidget_GetUsedHeight(TextGroupWidget* widget);
 void TextGroupWidget_GetSelected(TextGroupWidget* widget, STRING_TRANSIENT String* text, Int32 mouseX, Int32 mouseY);
 void TextGroupWidget_SetText(TextGroupWidget* widget, Int32 index, STRING_PURE String* text);
+
+
+typedef struct PlayerListWidget_ {
+	Widget Base;
+	FontDesc Font;
+	UInt16 NamesCount, ElementOffset;
+	Int32 XMin, XMax, YHeight;
+	bool Classic;
+	TextWidget Overview;
+	UInt16 IDs[TABLIST_MAX_NAMES * 2];
+	Texture Textures[TABLIST_MAX_NAMES * 2];
+} PlayerListWidget;
+
+void PlayerListWidget_Create(PlayerListWidget* widget, FontDesc* font, bool classic);
+void PlayerListWidget_GetNameUnder(PlayerListWidget* widget, Int32 mouseX, Int32 mouseY, STRING_TRANSIENT String* name);
+void PlayerListWidget_RecalcYOffset(PlayerListWidget* widget);
 #endif

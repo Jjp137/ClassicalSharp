@@ -164,7 +164,7 @@ namespace ClassicalSharp {
 		
 		public int Vertices;
 		public FrustumCulling Culling;
-		public AsyncDownloader AsyncDownloader;
+		public AsyncDownloader Downloader;
 		
 		/// <summary> How sensitive the client is to changes in the player's mouse position. </summary>
 		public int MouseSensitivity = 30;
@@ -186,6 +186,8 @@ namespace ClassicalSharp {
 		public bool SmoothCamera = false;
 		
 		public string FontName = "Arial";
+		
+		public int MaxChunkUpdates = 30;
 		
 		public int ChatLines = 12;
 		public bool ClickableChat = false, HideGui = false, ShowFPS = true;

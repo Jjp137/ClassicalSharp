@@ -127,14 +127,14 @@ namespace ClassicalSharp.Gui.Screens {
 		int lastDownloadStatus = int.MinValue;
 		StringBuffer lastDownload = new StringBuffer(48);
 		void CheckOtherStatuses() {
-			Request item = game.AsyncDownloader.CurrentItem;
+			Request item = game.Downloader.CurrentItem;
 			if (item == null || !(item.Identifier == "terrain" || item.Identifier == "texturePack")) {
 				if (status.Textures[1].IsValid) status.SetText(1, null);
 				lastDownloadStatus = int.MinValue;
 				return;
 			}
 			
-			int progress = game.AsyncDownloader.CurrentItemProgress;
+			int progress = game.Downloader.CurrentItemProgress;
 			if (progress == lastDownloadStatus) return;
 			lastDownloadStatus = progress;
 			SetFetchStatus(progress);
@@ -142,14 +142,13 @@ namespace ClassicalSharp.Gui.Screens {
 		
 		void SetFetchStatus(int progress) {
 			lastDownload.Clear();
-			int index = 0;
 			if (progress == -2) {
-				lastDownload.Append(ref index, "&eRetrieving texture pack..");
+				lastDownload.Append("&eRetrieving texture pack..");
 			} else if (progress == -1) {
-				lastDownload.Append(ref index, "&eDownloading texture pack");
+				lastDownload.Append("&eDownloading texture pack");
 			} else if (progress >= 0 && progress <= 100) {
-				lastDownload.Append(ref index, "&eDownloading texture pack (&7")
-					.AppendNum(ref index, progress).Append(ref index, "&e%)");
+				lastDownload.Append("&eDownloading texture pack (&7")
+					.AppendNum(progress).Append("&e%)");
 			}
 			status.SetText(1, lastDownload.ToString());
 		}
@@ -330,7 +329,7 @@ namespace ClassicalSharp.Gui.Screens {
 			game.Keyboard.KeyRepeat = true;
 			
 			input.Text.Clear();
-			input.Text.Append(0, initialText);
+			input.Text.Set(initialText);
 			input.Recreate();
 		}
 		
@@ -412,7 +411,7 @@ namespace ClassicalSharp.Gui.Screens {
 			
 			int height = normalChat.GetUsedHeight();
 			int y = normalChat.Y + normalChat.Height - height;
-			if (new Rectangle(normalChat.X, y, normalChat.Width, height).Contains(mouseX, mouseY))
+			if (GuiElement.Contains(normalChat.X, y, normalChat.Width, height, mouseX, mouseY))
 				return HandlesChatClick(mouseX, mouseY);
 			return false;
 		}

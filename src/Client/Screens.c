@@ -9,6 +9,11 @@
 #include "GraphicsAPI.h"
 #include "Player.h"
 #include "Funcs.h"
+#include "TerrainAtlas.h"
+#include "ModelCache.h"
+#include "MapGenerator.h"
+#include "ServerConnection.h"
+#define LeftOnly(func) { if (btn == MouseButton_Left) { func; } return true; }
 
 void Screen_FreeWidgets(Widget** widgets, UInt32 widgetsCount) {
 	if (widgets == NULL) return;
@@ -54,19 +59,13 @@ void Screen_MakeDefaultBack(ButtonWidget* widget, bool toGame, FontDesc* font, G
 	}
 }
 
-void Screen_SwitchOptions(GuiElement* elem, Int32 x, Int32 y, MouseButton btn) {
-	if (btn == MouseButton_Left) Gui_SetNewScreen(OptionsGroupScreen_MakeInstance());
+bool Screen_SwitchOptions(GuiElement* elem, Int32 x, Int32 y, MouseButton btn) {
+	LeftOnly(Gui_SetNewScreen(OptionsGroupScreen_MakeInstance()));
 }
-void Screen_SwitchPause(GuiElement* elem, Int32 x, Int32 y, MouseButton btn) {
-	if (btn == MouseButton_Left) Gui_SetNewScreen(PauseScreen_MakeInstance());
+bool Screen_SwitchPause(GuiElement* elem, Int32 x, Int32 y, MouseButton btn) {
+	LeftOnly(Gui_SetNewScreen(PauseScreen_MakeInstance()));
 }
 
-
-/* These were sourced by taking a screenshot of vanilla
-   Then using paint to extract the colour components
-   Then using wolfram alpha to solve the glblendfunc equation */
-PackedCol Menu_TopBackCol    = PACKEDCOL_CONST(24, 24, 24, 105);
-PackedCol Menu_BottomBackCol = PACKEDCOL_CONST(51, 51, 98, 162);
 
 typedef struct ClickableScreen_ {
 	GuiElement* Elem;
@@ -77,7 +76,12 @@ typedef struct ClickableScreen_ {
 } ClickableScreen;
 
 void ClickableScreen_RenderMenuBounds(void) {
-	GfxCommon_Draw2DGradient(0, 0, Game_Width, Game_Height, Menu_TopBackCol, Menu_BottomBackCol);
+	/* These were sourced by taking a screenshot of vanilla
+	Then using paint to extract the colour components
+	Then using wolfram alpha to solve the glblendfunc equation */
+	PackedCol topCol    = PACKEDCOL_CONST(24, 24, 24, 105);
+	PackedCol bottomCol = PACKEDCOL_CONST(51, 51, 98, 162);
+	GfxCommon_Draw2DGradient(0, 0, Game_Width, Game_Height, topCol, bottomCol);
 }
 
 void ClickableScreen_DefaultWidgetSelected(GuiElement* elem, Widget* widget) { }
@@ -138,17 +142,20 @@ typedef struct InventoryScreen_ {
 } InventoryScreen;
 InventoryScreen InventoryScreen_Instance;
 
-void InventoryScreen_OnBlockChanged(void) {
-	TableWidget_OnInventoryChanged(&InventoryScreen_Instance.Table);
+void InventoryScreen_OnBlockChanged(void* obj) {
+	InventoryScreen* screen = (InventoryScreen*)obj;
+	TableWidget_OnInventoryChanged(&screen->Table);
 }
 
-void InventoryScreen_ContextLost(void) {
-	GuiElement* elem = &InventoryScreen_Instance.Table.Base.Base;
+void InventoryScreen_ContextLost(void* obj) {
+	InventoryScreen* screen = (InventoryScreen*)obj;
+	GuiElement* elem = &screen->Table.Base.Base;
 	elem->Free(elem);
 }
 
-void InventoryScreen_ContextRecreated(void) {
-	GuiElement* elem = &InventoryScreen_Instance.Table.Base.Base;
+void InventoryScreen_ContextRecreated(void* obj) {
+	InventoryScreen* screen = (InventoryScreen*)obj;
+	GuiElement* elem = &screen->Table.Base.Base;
 	elem->Recreate(elem);
 }
 
@@ -163,10 +170,10 @@ void InventoryScreen_Init(GuiElement* elem) {
 	elem->Init(elem);
 
 	Key_KeyRepeat = true;
-	Event_RegisterVoid(&BlockEvents_PermissionsChanged, InventoryScreen_OnBlockChanged);
-	Event_RegisterVoid(&BlockEvents_BlockDefChanged,    InventoryScreen_OnBlockChanged);	
-	Event_RegisterVoid(&GfxEvents_ContextLost,          InventoryScreen_ContextLost);
-	Event_RegisterVoid(&GfxEvents_ContextRecreated,     InventoryScreen_ContextRecreated);
+	Event_RegisterVoid(&BlockEvents_PermissionsChanged, screen, InventoryScreen_OnBlockChanged);
+	Event_RegisterVoid(&BlockEvents_BlockDefChanged,    screen, InventoryScreen_OnBlockChanged);	
+	Event_RegisterVoid(&GfxEvents_ContextLost,          screen, InventoryScreen_ContextLost);
+	Event_RegisterVoid(&GfxEvents_ContextRecreated,     screen, InventoryScreen_ContextRecreated);
 }
 
 void InventoryScreen_Render(GuiElement* elem, Real64 delta) {
@@ -188,10 +195,10 @@ void InventoryScreen_Free(GuiElement* elem) {
 	elem->Free(elem);
 
 	Key_KeyRepeat = false;
-	Event_UnregisterVoid(&BlockEvents_PermissionsChanged, InventoryScreen_OnBlockChanged);
-	Event_UnregisterVoid(&BlockEvents_BlockDefChanged,    InventoryScreen_OnBlockChanged);
-	Event_UnregisterVoid(&GfxEvents_ContextLost,          InventoryScreen_ContextLost);
-	Event_UnregisterVoid(&GfxEvents_ContextRecreated,     InventoryScreen_ContextRecreated);
+	Event_UnregisterVoid(&BlockEvents_PermissionsChanged, screen, InventoryScreen_OnBlockChanged);
+	Event_UnregisterVoid(&BlockEvents_BlockDefChanged,    screen, InventoryScreen_OnBlockChanged);
+	Event_UnregisterVoid(&GfxEvents_ContextLost,          screen, InventoryScreen_ContextLost);
+	Event_UnregisterVoid(&GfxEvents_ContextRecreated,     screen, InventoryScreen_ContextRecreated);
 }
 
 bool InventoryScreen_HandlesKeyDown(GuiElement* elem, Key key) {
@@ -317,98 +324,6 @@ void StatusScreen_MakeText(StatusScreen* screen, STRING_TRANSIENT String* status
 	}
 }
 
-void StatusScreen_Update(StatusScreen* screen, Real64 delta) {
-	screen->Frames++;
-	screen->Accumulator += delta;
-	if (screen->Accumulator < 1.0) return;
-
-	UInt8 statusBuffer[String_BufferSize(STRING_SIZE * 2)];
-	String status = String_InitAndClearArray(statusBuffer);
-	StatusScreen_MakeText(screen, &status);
-
-	TextWidget_SetText(&screen->Status, &status);
-	screen->Accumulator = 0.0;
-	screen->Frames = 0;
-	Game_ChunkUpdates = 0;
-}
-
-void StatusScreen_Render(GuiElement* elem, Real64 delta) {
-	StatusScreen* screen = (StatusScreen*)elem;
-	StatusScreen_Update(screen, delta);
-	if (Game_HideGui || !Game_ShowFPS) return;
-
-	Gfx_SetTexturing(true);
-	elem = &screen->Status.Base.Base;
-	elem->Render(elem, delta);
-
-	if (!Game_ClassicMode && Gui_Active == NULL) {
-		StatusScreen_UpdateHackState(screen, false);
-		StatusScreen_DrawPosition(screen);
-		elem = &screen->HackStates.Base.Base;
-		elem->Render(elem, delta);
-	}
-	Gfx_SetTexturing(false);
-}
-
-void StatusScreen_OnResize(Screen* screen) { }
-void StatusScreen_ChatFontChanged(void) {
-	StatusScreen* screen = &StatusScreen_Instance;
-	GuiElement* elem = &screen->Base.Base;
-	elem->Recreate(elem);
-}
-
-void StatusScreen_ContextLost(void) {
-	StatusScreen* screen = &StatusScreen_Instance;
-	TextAtlas_Free(&screen->PosAtlas);
-	GuiElement* elem;
-
-	elem = &screen->Status.Base.Base;
-	elem->Free(elem);
-	elem = &screen->HackStates.Base.Base;
-	elem->Free(elem);
-}
-
-void StatusScreen_ContextRecreated(void) {
-	StatusScreen* screen = &StatusScreen_Instance;
-
-	TextWidget* status = &screen->Status; TextWidget_Make(status, &screen->Font);
-	Widget_SetLocation(&status->Base, ANCHOR_LEFT_OR_TOP, ANCHOR_LEFT_OR_TOP, 2, 2);
-	status->ReducePadding = true;
-	status->Base.Base.Init(&status->Base.Base);
-	StatusScreen_Update(screen, 1.0);
-
-	String chars = String_FromConst("0123456789-, ()");
-	String prefix = String_FromConst("Position: ");
-	TextAtlas_Make(&screen->PosAtlas, &chars, &screen->Font, &prefix);
-	screen->PosAtlas.Tex.Y = (Int16)(status->Base.Height + 2);
-
-	Int32 yOffset = status->Base.Height + screen->PosAtlas.Tex.Height + 2;
-	TextWidget* hacks = &screen->HackStates; TextWidget_Make(hacks, &screen->Font);
-	Widget_SetLocation(&hacks->Base, ANCHOR_LEFT_OR_TOP, ANCHOR_LEFT_OR_TOP, 2, yOffset);
-	hacks->ReducePadding = true;
-	hacks->Base.Base.Init(&hacks->Base.Base);
-	StatusScreen_UpdateHackState(screen, true);
-}
-
-void StatusScreen_Init(GuiElement* elem) {
-	StatusScreen* screen = (StatusScreen*)elem;
-	Platform_MakeFont(&screen->Font, &Game_FontName, 16, FONT_STYLE_NORMAL);
-	StatusScreen_ContextRecreated();
-
-	Event_RegisterVoid(&ChatEvents_FontChanged,     StatusScreen_ChatFontChanged);
-	Event_RegisterVoid(&GfxEvents_ContextLost,      StatusScreen_ContextLost);
-	Event_RegisterVoid(&GfxEvents_ContextRecreated, StatusScreen_ContextRecreated);
-}
-
-void StatusScreen_Free(GuiElement* elem) {
-	StatusScreen* screen = (StatusScreen*)elem;
-	Platform_FreeFont(&screen->Font);
-	StatusScreen_ContextLost();
-
-	Event_UnregisterVoid(&ChatEvents_FontChanged,     StatusScreen_ChatFontChanged);
-	Event_UnregisterVoid(&GfxEvents_ContextLost,      StatusScreen_ContextLost);
-	Event_UnregisterVoid(&GfxEvents_ContextRecreated, StatusScreen_ContextRecreated);
-}
 
 void StatusScreen_DrawPosition(StatusScreen* screen) {
 	TextAtlas* atlas = &screen->PosAtlas;
@@ -432,7 +347,7 @@ void StatusScreen_DrawPosition(StatusScreen* screen) {
 
 	Gfx_BindTexture(atlas->Tex.ID);
 	/* TODO: Do we need to use a separate VB here? */
-	GfxCommon_UpdateDynamicVb_IndexedTris(game.ModelCache.vb, vertices, index);
+	GfxCommon_UpdateDynamicVb_IndexedTris(ModelCache_Vb, vertices, index);
 }
 
 void StatusScreen_UpdateHackState(StatusScreen* screen, bool force) {
@@ -459,6 +374,99 @@ void StatusScreen_UpdateHackState(StatusScreen* screen, bool force) {
 
 		TextWidget_SetText(&screen->HackStates, &status);
 	}
+}
+
+void StatusScreen_Update(StatusScreen* screen, Real64 delta) {
+	screen->Frames++;
+	screen->Accumulator += delta;
+	if (screen->Accumulator < 1.0) return;
+
+	UInt8 statusBuffer[String_BufferSize(STRING_SIZE * 2)];
+	String status = String_InitAndClearArray(statusBuffer);
+	StatusScreen_MakeText(screen, &status);
+
+	TextWidget_SetText(&screen->Status, &status);
+	screen->Accumulator = 0.0;
+	screen->Frames = 0;
+	Game_ChunkUpdates = 0;
+}
+
+void StatusScreen_OnResize(Screen* screen) { }
+void StatusScreen_ChatFontChanged(void* obj) {
+	StatusScreen* screen = (StatusScreen*)obj;
+	GuiElement* elem = &screen->Base.Base;
+	elem->Recreate(elem);
+}
+
+void StatusScreen_ContextLost(void* obj) {
+	StatusScreen* screen = (StatusScreen*)obj;
+	TextAtlas_Free(&screen->PosAtlas);
+	GuiElement* elem;
+
+	elem = &screen->Status.Base.Base;
+	elem->Free(elem);
+	elem = &screen->HackStates.Base.Base;
+	elem->Free(elem);
+}
+
+void StatusScreen_ContextRecreated(void* obj) {
+	StatusScreen* screen = (StatusScreen*)obj;
+
+	TextWidget* status = &screen->Status; TextWidget_Make(status, &screen->Font);
+	Widget_SetLocation(&status->Base, ANCHOR_LEFT_OR_TOP, ANCHOR_LEFT_OR_TOP, 2, 2);
+	status->ReducePadding = true;
+	status->Base.Base.Init(&status->Base.Base);
+	StatusScreen_Update(screen, 1.0);
+
+	String chars = String_FromConst("0123456789-, ()");
+	String prefix = String_FromConst("Position: ");
+	TextAtlas_Make(&screen->PosAtlas, &chars, &screen->Font, &prefix);
+	screen->PosAtlas.Tex.Y = (Int16)(status->Base.Height + 2);
+
+	Int32 yOffset = status->Base.Height + screen->PosAtlas.Tex.Height + 2;
+	TextWidget* hacks = &screen->HackStates; TextWidget_Make(hacks, &screen->Font);
+	Widget_SetLocation(&hacks->Base, ANCHOR_LEFT_OR_TOP, ANCHOR_LEFT_OR_TOP, 2, yOffset);
+	hacks->ReducePadding = true;
+	hacks->Base.Base.Init(&hacks->Base.Base);
+	StatusScreen_UpdateHackState(screen, true);
+}
+
+void StatusScreen_Init(GuiElement* elem) {
+	StatusScreen* screen = (StatusScreen*)elem;
+	Platform_MakeFont(&screen->Font, &Game_FontName, 16, FONT_STYLE_NORMAL);
+	StatusScreen_ContextRecreated(screen);
+
+	Event_RegisterVoid(&ChatEvents_FontChanged,     screen, StatusScreen_ChatFontChanged);
+	Event_RegisterVoid(&GfxEvents_ContextLost,      screen, StatusScreen_ContextLost);
+	Event_RegisterVoid(&GfxEvents_ContextRecreated, screen, StatusScreen_ContextRecreated);
+}
+
+void StatusScreen_Render(GuiElement* elem, Real64 delta) {
+	StatusScreen* screen = (StatusScreen*)elem;
+	StatusScreen_Update(screen, delta);
+	if (Game_HideGui || !Game_ShowFPS) return;
+
+	Gfx_SetTexturing(true);
+	elem = &screen->Status.Base.Base;
+	elem->Render(elem, delta);
+
+	if (!Game_ClassicMode && Gui_Active == NULL) {
+		StatusScreen_UpdateHackState(screen, false);
+		StatusScreen_DrawPosition(screen);
+		elem = &screen->HackStates.Base.Base;
+		elem->Render(elem, delta);
+	}
+	Gfx_SetTexturing(false);
+}
+
+void StatusScreen_Free(GuiElement* elem) {
+	StatusScreen* screen = (StatusScreen*)elem;
+	Platform_FreeFont(&screen->Font);
+	StatusScreen_ContextLost(screen);
+
+	Event_UnregisterVoid(&ChatEvents_FontChanged,     screen, StatusScreen_ChatFontChanged);
+	Event_UnregisterVoid(&GfxEvents_ContextLost,      screen, StatusScreen_ContextLost);
+	Event_UnregisterVoid(&GfxEvents_ContextRecreated, screen, StatusScreen_ContextRecreated);
 }
 
 Screen* StatusScreen_MakeInstance(void) {
@@ -550,21 +558,21 @@ void FilesScreen_PageClick(bool forward) {
 	FilesScreen_SetCurrentIndex(screen->CurrentIndex + delta);
 }
 
-void FilesScreen_MoveBackwards(GuiElement* elem, Int32 x, Int32 y, MouseButton btn) {
-	if (btn == MouseButton_Left) FilesScreen_PageClick(false);
+bool FilesScreen_MoveBackwards(GuiElement* elem, Int32 x, Int32 y, MouseButton btn) {
+	LeftOnly(FilesScreen_PageClick(false));
 }
 
-void FilesScreen_MoveForwards(GuiElement* elem, Int32 x, Int32 y, MouseButton btn) {
-	if (btn == MouseButton_Left) FilesScreen_PageClick(true);
+bool FilesScreen_MoveForwards(GuiElement* elem, Int32 x, Int32 y, MouseButton btn) {
+	LeftOnly(FilesScreen_PageClick(true));
 }
 
-void FilesScreen_ContextLost(void) {
-	FilesScreen* screen = &FilesScreen_Instance;
+void FilesScreen_ContextLost(void* obj) {
+	FilesScreen* screen = (FilesScreen*)obj;
 	Screen_FreeWidgets(screen->Widgets, Array_NumElements(screen->Widgets));
 }
 
-void FilesScreen_ContextRecreated(void) {
-	FilesScreen* screen = &FilesScreen_Instance;
+void FilesScreen_ContextRecreated(void* obj) {
+	FilesScreen* screen = (FilesScreen*)obj;
 	TextWidget_Create(&screen->Title, &screen->TitleText, &screen->Font);
 	Widget_SetLocation(&screen->Title.Base, ANCHOR_CENTRE, ANCHOR_CENTRE, 0, -155);
 
@@ -591,9 +599,9 @@ void FilesScreen_ContextRecreated(void) {
 void FilesScreen_Init(GuiElement* elem) {
 	FilesScreen* screen = (FilesScreen*)elem;
 	Platform_MakeFont(&screen->Font, &Game_FontName, 16, FONT_STYLE_BOLD);
-	FilesScreen_ContextRecreated();
-	Event_RegisterVoid(&GfxEvents_ContextLost,      FilesScreen_ContextLost);
-	Event_RegisterVoid(&GfxEvents_ContextRecreated, FilesScreen_ContextRecreated);
+	FilesScreen_ContextRecreated(screen);
+	Event_RegisterVoid(&GfxEvents_ContextLost,      screen, FilesScreen_ContextLost);
+	Event_RegisterVoid(&GfxEvents_ContextRecreated, screen, FilesScreen_ContextRecreated);
 }
 
 void FilesScreen_Render(GuiElement* elem, Real64 delta) {
@@ -607,9 +615,9 @@ void FilesScreen_Render(GuiElement* elem, Real64 delta) {
 void FilesScreen_Free(GuiElement* elem) {
 	FilesScreen* screen = (FilesScreen*)elem;
 	Platform_FreeFont(&screen->Font);
-	FilesScreen_ContextLost();
-	Event_UnregisterVoid(&GfxEvents_ContextLost,      FilesScreen_ContextLost);
-	Event_UnregisterVoid(&GfxEvents_ContextRecreated, FilesScreen_ContextRecreated);
+	FilesScreen_ContextLost(screen);
+	Event_UnregisterVoid(&GfxEvents_ContextLost,      screen, FilesScreen_ContextLost);
+	Event_UnregisterVoid(&GfxEvents_ContextRecreated, screen, FilesScreen_ContextRecreated);
 }
 
 bool FilesScreen_HandlesKeyDown(GuiElement* elem, Key key) {
@@ -644,7 +652,7 @@ void FilesScreen_OnResize(Screen* elem) {
 Screen* FilesScreen_MakeInstance(void) {
 	FilesScreen* screen = &FilesScreen_Instance;
 	Platform_MemSet(&screen, 0, sizeof(FilesScreen) - sizeof(StringsBuffer));
-	screen->Entries.Count = 0;
+	StringsBuffer_UNSAFE_Reset(&screen->Entries);
 	Screen_Reset(&screen->Base);
 	
 	screen->Base.Base.HandlesKeyDown     = FilesScreen_HandlesKeyDown;
@@ -657,4 +665,234 @@ Screen* FilesScreen_MakeInstance(void) {
 	screen->Base.Base.Free   = FilesScreen_Free;
 	screen->Base.HandlesAllInput = true;
 	return &screen->Base;
+}
+
+
+typedef struct LoadingScreen_ {
+	Screen Base;
+	FontDesc Font;
+
+	String Title, Message;
+	Real32 Progress;
+	TextWidget TitleWidget;
+	TextWidget MessageWidget;
+
+	UInt8 TitleBuffer[String_BufferSize(STRING_SIZE)];
+	UInt8 MessageBuffer[String_BufferSize(STRING_SIZE)];
+} LoadingScreen;
+LoadingScreen LoadingScreen_Instance;
+
+void LoadingScreen_SetTitle(LoadingScreen* screen, STRING_PURE String* title) {
+	GuiElement* elem = &screen->TitleWidget.Base.Base;
+	elem->Free(elem);
+
+	TextWidget_Create(&screen->TitleWidget, title, &screen->Font);
+	Widget_SetLocation(&screen->TitleWidget.Base, ANCHOR_CENTRE, ANCHOR_CENTRE, 0, -80);
+	String_Clear(&screen->Title);
+	String_AppendString(&screen->Title, title);
+}
+
+void LoadingScreen_SetMessage(LoadingScreen* screen, STRING_PURE String* message) {
+	GuiElement* elem = &screen->MessageWidget.Base.Base;
+	elem->Free(elem);
+
+	TextWidget_Create(&screen->MessageWidget, message, &screen->Font);
+	Widget_SetLocation(&screen->MessageWidget.Base, ANCHOR_CENTRE, ANCHOR_CENTRE, 0, -30);
+	String_Clear(&screen->Message);
+	String_AppendString(&screen->Message, message);
+}
+
+void LoadingScreen_MapLoading(void* obj, Real32 progress) {
+	LoadingScreen* screen = (LoadingScreen*)obj;
+	screen->Progress = progress;
+}
+
+void LoadingScreen_OnResize(Screen* elem) {
+	LoadingScreen* screen = (LoadingScreen*)elem;
+	Widget* widget;
+	widget = &screen->TitleWidget.Base;   widget->Reposition(widget);
+	widget = &screen->MessageWidget.Base; widget->Reposition(widget);
+}
+
+void LoadingScreen_ContextLost(void* obj) {
+	LoadingScreen* screen = (LoadingScreen*)obj;
+	GuiElement* elem;
+	elem = &screen->TitleWidget.Base.Base;   elem->Free(elem);
+	elem = &screen->MessageWidget.Base.Base; elem->Free(elem);
+}
+
+void LoadingScreen_ContextRecreated(void* obj) {
+	LoadingScreen* screen = (LoadingScreen*)obj;
+	if (Gfx_LostContext) return;
+	LoadingScreen_SetTitle(screen, &screen->Title);
+	LoadingScreen_SetMessage(screen, &screen->Message);
+}
+
+bool LoadingScreen_HandlesKeyDown(GuiElement* elem, Key key) {
+	if (key == Key_Tab) return true;
+	elem = &Gui_HUD->Base;
+	return elem->HandlesKeyDown(elem, key);
+}
+
+bool LoadingScreen_HandlesKeyPress(GuiElement* elem, UInt8 key) {
+	elem = &Gui_HUD->Base;
+	return elem->HandlesKeyPress(elem, key);
+}
+
+bool LoadingScreen_HandlesKeyUp(GuiElement* elem, Key key) {
+	if (key == Key_Tab) return true;
+	elem = &Gui_HUD->Base;
+	return elem->HandlesKeyUp(elem, key);
+}
+
+bool LoadingScreen_HandlesMouseDown(GuiElement* elem, Int32 x, Int32 y, MouseButton btn) { return true; }
+bool LoadingScreen_HandlesMouseUp(GuiElement* elem, Int32 x, Int32 y, MouseButton btn) { return true; }
+bool LoadingScreen_HandlesMouseMove(GuiElement* elem, Int32 x, Int32 y) { return true; }
+bool LoadingScreen_HandlesMouseScroll(GuiElement* elem, Real32 delta) { return true; }
+
+void LoadingScreen_UpdateBackgroundVB(VertexP3fT2fC4b* vertices, Int32 count, Int32 atlasIndex, bool* bound) {
+	if (!(*bound)) {
+		*bound = true;
+		Gfx_BindTexture(Atlas1D_TexIds[atlasIndex]);
+	}
+
+	Gfx_SetBatchFormat(VERTEX_FORMAT_P3FT2FC4B);
+	/* TODO: Do we need to use a separate VB here? */
+	GfxCommon_UpdateDynamicVb_IndexedTris(ModelCache_Vb, vertices, count);
+}
+
+#define LOADING_TILE_SIZE 64
+void LoadingScreen_DrawBackground(void) {
+	VertexP3fT2fC4b vertices[144];
+	VertexP3fT2fC4b* ptr = vertices;
+	Int32 count = 0, atlasIndex = 0, y = 0;
+	PackedCol col = PACKEDCOL_CONST(64, 64, 64, 255);
+
+	TextureLoc texLoc = Block_GetTexLoc(BLOCK_DIRT, FACE_YMAX);
+	TextureRec rec = Atlas1D_TexRec(texLoc, 1, &atlasIndex);
+	Texture tex = Texture_FromRec(0, 0, 0, Game_Width, LOADING_TILE_SIZE, rec);		
+	tex.U2 = (Real32)Game_Width / (Real32)LOADING_TILE_SIZE;
+
+	bool bound = false;
+	while (y < Game_Height) {
+		tex.Y = (Int16)y;
+		y += LOADING_TILE_SIZE;		
+		GfxCommon_Make2DQuad(&tex, col, &ptr);
+		count += 4;
+
+		if (count < Array_NumElements(vertices)) continue;
+		LoadingScreen_UpdateBackgroundVB(vertices, count, atlasIndex, &bound);
+		count = 0;
+		ptr = vertices;
+	}
+
+	if (count == 0) return;
+	LoadingScreen_UpdateBackgroundVB(vertices, count, atlasIndex, &bound);
+}
+
+void LoadingScreen_Init(GuiElement* elem) {
+	LoadingScreen* screen = (LoadingScreen*)elem;
+	Gfx_SetFog(false);
+	LoadingScreen_ContextRecreated(screen);
+
+	Event_RegisterReal32(&WorldEvents_MapLoading,   screen, LoadingScreen_MapLoading);
+	Event_RegisterVoid(&GfxEvents_ContextLost,      screen, LoadingScreen_ContextLost);
+	Event_RegisterVoid(&GfxEvents_ContextRecreated, screen, LoadingScreen_ContextRecreated);
+}
+
+#define PROG_BAR_WIDTH 220
+#define PROG_BAR_HEIGHT 10
+void LoadingScreen_Render(GuiElement* elem, Real64 delta) {
+	LoadingScreen* screen = (LoadingScreen*)elem;
+	Gfx_SetTexturing(true);
+	LoadingScreen_DrawBackground();
+	elem = &screen->TitleWidget.Base.Base;   elem->Render(elem, delta);
+	elem = &screen->MessageWidget.Base.Base; elem->Render(elem, delta);
+	Gfx_SetTexturing(false);
+
+	Int32 x = Game_Width  / 2 - PROG_BAR_WIDTH  / 2;
+	Int32 y = Game_Height / 2 - PROG_BAR_HEIGHT / 2;
+	Int32 progWidth = (Int32)(PROG_BAR_WIDTH * screen->Progress);
+
+	PackedCol backCol = PACKEDCOL_CONST(128, 128, 128, 255);
+	PackedCol progCol = PACKEDCOL_CONST(128, 255, 128, 255);
+	GfxCommon_Draw2DFlat(x, y, PROG_BAR_WIDTH, PROG_BAR_HEIGHT, backCol);
+	GfxCommon_Draw2DFlat(x, y, progWidth,      PROG_BAR_HEIGHT, progCol);
+}
+
+void LoadingScreen_Free(GuiElement* elem) {
+	LoadingScreen* screen = (LoadingScreen*)elem;
+	Platform_FreeFont(&screen->Font);
+	LoadingScreen_ContextLost(screen);
+
+	Event_UnregisterReal32(&WorldEvents_MapLoading,   screen, LoadingScreen_MapLoading);
+	Event_UnregisterVoid(&GfxEvents_ContextLost,      screen, LoadingScreen_ContextLost);
+	Event_UnregisterVoid(&GfxEvents_ContextRecreated, screen, LoadingScreen_ContextRecreated);
+}
+
+void LoadingScreen_Make(LoadingScreen* screen, STRING_PURE String* title, STRING_PURE String* message) {
+	LoadingScreen* screen = &LoadingScreen_Instance;
+	Platform_MemSet(&screen, 0, sizeof(LoadingScreen));
+	Screen_Reset(&screen->Base);
+
+	screen->Base.Base.HandlesKeyDown     = LoadingScreen_HandlesKeyDown;
+	screen->Base.Base.HandlesKeyUp       = LoadingScreen_HandlesKeyUp;
+	screen->Base.Base.HandlesMouseDown   = LoadingScreen_HandlesMouseDown;
+	screen->Base.Base.HandlesMouseUp     = LoadingScreen_HandlesMouseUp;
+	screen->Base.Base.HandlesMouseMove   = LoadingScreen_HandlesMouseMove;
+	screen->Base.Base.HandlesMouseScroll = LoadingScreen_HandlesMouseScroll;
+
+	screen->Base.OnResize           = LoadingScreen_OnResize;
+	screen->Base.Base.Init          = LoadingScreen_Init;
+	screen->Base.Base.Render        = LoadingScreen_Render;
+	screen->Base.Base.Free          = LoadingScreen_Free;
+
+	screen->Title = String_InitAndClearArray(screen->TitleBuffer);
+	String_AppendString(&screen->Title, title);
+	screen->Message = String_InitAndClearArray(screen->MessageBuffer);
+	String_AppendString(&screen->Message, message);
+
+	Platform_MakeFont(&screen->Font, &Game_FontName, 16, FONT_STYLE_NORMAL);
+	screen->Base.BlocksWorld     = true;
+	screen->Base.RenderHUDOver   = true;
+	screen->Base.HandlesAllInput = true;
+}
+
+Screen* LoadingScreen_MakeInstance(STRING_PURE String* title, STRING_PURE String* message) {
+	LoadingScreen* screen = &LoadingScreen_Instance;
+	LoadingScreen_Make(screen, title, message);
+	return &screen->Base;
+}
+
+
+typedef struct GeneratingMapScreen_ {
+	LoadingScreen Base;
+	String LastState;
+	UInt8 LastStateBuffer[String_BufferSize(STRING_SIZE)];
+} GeneratingMapScreen;
+GeneratingMapScreen GeneratingMapScreen_Instance;
+
+void GeneratingScreen_Render(GuiElement* elem, Real64 delta) {
+	GeneratingMapScreen* screen = (GeneratingMapScreen*)elem;
+	LoadingScreen_Render(elem, delta);
+	if (Gen_Done) { ServerConnection_EndGeneration(); return; }
+
+	String state = Gen_CurrentState;
+	screen->Base.Progress = Gen_CurrentProgress;
+	if (String_Equals(&state, &screen->LastState)) return;
+
+	String_Clear(&screen->LastState);
+	String_AppendString(&screen->LastState, &state);
+	LoadingScreen_SetMessage(&screen->Base, &state);
+}
+
+Screen* GeneratingScreen_MakeInstance(void) {
+	GeneratingMapScreen* screen = &GeneratingMapScreen_Instance;
+	String title   = String_FromConst("Generating level");
+	String message = String_FromConst("Generating..");
+	LoadingScreen_Make(&screen->Base, &title, &message);
+
+	screen->Base.Base.Base.Render = GeneratingScreen_Render;
+	screen->LastState = String_InitAndClearArray(screen->LastStateBuffer);
+	return &screen->Base.Base;
 }

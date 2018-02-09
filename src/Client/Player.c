@@ -68,7 +68,7 @@ void Player_DrawName(Player* player) {
 	Vector3 pos;
 	model->RecalcProperties(entity);
 	Vector3_TransformY(&pos, model->NameYOffset, &entity->Transform);
-	Real32 scale = Math.Min(1, model->NameScale * entity->ModelScale.Y) / 70.0f;
+	Real32 scale = Math.Min(1.0f, model->NameScale * entity->ModelScale.Y) / 70.0f;
 	PackedCol col = PACKEDCOL_WHITE;
 	Vector2 size = Vector2_Create2(player->NameTex.Width * scale, player->NameTex.Height * scale);
 
@@ -131,7 +131,7 @@ void Player_ApplySkin(Player* player, Player* from) {
 	/* Custom mob textures */
 	dst->MobTextureId = NULL;
 	String skin = String_FromRawArray(player->SkinNameRaw);
-	if (Utils.IsUrlPrefix(&skin, 0)) {
+	if (Utils_IsUrlPrefix(&skin, 0)) {
 		dst->MobTextureId = dst->TextureId;
 	}
 }
@@ -236,7 +236,7 @@ void Player_CheckSkin(Player* player) {
 
 	Player_SetSkinAll(player, true);
 	Player_EnsurePow2(player, &bmp);
-	entity->SkinType = Utils.GetSkinType(bmp);
+	entity->SkinType = Utils_GetSkinType(&bmp);
 
 	if (entity->SkinType == SKIN_TYPE_INVALID) {
 		Player_SetSkinAll(player, true);

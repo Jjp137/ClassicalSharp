@@ -86,7 +86,7 @@ namespace ClassicalSharp {
 			for (int i = 0; i < text.Length; i++) {
 				char c = text[i];
 				if (c == '&' && ValidColCode(text, i + 1)) {
-					col = Cols[text[i + 1]];
+					col = GetCol(text[i + 1]);
 					if (shadowCol)
 						col = BlackTextShadows ? FastColour.Black : FastColour.Scale(col, 0.25f);
 					i++; continue; // Skip over the colour code.

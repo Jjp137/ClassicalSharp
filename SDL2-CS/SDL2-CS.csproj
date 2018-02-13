@@ -9,7 +9,6 @@
     <OutputType>Library</OutputType>
     <RootNamespace>SDL2</RootNamespace>
     <AssemblyName>SDL2-CS</AssemblyName>
-    <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
     <DebugSymbols>true</DebugSymbols>
@@ -81,25 +80,12 @@
     <Compile Include="src\SDL2_image.cs" />
     <Compile Include="src\SDL2_mixer.cs" />
     <Compile Include="src\SDL2_ttf.cs" />
-    <Compile Include="src\LPUtf8StrMarshaler.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="SDL2-CS.dll.config">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="src\" />
-  </ItemGroup>
-  <ProjectExtensions>
-    <MonoDevelop>
-      <Properties>
-        <Policies>
-          <StandardHeader Text="" IncludeInNewFiles="False" />
-        </Policies>
-      </Properties>
-    </MonoDevelop>
-  </ProjectExtensions>
   <ItemGroup>
     <Reference Include="System" />
   </ItemGroup>

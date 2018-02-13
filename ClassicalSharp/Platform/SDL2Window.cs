@@ -217,9 +217,9 @@ namespace ClassicalSharp
 			SDL.SDL_GetVersion(out version);
 			Utils.LogDebug("Using SDL version: " + version.major + "." + version.minor + "." + version.patch);
 
-			if (SDL.SDL_COMPILEDVERSION > SDL.SDL_VERSIONNUM(version.major, version.minor, version.patch)) {
+			/*if (SDL.SDL_COMPILEDVERSION > SDL.SDL_VERSIONNUM(version.major, version.minor, version.patch)) {
 				throw new InvalidOperationException("SDL version must be at least 2.0.4");
-			}
+			}*/
 
 			int success = SDL.SDL_Init(SDL.SDL_INIT_TIMER | SDL.SDL_INIT_VIDEO);
 

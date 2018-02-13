@@ -25,6 +25,12 @@ namespace ClassicalSharp
 				return visible == SDL.SDL_ENABLE;
 			}
 			set {
+				// Crappy hack to prevent a segfault during Game.Dispose() as GuiInterface.Dispose()
+				// tries to set CursorVisible after SDL_Quit() has been called
+				if (!this.exists) {
+					return;
+				}
+
 				int arg = value ? SDL.SDL_ENABLE : SDL.SDL_DISABLE;
 				SDL.SDL_ShowCursor(arg);
 			}

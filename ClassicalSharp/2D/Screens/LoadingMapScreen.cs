@@ -31,12 +31,12 @@ namespace ClassicalSharp.Gui.Screens {
 
 		
 		public override void Init() {
-			gfx.Fog = false;
+			game.Graphics.Fog = false;
 			ContextRecreated();
 			
 			game.WorldEvents.MapLoading += MapLoading;
-			gfx.ContextLost += ContextLost;
-			gfx.ContextRecreated += ContextRecreated;
+			game.Graphics.ContextLost += ContextLost;
+			game.Graphics.ContextRecreated += ContextRecreated;
 		}
 		
 		public void SetTitle(string title) {
@@ -68,8 +68,8 @@ namespace ClassicalSharp.Gui.Screens {
 			ContextLost();
 			
 			game.WorldEvents.MapLoading -= MapLoading;
-			gfx.ContextLost -= ContextLost;
-			gfx.ContextRecreated -= ContextRecreated;
+			game.Graphics.ContextLost -= ContextLost;
+			game.Graphics.ContextRecreated -= ContextRecreated;
 		}
 		
 		public override void OnResize(int width, int height) {
@@ -84,7 +84,7 @@ namespace ClassicalSharp.Gui.Screens {
 		}
 		
 		protected override void ContextRecreated() {
-			if (gfx.LostContext) return;
+			if (game.Graphics.LostContext) return;
 			SetTitle(title);
 			SetMessage(message);
 		}
@@ -114,6 +114,7 @@ namespace ClassicalSharp.Gui.Screens {
 		
 		
 		public override void Render(double delta) {
+			IGraphicsApi gfx = game.Graphics;
 			gfx.Texturing = true;
 			DrawBackground();
 			titleWidget.Render(delta);
@@ -133,9 +134,8 @@ namespace ClassicalSharp.Gui.Screens {
 			int col = new FastColour(64, 64, 64).Pack();
 			
 			int texLoc = BlockInfo.GetTextureLoc(Block.Dirt, Side.Top);
-			TerrainAtlas1D atlas = game.TerrainAtlas1D;
 			Texture tex = new Texture(0, 0, 0, game.Width, 64, 
-			                          atlas.GetTexRec(texLoc, 1, out atlasIndex));
+			                          TerrainAtlas1D.GetTexRec(texLoc, 1, out atlasIndex));
 			tex.U2 = (float)game.Width / 64;
 			bool bound = false;
 			
@@ -153,12 +153,12 @@ namespace ClassicalSharp.Gui.Screens {
 			if (index == 0) return;
 			if (!bound) {
 				bound = true;
-				gfx.BindTexture(game.TerrainAtlas1D.TexIds[atlasIndex]);
+				game.Graphics.BindTexture(TerrainAtlas1D.TexIds[atlasIndex]);
 			}
 					
 			ModelCache cache = game.ModelCache;
-			gfx.SetBatchFormat(VertexFormat.P3fT2fC4b);
-			gfx.UpdateDynamicVb_IndexedTris(cache.vb, cache.vertices, index);
+			game.Graphics.SetBatchFormat(VertexFormat.P3fT2fC4b);
+			game.Graphics.UpdateDynamicVb_IndexedTris(cache.vb, cache.vertices, index);
 			index = 0;
 		}
 	}

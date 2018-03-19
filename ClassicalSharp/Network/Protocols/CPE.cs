@@ -88,7 +88,7 @@ namespace ClassicalSharp.Network.Protocols {
 		}
 		
 		void HandleHoldThis() {
-			BlockID block = reader.ReadUInt8();
+			BlockID block = reader.ReadBlock();
 			bool canChange = reader.ReadUInt8() == 0;
 			
 			game.Inventory.CanChangeHeldBlock = true;
@@ -151,22 +151,22 @@ namespace ClassicalSharp.Network.Protocols {
 		void HandleMakeSelection() {
 			byte selectionId = reader.ReadUInt8();
 			string label = reader.ReadString();
-			Vector3I start, end;
 			
-			start.X = reader.ReadInt16();
-			start.Y = reader.ReadInt16();
-			start.Z = reader.ReadInt16();
+			Vector3I p1;			
+			p1.X = reader.ReadInt16();
+			p1.Y = reader.ReadInt16();
+			p1.Z = reader.ReadInt16();
 			
-			end.X = reader.ReadInt16();
-			end.Y = reader.ReadInt16();
-			end.Z = reader.ReadInt16();
+			Vector3I p2;
+			p2.X = reader.ReadInt16();
+			p2.Y = reader.ReadInt16();
+			p2.Z = reader.ReadInt16();
 			
 			byte r = (byte)reader.ReadInt16();
 			byte g = (byte)reader.ReadInt16();
 			byte b = (byte)reader.ReadInt16();
 			byte a = (byte)reader.ReadInt16();
 			
-			Vector3I p1 = Vector3I.Min(start, end), p2 = Vector3I.Max(start, end);
 			FastColour col = new FastColour(r, g, b, a);
 			game.SelectionManager.AddSelection(selectionId, p1, p2, col);
 		}
@@ -198,9 +198,9 @@ namespace ClassicalSharp.Network.Protocols {
 		}
 		
 		void HandleSetBlockPermission() {
-			byte blockId = reader.ReadUInt8();
-			BlockInfo.CanPlace[blockId]  = reader.ReadUInt8() != 0;
-			BlockInfo.CanDelete[blockId] = reader.ReadUInt8() != 0;
+			BlockID block = reader.ReadBlock();
+			BlockInfo.CanPlace[block]  = reader.ReadUInt8() != 0;
+			BlockInfo.CanDelete[block] = reader.ReadUInt8() != 0;
 			game.Events.RaiseBlockPermissionsChanged();
 		}
 		
@@ -260,7 +260,7 @@ namespace ClassicalSharp.Network.Protocols {
 		const int bulkCount = 256;
 		unsafe void HandleBulkBlockUpdate() {
 			int count = reader.ReadUInt8() + 1;
-			if (game.World.blocks == null) {
+			if (!game.World.HasBlocks) {
 				#if DEBUG_BLOCKS
 				Utils.LogDebug("Server tried to update a block while still sending us the map!");
 				#endif
@@ -273,7 +273,7 @@ namespace ClassicalSharp.Network.Protocols {
 			reader.Skip((bulkCount - count) * sizeof(int));
 			
 			for (int i = 0; i < count; i++) {
-				BlockID block = reader.ReadUInt8();
+				BlockID block = reader.ReadBlock();
 				Vector3I coords = game.World.GetCoords(indices[i]);
 				
 				if (coords.X < 0) {
@@ -284,7 +284,9 @@ namespace ClassicalSharp.Network.Protocols {
 				}
 				game.UpdateBlock(coords.X, coords.Y, coords.Z, block);
 			}
-			reader.Skip(bulkCount - count);
+			
+			int elemSize = reader.ExtendedBlocks ? 2 : 1;
+			reader.Skip((bulkCount - count) * elemSize);
 		}
 		
 		void HandleSetTextColor() {
@@ -320,11 +322,11 @@ namespace ClassicalSharp.Network.Protocols {
 			
 			switch (type) {
 				case 0:
-					Utils.Clamp(ref value, byte.MinValue, byte.MaxValue);
-					env.SetSidesBlock((byte)value); break;
+					Utils.Clamp(ref value, 0, BlockInfo.MaxDefined);
+					env.SetSidesBlock((BlockID)value); break;
 				case 1:
-					Utils.Clamp(ref value, byte.MinValue, byte.MaxValue);
-					env.SetEdgeBlock((byte)value); break;
+					Utils.Clamp(ref value, 0, BlockInfo.MaxDefined);
+					env.SetEdgeBlock((BlockID)value); break;
 				case 2:
 					env.SetEdgeLevel(value); break;
 				case 3:
@@ -395,11 +397,11 @@ namespace ClassicalSharp.Network.Protocols {
 		}
 		
 		void HandleSetInventoryOrder() {
-			byte block = reader.ReadUInt8();
-			byte order = reader.ReadUInt8();
+			BlockID block = reader.ReadBlock();
+			BlockID order = reader.ReadBlock();
 			
 			game.Inventory.Remove(block);
-			if (order != Block.Invalid) {
+			if (order != 255) {
 				game.Inventory.Insert(order, block);
 			}
 		}					

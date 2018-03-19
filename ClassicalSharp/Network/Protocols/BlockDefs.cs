@@ -1,6 +1,11 @@
 ﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 using System;
 using OpenTK;
+#if USE16_BIT
+using BlockID = System.UInt16;
+#else
+using BlockID = System.Byte;
+#endif
 
 namespace ClassicalSharp.Network.Protocols {
 
@@ -14,27 +19,28 @@ namespace ClassicalSharp.Network.Protocols {
 		public override void Reset() {
 			if (!game.UseCPE || !game.UseCustomBlocks) return;
 			net.Set(Opcode.CpeDefineBlock, HandleDefineBlock, 80);
-			net.Set(Opcode.CpeRemoveBlockDefinition, HandleRemoveBlockDefinition, 2);
+			net.Set(Opcode.CpeUndefineBlock, HandleRemoveBlockDefinition, 2);
 			net.Set(Opcode.CpeDefineBlockExt, HandleDefineBlockExt, 85);
 		}
 		
 		internal void HandleDefineBlock() {
-			byte id = HandleDefineBlockCommonStart(reader, false);
+			BlockID block = HandleDefineBlockCommonStart(reader, false);
 			
 			byte shape = reader.ReadUInt8();
-			if (shape > 0 && shape <= 16)
-				BlockInfo.MaxBB[id].Y = shape / 16f;
+			if (shape > 0 && shape <= 16) {
+				BlockInfo.MaxBB[block].Y = shape / 16f;
+			}
 			
-			HandleDefineBlockCommonEnd(reader, shape, id);
+			HandleDefineBlockCommonEnd(reader, shape, block);
 			// Update sprite BoundingBox if necessary
-			if (BlockInfo.Draw[id] == DrawType.Sprite) {
-				using (FastBitmap dst = new FastBitmap(game.TerrainAtlas.AtlasBitmap, true, true))
-					BlockInfo.RecalculateBB(id, dst);
+			if (BlockInfo.Draw[block] == DrawType.Sprite) {
+				using (FastBitmap dst = new FastBitmap(TerrainAtlas2D.Atlas, true, true))
+					BlockInfo.RecalculateBB(block, dst);
 			}
 		}
 		
 		void HandleRemoveBlockDefinition() {
-			byte block = reader.ReadUInt8();
+			BlockID block = reader.ReadBlock();
 			bool didBlockLight = BlockInfo.BlocksLight[block];
 			
 			BlockInfo.ResetBlockProps(block);
@@ -46,12 +52,12 @@ namespace ClassicalSharp.Network.Protocols {
 				game.Inventory.AddDefault(block);
 			}
 			
-			BlockInfo.DefinedCustomBlocks[block >> 5] &= ~(1u << (block & 0x1F));
+			BlockInfo.SetCustomDefined(block, false);
 			game.Events.RaiseBlockDefinitionChanged();
 		}
 		
-		void OnBlockUpdated(byte block, bool didBlockLight) {
-			if (game.World.blocks == null) return;
+		void OnBlockUpdated(BlockID block, bool didBlockLight) {
+			if (!game.World.HasBlocks) return;
 			
 			// Need to refresh lighting when a block's light blocking state changes
 			if (BlockInfo.BlocksLight[block] != didBlockLight) {
@@ -63,7 +69,7 @@ namespace ClassicalSharp.Network.Protocols {
 			if (!game.UseCustomBlocks) {
 				net.SkipPacketData(Opcode.CpeDefineBlockExt); return;
 			}
-			byte block = HandleDefineBlockCommonStart(reader, net.cpeData.blockDefsExtVer >= 2);
+			BlockID block = HandleDefineBlockCommonStart(reader, net.cpeData.blockDefsExtVer >= 2);
 			Vector3 min, max;
 			
 			min.X = reader.ReadUInt8() / 16f; Utils.Clamp(ref min.X, 0, 15/16f);
@@ -78,8 +84,8 @@ namespace ClassicalSharp.Network.Protocols {
 			HandleDefineBlockCommonEnd(reader, 1, block);
 		}
 		
-		byte HandleDefineBlockCommonStart(NetReader reader, bool uniqueSideTexs) {
-			byte block = reader.ReadUInt8();
+		BlockID HandleDefineBlockCommonStart(NetReader reader, bool uniqueSideTexs) {
+			BlockID block = reader.ReadBlock();
 			bool didBlockLight = BlockInfo.BlocksLight[block];
 			BlockInfo.ResetBlockProps(block);
 			
@@ -110,7 +116,7 @@ namespace ClassicalSharp.Network.Protocols {
 			return block;
 		}
 		
-		void HandleDefineBlockCommonEnd(NetReader reader, byte shape, byte block) {
+		void HandleDefineBlockCommonEnd(NetReader reader, byte shape, BlockID block) {
 			byte blockDraw = reader.ReadUInt8();
 			if (shape == 0) {
 				BlockInfo.SpriteOffset[block] = blockDraw;
@@ -129,7 +135,7 @@ namespace ClassicalSharp.Network.Protocols {
 			BlockInfo.UpdateCulling(block);
 			
 			game.Inventory.AddDefault(block);
-			BlockInfo.DefinedCustomBlocks[block >> 5] |= (1u << (block & 0x1F));
+			BlockInfo.SetCustomDefined(block, true);
 			game.Events.RaiseBlockDefinitionChanged();
 		}
 		
@@ -163,20 +169,18 @@ namespace ClassicalSharp.Network.Protocols {
 		}
 		#endif
 		
-		internal static SoundType[] stepSnds, breakSnds;
-		static CPEProtocolBlockDefs() {
-			stepSnds = new SoundType[10];
-			breakSnds = new SoundType[10];
-			stepSnds[0] = SoundType.None; breakSnds[0] = SoundType.None;
-			stepSnds[1] = SoundType.Wood; breakSnds[1] = SoundType.Wood;
-			stepSnds[2] = SoundType.Gravel; breakSnds[2] = SoundType.Gravel;
-			stepSnds[3] = SoundType.Grass; breakSnds[3] = SoundType.Grass;
-			stepSnds[4] = SoundType.Stone; breakSnds[4] = SoundType.Stone;
-			stepSnds[5] = SoundType.Metal; breakSnds[5] = SoundType.Metal;
-			stepSnds[6] = SoundType.Stone; breakSnds[6] = SoundType.Glass;
-			stepSnds[7] = SoundType.Cloth; breakSnds[7] = SoundType.Cloth;
-			stepSnds[8] = SoundType.Sand; breakSnds[8] = SoundType.Sand;
-			stepSnds[9] = SoundType.Snow; breakSnds[9] = SoundType.Snow;
-		}
+		internal static byte[] stepSnds = new byte[10] {
+			SoundType.None, SoundType.Wood, SoundType.Gravel,
+			SoundType.Grass, SoundType.Stone, SoundType.Metal,
+			SoundType.Stone, SoundType.Cloth, SoundType.Sand,
+			SoundType.Snow,
+		};
+		
+		internal static byte[] breakSnds = new byte[10] {
+			SoundType.None, SoundType.Wood, SoundType.Gravel,
+			SoundType.Grass, SoundType.Stone, SoundType.Metal,
+			SoundType.Glass, SoundType.Cloth, SoundType.Sand,
+			SoundType.Snow,
+		};
 	}
 }

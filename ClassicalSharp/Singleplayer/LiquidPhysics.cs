@@ -2,12 +2,7 @@
 using System;
 using System.Collections.Generic;
 using ClassicalSharp.Map;
-
-#if USE16_BIT
-using BlockID = System.UInt16;
-#else
-using BlockID = System.Byte;
-#endif
+using BlockRaw = System.Byte;
 
 namespace ClassicalSharp.Singleplayer {
 
@@ -43,8 +38,8 @@ namespace ClassicalSharp.Singleplayer {
 			physics.OnRandomTick[Block.StillLava] = ActivateLava;
 		}
 		
-		void OnPlaceLava(int index, BlockID b) { Lava.Enqueue(defLavaTick | (uint)index); }
-		void OnPlaceWater(int index, BlockID b) { Water.Enqueue(defWaterTick | (uint)index); }
+		void OnPlaceLava(int index, BlockRaw b) { Lava.Enqueue(defLavaTick | (uint)index); }
+		void OnPlaceWater(int index, BlockRaw b) { Water.Enqueue(defWaterTick | (uint)index); }
 		
 		public void Clear() { Lava.Clear(); Water.Clear(); }
 		
@@ -78,14 +73,14 @@ namespace ClassicalSharp.Singleplayer {
 			for (int i = 0; i < count; i++) {
 				int index;
 				if (CheckItem(Lava, out index)) {
-					BlockID block = map.blocks[index];
+					BlockRaw block = map.blocks1[index];
 					if (!(block == Block.Lava || block == Block.StillLava)) continue;
 					ActivateLava(index, block);
 				}
 			}
 		}
 		
-		void ActivateLava(int index, BlockID block) {
+		void ActivateLava(int index, BlockRaw block) {
 			int x = index % width;
 			int y = index / oneY; // posIndex / (width * length)
 			int z = (index / width) % length;
@@ -98,7 +93,7 @@ namespace ClassicalSharp.Singleplayer {
 		}
 		
 		void PropagateLava(int posIndex, int x, int y, int z) {
-			BlockID block = map.blocks[posIndex];
+			BlockRaw block = map.blocks1[posIndex];
 			if (block == Block.Water || block == Block.StillWater) {
 				game.UpdateBlock(x, y, z, Block.Stone);
 			} else if (BlockInfo.Collide[block] == CollideType.Gas) {
@@ -115,14 +110,14 @@ namespace ClassicalSharp.Singleplayer {
 			for (int i = 0; i < count; i++) {
 				int index;
 				if (CheckItem(Water, out index)) {
-					BlockID block = map.blocks[index];
+					BlockRaw block = map.blocks1[index];
 					if (!(block == Block.Water || block == Block.StillWater)) continue;
 					ActivateWater(index, block);
 				}
 			}
 		}
 		
-		void ActivateWater(int index, BlockID block) {
+		void ActivateWater(int index, BlockRaw block) {
 			int x = index % width;
 			int y = index / oneY; // posIndex / (width * length)
 			int z = (index / width) % length;
@@ -135,16 +130,16 @@ namespace ClassicalSharp.Singleplayer {
 		}
 		
 		void PropagateWater(int posIndex, int x, int y, int z) {
-			BlockID block = map.blocks[posIndex];
+			BlockRaw block = map.blocks1[posIndex];
 			if (block == Block.Lava || block == Block.StillLava) {
 				game.UpdateBlock(x, y, z, Block.Stone);
-			} else if (BlockInfo.Collide[block] == CollideType.Gas && block != Block.Rope) {
+			} else if (BlockInfo.ExtendedCollide[block] == CollideType.Gas) {
 				// Sponge check
 				for (int yy = (y < 2 ? 0 : y - 2); yy <= (y > maxWaterY ? maxY : y + 2); yy++)
 					for (int zz = (z < 2 ? 0 : z - 2); zz <= (z > maxWaterZ ? maxZ : z + 2); zz++)
 						for (int xx = (x < 2 ? 0 : x - 2); xx <= (x > maxWaterX ? maxX : x + 2); xx++)
 				{
-					block = map.blocks[(yy * length + zz) * width + xx];
+					block = map.blocks1[(yy * length + zz) * width + xx];
 					if (block == Block.Sponge) return;
 				}
 				
@@ -154,7 +149,7 @@ namespace ClassicalSharp.Singleplayer {
 		}
 
 		
-		void PlaceSponge(int index, BlockID block) {
+		void PlaceSponge(int index, BlockRaw block) {
 			int x = index % width;
 			int y = index / oneY; // posIndex / (width * length)
 			int z = (index / width) % length;
@@ -163,14 +158,17 @@ namespace ClassicalSharp.Singleplayer {
 				for (int zz = z - 2; zz <= z + 2; zz++)
 					for (int xx = x - 2; xx <= x + 2; xx++)
 			{
-				block = map.SafeGetBlock(xx, yy, zz);
-				if (block == Block.Water || block == Block.StillWater)
+				if (!map.IsValidPos(xx, yy, zz)) continue;
+				
+				block = map.blocks1[xx + width * (zz + yy * length)];
+				if (block == Block.Water || block == Block.StillWater) {
 					game.UpdateBlock(xx, yy, zz, Block.Air);
+				}
 			}
 		}
 		
 		
-		void DeleteSponge(int index, BlockID block) {
+		void DeleteSponge(int index, BlockRaw block) {
 			int x = index % width;
 			int y = index / oneY; // posIndex / (width * length)
 			int z = (index / width) % length;
@@ -183,9 +181,10 @@ namespace ClassicalSharp.Singleplayer {
 					if (!map.IsValidPos(xx, yy, zz)) continue;
 					
 					index = xx + width * (zz + yy * length);
-					block = map.blocks[index];
-					if (block == Block.Water || block == Block.StillWater)
+					block = map.blocks1[index];
+					if (block == Block.Water || block == Block.StillWater) {
 						Water.Enqueue((1u << tickShift) | (uint)index);
+					}
 				}
 			}
 		}

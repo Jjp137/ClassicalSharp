@@ -17,6 +17,7 @@ HANDLE heap;
 UInt8* Platform_NewLine = "\r\n";
 UInt8 Platform_DirectorySeparator = '\\';
 ReturnCode ReturnCode_FileShareViolation = ERROR_SHARING_VIOLATION;
+ReturnCode ReturnCode_FileNotFound = ERROR_FILE_NOT_FOUND;
 
 void Platform_Init(void) {
 	heap = GetProcessHeap(); /* TODO: HeapCreate instead? probably not */
@@ -123,6 +124,30 @@ bool Platform_DirectoryExists(STRING_PURE String* path) {
 ReturnCode Platform_DirectoryCreate(STRING_PURE String* path) {
 	BOOL success = CreateDirectoryA(path->buffer, NULL);
 	return success ? 0 : GetLastError();
+}
+
+ReturnCode Platform_EnumFiles(STRING_PURE String* path, void* obj, Platform_EnumFilesCallback callback) {
+	/* Need to do directory\* to search for files in directory */
+	UInt8 searchPatternBuffer[FILENAME_SIZE + 10];
+	String searchPattern = String_InitAndClearArray(searchPatternBuffer);
+	String_AppendString(&searchPattern, path);
+	String_AppendConst(&searchPattern, "\\*");
+
+	WIN32_FIND_DATAA data;
+	HANDLE find = FindFirstFileA(searchPattern.buffer, &data);
+	if (find == INVALID_HANDLE_VALUE) return GetLastError();
+
+	do {
+		String filePath = String_FromRawArray(data.cFileName);
+		if (!(data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+			callback(&filePath, obj);
+		}
+	} while (FindNextFileA(find, &data));
+
+	/* get return code from FindNextFile before closing find handle */
+	ReturnCode code = GetLastError();
+	FindClose(find);
+	return code == ERROR_NO_MORE_FILES ? 0 : code;
 }
 
 

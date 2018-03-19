@@ -15,7 +15,6 @@ namespace ClassicalSharp.Textures {
 	public class Animations : IGameComponent {
 		
 		Game game;
-		IGraphicsApi gfx;
 		Bitmap animBmp;
 		FastBitmap animsBuffer;
 		List<AnimationData> animations = new List<AnimationData>();
@@ -23,7 +22,6 @@ namespace ClassicalSharp.Textures {
 		
 		public void Init(Game game) {
 			this.game = game;
-			gfx = game.Graphics;
 			game.Events.TexturePackChanged += TexturePackChanged;
 			game.Events.TextureChanged += TextureChanged;
 		}
@@ -57,11 +55,11 @@ namespace ClassicalSharp.Textures {
 		/// <summary> Runs through all animations and if necessary updates the terrain atlas. </summary>
 		public void Tick(ScheduledTask task) {
 			if (useLavaAnim) {
-				int size = Math.Min(game.TerrainAtlas.TileSize, 64);
+				int size = Math.Min(TerrainAtlas2D.ElemSize, 64);
 				DrawAnimation(null, 30, size);
 			}			
 			if (useWaterAnim) {
-				int size = Math.Min(game.TerrainAtlas.TileSize, 64);
+				int size = Math.Min(TerrainAtlas2D.ElemSize, 64);
 				DrawAnimation(null, 14, size);
 			}
 			
@@ -82,32 +80,32 @@ namespace ClassicalSharp.Textures {
 		/// 1) the target tile in the terrain atlas  2) the start location of animation frames<br/>
 		/// 3) the size of each animation frame      4) the number of animation frames<br/>
 		/// 5) the delay between advancing animation frames. </summary>
-		public void ReadAnimationsDescription(StreamReader reader) {
+		void ReadAnimationsDescription(StreamReader reader) {
 			string line;
 			while ((line = reader.ReadLine()) != null) {
 				if (line.Length == 0 || line[0] == '#') continue;
 				
 				string[] parts = line.Split(' ');
 				if (parts.Length < 7) {
-					Utils.LogDebug("Not enough arguments for animation: {0}", line); continue;
+					game.Chat.Add("&cNot enough arguments for animation: " + line); continue;
 				}
 				
 				byte tileX, tileY;
 				if (!Byte.TryParse(parts[0], out tileX) || !Byte.TryParse(parts[1], out tileY)
 				   || tileX >= 16 || tileY >= 16) {
-					Utils.LogDebug("Invalid animation tile coordinates: {0}", line); continue;
+					game.Chat.Add("&cInvalid animation tile coords: " + line); continue;
 				}
 				
 				int frameX, frameY;
 				if (!Int32.TryParse(parts[2], out frameX) || !Int32.TryParse(parts[3], out frameY)
 				   || frameX < 0 || frameY < 0) {
-					Utils.LogDebug("Invalid animation coordinates: {0}", line); continue;
+					game.Chat.Add("&cInvalid animation coords: " + line); continue;
 				}
 				
 				int frameSize, statesCount, tickDelay;
 				if (!Int32.TryParse(parts[4], out frameSize) || !Int32.TryParse(parts[5], out statesCount) ||
 				   !Int32.TryParse(parts[6], out tickDelay) || frameSize < 0 || statesCount < 0 || tickDelay < 0) {
-					Utils.LogDebug("Invalid animation: {0}", line); continue;
+					game.Chat.Add("&cInvalid animation: " + line); continue;
 				}
 				
 				DefineAnimation(tileX, tileY, frameX, frameY, frameSize, statesCount, tickDelay);
@@ -116,8 +114,7 @@ namespace ClassicalSharp.Textures {
 		
 		/// <summary> Adds an animation described by the arguments to the list of animations
 		/// that are applied to the terrain atlas. </summary>
-		public void DefineAnimation(int tileX, int tileY, int frameX, int frameY, int frameSize,
-		                            int statesNum, int tickDelay) {
+		void DefineAnimation(int tileX, int tileY, int frameX, int frameY, int frameSize, int statesNum, int tickDelay) {
 			AnimationData data = new AnimationData();
 			data.TileX = tileX; data.TileY = tileY;
 			data.FrameX = frameX; data.FrameY = frameY;
@@ -156,10 +153,9 @@ namespace ClassicalSharp.Textures {
 			}
 		}
 		
-		unsafe void DrawAnimationCore(AnimationData data, int texId, int size, byte* temp) {
-			TerrainAtlas1D atlas = game.TerrainAtlas1D;			
-			int index = atlas.Get1DIndex(texId);
-			int rowNum = atlas.Get1DRowId(texId);						
+		unsafe void DrawAnimationCore(AnimationData data, int texId, int size, byte* temp) {	
+			int index  = TerrainAtlas1D.Get1DIndex(texId);
+			int rowNum = TerrainAtlas1D.Get1DRowId(texId);						
 			animPart.SetData(size, size, size * 4, (IntPtr)temp, false);
 			
 			if (data == null) {
@@ -172,7 +168,9 @@ namespace ClassicalSharp.Textures {
 				FastBitmap.MovePortion(data.FrameX + data.State * size, 
 				                       data.FrameY, 0, 0, animsBuffer, animPart, size);
 			}
-			gfx.UpdateTexturePart(atlas.TexIds[index], 0, rowNum * game.TerrainAtlas.TileSize, animPart, game.Graphics.Mipmaps);
+			
+			int y = rowNum * TerrainAtlas2D.ElemSize;
+			game.Graphics.UpdateTexturePart(TerrainAtlas1D.TexIds[index], 0, y, animPart, game.Graphics.Mipmaps);
 		}
 		
 		bool IsDefaultZip() {
@@ -183,7 +181,7 @@ namespace ClassicalSharp.Textures {
 		
 		/// <summary> Disposes the atlas bitmap that contains animation frames, and clears
 		/// the list of defined animations. </summary>
-		public void Clear() {
+		void Clear() {
 			animations.Clear();
 			
 			if (animBmp == null) return;
@@ -211,10 +209,10 @@ namespace ClassicalSharp.Textures {
 		const string terrainFormat = "&cAnimation frames for tile ({0}, {1}) are bigger than the size of a tile in terrain.png";
 		void ValidateAnimations() {
 			validated = true;
-			int tileSize = game.TerrainAtlas.TileSize;
+			int elemSize = TerrainAtlas2D.ElemSize;
 			for (int i = animations.Count - 1; i >= 0; i--) {
 				AnimationData a = animations[i];
-				if (a.FrameSize > tileSize) {
+				if (a.FrameSize > elemSize) {
 					game.Chat.Add(String.Format(terrainFormat, a.TileX, a.TileY));
 					animations.RemoveAt(i);
 					continue;

@@ -121,12 +121,11 @@ void SpecialInputWidget_SetActive(SpecialInputWidget* widget, bool active);
 
 
 #define INPUTWIDGET_MAX_LINES 3
-struct InputWidget_;
+#define INPUTWIDGET_LEN STRING_SIZE
 typedef struct InputWidget_ {
 	Widget Base;
-	FontDesc Font;	
+	FontDesc Font;		
 	Int32 (*GetMaxLines)(void);
-	Int32 Padding, MaxCharsPerLine;
 	void (*RemakeTexture)(GuiElement* elem);  /* Remakes the raw texture containing all the chat lines. Also updates dimensions. */
 	void (*OnPressedEnter)(GuiElement* elem); /* Invoked when the user presses enter. */
 	bool (*AllowedChar)(GuiElement* elem, UInt8 c);
@@ -137,12 +136,12 @@ typedef struct InputWidget_ {
 	Texture InputTex;
 	String Prefix;
 	UInt16 PrefixWidth, PrefixHeight;
-	Texture PrefixTex;
-
-	Int32 CaretX, CaretY;          /* Coordinates of caret in lines */
-	UInt16 CaretWidth, CaretHeight;	
-	Int32 CaretPos;                /* Position of caret, -1 for at end of string. */
+	
+	UInt8 Padding;
 	bool ShowCaret;
+	UInt16 CaretWidth;
+	Int32 CaretX, CaretY;          /* Coordinates of caret in lines */
+	Int32 CaretPos;                /* Position of caret, -1 for at end of string. */
 	PackedCol CaretCol;
 	Texture CaretTex;
 	Real64 CaretAccumulator;
@@ -187,7 +186,7 @@ typedef struct MenuInputWidget_ {
 	InputWidget Base;
 	Int32 MinWidth, MinHeight;
 	MenuInputValidator Validator;
-	UInt8 TextBuffer[String_BufferSize(STRING_SIZE)];
+	UInt8 TextBuffer[String_BufferSize(INPUTWIDGET_LEN)];
 } MenuInputWidget;
 
 void MenuInputWidget_Create(MenuInputWidget* widget, Int32 width, Int32 height, STRING_PURE String* text, FontDesc* font, MenuInputValidator* validator);
@@ -196,37 +195,23 @@ void MenuInputWidget_Create(MenuInputWidget* widget, Int32 width, Int32 height, 
 typedef struct ChatInputWidget_ {
 	InputWidget Base;
 	Int32 TypingLogPos;
-	UInt8 TextBuffer[String_BufferSize(INPUTWIDGET_MAX_LINES * STRING_SIZE)];
-	UInt8 OrigBuffer[String_BufferSize(INPUTWIDGET_MAX_LINES * STRING_SIZE)];
+	UInt8 TextBuffer[String_BufferSize(INPUTWIDGET_MAX_LINES * INPUTWIDGET_LEN)];
+	UInt8 OrigBuffer[String_BufferSize(INPUTWIDGET_MAX_LINES * INPUTWIDGET_LEN)];
 } ChatInputWidget;
 
 void ChatInputWidget_Create(ChatInputWidget* widget, FontDesc* font);
 
 
-/* "part1" "> part2" type urls */
-#define LINK_FLAG_CONTINUE 2
-/* used for internally combining "part1" and "part2" */
-#define LINK_FLAG_APPEND 4
-/* used to signify that part2 is a separate url from part1 */
-#define LINK_FLAG_NEWLINK 8
-/* min size of link is 'http:// ' */
-#define LINK_MAX_PER_LINE (STRING_SIZE / 8)
-typedef struct LinkData_ {
-	Rectangle2D Bounds[LINK_MAX_PER_LINE];
-	String Parts[LINK_MAX_PER_LINE];
-	String Urls[LINK_MAX_PER_LINE];
-	UInt8 LinkFlags, LinksCount;
-} LinkData;
-
 #define TEXTGROUPWIDGET_MAX_LINES 30
+#define TEXTGROUPWIDGET_LEN (STRING_SIZE * 2)
 typedef struct TextGroupWidget_ {
 	Widget Base;
 	Int32 LinesCount, DefaultHeight;
-	FontDesc Font, UnderlineFont;	
+	FontDesc Font, UnderlineFont;
 	bool PlaceholderHeight[TEXTGROUPWIDGET_MAX_LINES];
-	String Lines[TEXTGROUPWIDGET_MAX_LINES];
-	LinkData LinkDatas[TEXTGROUPWIDGET_MAX_LINES];
+	UInt8 LineLengths[TEXTGROUPWIDGET_MAX_LINES];
 	Texture Textures[TEXTGROUPWIDGET_MAX_LINES];
+	UInt8 Buffer[String_BufferSize(TEXTGROUPWIDGET_MAX_LINES * TEXTGROUPWIDGET_LEN)];
 } TextGroupWidget;
 
 void TextGroupWidget_Create(TextGroupWidget* widget, Int32 linesCount, FontDesc* font, FontDesc* underlineFont);
@@ -250,5 +235,4 @@ typedef struct PlayerListWidget_ {
 
 void PlayerListWidget_Create(PlayerListWidget* widget, FontDesc* font, bool classic);
 void PlayerListWidget_GetNameUnder(PlayerListWidget* widget, Int32 mouseX, Int32 mouseY, STRING_TRANSIENT String* name);
-void PlayerListWidget_RecalcYOffset(PlayerListWidget* widget);
 #endif

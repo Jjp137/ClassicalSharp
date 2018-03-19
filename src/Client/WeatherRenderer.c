@@ -151,15 +151,15 @@ void WeatherRenderer_Render(Real64 deltaTime) {
 			Real32 x1 = (Real32)x,       y1 = (Real32)y,            z1 = (Real32)z;
 			Real32 x2 = (Real32)(x + 1), y2 = (Real32)(y + height), z2 = (Real32)(z + 1);
 
-			v.X = x1; v.Y = y1; v.Z = z1; v.U = 0.0f; v.V = v1; *ptr = v; ptr++;
-			          v.Y = y2;                      v.V = v2;  *ptr = v; ptr++;
-			v.X = x2;           v.Z = z2; v.U = 1.0f; 	        *ptr = v; ptr++;
-			          v.Y = y1;                      v.V = v1;  *ptr = v; ptr++;
+			v.X = x1; v.Y = y1; v.Z = z1; v.U = 0.0f; v.V = v1; *ptr++ = v;
+			          v.Y = y2;                      v.V = v2;  *ptr++ = v;
+			v.X = x2;           v.Z = z2; v.U = 1.0f; 	        *ptr++ = v;
+			          v.Y = y1;                      v.V = v1;  *ptr++ = v;
 
-			                    v.Z = z1;					    *ptr = v; ptr++;
-			          v.Y = y2;                       v.V = v2; *ptr = v; ptr++;
-			v.X = x1;           v.Z = z2; v.U = 0.0f;		    *ptr = v; ptr++;
-			          v.Y = y1;                       v.V = v1; *ptr = v; ptr++;
+			                    v.Z = z1;					    *ptr++ = v;
+			          v.Y = y2;                       v.V = v2; *ptr++ = v;
+			v.X = x1;           v.Z = z2; v.U = 0.0f;		    *ptr++ = v;
+			          v.Y = y1;                       v.V = v1; *ptr++ = v;
 		}
 	}
 
@@ -185,9 +185,9 @@ void WeatherRenderer_FileChanged(void* obj, Stream* stream) {
 	String snow = String_FromConst("snow.png");
 	String rain = String_FromConst("rain.png");
 
-	if (String_Equals(&stream->Name, &snow)) {
+	if (String_CaselessEquals(&stream->Name, &snow)) {
 		Game_UpdateTexture(&weather_snowTex, stream, false);
-	} else if (String_Equals(&stream->Name, &rain)) {
+	} else if (String_CaselessEquals(&stream->Name, &rain)) {
 		Game_UpdateTexture(&weather_rainTex, stream, false);
 	}
 }

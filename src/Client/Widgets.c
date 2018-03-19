@@ -14,6 +14,7 @@
 #include "WordWrap.h"
 #include "ServerConnection.h"
 #include "Event.h"
+#include "Chat.h"
 
 void Widget_SetLocation(Widget* widget, Anchor horAnchor, Anchor verAnchor, Int32 xOffset, Int32 yOffset) {
 	widget->HorAnchor = horAnchor; widget->VerAnchor = verAnchor;
@@ -37,7 +38,7 @@ void TextWidget_Init(GuiElement* elem) {
 
 void TextWidget_Render(GuiElement* elem, Real64 delta) {
 	TextWidget* widget = (TextWidget*)elem;	
-	if (Texture_IsValid(&widget->Texture)) {
+	if (widget->Texture.ID != NULL) {
 		Texture_RenderShaded(&widget->Texture, widget->Col);
 	}
 }
@@ -124,7 +125,7 @@ void ButtonWidget_Reposition(Widget* elem) {
 void ButtonWidget_Render(GuiElement* elem, Real64 delta) {
 	ButtonWidget* widget = (ButtonWidget*)elem;
 	Widget* elemW = &widget->Base;
-	if (!Texture_IsValid(&widget->Texture)) return;
+	if (widget->Texture.ID == NULL) return;
 	Texture back = elemW->Active ? Button_SelectedTex : Button_ShadowTex;
 	if (elemW->Disabled) back = Button_DisabledTex;
 
@@ -677,7 +678,7 @@ void TableWidget_Render(GuiElement* elem, Real64 delta) {
 	}
 	IsometricDrawer_EndBatch();
 
-	if (Texture_IsValid(&widget->DescTex)) {
+	if (widget->DescTex.ID != NULL) {
 		Texture_Render(&widget->DescTex);
 	}
 	Gfx_SetTexturing(false);
@@ -1094,6 +1095,14 @@ void SpecialInputWidget_Create(SpecialInputWidget* widget, FontDesc* font, Speci
 }
 
 
+bool InputWidget_ControlDown(void) {
+#if CC_BUILD_OSX
+	return Key_IsWinPressed();
+#else
+	return Key_IsControlPressed();
+#endif
+}
+
 void InputWidget_CalculateLineSizes(InputWidget* widget) {
 	Int32 y;
 	for (y = 0; y < INPUTWIDGET_MAX_LINES; y++) {
@@ -1125,7 +1134,7 @@ UInt8 InputWidget_GetLastCol(InputWidget* widget, Int32 indexX, Int32 indexY) {
 }
 
 void InputWidget_UpdateCaret(InputWidget* widget) {
-	Int32 maxChars = widget->GetMaxLines() * widget->MaxCharsPerLine;
+	Int32 maxChars = widget->GetMaxLines() * INPUTWIDGET_LEN;
 	if (widget->CaretPos >= maxChars) widget->CaretPos = -1;
 	WordWrap_GetCoords(widget->CaretPos, widget->Lines, widget->GetMaxLines(), &widget->CaretX, &widget->CaretY);
 	DrawTextArgs args; DrawTextArgs_MakeEmpty(&args, &widget->Font, false);
@@ -1133,7 +1142,7 @@ void InputWidget_UpdateCaret(InputWidget* widget) {
 
 	/* Caret is at last character on line */
 	Widget* elem = &widget->Base;
-	if (widget->CaretX == widget->MaxCharsPerLine) {
+	if (widget->CaretX == INPUTWIDGET_LEN) {
 		widget->CaretTex.X = elem->X + widget->Padding + widget->LineSizes[widget->CaretY].Width;
 		PackedCol yellow = PACKEDCOL_YELLOW; widget->CaretCol = yellow;
 		widget->CaretTex.Width = widget->CaretWidth;
@@ -1172,7 +1181,8 @@ void InputWidget_RenderCaret(InputWidget* widget, Real64 delta) {
 	}
 }
 
-void InputWidget_RemakeTexture(InputWidget* widget) {
+void InputWidget_RemakeTexture(GuiElement* elem) {
+	InputWidget* widget = (InputWidget*)elem;
 	Int32 totalHeight = 0, maxWidth = 0, i;
 	for (i = 0; i < widget->GetMaxLines(); i++) {
 		totalHeight += widget->LineSizes[i].Height;
@@ -1214,15 +1224,16 @@ void InputWidget_RemakeTexture(InputWidget* widget) {
 	Drawer2D_End();
 	Platform_MemFree(bmp.Scan0);
 
-	Widget* elem = &widget->Base;
-	elem->Width = size.Width;
-	elem->Height = realHeight == 0 ? widget->PrefixHeight : realHeight;
-	elem->Reposition(elem);
-	widget->InputTex.X = elem->X + widget->Padding;
-	widget->InputTex.Y = elem->Y;
+	Widget* elemW = &widget->Base;
+	elemW->Width = size.Width;
+	elemW->Height = realHeight == 0 ? widget->PrefixHeight : realHeight;
+	elemW->Reposition(elemW);
+	widget->InputTex.X = elemW->X + widget->Padding;
+	widget->InputTex.Y = elemW->Y;
 }
 
-void InputWidget_EnterInput(InputWidget* widget) {
+void InputWidget_OnPressedEnter(GuiElement* elem) {
+	InputWidget* widget = (InputWidget*)elem;
 	InputWidget_Clear(widget);
 	widget->Base.Height = widget->PrefixHeight;
 }
@@ -1253,7 +1264,7 @@ void InputWidget_AppendChar(InputWidget* widget, UInt8 c) {
 }
 
 bool InputWidget_TryAppendChar(InputWidget* widget, UInt8 c) {
-	Int32 maxChars = widget->GetMaxLines() * widget->MaxCharsPerLine;
+	Int32 maxChars = widget->GetMaxLines() * INPUTWIDGET_LEN;
 	if (widget->Text.length >= maxChars) return false;
 	if (!widget->AllowedChar(&widget->Base.Base, c)) return false;
 
@@ -1296,8 +1307,8 @@ bool InputWidget_CheckCol(InputWidget* widget, Int32 index) {
 	return (code == '%' || code == '&') && Drawer2D_ValidColCode(col);
 }
 
-void InputWidget_BackspaceKey(InputWidget* widget, bool controlDown) {
-	if (controlDown) {
+void InputWidget_BackspaceKey(InputWidget* widget) {
+	if (InputWidget_ControlDown()) {
 		if (widget->CaretPos == -1) { widget->CaretPos = widget->Text.length - 1; }
 		Int32 len = WordWrap_GetBackLength(&widget->Text, widget->CaretPos);
 		if (len == 0) return;
@@ -1341,8 +1352,8 @@ void InputWidget_DeleteKey(InputWidget* widget) {
 	}
 }
 
-void InputWidget_LeftKey(InputWidget* widget, bool controlDown) {
-	if (controlDown) {
+void InputWidget_LeftKey(InputWidget* widget) {
+	if (InputWidget_ControlDown()) {
 		if (widget->CaretPos == -1) { widget->CaretPos = widget->Text.length - 1; }
 		widget->CaretPos -= WordWrap_GetBackLength(&widget->Text, widget->CaretPos);
 		InputWidget_UpdateCaret(widget);
@@ -1357,8 +1368,8 @@ void InputWidget_LeftKey(InputWidget* widget, bool controlDown) {
 	}
 }
 
-void InputWidget_RightKey(InputWidget* widget, bool controlDown) {
-	if (controlDown) {
+void InputWidget_RightKey(InputWidget* widget) {
+	if (InputWidget_ControlDown()) {
 		widget->CaretPos += WordWrap_GetForwardLength(&widget->Text, widget->CaretPos);
 		if (widget->CaretPos >= widget->Text.length) { widget->CaretPos = -1; }
 		InputWidget_UpdateCaret(widget);
@@ -1384,7 +1395,7 @@ void InputWidget_EndKey(InputWidget* widget) {
 }
 
 bool InputWidget_OtherKey(InputWidget* widget, Key key) {
-	Int32 maxChars = widget->GetMaxLines() * widget->MaxCharsPerLine;
+	Int32 maxChars = widget->GetMaxLines() * INPUTWIDGET_LEN;
 	if (key == Key_V && widget->Text.length < maxChars) {
 		UInt8 textBuffer[String_BufferSize(INPUTWIDGET_MAX_LINES * STRING_SIZE)];
 		String text = String_InitAndClearArray(textBuffer);
@@ -1405,14 +1416,15 @@ void InputWidget_Init(GuiElement* elem) {
 	InputWidget* widget = (InputWidget*)elem;
 	Int32 lines = widget->GetMaxLines();
 	if (lines > 1) {
-		WordWrap_Do(&widget->Text, widget->Lines, lines, widget->MaxCharsPerLine);
+		/* TODO: Actually make this work */
+		WordWrap_Do(&widget->Text, widget->Lines, lines, INPUTWIDGET_LEN);
 	} else {
 		String_Clear(&widget->Lines[0]);
 		String_AppendString(&widget->Lines[0], &widget->Text);
 	}
 
 	InputWidget_CalculateLineSizes(widget);
-	InputWidget_RemakeTexture(widget);
+	InputWidget_RemakeTexture(elem);
 	InputWidget_UpdateCaret(widget);
 }
 
@@ -1420,7 +1432,6 @@ void InputWidget_Free(GuiElement* elem) {
 	InputWidget* widget = (InputWidget*)elem;
 	Gfx_DeleteTexture(&widget->InputTex.ID);
 	Gfx_DeleteTexture(&widget->CaretTex.ID);
-	Gfx_DeleteTexture(&widget->PrefixTex.ID);
 }
 
 void InputWidget_Recreate(GuiElement* elem) {
@@ -1439,26 +1450,21 @@ void InputWidget_Reposition(Widget* elem) {
 }
 
 bool InputWidget_HandlesKeyDown(GuiElement* elem, Key key) {
-#if CC_BUILD_OSX
-	bool clipboardDown = Key_IsWinPressed();
-#else
-	bool clipboardDown = Key_IsControlPressed();
-#endif
 	InputWidget* widget = (InputWidget*)elem;
 
 	if (key == Key_Left) {
-		InputWidget_LeftKey(widget, clipboardDown);
+		InputWidget_LeftKey(widget);
 	} else if (key == Key_Right) {
-		InputWidget_RightKey(widget, clipboardDown);
+		InputWidget_RightKey(widget);
 	} else if (key == Key_BackSpace) {
-		InputWidget_BackspaceKey(widget, clipboardDown);
+		InputWidget_BackspaceKey(widget);
 	} else if (key == Key_Delete) {
 		InputWidget_DeleteKey(widget);
 	} else if (key == Key_Home) {
 		InputWidget_HomeKey(widget);
 	} else if (key == Key_End) {
 		InputWidget_EndKey(widget);
-	} else if (clipboardDown && !InputWidget_OtherKey(widget, key)) {
+	} else if (InputWidget_ControlDown() && !InputWidget_OtherKey(widget, key)) {
 		return false;
 	}
 	return true;
@@ -1477,7 +1483,7 @@ bool InputWidget_HandlesMouseDown(GuiElement* elem, Int32 x, Int32 y, MouseButto
 	if (button == MouseButton_Left) {
 		x -= widget->InputTex.X; y -= widget->InputTex.Y;
 		DrawTextArgs args; DrawTextArgs_MakeEmpty(&args, &widget->Font, true);
-		Int32 offset = 0, charHeight = widget->CaretHeight;
+		Int32 offset = 0, charHeight = widget->CaretTex.Height;
 
 		Int32 charX, i;
 		for (i = 0; i < widget->GetMaxLines(); i++) {
@@ -1508,11 +1514,12 @@ bool InputWidget_HandlesMouseDown(GuiElement* elem, Int32 x, Int32 y, MouseButto
 
 void InputWidget_Create(InputWidget* widget, FontDesc* font, STRING_REF String* prefix) {
 	Widget_Init(&widget->Base);
-	widget->Font = *font;
-	widget->Prefix = *prefix;
-	widget->CaretPos = -1;
-	widget->MaxCharsPerLine = STRING_SIZE;
-	widget->AllowedChar = InputWidget_AllowedChar;
+	widget->Font            = *font;
+	widget->Prefix          = *prefix;
+	widget->CaretPos        = -1;
+	widget->RemakeTexture   = InputWidget_RemakeTexture;
+	widget->OnPressedEnter  = InputWidget_OnPressedEnter;
+	widget->AllowedChar     = InputWidget_AllowedChar;	
 
 	widget->Base.Base.Init     = InputWidget_Init;
 	widget->Base.Base.Free     = InputWidget_Free;
@@ -1528,8 +1535,7 @@ void InputWidget_Create(InputWidget* widget, FontDesc* font, STRING_REF String* 
 	DrawTextArgs args; DrawTextArgs_Make(&args, &caret, font, true);
 	widget->CaretTex = Drawer2D_MakeTextTexture(&args, 0, 0);
 	widget->CaretTex.Width = (UInt16)((widget->CaretTex.Width * 3) / 4);
-	widget->CaretWidth  = (UInt16)widget->CaretTex.Width;
-	widget->CaretHeight = (UInt16)widget->CaretTex.Height;
+	widget->CaretWidth     = (UInt16)widget->CaretTex.Width;
 
 	if (prefix->length == 0) return;
 	DrawTextArgs_Make(&args, prefix, font, true);
@@ -1778,7 +1784,7 @@ bool MenuInputWidget_AllowedChar(GuiElement* elem, UInt8 c) {
 	MenuInputValidator* validator = &widget->Validator;
 
 	if (!validator->IsValidChar(validator, c)) return false;
-	Int32 maxChars = elemW->GetMaxLines() * elemW->MaxCharsPerLine;
+	Int32 maxChars = elemW->GetMaxLines() * INPUTWIDGET_LEN;
 	if (elemW->Text.length == maxChars) return false;
 
 	/* See if the new string is in valid format */
@@ -1791,21 +1797,214 @@ bool MenuInputWidget_AllowedChar(GuiElement* elem, UInt8 c) {
 Int32 MenuInputWidget_GetMaxLines(void) { return 1; }
 void MenuInputWidget_Create(MenuInputWidget* widget, Int32 width, Int32 height, STRING_PURE String* text, FontDesc* font, MenuInputValidator* validator) {
 	InputWidget_Create(&widget->Base, font, NULL);
-	widget->MinWidth = width;
+	widget->MinWidth  = width;
 	widget->MinHeight = height;
 	widget->Validator = *validator;
 
 	widget->Base.Padding = 3;	
-	widget->Base.Text = String_InitAndClearArray(widget->TextBuffer);
+	widget->Base.Text    = String_InitAndClearArray(widget->TextBuffer);
 	widget->Base.GetMaxLines   = MenuInputWidget_GetMaxLines;
-	widget->Base.AllowedChar   = MenuInputWidget_AllowedChar;
 	widget->Base.RemakeTexture = MenuInputWidget_RemakeTexture;
+	widget->Base.AllowedChar   = MenuInputWidget_AllowedChar;	
 
 	GuiElement* elem = &widget->Base.Base.Base;
 	elem->Render = MenuInputWidget_Render;
 	elem->Init(elem);
 	InputWidget_AppendString(&widget->Base, text);
 }
+
+
+void ChatInputWidget_Render(GuiElement* elem, Real64 delta) {
+	ChatInputWidget* widget = (ChatInputWidget*)elem;
+	InputWidget* input = (InputWidget*)elem;
+	Gfx_SetTexturing(false);
+	Int32 x = input->Base.X, y = input->Base.Y;
+
+	UInt32 i;
+	for (i = 0; i < INPUTWIDGET_MAX_LINES; i++) {
+		if (i > 0 && input->LineSizes[i].Height == 0) break;
+		bool caretAtEnd = (input->CaretY == i) && (input->CaretX == INPUTWIDGET_LEN || input->CaretPos == -1);
+		Int32 drawWidth = input->LineSizes[i].Width + (caretAtEnd ? input->CaretTex.Width : 0);
+		/* Cover whole window width to match original classic behaviour */
+		if (Game_PureClassic) {
+			drawWidth = max(drawWidth, Game_Width - x * 4);
+		}
+
+		PackedCol backCol = PACKEDCOL_CONST(0, 0, 0, 127);
+		GfxCommon_Draw2DFlat(x, y, drawWidth + input->Padding * 2, input->PrefixHeight, backCol);
+		y += input->LineSizes[i].Height;
+	}
+
+	Gfx_SetTexturing(true);
+	Texture_Render(&input->InputTex);
+	InputWidget_RenderCaret(input, delta);
+}
+
+void ChatInputWidget_OnPressedEnter(GuiElement* elem) {
+	ChatInputWidget* widget = (ChatInputWidget*)elem;
+
+	/* Don't want trailing spaces in output message */
+	String text = widget->Base.Text;
+	while (text.length > 0 && text.buffer[text.length - 1] == ' ') { text.length--; }
+	if (text.length > 0) { Chat_Send(&text); }
+
+	String orig = String_FromRawArray(widget->OrigBuffer);
+	String_Clear(&orig);
+	widget->TypingLogPos = Chat_InputLog.Count; /* Index of newest entry + 1. */
+
+	String empty = String_MakeNull();
+	Chat_AddOf(&empty, MESSAGE_TYPE_CLIENTSTATUS_2);
+	Chat_AddOf(&empty, MESSAGE_TYPE_CLIENTSTATUS_3);
+	InputWidget_OnPressedEnter(elem);
+}
+
+void ChatInputWidget_UpKey(GuiElement* elem) {
+	ChatInputWidget* widget = (ChatInputWidget*)elem;
+	InputWidget* input = (InputWidget*)elem;
+
+	if (InputWidget_ControlDown()) {
+		Int32 pos = input->CaretPos == -1 ? input->Text.length : input->CaretPos;
+		if (pos < INPUTWIDGET_LEN) return;
+
+		input->CaretPos = pos - INPUTWIDGET_LEN;
+		InputWidget_UpdateCaret(input);
+		return;
+	}
+
+	if (widget->TypingLogPos == Chat_InputLog.Count) {
+		String orig = String_FromRawArray(widget->OrigBuffer);
+		String_Clear(&orig);
+		String_AppendString(&orig, &input->Text);
+	}
+
+	if (Chat_InputLog.Count == 0) return;
+	widget->TypingLogPos--;
+	String_Clear(&input->Text);
+
+	if (widget->TypingLogPos < 0) widget->TypingLogPos = 0;
+	String prevInput = StringsBuffer_UNSAFE_Get(&Chat_InputLog, widget->TypingLogPos);
+	String_AppendString(&input->Text, &prevInput);
+
+	input->CaretPos = -1;
+	elem->Recreate(elem);
+}
+
+void ChatInputWidget_DownKey(GuiElement* elem) {
+	ChatInputWidget* widget = (ChatInputWidget*)elem;
+	InputWidget* input = (InputWidget*)elem;
+
+	if (InputWidget_ControlDown()) {
+		Int32 lines = input->GetMaxLines();
+		if (input->CaretPos == -1 || input->CaretPos >= (lines - 1) * INPUTWIDGET_LEN) return;
+
+		input->CaretPos += INPUTWIDGET_LEN;
+		InputWidget_UpdateCaret(input);
+		return;
+	}
+
+	if (Chat_InputLog.Count == 0) return;
+	widget->TypingLogPos++;
+	String_Clear(&input->Text);
+
+	if (widget->TypingLogPos >= Chat_InputLog.Count) {
+		widget->TypingLogPos = Chat_InputLog.Count;
+		String orig = String_FromRawArray(widget->OrigBuffer);
+		if (orig.length > 0) { String_AppendString(&input->Text, &orig); }
+	} else {
+		String prevInput = StringsBuffer_UNSAFE_Get(&Chat_InputLog, widget->TypingLogPos);
+		String_AppendString(&input->Text, &prevInput);
+	}
+
+	input->CaretPos = -1;
+	elem->Recreate(elem);
+}
+
+bool ChatInputWidget_IsNameChar(char c) {
+	return c == '_' || c == '.' || (c >= '0' && c <= '9')
+		|| (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+
+void ChatInputWidget_TabKey(GuiElement* elem) {
+	ChatInputWidget* widget = (ChatInputWidget*)elem;
+	InputWidget* input = (InputWidget*)elem;
+
+	Int32 end = input->CaretPos == -1 ? input->Text.length - 1 : input->CaretPos;
+	Int32 start = end;
+	UInt8* buffer = input->Text.buffer;
+
+	while (start >= 0 && ChatInputWidget_IsNameChar(buffer[start])) { start--; }
+	start++;
+	if (end < 0 || start > end) return;
+
+	String part = String_UNSAFE_Substring(&input->Text, start, (end + 1) - start);
+	String empty = String_MakeNull();
+	Chat_AddOf(&empty, MESSAGE_TYPE_CLIENTSTATUS_3);
+
+	EntityID matches[TABLIST_MAX_NAMES];
+	UInt32 i, matchesCount = 0;
+
+	for (i = 0; i < TABLIST_MAX_NAMES; i++) {
+		EntityID id = (EntityID)i;
+		if (!TabList_Valid(id)) continue;
+
+		String name = TabList_UNSAFE_GetPlayer(i);
+		if (!String_CaselessStarts(&name, &part)) continue;
+		matches[matchesCount++] = id;
+	}
+
+	if (matchesCount == 1) {
+		if (input->CaretPos == -1) end++;
+		Int32 len = end - start, j;
+		for (j = 0; j < len; j++) {
+			String_DeleteAt(&input->Text, start);
+		}
+
+		if (input->CaretPos != -1) input->CaretPos -= len;
+		String match = TabList_UNSAFE_GetPlayer(matches[0]);
+		InputWidget_AppendString(input, &match);
+	} else if (matchesCount > 1) {
+		UInt8 strBuffer[String_BufferSize(STRING_SIZE)];
+		String str = String_InitAndClearArray(strBuffer);
+		String_AppendConst(&str, "&e");
+		String_AppendInt32(&str, matchesCount);
+		String_AppendConst(&str, " matching names: ");
+
+		for (i = 0; i < matchesCount; i++) {
+			String match = TabList_UNSAFE_GetPlayer(matches[i]);
+			if ((str.length + match.length + 1) > STRING_SIZE) break;
+
+			String_AppendString(&str, &match);
+			String_Append(&str, ' ');
+		}
+		Chat_AddOf(&str, MESSAGE_TYPE_CLIENTSTATUS_3);
+	}
+}
+
+bool ChatInputWidget_HandlesKeyDown(GuiElement* elem, Key key) {
+	if (key == Key_Tab)  { ChatInputWidget_TabKey(elem);  return true; }
+	if (key == Key_Up)   { ChatInputWidget_UpKey(elem);   return true; }
+	if (key == Key_Down) { ChatInputWidget_DownKey(elem); return true; }
+	return InputWidget_HandlesKeyDown(elem, key);
+}
+
+Int32 ChatInputWidget_GetMaxLines(void) {
+	return !Game_ClassicMode && ServerConnection_SupportsPartialMessages ? 3 : 1;
+}
+
+void ChatInputWidget_Create(ChatInputWidget* widget, FontDesc* font) {
+	String prefix = String_FromConst("> ");
+	InputWidget_Create(&widget->Base, font, &prefix);
+	widget->TypingLogPos = Chat_InputLog.Count; /* Index of newest entry + 1. */
+
+	widget->Base.ShowCaret      = true;
+	widget->Base.Padding        = 5;
+	widget->Base.GetMaxLines    = ChatInputWidget_GetMaxLines;
+	widget->Base.OnPressedEnter = ChatInputWidget_OnPressedEnter;
+
+	widget->Base.Base.Base.Render         = ChatInputWidget_Render;
+	widget->Base.Base.Base.HandlesKeyDown = ChatInputWidget_HandlesKeyDown;
+}
+
 
 
 #define GROUP_NAME_ID UInt16_MaxValue
@@ -1831,9 +2030,10 @@ Texture PlayerListWidget_DrawName(PlayerListWidget* widget, STRING_PURE String* 
 
 
 Int32 PlayerListWidget_HighlightedName(PlayerListWidget* widget, Int32 mouseX, Int32 mouseY) {
+	if (!widget->Base.Active) return -1;
 	Int32 i;
 	for (i = 0; i < widget->NamesCount; i++) {
-		if (!Texture_IsValid(&widget->Textures[i]) || widget->IDs[i] == GROUP_NAME_ID) continue;
+		if (widget->Textures[i].ID == NULL || widget->IDs[i] == GROUP_NAME_ID) continue;
 
 		Texture t = widget->Textures[i];
 		if (Gui_Contains(t.X, t.Y, t.Width, t.Height, mouseX, mouseY)) return i;
@@ -1992,7 +2192,7 @@ Int32 PlayerListWidget_GetGroupCount(PlayerListWidget* widget, UInt16 id, Int32 
 Int32 PlayerListWidget_PlayerCompare(UInt16 x, UInt16 y) {
 	UInt8 xRank = TabList_GroupRanks[x];
 	UInt8 yRank = TabList_GroupRanks[y];
-	if (xRank != yRank) return (xRank < yRank ? 1 : -1);
+	if (xRank != yRank) return (xRank < yRank ? -1 : 1);
 
 	UInt8 xNameBuffer[String_BufferSize(STRING_SIZE)];
 	String xName    = String_InitAndClearArray(xNameBuffer);
@@ -2146,7 +2346,7 @@ void PlayerListWidget_Render(GuiElement* elem, Real64 delta) {
 
 	Int32 i, highlightedI = PlayerListWidget_HighlightedName(widget, Mouse_X, Mouse_Y);
 	for (i = 0; i < widget->NamesCount; i++) {
-		if (!Texture_IsValid(&widget->Textures[i])) continue;
+		if (widget->Textures[i].ID == NULL) continue;
 
 		Texture tex = widget->Textures[i];
 		if (i == highlightedI) tex.X += 4;
@@ -2171,15 +2371,209 @@ void PlayerListWidget_Free(GuiElement* elem) {
 
 void PlayerListWidget_Create(PlayerListWidget* widget, FontDesc* font, bool classic) {
 	Widget_Init(&widget->Base);
+	widget->Base.Base.Init  = PlayerListWidget_Init;
+	widget->Base.Base.Free  = PlayerListWidget_Free;
+	widget->Base.Reposition = PlayerListWidget_Reposition;
+	widget->Base.HorAnchor  = ANCHOR_CENTRE;
+	widget->Base.VerAnchor  = ANCHOR_CENTRE;
+
 	widget->NamesCount = 0;
-
-	widget->Base.Base.Init     = PlayerListWidget_Init;
-	widget->Base.Base.Free     = PlayerListWidget_Free;
-	widget->Base.Reposition    = PlayerListWidget_Reposition;
-
-	widget->Base.HorAnchor = ANCHOR_CENTRE;
-	widget->Base.VerAnchor = ANCHOR_CENTRE;
 	widget->Font = *font;
 	widget->Classic = classic;
 	widget->ElementOffset = classic ? 0 : 10;
+}
+
+
+void TextGroupWidget_PushUpAndReplaceLast(TextGroupWidget* widget, STRING_PURE String* text) {
+	Int32 y = widget->Base.Y;
+	Gfx_DeleteTexture(&widget->Textures[0].ID);
+	UInt32 i;
+#define tgw_max_idx (Array_NumElements(widget->Textures) - 1)
+
+	/* Move contents of X line to X - 1 line */
+	for (i = 0; i < tgw_max_idx; i++) {
+		UInt8* dst = widget->Buffer + i       * TEXTGROUPWIDGET_LEN;
+		UInt8* src = widget->Buffer + (i + 1) * TEXTGROUPWIDGET_LEN;
+		UInt8 lineLen = widget->LineLengths[i + 1];
+
+		if (lineLen > 0) Platform_MemCpy(dst, src, lineLen);
+		widget->Textures[i]    = widget->Textures[i + 1];
+		widget->LineLengths[i] = lineLen;
+
+		widget->Textures[i].Y = y;
+		y += widget->Textures[i].Height;
+	}
+
+	widget->Textures[tgw_max_idx].ID = NULL; /* Delete() is called by SetText otherwise */
+	TextGroupWidget_SetText(widget, tgw_max_idx, text);
+}
+
+Int32 TextGroupWidget_CalcY(TextGroupWidget* widget, Int32 index, Int32 newHeight) {
+	Int32 y = 0, i;
+	Texture* textures = widget->Textures;
+	Int32 deltaY = newHeight - textures[index].Height;
+
+	if (widget->Base.VerAnchor == ANCHOR_LEFT_OR_TOP) {
+		y = widget->Base.Y;
+		for (i = 0; i < index; i++) {
+			y += textures[i].Height;
+		}
+		for (i = index + 1; i < TEXTGROUPWIDGET_MAX_LINES; i++) {
+			textures[i].Y += deltaY;
+		}
+	} else {
+		y = Game_Height - widget->Base.YOffset;
+		for (i = index + 1; i < TEXTGROUPWIDGET_MAX_LINES; i++) {
+			y -= textures[i].Height;
+		}
+
+		y -= newHeight;
+		for (i = 0; i < index; i++) {
+			textures[i].Y -= deltaY;
+		}
+	}
+	return y;
+}
+
+void TextGroupWidget_SetUsePlaceHolder(TextGroupWidget* widget, Int32 index, bool placeHolder) {
+	widget->PlaceholderHeight[index] = placeHolder;
+	if (widget->Textures[index].ID != NULL) return;
+
+	Int32 newHeight = placeHolder ? widget->DefaultHeight : 0;
+	widget->Textures[index].Y = TextGroupWidget_CalcY(widget, index, newHeight);
+	widget->Textures[index].Height = (UInt16)newHeight;
+}
+
+Int32 TextGroupWidget_GetUsedHeight(TextGroupWidget* widget) {
+	Int32 height = 0, i;
+	Texture* textures = widget->Textures;
+
+	for (i = 0; i < TEXTGROUPWIDGET_MAX_LINES; i++) {
+		if (textures[i].ID != NULL) break;
+	}
+	for (; i < TEXTGROUPWIDGET_MAX_LINES; i++) {
+		height += textures[i].Height;
+	}
+	return height;
+}
+
+void TextGroupWidget_Reposition(Widget* elem) {
+	TextGroupWidget* widget = (TextGroupWidget*)elem;
+	UInt32 i;
+	Texture* textures = widget->Textures;
+
+	Int32 oldY = elem->Y;
+	Widget_DoReposition(elem);
+	if (widget->LinesCount == 0) return;
+
+	for (i = 0; i < TEXTGROUPWIDGET_MAX_LINES; i++) {
+		textures[i].X = Gui_CalcPos(elem->HorAnchor, elem->XOffset, textures[i].Width, Game_Width);
+		textures[i].Y += elem->Y - oldY;
+	}
+}
+
+void TextGroupWidget_UpdateDimensions(TextGroupWidget* widget) {
+	Int32 i, width = 0, height = 0;
+	Texture* textures = widget->Textures;
+
+	for (i = 0; i < TEXTGROUPWIDGET_MAX_LINES; i++) {
+		width = max(width, textures[i].Width);
+		height += textures[i].Height;
+	}
+
+	widget->Base.Width  = width;
+	widget->Base.Height = height;
+	TextGroupWidget_Reposition(&widget->Base);
+}
+
+String TextGroupWidget_UNSAFE_Get(TextGroupWidget* widget, Int32 i) {
+	UInt8* buffer = widget->Buffer + i * TEXTGROUPWIDGET_LEN;
+	UInt16 length = widget->LineLengths[i];
+	return String_Init(widget->Buffer, length, length);
+}
+
+void TextGroupWidget_GetSelected(TextGroupWidget* widget, STRING_TRANSIENT String* text, Int32 x, Int32 y) {
+	Int32 i;
+	for (i = 0; i < TEXTGROUPWIDGET_MAX_LINES; i++) {
+		if (widget->Textures[i].ID == NULL) continue;
+		Texture tex = widget->Textures[i];
+		/* TODO: Add support for URLS */
+		if (!Gui_Contains(tex.X, tex.Y, tex.Width, tex.Height, x, y)) continue;
+
+		String line = TextGroupWidget_UNSAFE_Get(widget, i);
+		String_AppendString(text, &line);
+		return;
+	}
+}
+
+void TextGroupWidget_SetText(TextGroupWidget* widget, Int32 index, STRING_PURE String* text) {
+	if (text->length > TEXTGROUPWIDGET_LEN) ErrorHandler_Fail("TextGroupWidget - too big text");
+	Gfx_DeleteTexture(&widget->Textures[index].ID);
+	Platform_MemCpy(widget->Buffer + index * TEXTGROUPWIDGET_LEN, text->buffer, text->length);
+	widget->LineLengths[index] = (UInt8)text->length;
+
+	Texture tex;
+	if (!Drawer2D_IsEmptyText(text)) {
+		/* TODO: Add support for URLs */
+		DrawTextArgs args; DrawTextArgs_Make(&args, text, &widget->Font, true);
+		tex = Drawer2D_MakeTextTexture(&args, 0, 0);
+		Drawer2D_ReducePadding_Tex(&tex, widget->Font.Size, 3);
+	} else {
+		tex = Texture_MakeInvalid();
+		tex.Height = (UInt16)(widget->PlaceholderHeight[index] ? widget->DefaultHeight : 0);
+	}
+
+	Widget* elem = &widget->Base;
+	tex.X = Gui_CalcPos(elem->HorAnchor, elem->XOffset, tex.Width, Game_Width);
+	tex.Y = TextGroupWidget_CalcY(widget, index, tex.Height);
+	widget->Textures[index] = tex;
+	TextGroupWidget_UpdateDimensions(widget);
+}
+
+
+void TextGroupWidget_Init(GuiElement* elem) {
+	TextGroupWidget* widget = (TextGroupWidget*)elem;
+	Int32 height = Drawer2D_FontHeight(&widget->Font, true);
+	Drawer2D_ReducePadding_Height(&height, widget->Font.Size, 3);
+	widget->DefaultHeight = height;
+
+	UInt32 i;
+	for (i = 0; i < Array_NumElements(widget->Textures); i++) {
+		widget->Textures[i].Height = (UInt16)height;
+		widget->PlaceholderHeight[i] = true;
+	}
+	TextGroupWidget_UpdateDimensions(widget);
+}
+
+void TextGroupWidget_Render(GuiElement* elem, Real64 delta) {
+	TextGroupWidget* widget = (TextGroupWidget*)elem;
+	UInt32 i;
+	Texture* textures = widget->Textures;
+
+	for (i = 0; i < TEXTGROUPWIDGET_MAX_LINES; i++) {
+		if (textures[i].ID == NULL) continue;
+		Texture_Render(&textures[i]);
+	}
+}
+
+void TextGroupWidget_Free(GuiElement* elem) {
+	TextGroupWidget* widget = (TextGroupWidget*)elem;
+	UInt32 i;
+
+	for (i = 0; i < TEXTGROUPWIDGET_MAX_LINES; i++) {
+		widget->LineLengths[i] = 0;
+		Gfx_DeleteTexture(&widget->Textures[i].ID);
+	}
+}
+
+void TextGroupWidget_Create(TextGroupWidget* widget, Int32 linesCount, FontDesc* font, FontDesc* underlineFont) {
+	Widget_Init(&widget->Base);
+	widget->Base.Base.Init   = TextGroupWidget_Init;
+	widget->Base.Base.Render = TextGroupWidget_Render;
+	widget->Base.Base.Free   = TextGroupWidget_Free;
+	widget->Base.Reposition  = TextGroupWidget_Reposition;
+
+	widget->LinesCount = linesCount;
+	widget->Font = *font;
+	widget->UnderlineFont = *underlineFont;
 }

@@ -4,6 +4,7 @@ using ClassicalSharp.Entities;
 using ClassicalSharp.Events;
 using ClassicalSharp.GraphicsAPI;
 using ClassicalSharp.Map;
+using ClassicalSharp.Textures;
 using OpenTK;
 
 #if USE16_BIT
@@ -61,18 +62,18 @@ namespace ClassicalSharp.Renderers {
 		
 		public void Refresh() {
 			chunkPos = new Vector3I(int.MaxValue);
-			if (renderer.chunks != null && game.World.blocks != null) {
+			if (renderer.chunks != null && game.World.HasBlocks) {
 				ClearChunkCache();
 				ResetChunkCache();
 			}
 			
-			renderer.normalPartsCount = new int[game.TerrainAtlas1D.TexIds.Length];
-			renderer.translucentPartsCount = new int[game.TerrainAtlas1D.TexIds.Length];
+			renderer.normalPartsCount = new int[TerrainAtlas1D.TexIds.Length];
+			renderer.translucentPartsCount = new int[TerrainAtlas1D.TexIds.Length];
 		}
 		
 		void RefreshBorders(int clipLevel) {
 			chunkPos = new Vector3I(int.MaxValue);
-			if (renderer.chunks == null || game.World.blocks == null) return;
+			if (renderer.chunks == null || game.World.HasBlocks) return;
 			
 			int index = 0;
 			for (int z = 0; z < chunksZ; z++)
@@ -99,20 +100,20 @@ namespace ClassicalSharp.Renderers {
 
 		void TerrainAtlasChanged(object sender, EventArgs e) {
 			if (renderer._1DUsed == -1) {
-				renderer.normalPartsCount = new int[game.TerrainAtlas1D.TexIds.Length];
-				renderer.translucentPartsCount = new int[game.TerrainAtlas1D.TexIds.Length];
+				renderer.normalPartsCount = new int[TerrainAtlas1D.TexIds.Length];
+				renderer.translucentPartsCount = new int[TerrainAtlas1D.TexIds.Length];
 			} else {
-				bool refreshRequired = elementsPerBitmap != game.TerrainAtlas1D.elementsPerBitmap;
+				bool refreshRequired = elementsPerBitmap != TerrainAtlas1D.elementsPerBitmap;
 				if (refreshRequired) Refresh();
 			}
 			
-			renderer._1DUsed = game.TerrainAtlas1D.UsedAtlasesCount();
-			elementsPerBitmap = game.TerrainAtlas1D.elementsPerBitmap;
+			renderer._1DUsed = TerrainAtlas1D.UsedAtlasesCount();
+			elementsPerBitmap = TerrainAtlas1D.elementsPerBitmap;
 			ResetUsedFlags();
 		}
 		
 		void BlockDefinitionChanged(object sender, EventArgs e) {
-			renderer._1DUsed = game.TerrainAtlas1D.UsedAtlasesCount();
+			renderer._1DUsed = TerrainAtlas1D.UsedAtlasesCount();
 			ResetUsedFlags();
 			Refresh();
 		}
@@ -204,8 +205,8 @@ namespace ClassicalSharp.Renderers {
 			for (int i = 0; i < renderer.chunks.Length; i++)
 				DeleteChunk(renderer.chunks[i]);
 			
-			renderer.normalPartsCount = new int[game.TerrainAtlas1D.TexIds.Length];
-			renderer.translucentPartsCount = new int[game.TerrainAtlas1D.TexIds.Length];
+			renderer.normalPartsCount = new int[TerrainAtlas1D.TexIds.Length];
+			renderer.translucentPartsCount = new int[TerrainAtlas1D.TexIds.Length];
 		}
 		
 		void DeleteChunk(ChunkInfo info) {

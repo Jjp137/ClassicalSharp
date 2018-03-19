@@ -516,7 +516,9 @@ namespace ClassicalSharp.GraphicsAPI
 
 		float lastFogEnd = -1, lastFogDensity = -1;
 		public override void SetFogDensity(float value) {
-			FogParam(FogParameter.FogDensity, value, ref lastFogDensity);
+			if (value == lastFogDensity) return;
+			GLFuncs.Fogf(FogParameter.FogDensity, value);
+			lastFogDensity = value;
 		}
 
 		public override void SetFogStart(float value) {
@@ -524,13 +526,9 @@ namespace ClassicalSharp.GraphicsAPI
 		}
 
 		public override void SetFogEnd(float value) {
-			FogParam(FogParameter.FogEnd, value, ref lastFogEnd);
-		}
-
-		static void FogParam(FogParameter param, float value, ref float last) {
-			if (value == last) return;
-			GLFuncs.Fogf(param, value);
-			last = value;
+			if (value == lastFogEnd) return;
+			GLFuncs.Fogf(FogParameter.FogEnd, value);
+			lastFogEnd = value;
 		}
 
 		Fog lastFogMode = (Fog)999;
@@ -561,7 +559,9 @@ namespace ClassicalSharp.GraphicsAPI
 			}
 		}
 
-		public override bool ColourWrite { set { GLFuncs.ColorMask(value, value, value, value); } }
+		public override void ColourWriteMask(bool r, bool g, bool b, bool a) {
+			GLFuncs.ColorMask(r, g, b, a);
+		}
 
 		public override void DepthTestFunc(CompareFunc func) {
 			GLFuncs.DepthFunc(compareFuncs[(int)func]);

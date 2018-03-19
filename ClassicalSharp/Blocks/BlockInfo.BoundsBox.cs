@@ -14,20 +14,15 @@ namespace ClassicalSharp {
 	/// <summary> Stores various properties about the blocks in Minecraft Classic. </summary>
 	public static partial class BlockInfo {
 		
-		public static Vector3[] MinBB = new Vector3[Block.Count];
-		public static Vector3[] MaxBB = new Vector3[Block.Count];
-		public static Vector3[] RenderMinBB = new Vector3[Block.Count];
-		public static Vector3[] RenderMaxBB = new Vector3[Block.Count];
-		
 		internal static void CalcRenderBounds(BlockID block) {
 			Vector3 min = MinBB[block], max = MaxBB[block];
 			
 			if (IsLiquid[block]) {
-				min.X -= 0.1f/16f; max.X -= 0.1f/16f; 
+				min.X -= 0.1f/16f; max.X -= 0.1f/16f;
 				min.Z -= 0.1f/16f; max.Z -= 0.1f/16f;
 				min.Y -= 1.5f/16f; max.Y -= 1.5f/16f;
 			} else if (Draw[block] == DrawType.Translucent && Collide[block] != CollideType.Solid) {
-				min.X += 0.1f/16f; max.X += 0.1f/16f; 
+				min.X += 0.1f/16f; max.X += 0.1f/16f;
 				min.Z += 0.1f/16f; max.Z += 0.1f/16f;
 				min.Y -= 0.1f/16f; max.Y -= 0.1f/16f;
 			}
@@ -51,10 +46,12 @@ namespace ClassicalSharp {
 			return (byte)flags;
 		}
 		
-		public static void RecalculateSpriteBB(FastBitmap fastBmp) {
-			for (int i = 0; i < Block.Count; i++) {
-				if (Draw[i] != DrawType.Sprite) continue;
-				RecalculateBB((BlockID)i, fastBmp);
+		internal static void RecalculateSpriteBB() {
+			using (FastBitmap fastBmp = new FastBitmap(TerrainAtlas2D.Atlas, true, true)) {
+				for (int b = 0; b <= MaxDefined; b++) {
+					if (Draw[b] != DrawType.Sprite) continue;
+					RecalculateBB((BlockID)b, fastBmp);
+				}
 			}
 		}
 		

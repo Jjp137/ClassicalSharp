@@ -37,10 +37,10 @@ namespace ClassicalSharp {
 		
 		void LoadAtlas(Bitmap bmp) {
 			TerrainAtlas1D.Dispose();
-			TerrainAtlas.Dispose();
+			TerrainAtlas2D.Dispose();
 			
-			TerrainAtlas.UpdateState(bmp);
-			TerrainAtlas1D.UpdateState(TerrainAtlas);
+			TerrainAtlas2D.UpdateState(bmp);
+			TerrainAtlas1D.UpdateState();
 		}
 		
 		public bool ChangeTerrainAtlas(Bitmap atlas) {
@@ -110,7 +110,7 @@ namespace ClassicalSharp {
 			UpdateViewMatrix();
 			
 			bool visible = Gui.activeScreen == null || !Gui.activeScreen.BlocksWorld;
-			if (World.blocks == null) visible = false;
+			if (!World.HasBlocks) visible = false;
 			if (visible) {
 				Render3D(delta, t);
 			} else {
@@ -242,10 +242,9 @@ namespace ClassicalSharp {
 			Gui.Reset(this);
 			World.Reset();
 			WorldEvents.RaiseOnNewMap();
-			
-			World.blocks = null;
+
 			IDrawer2D.InitCols();
-			BlockInfo.Reset(this);
+			BlockInfo.Reset();
 			TexturePack.ExtractDefault(this);
 			Gui.SetNewScreen(new DisconnectScreen(this, title, reason));
 			GC.Collect();
@@ -310,7 +309,7 @@ namespace ClassicalSharp {
 		
 		public void Dispose() {
 			MapRenderer.Dispose();
-			TerrainAtlas.Dispose();
+			TerrainAtlas2D.Dispose();
 			TerrainAtlas1D.Dispose();
 			ModelCache.Dispose();
 			Entities.Dispose();

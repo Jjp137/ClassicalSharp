@@ -24,14 +24,12 @@ namespace ClassicalSharp {
 		protected IWorldLighting light;
 		protected WorldEnv env;
 		protected Game game;
-		protected IGraphicsApi gfx;
 		protected const int chunkSize = 16, extChunkSize = 18;
 		protected const int chunkSize2 = 16 * 16, extChunkSize2 = 18 * 18;
 		protected const int chunkSize3 = 16 * 16 * 16, extChunkSize3 = 18 * 18 * 18;
 		
 		public void Init(Game game) {
 			this.game = game;
-			gfx = game.Graphics;
 			game.Events.TerrainAtlasChanged += TerrainAtlasChanged;
 		}
 		
@@ -83,7 +81,7 @@ namespace ClassicalSharp {
 		
 		bool ReadChunkData(int x1, int y1, int z1, ref bool outAllAir) { // only assign this variable once
 			bool allAir = true, allSolid = true;
-			fixed(BlockID* mapPtr = map.blocks) {
+			fixed(BlockID* mapPtr = map.blocks1) {
 				
 				for (int yy = -1; yy < 17; yy++) {
 					int y = yy + y1;
@@ -144,7 +142,7 @@ namespace ClassicalSharp {
 			ChunkPartInfo info;
 			fixed (VertexP3fT2fC4b* ptr = part.vertices) {
 				// add an extra element to fix crashing on some GPUs
-				info.VbId = gfx.CreateVb((IntPtr)ptr, VertexFormat.P3fT2fC4b, vertCount + 1);
+				info.VbId = game.Graphics.CreateVb((IntPtr)ptr, VertexFormat.P3fT2fC4b, vertCount + 1);
 			}
 			info.VerticesCount = vertCount;
 			
@@ -204,11 +202,7 @@ namespace ClassicalSharp {
 						
 						X = x; Y = y; Z = z;
 						fullBright = BlockInfo.FullBright[b];
-						#if USE16_BIT
-						int tileIdx = b << 12;
-						#else
-						int tileIdx = b << 8;
-						#endif
+						int tileIdx = b << Block.Shift;
 						// All of these function calls are inlined as they can be called tens of millions to hundreds of millions of times.
 						
 						if (counts[index] == 0 ||

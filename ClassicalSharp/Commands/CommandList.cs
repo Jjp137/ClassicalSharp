@@ -16,12 +16,12 @@ namespace ClassicalSharp.Commands {
 	
 	public class CommandList : IGameComponent {
 		
-		const string prefix = "/client";
+		const string prefix = "/client", prefixSpace = "/client ";
 		public bool IsCommandPrefix(string input) {
 			if (game.Server.IsSinglePlayer && Utils.CaselessStarts(input, "/"))
 				return true;
 			
-			return Utils.CaselessStarts(input, prefix + " ")
+			return Utils.CaselessStarts(input, prefixSpace)
 				|| Utils.CaselessEquals(input, prefix);
 		}
 		
@@ -75,8 +75,10 @@ namespace ClassicalSharp.Commands {
 		
 		static char[] splitChar = { ' ' };
 		public void Execute(string text) {
-			if (Utils.CaselessStarts(text, prefix)) { // /client command args
-				text = text.Substring(prefix.Length).TrimStart(splitChar);
+			if (Utils.CaselessStarts(text, prefixSpace)) { // /client command args
+				text = text.Substring(prefixSpace.Length);
+			} else if (Utils.CaselessStarts(text, prefix)) { // /clientcommand args
+				text = text.Substring(prefix.Length);
 			} else { // /command args
 				text = text.Substring(1);
 			}
@@ -84,7 +86,7 @@ namespace ClassicalSharp.Commands {
 			if (text.Length == 0) { // only / or /client
 				game.Chat.Add("&eList of client commands:");
 				PrintDefinedCommands(game);
-				game.Chat.Add("&eTo see a particular command's help, type &a/client help [cmd name]");
+				game.Chat.Add("&eTo see help for a command, type &a/client help [cmd name]");
 				return;
 			}
 			

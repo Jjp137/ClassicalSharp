@@ -24,6 +24,7 @@ namespace ClassicalSharp.Gui.Screens {
 		internal int BottomOffset { get { return hotbar.Height; } }
 		
 		public override void Render(double delta) {
+			IGraphicsApi gfx = game.Graphics;
 			if (game.HideGui && chat.HandlesAllInput) {
 				gfx.Texturing = true;
 				chat.input.Render(delta);
@@ -46,6 +47,7 @@ namespace ClassicalSharp.Gui.Screens {
 			chat.Render(delta);
 			
 			if (playerList != null && game.Gui.ActiveScreen == this) {
+				playerList.Active = chat.HandlesAllInput;
 				playerList.Render(delta);
 				// NOTE: Should usually be caught by KeyUp, but just in case.
 				if (!game.IsKeyDown(KeyBind.PlayerList)) {
@@ -66,7 +68,7 @@ namespace ClassicalSharp.Gui.Screens {
 			int extent = (int)(chExtent * game.Scale(game.Height / 480f));
 			Texture chTex = new Texture(game.Gui.IconsTex, cenX - extent,
 			                            cenY - extent, extent * 2, extent * 2, chRec);
-			chTex.Render(gfx);
+			chTex.Render(game.Graphics);
 		}
 		
 		bool hadPlayerList;
@@ -100,8 +102,8 @@ namespace ClassicalSharp.Gui.Screens {
 			ContextLost();
 			
 			game.WorldEvents.OnNewMap -= OnNewMap;
-			gfx.ContextLost -= ContextLost;
-			gfx.ContextRecreated -= ContextRecreated;
+			game.Graphics.ContextLost -= ContextLost;
+			game.Graphics.ContextRecreated -= ContextRecreated;
 		}
 		
 		public override void OnResize(int width, int height) {
@@ -122,8 +124,8 @@ namespace ClassicalSharp.Gui.Screens {
 			chat.Init();
 			
 			game.WorldEvents.OnNewMap += OnNewMap;
-			gfx.ContextLost += ContextLost;
-			gfx.ContextRecreated += ContextRecreated;
+			game.Graphics.ContextLost += ContextLost;
+			game.Graphics.ContextRecreated += ContextRecreated;
 		}
 
 		void OnNewMap(object sender, EventArgs e) { DisposePlayerList(); }

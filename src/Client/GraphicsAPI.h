@@ -62,7 +62,7 @@ void Gfx_Clear(void);
 void Gfx_ClearColour(PackedCol col);
 void Gfx_SetDepthTest(bool enabled);
 void Gfx_SetDepthTestFunc(Int32 compareFunc);
-void Gfx_SetColourWrite(bool enabled);
+void Gfx_SetColourWriteMask(bool r, bool g, bool b, bool a);
 void Gfx_SetDepthWrite(bool enabled);
 
 /* Creates a vertex buffer that can have its data dynamically updated. */
@@ -111,6 +111,5 @@ void Gfx_SetVSync(bool value);
 void Gfx_OnWindowResize(void);
 void Gfx_MakeApiInfo(void);
 
-#define Gfx_ApiInfo_Count 8
-String Gfx_ApiInfo[Gfx_ApiInfo_Count];
+String Gfx_ApiInfo[8];
 #endif

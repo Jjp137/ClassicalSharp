@@ -42,12 +42,8 @@ namespace ClassicalSharp.Map {
 				WriteSpawnCompoundTag();
 				
 				nbt.Write(NbtTagType.Int8Array);
-				nbt.Write("BlockArray"); nbt.WriteInt32(map.blocks.Length);
-				#if USE16_BIT
-				nbt.WriteBytes(Utils.UInt16sToUInt8s(map.blocks));
-				#else
-				nbt.WriteBytes(map.blocks);
-				#endif
+				nbt.Write("BlockArray"); nbt.WriteInt32(map.blocks1.Length);
+				nbt.WriteBytes(map.blocks1);
 				
 				WriteMetadata();
 				
@@ -116,10 +112,10 @@ namespace ClassicalSharp.Map {
 			nbt.Write(NbtTagType.End);
 			
 			nbt.WriteCpeExtCompound("BlockDefinitions", 1);
-			uint[] flags = BlockInfo.DefinedCustomBlocks;
 			for (int block = 1; block < 256; block++) {
-				if ((flags[block >> 5] & (1u << (block & 0x1F))) != 0)
+				if (BlockInfo.IsCustomDefined((byte)block)) {
 					WriteBlockDefinitionCompound((byte)block);
+				}
 			}
 			nbt.Write(NbtTagType.End);
 			

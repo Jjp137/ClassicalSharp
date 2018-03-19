@@ -79,11 +79,11 @@ void Gui_FileChanged(void* obj, Stream* stream) {
 	String guiClassic = String_FromConst("gui_classic.png");
 	String icons      = String_FromConst("icons.png");
 
-	if (String_Equals(&stream->Name, &gui)) {
+	if (String_CaselessEquals(&stream->Name, &gui)) {
 		Game_UpdateTexture(&Gui_GuiTex, stream, false);
-	} else if (String_Equals(&stream->Name, &guiClassic)) {
+	} else if (String_CaselessEquals(&stream->Name, &guiClassic)) {
 		Game_UpdateTexture(&Gui_GuiClassicTex, stream, false);
-	} else if (String_Equals(&stream->Name, &icons)) {
+	} else if (String_CaselessEquals(&stream->Name, &icons)) {
 		Game_UpdateTexture(&Gui_IconsTex, stream, false);
 	}
 }
@@ -91,9 +91,11 @@ void Gui_FileChanged(void* obj, Stream* stream) {
 void Gui_Init(void) {
 	Event_RegisterStream(&TextureEvents_FileChanged, NULL, Gui_FileChanged);
 	Gui_Status = StatusScreen_MakeInstance();
-	game.Components.Add(statusScreen);
 	Gui_HUD = HUDScreen_MakeInstance();
-	game.Components.Add(hudScreen);
+
+	IGameComponent comp;
+	comp = StatusScreen_MakeComponent(); Game_AddComponent(&comp);
+	comp = HUDScreen_MakeComponent();    Game_AddComponent(&comp);
 }
 
 void Gui_Reset(void) {

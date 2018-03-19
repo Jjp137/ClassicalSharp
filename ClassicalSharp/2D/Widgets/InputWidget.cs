@@ -19,7 +19,7 @@ namespace ClassicalSharp.Gui.Widgets {
 			DrawTextArgs args = new DrawTextArgs("_", font, true);
 			caretTex = game.Drawer2D.MakeTextTexture(ref args, 0, 0);
 			caretTex.Width = (ushort)((caretTex.Width * 3) / 4);
-			caretWidth = caretTex.Width; caretHeight = caretTex.Height;
+			caretWidth = caretTex.Width;
 			
 			if (Prefix == null) return;
 			args = new DrawTextArgs(Prefix, font, true);
@@ -38,7 +38,7 @@ namespace ClassicalSharp.Gui.Widgets {
 		protected int caret = -1;
 		protected Texture inputTex, caretTex, prefixTex;
 		protected readonly Font font;
-		protected int caretWidth, caretHeight, prefixWidth, prefixHeight;
+		protected int caretWidth, prefixWidth, prefixHeight;
 		protected FastColour caretColour;
 		
 		/// <summary> The raw text entered. </summary>
@@ -81,13 +81,13 @@ namespace ClassicalSharp.Gui.Widgets {
 		}
 		
 		public override void Dispose() {
-			gfx.DeleteTexture(ref inputTex);
-			gfx.DeleteTexture(ref caretTex);
-			gfx.DeleteTexture(ref prefixTex);
+			game.Graphics.DeleteTexture(ref inputTex);
+			game.Graphics.DeleteTexture(ref caretTex);
+			game.Graphics.DeleteTexture(ref prefixTex);
 		}
 		
 		public override void Recreate() {
-			gfx.DeleteTexture(ref inputTex);
+			game.Graphics.DeleteTexture(ref inputTex);
 			Init();
 		}
 
@@ -155,8 +155,9 @@ namespace ClassicalSharp.Gui.Widgets {
 			if (!ShowCaret) return;
 			
 			caretAccumulator += delta;
-			if ((caretAccumulator % 1) < 0.5)
-				caretTex.Render(gfx, caretColour);
+			if ((caretAccumulator % 1) < 0.5) {
+				caretTex.Render(game.Graphics, caretColour);
+			}
 		}
 		
 		/// <summary> Remakes the raw texture containg all the chat lines. </summary>
@@ -228,7 +229,7 @@ namespace ClassicalSharp.Gui.Widgets {
 				lines[i] = null;
 			
 			caret = -1;
-			gfx.DeleteTexture(ref inputTex);
+			game.Graphics.DeleteTexture(ref inputTex);
 		}
 
 		/// <summary> Appends a sequence of characters to current text buffer. </summary>
@@ -446,7 +447,7 @@ namespace ClassicalSharp.Gui.Widgets {
 			mouseX -= inputTex.X1; mouseY -= inputTex.Y1;
 			DrawTextArgs args = new DrawTextArgs(null, font, true);
 			IDrawer2D drawer = game.Drawer2D;
-			int offset = 0, elemHeight = caretHeight;
+			int offset = 0, elemHeight = caretTex.Height;
 			string oneChar = new String('A', 1);
 			
 			for (int y = 0; y < lines.Length; y++) {

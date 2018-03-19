@@ -120,6 +120,9 @@ namespace ClassicalSharp.Network.Protocols {
 				if (mapSizeIndex == 4) {
 					if (map == null) {
 						int size = mapSize[0] << 24 | mapSize[1] << 16 | mapSize[2] << 8 | mapSize[3];
+						#if USE16_BIT
+						if (reader.ExtendedBlocks) size *= 2;
+						#endif
 						map = new byte[size];
 					}
 					mapIndex += gzipStream.Read(map, mapIndex, map.Length - mapIndex);
@@ -130,6 +133,14 @@ namespace ClassicalSharp.Network.Protocols {
 			float progress = map == null ? 0 : (float)mapIndex / map.Length;
 			game.WorldEvents.RaiseMapLoading(progress);
 		}
+		
+		#if USE16_BIT
+		static ushort[] UInt8sToUInt16s(byte[] src) {
+			ushort[] dst = new ushort[src.Length / 2];
+			Buffer.BlockCopy(src, 0, dst, 0, src.Length);
+			return dst;
+		}
+		#endif
 		
 		void HandleLevelFinalise() {
 			game.Gui.SetNewScreen(null);
@@ -147,7 +158,11 @@ namespace ClassicalSharp.Network.Protocols {
 			Utils.LogDebug("map loading took: " + loadingMs);
 			
 			#if USE16_BIT
-			game.World.SetNewMap(Utils.UInt8sToUInt16s(map), mapWidth, mapHeight, mapLength);
+			if (reader.ExtendedBlocks) {
+				game.World.SetNewMap(UInt8sToUInt16s(map), mapWidth, mapHeight, mapLength);
+			} else{
+				game.World.SetNewMap(Utils.UInt8sToUInt16s(map), mapWidth, mapHeight, mapLength);
+			}
 			#else
 			game.World.SetNewMap(map, mapWidth, mapHeight, mapLength);
 			#endif
@@ -164,8 +179,8 @@ namespace ClassicalSharp.Network.Protocols {
 			int x = reader.ReadUInt16();
 			int y = reader.ReadUInt16();
 			int z = reader.ReadUInt16();
-			byte block = reader.ReadUInt8();
-			if (game.World.blocks != null && game.World.IsValidPos(x, y, z)) {
+			BlockID block = reader.ReadBlock();
+			if (game.World.HasBlocks && game.World.IsValidPos(x, y, z)) {
 				game.UpdateBlock(x, y, z, block);
 			}
 		}
@@ -174,8 +189,8 @@ namespace ClassicalSharp.Network.Protocols {
 			byte id = reader.ReadUInt8();
 			string name = reader.ReadString();
 			string skin = name;
-			net.CheckName(id, ref name, ref skin);			
-			net.AddEntity(id, name, skin, true);			
+			net.CheckName(id, ref name, ref skin);
+			net.AddEntity(id, name, skin, true);
 			
 			if (!net.addEntityHack) return;
 			// Workaround for some servers that declare they support ExtPlayerList,
@@ -253,7 +268,7 @@ namespace ClassicalSharp.Network.Protocols {
 		}
 		
 		internal void ReadAbsoluteLocation(byte id, bool interpolate) {
-			Vector3 P = reader.ReadPosition(id);	
+			Vector3 P = reader.ReadPosition(id);
 			float rotY =  (float)Utils.PackedToDegrees(reader.ReadUInt8());
 			float headX = (float)Utils.PackedToDegrees(reader.ReadUInt8());
 			
@@ -267,7 +282,7 @@ namespace ClassicalSharp.Network.Protocols {
 		
 		internal void WriteChat(string text, bool partial) {
 			int payload = !net.SupportsPartialMessages ? EntityList.SelfID : (partial ? 1 : 0);
-			writer.WriteUInt8((byte)Opcode.Message);			
+			writer.WriteUInt8((byte)Opcode.Message);
 			writer.WriteUInt8((byte)payload);
 			writer.WriteString(text);
 		}
@@ -276,7 +291,7 @@ namespace ClassicalSharp.Network.Protocols {
 			int payload = net.cpeData.sendHeldBlock ? game.Inventory.Selected : EntityList.SelfID;
 			writer.WriteUInt8((byte)Opcode.EntityTeleport);
 			
-			writer.WriteUInt8((byte)payload); // held block when using HeldBlock, otherwise just 255
+			writer.WriteBlock((BlockID)payload); // held block when using HeldBlock, otherwise just 255
 			writer.WritePosition(pos);
 			writer.WriteUInt8(Utils.DegreesToPacked(rotY));
 			writer.WriteUInt8(Utils.DegreesToPacked(headX));
@@ -284,17 +299,11 @@ namespace ClassicalSharp.Network.Protocols {
 		
 		internal void WriteSetBlock(int x, int y, int z, bool place, BlockID block) {
 			writer.WriteUInt8((byte)Opcode.SetBlockClient);
-			
 			writer.WriteInt16((short)x);
 			writer.WriteInt16((short)y);
 			writer.WriteInt16((short)z);
 			writer.WriteUInt8(place ? (byte)1 : (byte)0);
-			
-			#if USE16_BIT
-			writer.WriteUInt8((byte)block);
-			#else
-			writer.WriteUInt8(block);
-			#endif
+			writer.WriteBlock(block);
 		}
 		
 		internal void WriteLogin(string username, string verKey) {

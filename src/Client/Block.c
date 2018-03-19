@@ -5,6 +5,8 @@
 #include "Player.h"
 #include "Game.h"
 
+UInt32 Block_DefinedCustomBlocks[BLOCK_COUNT >> 5];
+
 TextureLoc Block_TopTex[BLOCK_CPE_COUNT] = { 0,  1,  0,  2, 16,  4, 15, 17, 14, 14,
 30, 30, 18, 19, 32, 33, 34, 21, 22, 48, 49, 64, 65, 66, 67, 68, 69, 70, 71,
 72, 73, 74, 75, 76, 77, 78, 79, 13, 12, 29, 28, 24, 23,  6,  6,  7,  9,  4,
@@ -26,10 +28,10 @@ void Block_Reset(void) {
 }
 
 void Block_Init(void) {
-	Int32 count = Array_NumElements(DefinedCustomBlocks);
+	Int32 count = Array_NumElements(Block_DefinedCustomBlocks);
 	Int32 i;
 	for (i = 0; i < count; i++) {
-		DefinedCustomBlocks[i] = 0;
+		Block_DefinedCustomBlocks[i] = 0;
 	}
 
 	Int32 block;
@@ -52,6 +54,18 @@ void Block_SetDefaultPerms(void) {
 	Block_CanPlace[BLOCK_STILL_LAVA] = false;  Block_CanDelete[BLOCK_STILL_LAVA] = false;
 	Block_CanPlace[BLOCK_STILL_WATER] = false; Block_CanDelete[BLOCK_STILL_WATER] = false;
 	Block_CanPlace[BLOCK_BEDROCK] = false;     Block_CanDelete[BLOCK_BEDROCK] = false;
+}
+
+bool Block_IsCustomDefined(BlockID block) {
+	return (Block_DefinedCustomBlocks[block >> 5] & (1u << (block & 0x1F))) != 0;
+}
+
+void Block_SetCustomDefined(BlockID block, bool defined) {
+	if (defined) {
+		Block_DefinedCustomBlocks[block >> 5] |=  (1u << (block & 0x1F));
+	} else {
+		Block_DefinedCustomBlocks[block >> 5] &= ~(1u << (block & 0x1F));
+	}
 }
 
 void Block_RecalcIsLiquid(BlockID b) {
@@ -83,7 +97,7 @@ void Block_SetDrawType(BlockID block, UInt8 draw) {
 	Block_Draw[block] = draw;
 	Block_RecalcIsLiquid(block);
 
-	Vector3 zero = Vector3_Zero, one = Vector3_One;
+	Vector3 zero = Vector3_Zero; Vector3 one = Vector3_One;
 	Block_FullOpaque[block] = draw == DRAW_OPAQUE
 		&& Vector3_Equals(&Block_MinBB[block], &zero)
 		&& Vector3_Equals(&Block_MaxBB[block], &one);
@@ -146,9 +160,9 @@ void Block_ResetProps(BlockID block) {
 	if (Block_Draw[block] == DRAW_SPRITE) {
 		Block_MinBB[block] = Vector3_Create3(2.50f / 16.0f, 0.0f, 2.50f / 16.0f);
 		Block_MaxBB[block] = Vector3_Create3(13.5f / 16.0f, 1.0f, 13.5f / 16.0f);
-	} else {
-		Block_MinBB[block] = Vector3_Zero;
-		Block_MaxBB[block] = Vector3_One;
+	} else {		
+		Vector3 zero = Vector3_Zero; Block_MinBB[block] = zero;
+		Vector3 one  = Vector3_One;  Block_MaxBB[block] = one;
 		Block_MaxBB[block].Y = DefaultSet_Height(block);
 	}
 
@@ -331,14 +345,14 @@ void Block_RecalculateBB(BlockID block) {
 	TextureLoc texLoc = Block_GetTexLoc(block, FACE_XMAX);
 	Int32 texX = texLoc & 0x0F, texY = texLoc >> 4;
 
-	Real32 topY = Block_GetSpriteBB_TopY(elemSize, texX, texY, bmp);
+	Real32 topY    = Block_GetSpriteBB_TopY(elemSize,    texX, texY, bmp);
 	Real32 bottomY = Block_GetSpriteBB_BottomY(elemSize, texX, texY, bmp);
-	Real32 leftX = Block_GetSpriteBB_LeftX(elemSize, texX, texY, bmp);
-	Real32 rightX = Block_GetSpriteBB_RightX(elemSize, texX, texY, bmp);
+	Real32 leftX   = Block_GetSpriteBB_LeftX(elemSize,   texX, texY, bmp);
+	Real32 rightX  = Block_GetSpriteBB_RightX(elemSize,  texX, texY, bmp);
 
 	Vector3 centre = Vector3_Create3(0.5f, 0, 0.5f);
-	Vector3 minRaw = Vector3_RotateY3(leftX - 0.5f, bottomY, 0, 45.0f * MATH_DEG2RAD);
-	Vector3 maxRaw = Vector3_RotateY3(rightX - 0.5f, topY, 0, 45.0f * MATH_DEG2RAD);
+	Vector3 minRaw = Vector3_RotateY3(leftX  - 0.5f, bottomY, 0, 45.0f * MATH_DEG2RAD);
+	Vector3 maxRaw = Vector3_RotateY3(rightX - 0.5f, topY,    0, 45.0f * MATH_DEG2RAD);
 
 	Vector3_Add(&minRaw, &centre, &Block_MinBB[block]);
 	Vector3_Add(&maxRaw, &centre, &Block_MaxBB[block]);
@@ -346,15 +360,20 @@ void Block_RecalculateBB(BlockID block) {
 }
 
 
+void Block_CalcStretch(BlockID block) {
+	/* faces which can be stretched on X axis */
+	if (Block_MinBB[block].X == 0.0f && Block_MaxBB[block].X == 1.0f) {
+		Block_CanStretch[block] |= 0x3C;
+	} else {
+		Block_CanStretch[block] &= 0xC3; /* ~0x3C */
+	}
 
-void Block_SetXStretch(BlockID block, bool stretch) {
-	Block_CanStretch[block] &= 0xC3; /* ~0x3C */
-	Block_CanStretch[block] |= (stretch ? 0x3C : (UInt8)0);
-}
-
-void Block_SetZStretch(BlockID block, bool stretch) {
-	Block_CanStretch[block] &= 0xFC; /* ~0x03 */
-	Block_CanStretch[block] |= (stretch ? 0x03 : (UInt8)0);
+	/* faces which can be stretched on Z axis */
+	if (Block_MinBB[block].Z == 0.0f && Block_MaxBB[block].Z == 1.0f) {
+		Block_CanStretch[block] |= 0x03;
+	} else {
+		Block_CanStretch[block] &= 0xFC; /* ~0x03 */
+	}
 }
 
 void Block_CalcCulling(BlockID block, BlockID other) {
@@ -363,7 +382,7 @@ void Block_CalcCulling(BlockID block, BlockID other) {
 	if (Block_IsLiquid[block]) bMax.Y -= 1.5f / 16.0f;
 	if (Block_IsLiquid[other]) oMax.Y -= 1.5f / 16.0f;
 
-	Block_Hidden[block * BLOCK_COUNT + other] = 0; /* set all faces 'not hidden' */
+	Block_Hidden[(block << BLOCK_SHIFT) | other] = 0; /* set all faces 'not hidden' */
 	if (Block_Draw[block] == DRAW_SPRITE) {
 		Block_SetHidden(block, other, FACE_XMIN, true);
 		Block_SetHidden(block, other, FACE_XMAX, true);
@@ -372,8 +391,6 @@ void Block_CalcCulling(BlockID block, BlockID other) {
 		Block_SetHidden(block, other, FACE_YMIN, oMax.Y == 1.0f);
 		Block_SetHidden(block, other, FACE_YMAX, bMax.Y == 1.0f);
 	} else {
-		Block_SetXStretch(block, bMin.X == 0 && bMax.X == 1.0f);
-		Block_SetZStretch(block, bMin.Z == 0 && bMax.Z == 1.0f);
 		bool bothLiquid = Block_IsLiquid[block] && Block_IsLiquid[other];
 
 		Block_SetHidden(block, other, FACE_XMIN, oMax.X == 1.0f && bMin.X == 0.0f);
@@ -390,10 +407,8 @@ void Block_CalcCulling(BlockID block, BlockID other) {
 
 void Block_UpdateCullingAll(void) {
 	Int32 block, neighbour;
-	for (block = BLOCK_AIR; block < BLOCK_COUNT; block++)
-		Block_CanStretch[block] = 0x3F;
-
 	for (block = BLOCK_AIR; block < BLOCK_COUNT; block++) {
+		Block_CalcStretch((BlockID)block);
 		for (neighbour = BLOCK_AIR; neighbour < BLOCK_COUNT; neighbour++) {
 			Block_CalcCulling((BlockID)block, (BlockID)neighbour);
 		}
@@ -401,8 +416,7 @@ void Block_UpdateCullingAll(void) {
 }
 
 void Block_UpdateCulling(BlockID block) {
-	Block_CanStretch[block] = 0x3F;
-
+	Block_CalcStretch(block);
 	Int32 other;
 	for (other = BLOCK_AIR; other < BLOCK_COUNT; other++) {
 		Block_CalcCulling(block, (BlockID)other);
@@ -428,22 +442,17 @@ bool Block_IsHidden(BlockID block, BlockID other) {
 
 	/* e.g. for water / ice, don't need to draw water. */
 	UInt8 bType = Block_Collide[block], oType = Block_Collide[other];
-	bool canSkip = (bType == COLLIDE_SOLID && oType == COLLIDE_SOLID)
-		|| bType != COLLIDE_SOLID;
+	bool canSkip = (bType == COLLIDE_SOLID && oType == COLLIDE_SOLID) || bType != COLLIDE_SOLID;
 	return canSkip;
 }
 
 void Block_SetHidden(BlockID block, BlockID other, Face face, bool value) {
 	value = Block_IsHidden(block, other) && Block_FaceOccluded(block, other, face) && value;
-	Block_Hidden[block * BLOCK_COUNT + other] |= (UInt8)(value << face);
+	Block_Hidden[(block << BLOCK_SHIFT) | other] |= (UInt8)(value << face);
 }
 
 bool Block_IsFaceHidden(BlockID block, BlockID other, Face face) {
-#if USE16_BIT
-	return (hidden[(block << 12) | other] & (1 << face)) != 0;
-#else
-	return (Block_Hidden[(block << 8) | other] & (1 << face)) != 0;
-#endif
+	return (Block_Hidden[(block << BLOCK_SHIFT) | other] & (1 << face)) != 0;
 }
 
 
@@ -508,31 +517,17 @@ BlockID AutoRotate_RotateOther(BlockID block, String* name, Vector3 offset) {
 }
 
 BlockID AutoRotate_RotateDirection(BlockID block, String* name, Vector3 offset) {
-	Vector3 SE = Vector3_Create3(+1.0f, 0.0f, 1.0f);
-	Vector3 SW = Vector3_Create3(-1.0f, 0.0f, 1.0f);
+	Real32 headY = LocalPlayer_Instance.Base.Base.HeadY;
+	headY = LocationUpdate_Clamp(headY);
 
-	Vector3I pos = Game_SelectedPos.TranslatedPos;
-	Vector3 exact = Game_SelectedPos.Intersect;
-	Vector3 exactFlat = exact; exactFlat.Y = 0.0f;
-
-	Vector3 SEToPoint = exactFlat; SEToPoint.X -= pos.X; SEToPoint.Z -= pos.Z;
-	Vector3 SWToPoint = exactFlat; SWToPoint.X -= (pos.X + 1); SWToPoint.Z -= pos.Z;
-
-	Real32 dotSE = Vector3_Dot(&SEToPoint, &SW);
-	Real32 dotSW = Vector3_Dot(&SWToPoint, &SE);
-
-	if (dotSE <= 0.0f) { /* NorthEast */
-		if (dotSW <= 0.0f) { /* NorthWest */
-			return AutoRotate_Find(block, name, "-N");
-		} else { /* SouthEast */
-			return AutoRotate_Find(block, name, "-E");
-		}
-	} else { /* SouthWest */
-		if (dotSW <= 0.0f) { /* NorthWest */
-			return AutoRotate_Find(block, name, "-W");
-		} else { /* SouthEast */
-			return AutoRotate_Find(block, name, "-S");
-		}
+	if (headY >= 45.0f && headY < 135.0f) {
+		return AutoRotate_Find(block, name, "-E");
+	} else if (headY >= 135.0f && headY < 225.0f) {
+		return AutoRotate_Find(block, name, "-S");
+	} else if (headY >= 225.0f && headY < 315.0f) {
+		return AutoRotate_Find(block, name, "-W");
+	} else {
+		return AutoRotate_Find(block, name, "-N");
 	}
 }
 
@@ -602,6 +597,8 @@ UInt8 DefaultSet_Collide(BlockID b) {
 }
 
 UInt8 DefaultSet_MapOldCollide(BlockID b, UInt8 collide) {
+	if (b == BLOCK_ROPE && collide == COLLIDE_GAS)
+		return COLLIDE_CLIMB_ROPE;
 	if (b == BLOCK_ICE && collide == COLLIDE_SOLID)
 		return COLLIDE_ICE;
 	if ((b == BLOCK_WATER || b == BLOCK_STILL_WATER) && collide == COLLIDE_LIQUID)

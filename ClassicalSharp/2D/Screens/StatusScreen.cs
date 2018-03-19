@@ -29,16 +29,16 @@ namespace ClassicalSharp.Gui.Screens {
 		TextAtlas posAtlas;
 		public override void Render(double delta) {
 			UpdateStatus(delta);
-			if (game.HideGui || !game.ShowFPS) return;
-			
-			gfx.Texturing = true;
+			if (game.HideGui || !game.ShowFPS) return;			
+			game.Graphics.Texturing = true;
 			status.Render(delta);
+			
 			if (!game.ClassicMode && game.Gui.activeScreen == null) {
-				UpdateHackState(false);
+				if (HacksChanged()) { UpdateHackState(); }
 				DrawPosition();
 				hackStates.Render(delta);
 			}
-			gfx.Texturing = false;
+			game.Graphics.Texturing = false;
 		}
 		
 		double accumulator;
@@ -49,7 +49,7 @@ namespace ClassicalSharp.Gui.Screens {
 			accumulator += delta;
 			if (accumulator < 1) return;
 			
-			int fps = (int)(frames / accumulator);			
+			int fps = (int)(frames / accumulator);
 			statusBuffer.Clear().AppendNum(fps).Append(" fps, ");
 			
 			if (game.ClassicMode) {
@@ -78,8 +78,8 @@ namespace ClassicalSharp.Gui.Screens {
 			ContextRecreated();
 			
 			game.Events.ChatFontChanged += ChatFontChanged;
-			gfx.ContextLost += ContextLost;
-			gfx.ContextRecreated += ContextRecreated;
+			game.Graphics.ContextLost += ContextLost;
+			game.Graphics.ContextRecreated += ContextRecreated;
 		}
 		
 		protected override void ContextLost() {
@@ -105,7 +105,7 @@ namespace ClassicalSharp.Gui.Screens {
 				.SetLocation(Anchor.LeftOrTop, Anchor.LeftOrTop, 2, yOffset);
 			hackStates.ReducePadding = true;
 			hackStates.Init();
-			UpdateHackState(true);
+			UpdateHackState();
 		}
 		
 		public override void Dispose() {
@@ -113,8 +113,8 @@ namespace ClassicalSharp.Gui.Screens {
 			ContextLost();
 			
 			game.Events.ChatFontChanged -= ChatFontChanged;
-			gfx.ContextLost -= ContextLost;
-			gfx.ContextRecreated -= ContextRecreated;
+			game.Graphics.ContextLost -= ContextLost;
+			game.Graphics.ContextRecreated -= ContextRecreated;
 		}
 		
 		void ChatFontChanged(object sender, EventArgs e) { Recreate(); }
@@ -140,28 +140,31 @@ namespace ClassicalSharp.Gui.Screens {
 			posAtlas.AddInt(pos.Z, vertices, ref index);
 			posAtlas.Add(14, vertices, ref index);
 			
-			gfx.BindTexture(posAtlas.tex.ID);
-			gfx.UpdateDynamicVb_IndexedTris(game.ModelCache.vb, game.ModelCache.vertices, index);
+			game.Graphics.BindTexture(posAtlas.tex.ID);
+			game.Graphics.UpdateDynamicVb_IndexedTris(game.ModelCache.vb, game.ModelCache.vertices, index);
 		}
 		
-		bool speeding, halfSpeeding, noclip, fly;
+		bool speed, halfSpeed, noclip, fly, canSpeed;
 		int lastFov;
-		void UpdateHackState(bool force) {
+		bool HacksChanged()  {
 			HacksComponent hacks = game.LocalPlayer.Hacks;
-			if (force || hacks.Speeding != speeding || hacks.HalfSpeeding != halfSpeeding || hacks.Noclip != noclip ||
-			    hacks.Flying != fly || game.Fov != lastFov) {
-				speeding = hacks.Speeding; halfSpeeding = hacks.HalfSpeeding; noclip = hacks.Noclip; fly = hacks.Flying;
-				lastFov = game.Fov;
-				statusBuffer.Clear();
-				
-				if (game.Fov != game.DefaultFov) statusBuffer.Append("Zoom fov ").AppendNum(lastFov).Append("  ");
-				if (fly) statusBuffer.Append("Fly ON   ");
-				
-				bool speed = (speeding || halfSpeeding) && (hacks.CanSpeed || hacks.BaseHorSpeed > 1);
-				if (speed) statusBuffer.Append("Speed ON   ");
-				if (noclip) statusBuffer.Append("Noclip ON   ");
-				hackStates.SetText(statusBuffer.ToString());
-			}
+			return hacks.Speeding != speed || hacks.HalfSpeeding != halfSpeed || hacks.Flying != fly
+				|| hacks.Noclip != noclip || game.Fov != lastFov || hacks.CanSpeed != canSpeed;
+		}
+		
+		void UpdateHackState() {
+			HacksComponent hacks = game.LocalPlayer.Hacks;
+			speed = hacks.Speeding; halfSpeed = hacks.HalfSpeeding; fly = hacks.Flying; 
+			noclip = hacks.Noclip; lastFov = game.Fov; canSpeed = hacks.CanSpeed;
+			
+			statusBuffer.Clear();
+			if (game.Fov != game.DefaultFov) statusBuffer.Append("Zoom fov ").AppendNum(lastFov).Append("  ");
+			if (fly) statusBuffer.Append("Fly ON   ");
+			
+			bool speeding = (speed || halfSpeed) && (hacks.CanSpeed || hacks.BaseHorSpeed > 1);
+			if (speeding) statusBuffer.Append("Speed ON   ");
+			if (noclip) statusBuffer.Append("Noclip ON   ");
+			hackStates.SetText(statusBuffer.ToString());
 		}
 	}
 }

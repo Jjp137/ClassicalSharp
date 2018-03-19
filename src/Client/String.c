@@ -3,10 +3,11 @@
 #include "ErrorHandler.h"
 #include "Platform.h"
 
+#define Char_MakeLower(ch) if ((ch) >= 'A' && (ch) <= 'Z') { (ch) += ' '; }
 bool Char_IsUpper(UInt8 c) { return c >= 'A' && c <= 'Z'; }
 UInt8 Char_ToLower(UInt8 c) {
-	if (!Char_IsUpper(c)) return c;
-	return (UInt8)(c + ' ');
+	Char_MakeLower(c);
+	return c;
 }
 
 String String_Init(STRING_REF UInt8* buffer, UInt16 length, UInt16 capacity) {
@@ -71,6 +72,22 @@ String String_UNSAFE_Substring(STRING_REF String* str, Int32 offset, Int32 lengt
 	return String_Init(str->buffer + offset, (UInt16)length, (UInt16)length);
 }
 
+void String_UNSAFE_Split(STRING_REF String* str, UInt8 c, STRING_TRANSIENT String* subs, UInt32* subsCount) {
+	UInt32 maxSubs = *subsCount, i = 0;
+	Int32 start = 0;
+	for (; i < maxSubs && start <= str->length; i++) {
+		Int32 end = String_IndexOf(str, c, start);
+		if (end == -1) end = str->length;
+
+		subs[i] = String_UNSAFE_Substring(str, start, end - start);
+		start = end + 1;
+	}
+
+	*subsCount = i;
+	/* If not enough split substrings, make remaining null */
+	for (; i < maxSubs; i++) { subs[i] = String_MakeNull(); }
+}
+
 
 bool String_Equals(STRING_PURE String* a, STRING_PURE String* b) {
 	if (a->length != b->length) return false;
@@ -87,8 +104,8 @@ bool String_CaselessEquals(STRING_PURE String* a, STRING_PURE String* b) {
 	Int32 i;
 
 	for (i = 0; i < a->length; i++) {
-		UInt8 aCur = a->buffer[i]; if (aCur >= 'A' && aCur <= 'Z') { aCur += ' '; }
-		UInt8 bCur = b->buffer[i]; if (bCur >= 'A' && bCur <= 'Z') { bCur += ' '; }
+		UInt8 aCur = a->buffer[i]; Char_MakeLower(aCur);
+		UInt8 bCur = b->buffer[i]; Char_MakeLower(bCur);
 		if (aCur != bCur) return false;
 	}
 	return true;
@@ -212,6 +229,7 @@ void String_InsertAt(STRING_TRANSIENT String* str, Int32 offset, UInt8 c) {
 	for (i = str->length; i > offset; i--) {
 		str->buffer[i] = str->buffer[i - 1];
 	}
+
 	str->buffer[offset] = c;
 	str->length++;
 }
@@ -225,6 +243,7 @@ void String_DeleteAt(STRING_TRANSIENT String* str, Int32 offset) {
 	for (i = offset; i < str->length - 1; i++) {
 		str->buffer[i] = str->buffer[i + 1];
 	}
+
 	str->buffer[str->length - 1] = NULL;
 	str->length--;
 }
@@ -246,9 +265,32 @@ Int32 String_IndexOfString(STRING_PURE String* str, STRING_PURE String* sub) {
 	return -1;
 }
 
+bool String_StartsWith(STRING_PURE String* str, STRING_PURE String* sub) {
+	if (str->length < sub->length) return false;
+	Int32 i;
+
+	for (i = 0; i < sub->length; i++) {
+		if (str->buffer[i] != sub->buffer[i]) return false;
+	}
+	return true;
+}
+
+bool String_CaselessStarts(STRING_PURE String* str, STRING_PURE String* sub) {
+	if (str->length < sub->length) return false;
+	Int32 i;
+
+	for (i = 0; i < sub->length; i++) {
+		UInt8 strCur = str->buffer[i]; Char_MakeLower(strCur);
+		UInt8 subCur = sub->buffer[i]; Char_MakeLower(subCur);
+		if (strCur != subCur) return false;
+	}
+	return true;
+}
+
 Int32 String_Compare(STRING_PURE String* a, STRING_PURE String* b) {
 	Int32 minLen = min(a->length, b->length);
 	Int32 i;
+
 	for (i = 0; i < minLen; i++) {
 		if (a->buffer[i] == b->buffer[i]) continue;
 		return a->buffer[i] < b->buffer[i] ? 1 : -1;
@@ -307,6 +349,24 @@ UInt8 Convert_UnicodeToCP437(UInt16 c) {
 	return (UInt8)'?';
 }
 
+bool Convert_TryParseUInt8(STRING_PURE String* str, UInt8* value) {
+	*value = 0; Int32 tmp;
+	if (!Convert_TryParseInt32(str, &tmp) || tmp < 0 || tmp > UInt8_MaxValue) return false;
+	*value = (UInt8)tmp; return true;
+}
+
+bool Convert_TryParseInt16(STRING_PURE String* str, Int16* value) {
+	*value = 0; Int32 tmp;
+	if (!Convert_TryParseInt32(str, &tmp) || tmp < Int16_MinValue || tmp > Int16_MaxValue) return false;
+	*value = (Int16)tmp; return true;
+}
+
+bool Convert_TryParseUInt16(STRING_PURE String* str, UInt16* value) {
+	*value = 0; Int32 tmp;
+	if (!Convert_TryParseInt32(str, &tmp) || tmp < 0 || tmp > UInt16_MaxValue) return false;
+	*value = (UInt16)tmp; return true;
+}
+
 bool Convert_TryParseInt32(STRING_PURE String* str, Int32* value) {
 	Int32 sum = 0, i = 0;
 	*value = 0;
@@ -351,18 +411,6 @@ bool Convert_TryParseInt32(STRING_PURE String* str, Int32* value) {
 	if (negate) sum = -sum;
 	*value = sum;
 	return true;
-}
-
-bool Convert_TryParseUInt8(STRING_PURE String* str, UInt8* value) {
-	*value = 0; Int32 tmp;
-	if (!Convert_TryParseInt32(str, &tmp) || tmp < 0 || tmp > UInt8_MaxValue) return false;
-	*value = (UInt8)tmp; return true;
-}
-
-bool Convert_TryParseUInt16(STRING_PURE String* str, UInt16* value) {
-	*value = 0; Int32 tmp;
-	if (!Convert_TryParseInt32(str, &tmp) || tmp < 0 || tmp > UInt16_MaxValue) return false;
-	*value = (UInt16)tmp; return true;
 }
 
 bool Convert_TryParseReal32(STRING_PURE String* str, Real32* value) {
@@ -433,6 +481,7 @@ void StringsBuffer_Free(StringsBuffer* buffer) {
 	if (buffer->FlagsBufferElems > STRINGSBUFFER_FLAGS_DEF_ELEMS) {
 		Platform_MemFree(buffer->FlagsBuffer);
 	}
+	StringsBuffer_UNSAFE_Reset(buffer);
 }
 
 void StringsBuffer_UNSAFE_Reset(StringsBuffer* buffer) {

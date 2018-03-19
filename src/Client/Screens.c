@@ -20,6 +20,84 @@
 #define Widget_Free(widget) (widget)->Base.Base.Free(&((widget)->Base.Base))
 #define Widget_Reposition(widget) (widget)->Base.Reposition(&((widget)->Base))
 
+#define Widget_HandlesKeyDown(widget, key) (widget)->Base.Base.HandlesKeyDown(&((widget)->Base.Base), key)
+#define Widget_HandlesKeyUp(widget, key)   (widget)->Base.Base.HandlesKeyUp(&((widget)->Base.Base), key)
+#define Widget_HandlesMouseDown(widget, x, y, btn) (widget)->Base.Base.HandlesMouseDown(&((widget)->Base.Base), x, y, btn)
+#define Widget_HandlesMouseUp(widget, x, y, btn)   (widget)->Base.Base.HandlesMouseUp(&((widget)->Base.Base), x, y, btn)
+#define Widget_HandlesMouseMove(widget, x, y)      (widget)->Base.Base.HandlesMouseMove(&((widget)->Base.Base), x, y)
+#define Widget_HandlesMouseScroll(widget, delta)   (widget)->Base.Base.HandlesMouseScroll(&((widget)->Base.Base), delta)
+
+
+typedef struct ClickableScreen_ {
+	GuiElement* Elem;
+	Widget** Widgets;
+	UInt32 WidgetsCount;
+	Int32 LastX, LastY;
+	void (*OnWidgetSelected)(GuiElement* elem, Widget* widget);
+} ClickableScreen;
+
+typedef struct InventoryScreen_ {
+	Screen Base;
+	FontDesc Font;
+	TableWidget Table;
+	bool ReleasedInv;
+} InventoryScreen;
+
+typedef struct StatusScreen_ {
+	Screen Base;
+	FontDesc Font;
+	TextWidget Status, HackStates;
+	TextAtlas PosAtlas;
+	Real64 Accumulator;
+	Int32 Frames, FPS;
+	bool Speed, HalfSpeed, Noclip, Fly, CanSpeed;
+	Int32 LastFov;
+} StatusScreen;
+
+typedef struct HUDScreen_ {
+	Screen Base;
+	Screen* Chat;
+	HotbarWidget Hotbar;
+	PlayerListWidget PlayerList;
+	FontDesc PlayerFont;
+	bool ShowingList, WasShowingList;
+} HUDScreen;
+
+#define FILES_SCREEN_ITEMS 5
+#define FILES_SCREEN_BUTTONS (FILES_SCREEN_ITEMS + 3)
+typedef struct FilesScreen_ {
+	Screen Base;
+	FontDesc Font;
+	Int32 CurrentIndex;
+	Gui_MouseHandler TextButtonClick;
+	String TitleText;
+	ButtonWidget Buttons[FILES_SCREEN_BUTTONS];
+	TextWidget Title;
+	Widget* Widgets[FILES_SCREEN_BUTTONS + 1];
+	ClickableScreen Clickable;
+	StringsBuffer Entries; /* NOTE: this is the last member so we can avoid memsetting it to 0 */
+} FilesScreen;
+
+typedef struct LoadingScreen_ {
+	Screen Base;
+	FontDesc Font;
+
+	String Title, Message;
+	Real32 Progress;
+	TextWidget TitleWidget;
+	TextWidget MessageWidget;
+
+	UInt8 TitleBuffer[String_BufferSize(STRING_SIZE)];
+	UInt8 MessageBuffer[String_BufferSize(STRING_SIZE)];
+} LoadingScreen;
+
+typedef struct GeneratingMapScreen_ {
+	LoadingScreen Base;
+	String LastState;
+	UInt8 LastStateBuffer[String_BufferSize(STRING_SIZE)];
+} GeneratingMapScreen;
+
+
 void Screen_FreeWidgets(Widget** widgets, UInt32 widgetsCount) {
 	if (widgets == NULL) return;
 	UInt32 i;
@@ -71,14 +149,6 @@ bool Screen_SwitchPause(GuiElement* elem, Int32 x, Int32 y, MouseButton btn) {
 	LeftOnly(Gui_SetNewScreen(PauseScreen_MakeInstance()));
 }
 
-
-typedef struct ClickableScreen_ {
-	GuiElement* Elem;
-	Widget** Widgets;
-	UInt32 WidgetsCount;
-	Int32 LastX, LastY;
-	void (*OnWidgetSelected)(GuiElement* elem, Widget* widget);
-} ClickableScreen;
 
 void ClickableScreen_RenderMenuBounds(void) {
 	/* These were sourced by taking a screenshot of vanilla
@@ -139,14 +209,7 @@ void ClickableScreen_Init(ClickableScreen* data, GuiElement* elem, Widget** widg
 }
 
 
-typedef struct InventoryScreen_ {
-	Screen Base;
-	FontDesc Font;
-	TableWidget Table;
-	bool ReleasedInv;
-} InventoryScreen;
 InventoryScreen InventoryScreen_Instance;
-
 void InventoryScreen_OnBlockChanged(void* obj) {
 	InventoryScreen* screen = (InventoryScreen*)obj;
 	TableWidget_OnInventoryChanged(&screen->Table);
@@ -204,7 +267,6 @@ void InventoryScreen_Free(GuiElement* elem) {
 bool InventoryScreen_HandlesKeyDown(GuiElement* elem, Key key) {
 	InventoryScreen* screen = (InventoryScreen*)elem;
 	TableWidget* table = &screen->Table;
-	elem = &screen->Table.Base.Base;
 
 	if (key == KeyBind_Get(KeyBind_PauseOrExit)) {
 		Gui_SetNewScreen(NULL);
@@ -213,9 +275,10 @@ bool InventoryScreen_HandlesKeyDown(GuiElement* elem, Key key) {
 	} else if (key == Key_Enter && table->SelectedIndex != -1) {
 		Inventory_SetSelectedBlock(table->Elements[table->SelectedIndex]);
 		Gui_SetNewScreen(NULL);
-	} else if (elem->HandlesKeyDown(elem, key)) {
+	} else if (Widget_HandlesKeyDown(table, key)) {
 	} else {
-		game.Gui.hudScreen.hotbar.HandlesKeyDown(key);
+		HUDScreen* hud = (HUDScreen*)Gui_HUD;
+		return Widget_HandlesKeyDown(&hud->Hotbar, key);
 	}
 	return true;
 }
@@ -225,17 +288,18 @@ bool InventoryScreen_HandlesKeyUp(GuiElement* elem, Key key) {
 	if (key == KeyBind_Get(KeyBind_Inventory)) {
 		screen->ReleasedInv = true; return true;
 	}
-	return game.Gui.hudScreen.hotbar.HandlesKeyUp(key);
+
+	HUDScreen* hud = (HUDScreen*)Gui_HUD;
+	return Widget_HandlesKeyUp(&hud->Hotbar, key);
 }
 
 bool InventoryScreen_HandlesMouseDown(GuiElement* elem, Int32 x, Int32 y, MouseButton btn) {
 	InventoryScreen* screen = (InventoryScreen*)elem;
 	TableWidget* table = &screen->Table;
-	elem = &screen->Table.Base.Base;
-	if (table->Scroll.DraggingMouse || game.Gui.hudScreen.hotbar.HandlesMouseDown(x, y, btn))
-		return true;
+	HUDScreen* hud = (HUDScreen*)Gui_HUD;
+	if (table->Scroll.DraggingMouse || Widget_HandlesMouseDown(&hud->Hotbar, x, y, btn)) return true;
 
-	bool handled = elem->HandlesMouseDown(elem, x, y, btn);
+	bool handled = Widget_HandlesMouseDown(table, x, y, btn);
 	if ((!handled || table->PendingClose) && btn == MouseButton_Left) {
 		bool hotbar = Key_IsControlPressed();
 		if (!hotbar) Gui_SetNewScreen(NULL);
@@ -245,23 +309,23 @@ bool InventoryScreen_HandlesMouseDown(GuiElement* elem, Int32 x, Int32 y, MouseB
 
 bool InventoryScreen_HandlesMouseUp(GuiElement* elem, Int32 x, Int32 y, MouseButton btn) {
 	InventoryScreen* screen = (InventoryScreen*)elem;
-	elem = &screen->Table.Base.Base;
-	return elem->HandlesMouseUp(elem, x, y, btn);
+	TableWidget* table = &screen->Table;
+	return Widget_HandlesMouseUp(table, x, y, btn);
 }
 
 bool InventoryScreen_HandlesMouseMove(GuiElement* elem, Int32 x, Int32 y) {
 	InventoryScreen* screen = (InventoryScreen*)elem;
-	elem = &screen->Table.Base.Base;
-	return elem->HandlesMouseMove(elem, x, y);
+	TableWidget* table = &screen->Table;
+	return Widget_HandlesMouseMove(table, x, y);
 }
 
 bool InventoryScreen_HandlesMouseScroll(GuiElement* elem, Real32 delta) {
 	InventoryScreen* screen = (InventoryScreen*)elem;
-	elem = &screen->Table.Base.Base;
+	TableWidget* table = &screen->Table;
 
 	bool hotbar = Key_IsAltPressed() || Key_IsControlPressed() || Key_IsShiftPressed();
 	if (hotbar) return false;
-	return elem->HandlesMouseScroll(elem, delta);
+	return Widget_HandlesMouseScroll(table, delta);
 }
 
 Screen* InventoryScreen_MakeInstance(void) {
@@ -285,16 +349,6 @@ Screen* InventoryScreen_MakeInstance(void) {
 extern Screen* InventoryScreen_UNSAFE_RawPointer = &InventoryScreen_Instance.Base;
 
 
-typedef struct StatusScreen_ {
-	Screen Base;
-	FontDesc Font;
-	TextWidget Status, HackStates;
-	TextAtlas PosAtlas;
-	Real64 Accumulator;
-	Int32 Frames, FPS;
-	bool Speeding, HalfSpeeding, Noclip, Fly;
-	Int32 LastFov;
-} StatusScreen;
 StatusScreen StatusScreen_Instance;
 
 void StatusScreen_MakeText(StatusScreen* screen, STRING_TRANSIENT String* status) {
@@ -315,7 +369,7 @@ void StatusScreen_MakeText(StatusScreen* screen, STRING_TRANSIENT String* status
 		String_AppendInt32(status, indices);
 		String_AppendConst(status, " vertices");
 
-		Int32 ping = PingList.AveragePingMilliseconds();
+		Int32 ping = PingList_AveragePingMilliseconds();
 		if (ping != 0) {
 			String_AppendConst(status, ", ping ");
 			String_AppendInt32(status, ping);
@@ -347,33 +401,36 @@ void StatusScreen_DrawPosition(StatusScreen* screen) {
 
 	Gfx_BindTexture(atlas->Tex.ID);
 	/* TODO: Do we need to use a separate VB here? */
-	GfxCommon_UpdateDynamicVb_IndexedTris(ModelCache_Vb, vertices, index);
+	Int32 count = (Int32)(ptr - vertices) / sizeof(VertexP3fT2fC4b);
+	GfxCommon_UpdateDynamicVb_IndexedTris(ModelCache_Vb, vertices, count);
 }
 
-void StatusScreen_UpdateHackState(StatusScreen* screen, bool force) {
+bool StatusScreen_HacksChanged(StatusScreen* screen) {
 	HacksComp* hacks = &LocalPlayer_Instance.Hacks;
-	if (force || hacks->Speeding != screen->Speeding || hacks->HalfSpeeding != screen->HalfSpeeding 
-		|| hacks->Noclip != screen->Noclip || hacks->Flying != screen->Fly || Game_Fov != screen->LastFov) {
-		screen->Speeding = hacks->Speeding; screen->Noclip = hacks->Noclip;
-		screen->HalfSpeeding = hacks->HalfSpeeding; screen->Fly = hacks->Flying;
-		screen->LastFov = Game_Fov;
+	return hacks->Speeding != screen->Speed || hacks->HalfSpeeding != screen->HalfSpeed || hacks->Flying != screen->Fly
+		|| hacks->Noclip != screen->Noclip  || Game_Fov != screen->LastFov || hacks->CanSpeed != screen->CanSpeed;
+}
 
-		UInt8 statusBuffer[String_BufferSize(STRING_SIZE * 2)];
-		String status = String_InitAndClearArray(statusBuffer);
+void StatusScreen_UpdateHackState(StatusScreen* screen) {
+	HacksComp* hacks = &LocalPlayer_Instance.Hacks;
+	screen->Speed = hacks->Speeding; screen->HalfSpeed = hacks->HalfSpeeding; screen->Fly = hacks->Flying;
+	screen->Noclip = hacks->Noclip; screen->LastFov = Game_Fov; screen->CanSpeed = hacks->CanSpeed;
 
-		if (Game_Fov != Game_DefaultFov) {
-			String_AppendConst(&status, "Zoom fov ");
-			String_AppendInt32(&status, Game_Fov);
-			String_AppendConst(&status, "  ");
-		}
-		if (hacks->Flying) String_AppendConst(&status, "Fly ON   ");
+	UInt8 statusBuffer[String_BufferSize(STRING_SIZE * 2)];
+	String status = String_InitAndClearArray(statusBuffer);
 
-		bool speed = (hacks->Speeding || hacks->HalfSpeeding) && (hacks->CanSpeed || hacks->BaseHorSpeed > 1);
-		if (speed) String_AppendConst(&status, "Speed ON   ");
-		if (hacks->Noclip) String_AppendConst(&status, "Noclip ON   ");
-
-		TextWidget_SetText(&screen->HackStates, &status);
+	if (Game_Fov != Game_DefaultFov) {
+		String_AppendConst(&status, "Zoom fov ");
+		String_AppendInt32(&status, Game_Fov);
+		String_AppendConst(&status, "  ");
 	}
+	if (hacks->Flying) String_AppendConst(&status, "Fly ON   ");
+
+	bool speeding = (hacks->Speeding || hacks->HalfSpeeding) && (hacks->CanSpeed || hacks->BaseHorSpeed > 1);
+	if (speeding) String_AppendConst(&status, "Speed ON   ");
+	if (hacks->Noclip) String_AppendConst(&status, "Noclip ON   ");
+
+	TextWidget_SetText(&screen->HackStates, &status);
 }
 
 void StatusScreen_Update(StatusScreen* screen, Real64 delta) {
@@ -424,7 +481,7 @@ void StatusScreen_ContextRecreated(void* obj) {
 	Widget_SetLocation(&hacks->Base, ANCHOR_LEFT_OR_TOP, ANCHOR_LEFT_OR_TOP, 2, yOffset);
 	hacks->ReducePadding = true;
 	Widget_Init(hacks);
-	StatusScreen_UpdateHackState(screen, true);
+	StatusScreen_UpdateHackState(screen);
 }
 
 void StatusScreen_Init(GuiElement* elem) {
@@ -446,7 +503,7 @@ void StatusScreen_Render(GuiElement* elem, Real64 delta) {
 	Widget_Render(&screen->Status, delta);
 
 	if (!Game_ClassicMode && Gui_Active == NULL) {
-		StatusScreen_UpdateHackState(screen, false);
+		if (StatusScreen_HacksChanged(screen)) { StatusScreen_UpdateHackState(screen); }
 		StatusScreen_DrawPosition(screen);
 		Widget_Render(&screen->HackStates, delta);
 	}
@@ -487,24 +544,8 @@ IGameComponent StatusScreen_MakeComponent(void) {
 }
 
 
-#define FILES_SCREEN_ITEMS 5
-#define FILES_SCREEN_BUTTONS (FILES_SCREEN_ITEMS + 3)
-typedef struct FilesScreen_ {
-	Screen Base;
-	FontDesc Font;
-	Int32 CurrentIndex;
-	Gui_MouseHandler TextButtonClick;
-	String TitleText;
-	ButtonWidget Buttons[FILES_SCREEN_BUTTONS];
-	TextWidget Title;
-	Widget* Widgets[FILES_SCREEN_BUTTONS + 1];
-	ClickableScreen Clickable;
-	StringsBuffer Entries; /* NOTE: this is the last member so we can avoid memsetting it to 0 */
-} FilesScreen;
 FilesScreen FilesScreen_Instance;
-
-String FilesScreen_Get(UInt32 index) {
-	FilesScreen* screen = &FilesScreen_Instance;
+String FilesScreen_Get(FilesScreen* screen, UInt32 index) {
 	if (index < screen->Entries.Count) {
 		return StringsBuffer_UNSAFE_Get(&screen->Entries, index);
 	} else {
@@ -512,52 +553,51 @@ String FilesScreen_Get(UInt32 index) {
 	}
 }
 
-void FilesScreen_MakeText(ButtonWidget* widget, Int32 x, Int32 y, String* text) {
-	FilesScreen* screen = &FilesScreen_Instance;
+void FilesScreen_MakeText(FilesScreen* screen, Int32 idx, Int32 x, Int32 y, String* text) {
+	ButtonWidget* widget = &screen->Buttons[idx];
 	ButtonWidget_Create(widget, text, 300, &screen->Font, screen->TextButtonClick);
 	Widget_SetLocation(&widget->Base, ANCHOR_CENTRE, ANCHOR_CENTRE, x, y);
 }
 
-void FilesScreen_Make(ButtonWidget* widget, Int32 x, Int32 y, String* text, Gui_MouseHandler onClick) {
-	FilesScreen* screen = &FilesScreen_Instance;
+void FilesScreen_Make(FilesScreen* screen, Int32 idx, Int32 x, Int32 y, String* text, Gui_MouseHandler onClick) {
+	ButtonWidget* widget = &screen->Buttons[idx];
 	ButtonWidget_Create(widget, text, 40, &screen->Font, onClick);
 	Widget_SetLocation(&widget->Base, ANCHOR_CENTRE, ANCHOR_CENTRE, x, y);
 }
 
-void FilesScreen_UpdateArrows(void) {
-	FilesScreen* screen = &FilesScreen_Instance;
+void FilesScreen_UpdateArrows(FilesScreen* screen) {
 	Int32 start = FILES_SCREEN_ITEMS, end = screen->Entries.Count - FILES_SCREEN_ITEMS;
 	screen->Buttons[5].Base.Disabled = screen->CurrentIndex < start;
 	screen->Buttons[6].Base.Disabled = screen->CurrentIndex >= end;
 }
 
-void FilesScreen_SetCurrentIndex(Int32 index) {
-	FilesScreen* screen = &FilesScreen_Instance;
+void FilesScreen_SetCurrentIndex(FilesScreen* screen, Int32 index) {
 	if (index >= screen->Entries.Count) index -= FILES_SCREEN_ITEMS;
 	if (index < 0) index = 0;
 
 	UInt32 i;
 	for (i = 0; i < FILES_SCREEN_ITEMS; i++) {
-		String str = FilesScreen_Get(index + i);
+		String str = FilesScreen_Get(screen, index + i);
 		ButtonWidget_SetText(&screen->Buttons[i], &str);
 	}
 
 	screen->CurrentIndex = index;
-	FilesScreen_UpdateArrows();
+	FilesScreen_UpdateArrows(screen);
 }
 
-void FilesScreen_PageClick(bool forward) {
-	FilesScreen* screen = &FilesScreen_Instance;
+void FilesScreen_PageClick(FilesScreen* screen, bool forward) {
 	Int32 delta = forward ? FILES_SCREEN_ITEMS : -FILES_SCREEN_ITEMS;
-	FilesScreen_SetCurrentIndex(screen->CurrentIndex + delta);
+	FilesScreen_SetCurrentIndex(screen, screen->CurrentIndex + delta);
 }
 
 bool FilesScreen_MoveBackwards(GuiElement* elem, Int32 x, Int32 y, MouseButton btn) {
-	LeftOnly(FilesScreen_PageClick(false));
+	FilesScreen* screen = (FilesScreen*)elem;
+	LeftOnly(FilesScreen_PageClick(screen, false));
 }
 
 bool FilesScreen_MoveForwards(GuiElement* elem, Int32 x, Int32 y, MouseButton btn) {
-	LeftOnly(FilesScreen_PageClick(true));
+	FilesScreen* screen = (FilesScreen*)elem;
+	LeftOnly(FilesScreen_PageClick(screen, true));
 }
 
 void FilesScreen_ContextLost(void* obj) {
@@ -572,14 +612,14 @@ void FilesScreen_ContextRecreated(void* obj) {
 
 	UInt32 i;
 	for (i = 0; i < FILES_SCREEN_ITEMS; i++) {
-		String str = FilesScreen_Get(i);
-		FilesScreen_MakeText(&screen->Buttons[i], 0, 50 * (Int32)i - 100, &str);
+		String str = FilesScreen_Get(screen, i);
+		FilesScreen_MakeText(screen, i, 0, 50 * (Int32)i - 100, &str);
 	}
 
 	String lArrow = String_FromConst("<");
-	FilesScreen_Make(&screen->Buttons[5], -220, 0, &lArrow, FilesScreen_MoveBackwards);
+	FilesScreen_Make(screen, 5, -220, 0, &lArrow, FilesScreen_MoveBackwards);
 	String rArrow = String_FromConst(">");
-	FilesScreen_Make(&screen->Buttons[6],  220, 0, &rArrow, FilesScreen_MoveForwards);
+	FilesScreen_Make(screen, 6,  220, 0, &rArrow, FilesScreen_MoveForwards);
 	Screen_MakeDefaultBack(&screen->Buttons[7], false, &screen->Font, Screen_SwitchPause);
 
 	screen->Widgets[0] = &screen->Title.Base;
@@ -587,7 +627,7 @@ void FilesScreen_ContextRecreated(void* obj) {
 		screen->Widgets[i + 1] = &screen->Buttons[i].Base;
 	}
 	ClickableScreen_Init(&screen->Clickable, &screen->Base.Base, screen->Widgets, Array_NumElements(screen->Widgets));
-	FilesScreen_UpdateArrows();
+	FilesScreen_UpdateArrows(screen);
 }
 
 void FilesScreen_Init(GuiElement* elem) {
@@ -619,9 +659,9 @@ bool FilesScreen_HandlesKeyDown(GuiElement* elem, Key key) {
 	if (key == Key_Escape) {
 		Gui_SetNewScreen(NULL);
 	} else if (key == Key_Left) {
-		FilesScreen_PageClick(false);
+		FilesScreen_PageClick(screen, false);
 	} else if (key == Key_Right) {
-		FilesScreen_PageClick(true);
+		FilesScreen_PageClick(screen, true);
 	} else {
 		return false;
 	}
@@ -662,20 +702,7 @@ Screen* FilesScreen_MakeInstance(void) {
 }
 
 
-typedef struct LoadingScreen_ {
-	Screen Base;
-	FontDesc Font;
-
-	String Title, Message;
-	Real32 Progress;
-	TextWidget TitleWidget;
-	TextWidget MessageWidget;
-
-	UInt8 TitleBuffer[String_BufferSize(STRING_SIZE)];
-	UInt8 MessageBuffer[String_BufferSize(STRING_SIZE)];
-} LoadingScreen;
 LoadingScreen LoadingScreen_Instance;
-
 void LoadingScreen_SetTitle(LoadingScreen* screen, STRING_PURE String* title) {
 	Widget_Free(&screen->TitleWidget);
 	TextWidget_Create(&screen->TitleWidget, title, &screen->Font);
@@ -853,13 +880,7 @@ Screen* LoadingScreen_MakeInstance(STRING_PURE String* title, STRING_PURE String
 }
 
 
-typedef struct GeneratingMapScreen_ {
-	LoadingScreen Base;
-	String LastState;
-	UInt8 LastStateBuffer[String_BufferSize(STRING_SIZE)];
-} GeneratingMapScreen;
 GeneratingMapScreen GeneratingMapScreen_Instance;
-
 void GeneratingScreen_Render(GuiElement* elem, Real64 delta) {
 	GeneratingMapScreen* screen = (GeneratingMapScreen*)elem;
 	LoadingScreen_Render(elem, delta);
@@ -886,17 +907,7 @@ Screen* GeneratingScreen_MakeInstance(void) {
 }
 
 
-typedef struct HUDScreen_ {
-	Screen Base;
-	Screen* Chat;
-	HotbarWidget Hotbar;
-	PlayerListWidget PlayerList;
-	FontDesc PlayerFont;
-	bool ShowingList, WasShowingList;
-} HUDScreen;
 HUDScreen HUDScreen_Instance;
-
-
 #define CH_EXTENT 16
 #define CH_WEIGHT 2
 void HUDScreen_DrawCrosshairs(void) {
@@ -939,69 +950,86 @@ void HUDScreen_ContextRecreated(void* obj) {
 
 void HUDScreen_OnResize(Screen* elem) {
 	HUDScreen* screen = (HUDScreen*)elem;
-	chat.OnResize(width, height);
-	Widget_Reposition(&screen->Hotbar);
+	elem = screen->Chat; elem->OnResize(elem);
 
+	Widget_Reposition(&screen->Hotbar);
 	if (screen->ShowingList) {
 		Widget_Reposition(&screen->PlayerList);
 	}
 }
 
-void HUDScreen_OnNewMap(void* obj) { 
-	DisposePlayerList(); 
+void HUDScreen_OnNewMap(void* obj) {
+	HUDScreen* screen = (HUDScreen*)obj;
+	HUDScreen_FreePlayerList(screen);
 }
 
-bool HUDScreen_HandlesKeyPress(char key) { 
-	return chat.HandlesKeyPress(key); 
+bool HUDScreen_HandlesKeyPress(GuiElement* elem, UInt8 key) {
+	HUDScreen* screen = (HUDScreen*)elem;
+	elem = &screen->Chat->Base;
+	return elem->HandlesKeyPress(elem, key); 
 }
 
-bool HUDScreen_HandlesKeyDown(Key key) {
-	Key playerListKey = game.Mapping(KeyBind.PlayerList);
-	bool handles = playerListKey != Key.Tab || !Game_TabAutocomplete || !chat.HandlesAllInput;
+bool HUDScreen_HandlesKeyDown(GuiElement* elem, Key key) {
+	HUDScreen* screen = (HUDScreen*)elem;
+	Key playerListKey = KeyBind_Get(KeyBind_PlayerList);
+	bool handles = playerListKey != Key_Tab || !Game_TabAutocomplete || !screen->Chat->HandlesAllInput;
+
 	if (key == playerListKey && handles) {
-		if (playerList == null && !ServerConnection_IsSinglePlayer) {
-			hadPlayerList = true;
-			ContextRecreated();
+		if (!screen->ShowingList && !ServerConnection_IsSinglePlayer) {
+			screen->WasShowingList = true;
+			HUDScreen_ContextRecreated(screen);
 		}
 		return true;
 	}
 
-	return chat.HandlesKeyDown(key) || hotbar.HandlesKeyDown(key);
+	elem = &screen->Chat->Base;
+	return elem->HandlesKeyDown(elem, key) || Widget_HandlesKeyDown(&screen->Hotbar, key);
 }
 
-bool HUDScreen_HandlesKeyUp(Key key) {
-	if (key == game.Mapping(KeyBind.PlayerList)) {
-		if (playerList != null) {
-			hadPlayerList = false;
-			playerList.Dispose();
-			playerList = null;
+bool HUDScreen_HandlesKeyUp(GuiElement* elem, Key key) {
+	HUDScreen* screen = (HUDScreen*)elem;
+	if (key == KeyBind_Get(KeyBind_PlayerList)) {
+		if (screen->ShowingList) {
+			screen->ShowingList = false;
+			screen->WasShowingList = false;
+			Widget_Free(&screen->PlayerList);
 			return true;
 		}
 	}
 
-	return chat.HandlesKeyUp(key) || hotbar.HandlesKeyUp(key);
+	elem = &screen->Chat->Base;
+	return elem->HandlesKeyUp(elem, key) || Widget_HandlesKeyUp(&screen->Hotbar, key);
 }
 
-bool HUDScreen_HandlesMouseScroll(float delta) {
-	return chat.HandlesMouseScroll(delta);
+bool HUDScreen_HandlesMouseScroll(GuiElement* elem, Real32 delta) {
+	HUDScreen* screen = (HUDScreen*)elem;
+	elem = &screen->Chat->Base;
+	return elem->HandlesMouseScroll(elem, delta);
 }
 
-bool HUDScreen_HandlesMouseClick(int mouseX, int mouseY, MouseButton button) {
-	if (button != MouseButton_Left || !HandlesAllInput) return false;
+bool HUDScreen_HandlesMouseDown(GuiElement* elem, Int32 x, Int32 y, MouseButton btn) {
+	HUDScreen* screen = (HUDScreen*)elem;
+	if (btn != MouseButton_Left || !screen->Base.HandlesAllInput) return false;
 
-	string name;
-	if (playerList == null || (name = playerList.GetNameUnder(mouseX, mouseY)) == null)
-		return chat.HandlesMouseClick(mouseX, mouseY, button);
+	elem = &screen->Chat->Base;
+	if (!screen->ShowingList) { return elem->HandlesMouseDown(elem, x, y, btn); }
+
+	UInt8 nameBuffer[String_BufferSize(STRING_SIZE)];
+	String name = String_InitAndClearArray(nameBuffer);
+	PlayerListWidget_GetNameUnder(&screen->PlayerList, x, y, &name);
+	if (name.length == 0) { return elem->HandlesMouseDown(elem, x, y, btn); }
+
 	chat.AppendTextToInput(name + " ");
 	return true;
 }
 
 void HUDScreen_Init(GuiElement* elem) {
 	HUDScreen* screen = (HUDScreen*)elem;
-	Int32 size = Drawer2D_UseBitmappedChat ? 16 : 11;
-	playerFont = new Font(game.FontName, size);
-	hotbar = game.Mode.MakeHotbar();
-	hotbar.Init();
+	UInt16 size = Drawer2D_UseBitmappedChat ? 16 : 11;
+	Platform_MakeFont(&screen->PlayerFont, &Game_FontName, size, FONT_STYLE_NORMAL);
+
+	HotbarWidget_Create(&screen->Hotbar);
+	Widget_Init(&screen->Hotbar);
 	chat = new ChatScreen(game, this);
 	chat.Init();
 
@@ -1012,6 +1040,7 @@ void HUDScreen_Init(GuiElement* elem) {
 
 void HUDScreen_Render(GuiElement* elem, Real64 delta) {
 	HUDScreen* screen = (HUDScreen*)elem;
+	Screen* chat = screen->Chat;
 	if (Game_HideGui && chat->HandlesAllInput) {
 		Gfx_SetTexturing(true);
 		chat.input.Render(delta);
@@ -1022,7 +1051,7 @@ void HUDScreen_Render(GuiElement* elem, Real64 delta) {
 
 	if (!screen->ShowingList && !showMinimal) {
 		Gfx_SetTexturing(true);
-		DrawCrosshairs();
+		HUDScreen_DrawCrosshairs();
 		Gfx_SetTexturing(false);
 	}
 	if (chat->HandlesAllInput && !Game_PureClassic) {
@@ -1031,9 +1060,11 @@ void HUDScreen_Render(GuiElement* elem, Real64 delta) {
 
 	Gfx_SetTexturing(true);
 	if (!showMinimal) { Widget_Render(&screen->Hotbar, delta); }
-	chat.Render(delta);
+	elem = &screen->Chat->Base;
+	elem->Render(elem, delta);
 
 	if (screen->ShowingList && Gui_GetActiveScreen() == screen) {
+		screen->PlayerList.Base.Active = screen->Chat->HandlesAllInput;
 		Widget_Render(&screen->PlayerList, delta);
 		/* NOTE: Should usually be caught by KeyUp, but just in case. */
 		if (!KeyBind_IsPressed(KeyBind_PlayerList)) {
@@ -1047,7 +1078,7 @@ void HUDScreen_Render(GuiElement* elem, Real64 delta) {
 void HUDScreen_Free(GuiElement* elem) {
 	HUDScreen* screen = (HUDScreen*)elem;
 	Platform_FreeFont(&screen->PlayerFont);
-	chat.Dispose();
+	elem = &screen->Chat->Base; elem->Free(elem);
 	HUDScreen_ContextLost(screen);
 
 	Event_UnregisterVoid(&WorldEvents_NewMap,         screen, HUDScreen_OnNewMap);

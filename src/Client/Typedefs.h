@@ -37,7 +37,11 @@ typedef UInt8 bool;
 #define false 0
 #define NULL 0
 
+#if USE16_BIT
+typedef UInt16 BlockID;
+#else
 typedef UInt8 BlockID;
+#endif
 typedef UInt8 EntityID;
 typedef UInt8 TextureLoc;
 /* Sides of a block. TODO: Map this to CPE PlayerClicked blockface enums. */
@@ -46,12 +50,13 @@ typedef UInt32 ReturnCode;
 
 typedef struct FontDesc_ { void* Handle; UInt16 Size, Style; } FontDesc;
 
-#define UInt8_MaxValue   ((UInt8)0xFF)
-#define Int16_MaxValue   ((Int16)0x7FFF)
-#define UInt16_MaxValue  ((UInt16)0xFFFF)
-#define Int32_MaxValue   ((Int32)0x7FFFFFFFL)
-#define UInt32_MaxValue  ((UInt32)0xFFFFFFFFUL)
-#define Int32_MinValue   ((Int32)0xFFFFFFFFL)
+#define UInt8_MaxValue   ((UInt8)255)
+#define Int16_MinValue   ((Int16)-32768)
+#define Int16_MaxValue   ((Int16)32767)
+#define UInt16_MaxValue  ((UInt16)65535)
+#define Int32_MinValue   ((Int32)-2147483647L - (Int32)1L)
+#define Int32_MaxValue   ((Int32)2147483647L)
+#define UInt32_MaxValue  ((UInt32)4294967295UL)
 
 #define USE_DX true
 

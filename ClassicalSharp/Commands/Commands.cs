@@ -30,13 +30,14 @@ namespace ClassicalSharp.Commands {
 			if (args.Length == 1) {
 				game.Chat.Add("&eList of client commands:");
 				game.CommandList.PrintDefinedCommands(game);
-				game.Chat.Add("&eTo see a particular command's help, type /client help [cmd name]");
+				game.Chat.Add("&eTo see help for a command, type /client help [cmd name]");
 			} else {
 				Command cmd = game.CommandList.GetMatch(args[1]);
 				if (cmd == null) return;
 				string[] help = cmd.Help;
-				for (int i = 0; i < help.Length; i++)
+				for (int i = 0; i < help.Length; i++) {
 					game.Chat.Add(help[i]);
+				}
 			}
 		}
 	}
@@ -53,8 +54,9 @@ namespace ClassicalSharp.Commands {
 		
 		public override void Execute(string[] args) {
 			string[] lines = game.Graphics.ApiInfo;
-			for (int i = 0; i < lines.Length; i++)
+			for (int i = 0; i < lines.Length; i++) {
 				game.Chat.Add("&a" + lines[i]);
+			}
 		}
 	}
 	
@@ -166,15 +168,16 @@ namespace ClassicalSharp.Commands {
 			if (args.Length == 1) return true;
 			if (Utils.CaselessEquals(args[1], "yes")) { persist = true; return true; }
 			
-			int temp = -1;
+			int temp = BlockInfo.FindID(args[1]);
 			BlockID block = 0;
-			if ((temp = BlockInfo.FindID(args[1])) != -1) {
+			
+			if (temp != -1) {
 				block = (BlockID)temp;
 			} else if (!BlockID.TryParse(args[1], out block)) {
 				game.Chat.Add("&eCuboid: &c\"" + args[1] + "\" is not a valid block name or id."); return false;
 			}
 			
-			if (block >= Block.CpeCount && BlockInfo.Name[block] == "Invalid") {
+			if (block >= Block.CpeCount && !BlockInfo.IsCustomDefined(block)) {
 				game.Chat.Add("&eCuboid: &cThere is no block with id \"" + args[1] + "\"."); return false;
 			}
 			this.block = block;

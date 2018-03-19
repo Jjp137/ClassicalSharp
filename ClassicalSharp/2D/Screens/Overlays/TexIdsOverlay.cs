@@ -3,6 +3,7 @@ using System;
 using System.Drawing;
 using ClassicalSharp.GraphicsAPI;
 using ClassicalSharp.Gui.Widgets;
+using ClassicalSharp.Textures;
 using OpenTK.Input;
 
 namespace ClassicalSharp.Gui.Screens {
@@ -36,35 +37,35 @@ namespace ClassicalSharp.Gui.Screens {
 		
 		public override void Render(double delta) {
 			RenderMenuBounds();
-			gfx.Texturing = true;
-			gfx.SetBatchFormat(VertexFormat.P3fT2fC4b);
+			game.Graphics.Texturing = true;
+			game.Graphics.SetBatchFormat(VertexFormat.P3fT2fC4b);
 			RenderWidgets(widgets, delta);
 			RenderTerrain();
 			RenderTextOverlay();
-			gfx.Texturing = false;
+			game.Graphics.Texturing = false;
 		}
 		
 		protected override void ContextLost() {
 			base.ContextLost();
-			gfx.DeleteVb(ref dynamicVb);
+			game.Graphics.DeleteVb(ref dynamicVb);
 			idAtlas.Dispose();
 		}
 		
 		protected override void ContextRecreated() {
 			base.ContextRecreated();
-			dynamicVb = gfx.CreateDynamicVb(VertexFormat.P3fT2fC4b, verticesCount);
+			dynamicVb = game.Graphics.CreateDynamicVb(VertexFormat.P3fT2fC4b, verticesCount);
 			idAtlas = new TextAtlas(game, 16);
 			idAtlas.Pack("0123456789", regularFont, "f");
 			UpdateTileSize();
 		}
 		
 		void RenderTerrain() {
-			int elementsPerAtlas = game.TerrainAtlas1D.elementsPerAtlas1D;
+			int elementsPerAtlas = TerrainAtlas1D.elementsPerAtlas1D;
 			for (int i = 0; i < TerrainAtlas2D.TilesPerRow * TerrainAtlas2D.RowsCount;) {
 				int index = 0, texIdx = i / elementsPerAtlas, ignored;
 				
 				for (int j = 0; j < elementsPerAtlas; j++) {
-					TextureRec rec = game.TerrainAtlas1D.GetTexRec(i + j, 1, out ignored);
+					TextureRec rec = TerrainAtlas1D.GetTexRec(i + j, 1, out ignored);
 					int x = (i + j) % TerrainAtlas2D.TilesPerRow;
 					int y = (i + j) / TerrainAtlas2D.TilesPerRow;
 					
@@ -74,8 +75,8 @@ namespace ClassicalSharp.Gui.Screens {
 				}
 				i += elementsPerAtlas;
 				
-				gfx.BindTexture(game.TerrainAtlas1D.TexIds[texIdx]);
-				gfx.UpdateDynamicVb_IndexedTris(dynamicVb, vertices, index);
+				game.Graphics.BindTexture(TerrainAtlas1D.TexIds[texIdx]);
+				game.Graphics.UpdateDynamicVb_IndexedTris(dynamicVb, vertices, index);
 			}
 		}
 		
@@ -92,8 +93,8 @@ namespace ClassicalSharp.Gui.Screens {
 				idAtlas.tex.Y += (short)tileSize;
 				
 				if ((y % 4) != 0) continue;				
-				gfx.BindTexture(idAtlas.tex.ID);
-				gfx.UpdateDynamicVb_IndexedTris(dynamicVb, vertices, index);
+				game.Graphics.BindTexture(idAtlas.tex.ID);
+				game.Graphics.UpdateDynamicVb_IndexedTris(dynamicVb, vertices, index);
 				index = 0;
 			}
 		}

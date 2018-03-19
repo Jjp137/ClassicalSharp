@@ -16,14 +16,13 @@ namespace ClassicalSharp {
 	public unsafe partial class ChunkMeshBuilder {
 		
 		protected DrawInfo[] normalParts, translucentParts;
-		protected TerrainAtlas1D atlas;
 		protected int arraysCount = 0;
 		protected bool fullBright, tinted;
 		protected float invVerElementSize;
 		protected int elementsPerAtlas1D;
 		
 		void TerrainAtlasChanged(object sender, EventArgs e) {
-			int newArraysCount = game.TerrainAtlas1D.TexIds.Length;
+			int newArraysCount = TerrainAtlas1D.TexIds.Length;
 			if (arraysCount == newArraysCount) return;
 			arraysCount = newArraysCount;
 			Array.Resize(ref normalParts, arraysCount);
@@ -79,10 +78,9 @@ namespace ClassicalSharp {
 		protected abstract void RenderTile(int index);
 		
 		protected virtual void PreStretchTiles(int x1, int y1, int z1) {
-			atlas = game.TerrainAtlas1D;
-			invVerElementSize = atlas.invElementSize;
-			elementsPerAtlas1D = atlas.elementsPerAtlas1D;
-			arraysCount = atlas.TexIds.Length;
+			invVerElementSize  = TerrainAtlas1D.invElementSize;
+			elementsPerAtlas1D = TerrainAtlas1D.elementsPerAtlas1D;
+			arraysCount = TerrainAtlas1D.TexIds.Length;
 			
 			if (normalParts == null) {
 				normalParts = new DrawInfo[arraysCount];
@@ -107,13 +105,13 @@ namespace ClassicalSharp {
 		}
 		
 		void AddSpriteVertices(BlockID block) {
-			int i = atlas.Get1DIndex(BlockInfo.GetTextureLoc(block, Side.Left));
+			int i = TerrainAtlas1D.Get1DIndex(BlockInfo.GetTextureLoc(block, Side.Left));
 			DrawInfo part = normalParts[i];
 			part.spriteCount += 4 * 4;
 		}
 		
 		void AddVertices(BlockID block, int face) {
-			int i = atlas.Get1DIndex(BlockInfo.GetTextureLoc(block, face));
+			int i = TerrainAtlas1D.Get1DIndex(BlockInfo.GetTextureLoc(block, face));
 			DrawInfo part = BlockInfo.Draw[block] == DrawType.Translucent ? translucentParts[i] : normalParts[i];
 			part.vCount[face] += 4;
 		}
@@ -124,7 +122,7 @@ namespace ClassicalSharp {
 			int i = texId / elementsPerAtlas1D;
 			float vOrigin = (texId % elementsPerAtlas1D) * invVerElementSize;
 			
-			float x1 = X + 2.50f/16, y1 = Y,     z1 = Z + 2.5f/16;
+			float x1 = X + 2.50f/16, y1 = Y,     z1 = Z + 2.50f/16;
 			float x2 = X + 13.5f/16, y2 = Y + 1, z2 = Z + 13.5f/16;
 			const float u1 = 0, u2 = 15.99f/16f;
 			float v1 = vOrigin, v2 = vOrigin + invVerElementSize * 15.99f/16f;

@@ -39,6 +39,7 @@
 #define COLLIDE_SLIPPERY_ICE 4 /* Block is solid and fully slidable on. */
 #define COLLIDE_LIQUID_WATER 5 /* Water style 'swimming'/'bobbing' interaction when player collides. */
 #define COLLIDE_LIQUID_LAVA  6 /* Lava style 'swimming'/'bobbing' interaction when player collides. */
+#define COLLIDE_CLIMB_ROPE   7 /* Rope/Ladder style climbing interaction when player collides */
 
 UInt8 Block_NamesBuffer[String_BufferSize(STRING_SIZE) * BLOCK_COUNT];
 #define Block_NamePtr(i) &Block_NamesBuffer[String_BufferSize(STRING_SIZE) * i]
@@ -54,7 +55,6 @@ UInt8 Block_ExtendedCollide[BLOCK_COUNT];
 Real32 Block_SpeedMultiplier[BLOCK_COUNT];
 UInt8 Block_LightOffset[BLOCK_COUNT];
 UInt8 Block_Draw[BLOCK_COUNT];
-UInt32 DefinedCustomBlocks[BLOCK_COUNT >> 5];
 UInt8 Block_DigSounds[BLOCK_COUNT];
 UInt8 Block_StepSounds[BLOCK_COUNT];
 bool Block_Tinted[BLOCK_COUNT];
@@ -88,6 +88,8 @@ UInt8 Block_CanStretch[BLOCK_COUNT];
 void Block_Reset(void);
 void Block_Init(void);
 void Block_SetDefaultPerms(void);
+bool Block_IsCustomDefined(BlockID block);
+void Block_SetCustomDefined(BlockID block, bool defined);
 
 void Block_SetCollide(BlockID block, UInt8 collide);
 void Block_SetDrawType(BlockID block, UInt8 draw);

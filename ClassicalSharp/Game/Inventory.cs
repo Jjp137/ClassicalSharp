@@ -1,11 +1,6 @@
 ﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 using System;
-
-#if USE16_BIT
 using BlockID = System.UInt16;
-#else
-using BlockID = System.Byte;
-#endif
 
 namespace ClassicalSharp {
 	
@@ -18,7 +13,7 @@ namespace ClassicalSharp {
 		}
 		
 		public void Reset(Game game) { 
-			SetDefaultMapping(); 
+			SetDefaultMapping();
 			CanChangeHeldBlock = true; 
 			CanPick = true; 
 		}
@@ -95,7 +90,7 @@ namespace ClassicalSharp {
 			}
 		}
 		
-		public BlockID[] Map = new BlockID[Block.Count];
+		public BlockID[] Map;
 		public void SetDefaultMapping() {
 			for (int i = 0; i < Map.Length; i++) Map[i] = (BlockID)i;
 			for (int i = 0; i < Map.Length; i++) {
@@ -106,11 +101,7 @@ namespace ClassicalSharp {
 		}
 		
 		BlockID DefaultMapping(int i) {
-#if USE16_BIT
-			if ((i >= Block.CpeCount) || i == Block.Air) return Block.Air;
-#else
 			if (i >= Block.CpeCount || i == Block.Air) return Block.Air;
-#endif
 			if (!game.ClassicMode) return (BlockID)i;
 			
 			if (i >= 25 && i <= 40) {

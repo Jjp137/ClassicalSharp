@@ -1,6 +1,7 @@
 ﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 using System;
 using ClassicalSharp.Map;
+using BlockID = System.UInt16;
 using BlockRaw = System.Byte;
 
 namespace ClassicalSharp.Singleplayer {
@@ -33,7 +34,7 @@ namespace ClassicalSharp.Singleplayer {
 			int z = (index / map.Width) % map.Length;
 			
 			BlockRaw below = Block.Air;
-			if (y > 0) below = map.blocks1[index - map.Width * map.Length];
+			if (y > 0) below = map.blocks[index - map.OneY];
 			if (below == Block.Grass) GrowTree(x, y, z);
 		}
 		
@@ -67,7 +68,7 @@ namespace ClassicalSharp.Singleplayer {
 			}
 			
 			BlockRaw below = Block.Dirt;
-			if (y > 0) below = map.blocks1[index - map.Width * map.Length];
+			if (y > 0) below = map.blocks[index - map.Width * map.Length];
 			if (!(below == Block.Dirt || below == Block.Grass)) {
 				game.UpdateBlock(x, y, z, Block.Air);
 				physics.ActivateNeighbours(x, y, z, index);
@@ -86,7 +87,7 @@ namespace ClassicalSharp.Singleplayer {
 			}
 			
 			BlockRaw below = Block.Stone;
-			if (y > 0) below = map.blocks1[index - map.Width * map.Length];
+			if (y > 0) below = map.blocks[index - map.OneY];
 			if (!(below == Block.Stone || below == Block.Cobblestone)) {
 				game.UpdateBlock(x, y, z, Block.Air);
 				physics.ActivateNeighbours(x, y, z, index);
@@ -147,7 +148,7 @@ namespace ClassicalSharp.Singleplayer {
 			{
 				if (!map.IsValidPos(x, y, z)) return false;
 				
-				BlockRaw block = map.GetBlock(x, y, z);
+				BlockID block = map.GetBlock(x, y, z);
 				if (!(block == 0 || block == Block.Leaves)) return false;
 			}
 			return true;

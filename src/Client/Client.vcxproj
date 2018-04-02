@@ -178,7 +178,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="2DStructs.h" />
-    <ClInclude Include="AABB.h" />
     <ClInclude Include="AsyncDownloader.h" />
     <ClInclude Include="AxisLinesRenderer.h" />
     <ClInclude Include="BlockID.h" />
@@ -199,15 +198,15 @@
     <ClInclude Include="ErrorHandler.h" />
     <ClInclude Include="Event.h" />
     <ClInclude Include="Formats.h" />
-    <ClInclude Include="FrustumCulling.h" />
     <ClInclude Include="Deflate.h" />
     <ClInclude Include="GameMode.h" />
     <ClInclude Include="Gui.h" />
     <ClInclude Include="HeldBlockRenderer.h" />
-    <ClInclude Include="Hotkeys.h" />
     <ClInclude Include="IModel.h" />
     <ClInclude Include="Input.h" />
-    <ClInclude Include="Intersection.h" />
+    <ClInclude Include="InputHandler.h" />
+    <ClInclude Include="Menus.h" />
+    <ClInclude Include="Physics.h" />
     <ClInclude Include="Inventory.h" />
     <ClInclude Include="IsometricDrawer.h" />
     <ClInclude Include="Lighting.h" />
@@ -216,15 +215,12 @@
     <ClInclude Include="MapGenerator.h" />
     <ClInclude Include="MapRenderer.h" />
     <ClInclude Include="ModelCache.h" />
-    <ClInclude Include="NetworkEnums.h" />
     <ClInclude Include="Options.h" />
     <ClInclude Include="Particle.h" />
-    <ClInclude Include="Physics.h" />
+    <ClInclude Include="BlockPhysics.h" />
     <ClInclude Include="Picking.h" />
     <ClInclude Include="PickedPosRenderer.h" />
-    <ClInclude Include="Player.h" />
     <ClInclude Include="Screens.h" />
-    <ClInclude Include="Searcher.h" />
     <ClInclude Include="SelectionBox.h" />
     <ClInclude Include="ServerConnection.h" />
     <ClInclude Include="SkyboxRenderer.h" />
@@ -240,8 +236,6 @@
     <ClInclude Include="ExtMath.h" />
     <ClInclude Include="GraphicsAPI.h" />
     <ClInclude Include="GraphicsCommon.h" />
-    <ClInclude Include="GraphicsEnums.h" />
-    <ClInclude Include="Matrix.h" />
     <ClInclude Include="Noise.h" />
     <ClInclude Include="Platform.h" />
     <ClInclude Include="Random.h" />
@@ -258,7 +252,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="2DStructs.c" />
-    <ClCompile Include="AABB.c" />
     <ClCompile Include="Camera.c" />
     <ClCompile Include="AxisLinesRenderer.c" />
     <ClCompile Include="Block.c" />
@@ -280,14 +273,14 @@
     <ClCompile Include="GameMode.c" />
     <ClCompile Include="Gui.c" />
     <ClCompile Include="HeldBlockRenderer.c" />
-    <ClCompile Include="Hotkeys.c" />
+    <ClCompile Include="InputHandler.c" />
     <ClCompile Include="Inventory.c" />
     <ClCompile Include="MapGenerator.c" />
-    <ClCompile Include="FrustumCulling.c" />
     <ClCompile Include="GameStructs.c" />
     <ClCompile Include="Deflate.c" />
     <ClCompile Include="IModel.c" />
-    <ClCompile Include="Intersection.c" />
+    <ClCompile Include="Menus.c" />
+    <ClCompile Include="Physics.c" />
     <ClCompile Include="IsometricDrawer.c" />
     <ClCompile Include="Input.c" />
     <ClCompile Include="Lighting.c" />
@@ -299,17 +292,14 @@
     <ClCompile Include="Options.c" />
     <ClCompile Include="PackedCol.c" />
     <ClCompile Include="GraphicsCommon.c" />
-    <ClCompile Include="Matrix.c" />
     <ClCompile Include="Noise.c" />
     <ClCompile Include="Particle.c" />
-    <ClCompile Include="Physics.c" />
+    <ClCompile Include="BlockPhysics.c" />
     <ClCompile Include="PickedPosRenderer.c" />
     <ClCompile Include="Picking.c" />
-    <ClCompile Include="Player.c" />
     <ClCompile Include="Program.c" />
     <ClCompile Include="Random.c" />
     <ClCompile Include="Screens.c" />
-    <ClCompile Include="Searcher.c" />
     <ClCompile Include="SelectionBox.c" />
     <ClCompile Include="ServerConnection.c" />
     <ClCompile Include="SkyboxRenderer.c" />

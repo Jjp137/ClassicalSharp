@@ -1,16 +1,17 @@
-#include "Typedefs.h"
+#include "Formats.h"
 #include "World.h"
 #include "Deflate.h"
 #include "Block.h"
-#include "Player.h"
+#include "Entity.h"
 #include "Platform.h"
 #include "ExtMath.h"
+#include "ErrorHandler.h"
 
 void Map_ReadBlocks(Stream* stream) {
 	World_BlocksSize = World_Width * World_Length * World_Height;
 	World_Blocks = Platform_MemAlloc(World_BlocksSize);
 	if (World_Blocks == NULL) {
-		ErrorHandler_Fail("Failed to allocate memory when reading blocks array from file");
+		ErrorHandler_Fail("Failed to allocate memory for reading blocks array from file");
 	}
 	Stream_Read(stream, World_Blocks, World_BlocksSize);
 }

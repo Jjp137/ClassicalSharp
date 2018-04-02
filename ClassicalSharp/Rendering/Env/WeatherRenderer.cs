@@ -4,21 +4,16 @@ using ClassicalSharp.Events;
 using ClassicalSharp.GraphicsAPI;
 using ClassicalSharp.Map;
 using OpenTK;
-
-#if USE16_BIT
 using BlockID = System.UInt16;
-#else
-using BlockID = System.Byte;
-#endif
+using BlockRaw = System.Byte;
 
 namespace ClassicalSharp.Renderers {
 
-	public class WeatherRenderer : IGameComponent {
+	public sealed class WeatherRenderer : IGameComponent {
 		Game game;
 		World map;
 		
-		
-		public int RainTexId, SnowTexId;
+		int rainTexId, snowTexId;
 		int vb;
 		public short[] heightmap;
 		
@@ -43,7 +38,7 @@ namespace ClassicalSharp.Renderers {
 			if (heightmap == null) InitHeightmap();
 			IGraphicsApi gfx = game.Graphics;
 			
-			gfx.BindTexture(weather == Weather.Rainy ? RainTexId : SnowTexId);
+			gfx.BindTexture(weather == Weather.Rainy ? rainTexId : snowTexId);
 			Vector3 camPos = game.CurrentCameraPos;
 			Vector3I pos = Vector3I.Floor(camPos);
 			bool moved = pos != lastPos;
@@ -82,14 +77,14 @@ namespace ClassicalSharp.Renderers {
 				float x2 = x + 1, y2 = y + height, z2 = z + 1;
 				
 				v.X = x1; v.Y = y1; v.Z = z1; v.U = 0; v.V = v1; vertices[vCount++] = v;
-				          v.Y = y2;                    v.V = v2; vertices[vCount++] = v;
+				v.Y = y2;                    v.V = v2; vertices[vCount++] = v;
 				v.X = x2;           v.Z = z2; v.U = 1; 	         vertices[vCount++] = v;
-				          v.Y = y1;                    v.V = v1; vertices[vCount++] = v;
+				v.Y = y1;                    v.V = v1; vertices[vCount++] = v;
 				
-				                    v.Z = z1;				  	 vertices[vCount++] = v;
-				          v.Y = y2;                    v.V = v2; vertices[vCount++] = v;
+				v.Z = z1;				  	 vertices[vCount++] = v;
+				v.Y = y2;                    v.V = v2; vertices[vCount++] = v;
 				v.X = x1;           v.Z = z2; v.U = 0;		     vertices[vCount++] = v;
-				          v.Y = y1;                    v.V = v1; vertices[vCount++] = v;
+				v.Y = y1;                    v.V = v1; vertices[vCount++] = v;
 			}
 			if (particles && (rainAcc >= 0.25 || moved)) {
 				rainAcc = 0;
@@ -132,14 +127,14 @@ namespace ClassicalSharp.Renderers {
 		
 		void TextureChanged(object sender, TextureEventArgs e) {
 			if (e.Name == "snow.png")
-				game.UpdateTexture(ref SnowTexId, e.Name, e.Data, false);
+				game.UpdateTexture(ref snowTexId, e.Name, e.Data, false);
 			else if (e.Name == "rain.png")
-				game.UpdateTexture(ref RainTexId, e.Name, e.Data, false);
+				game.UpdateTexture(ref rainTexId, e.Name, e.Data, false);
 		}
 		
 		public void Dispose() {
-			game.Graphics.DeleteTexture(ref RainTexId);
-			game.Graphics.DeleteTexture(ref SnowTexId);
+			game.Graphics.DeleteTexture(ref rainTexId);
+			game.Graphics.DeleteTexture(ref snowTexId);
 			ContextLost();
 			
 			game.Events.TextureChanged -= TextureChanged;
@@ -163,22 +158,35 @@ namespace ClassicalSharp.Renderers {
 		}
 		
 		int CalcHeightAt(int x, int maxY, int z, int index) {
-			int mapIndex = (maxY * length + z) * width + x;
-			for (int y = maxY; y >= 0; y--) {
-				byte draw = BlockInfo.Draw[map.blocks1[mapIndex]];
-				if (!(draw == DrawType.Gas || draw == DrawType.Sprite)) {
-					heightmap[index] = (short)y;
-					return y;
+			int i = (maxY * length + z) * width + x;
+			BlockRaw[] blocks = map.blocks;
+			
+			if (BlockInfo.MaxDefined < 256) {
+				for (int y = maxY; y >= 0; y--, i -= oneY) {
+					byte draw = BlockInfo.Draw[blocks[i]];
+					if (!(draw == DrawType.Gas || draw == DrawType.Sprite)) {
+						heightmap[index] = (short)y;
+						return y;
+					}
 				}
-				mapIndex -= oneY;
-			}
+			} else {
+				BlockRaw[] blocks2 = game.World.blocks2;
+				for (int y = maxY; y >= 0; y--, i -= oneY) {
+					byte draw = BlockInfo.Draw[blocks[i] | (blocks2[i] << 8)];
+					if (!(draw == DrawType.Gas || draw == DrawType.Sprite)) {
+						heightmap[index] = (short)y;
+						return y;
+					}
+				}
+			}		
+			
 			heightmap[index] = -1;
 			return -1;
 		}
 		
 		internal void OnBlockChanged(int x, int y, int z, BlockID oldBlock, BlockID newBlock) {
 			bool didBlock = !(BlockInfo.Draw[oldBlock] == DrawType.Gas || BlockInfo.Draw[oldBlock] == DrawType.Sprite);
-			bool nowBlock =  !(BlockInfo.Draw[newBlock] == DrawType.Gas || BlockInfo.Draw[newBlock] == DrawType.Sprite);
+			bool nowBlock = !(BlockInfo.Draw[newBlock] == DrawType.Gas || BlockInfo.Draw[newBlock] == DrawType.Sprite);
 			if (didBlock == nowBlock) return;
 			
 			int index = (x * length) + z;

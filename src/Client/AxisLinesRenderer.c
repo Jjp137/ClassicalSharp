@@ -1,13 +1,12 @@
 #include "AxisLinesRenderer.h"
 #include "GraphicsAPI.h"
 #include "Game.h"
-#include "GraphicsEnums.h"
 #include "GraphicsCommon.h"
 #include "SelectionBox.h"
 #include "PackedCol.h"
 #include "Camera.h"
-#include "Player.h"
 #include "Event.h"
+#include "Entity.h"
 
 GfxResourceID axisLines_vb;
 #define axisLines_numVertices 12
@@ -42,7 +41,7 @@ void AxisLinesRenderer_Render(Real64 delta) {
 	}
 
 	Gfx_SetTexturing(false);
-	Vector3 P = LocalPlayer_Instance.Base.Base.Position; P.Y += 0.05f;
+	Vector3 P = LocalPlayer_Instance.Base.Position; P.Y += 0.05f;
 	VertexP3fC4b vertices[axisLines_numVertices];
 	VertexP3fC4b* ptr = vertices;
 

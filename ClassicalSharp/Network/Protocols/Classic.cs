@@ -8,12 +8,7 @@ using Ionic.Zlib;
 #else
 using System.IO.Compression;
 #endif
-
-#if USE16_BIT
 using BlockID = System.UInt16;
-#else
-using BlockID = System.Byte;
-#endif
 
 namespace ClassicalSharp.Network.Protocols {
 
@@ -23,7 +18,7 @@ namespace ClassicalSharp.Network.Protocols {
 		public ClassicProtocol(Game game) : base(game) { }
 		
 		public override void Init() {
-			gzippedMap = new FixedBufferStream(net.reader.buffer);
+			mapPartStream = new FixedBufferStream(net.reader.buffer);
 			Reset();
 		}
 		
@@ -52,9 +47,15 @@ namespace ClassicalSharp.Network.Protocols {
 		GZipHeaderReader gzipHeader;
 		int mapSizeIndex, mapIndex;
 		byte[] mapSize = new byte[4], map;
-		FixedBufferStream gzippedMap;
+		FixedBufferStream mapPartStream;
 		Screen prevScreen;
 		bool prevCursorVisible;
+		
+		#if !ONLY_8BIT
+		DeflateStream gzipStream2;
+		byte[] map2;
+		int mapIndex2;
+		#endif
 		
 		#region Read
 
@@ -64,7 +65,7 @@ namespace ClassicalSharp.Network.Protocols {
 			net.ServerMotd = reader.ReadString();
 			game.Chat.SetLogName(net.ServerName);
 			
-			game.LocalPlayer.Hacks.SetUserType(reader.ReadUInt8());
+			game.LocalPlayer.Hacks.SetUserType(reader.ReadUInt8(), !net.cpeData.blockPerms);
 			game.LocalPlayer.Hacks.HacksFlags = net.ServerName + net.ServerMotd;
 			game.LocalPlayer.Hacks.UpdateHacksState();
 		}
@@ -72,7 +73,21 @@ namespace ClassicalSharp.Network.Protocols {
 		void HandlePing() { }
 		
 		void HandleLevelInit() {
-			if (gzipStream != null) return;
+			if (gzipStream == null) StartLoadingState();
+			
+			// Fast map puts volume in header, doesn't bother with gzip
+			if (net.cpeData.fastMap) {
+				int size = reader.ReadInt32();
+				gzipHeader.done = true;
+				mapSizeIndex = 4;
+				map = new byte[size];
+				#if !ONLY_8BIT
+				if (reader.ExtendedBlocks) map2 = new byte[size];
+				#endif
+			}
+		}
+		
+		void StartLoadingState() {
 			game.World.Reset();
 			game.WorldEvents.RaiseOnNewMap();
 			
@@ -89,30 +104,45 @@ namespace ClassicalSharp.Network.Protocols {
 			// Workaround because built in mono stream assumes that the end of stream
 			// has been reached the first time a read call returns 0. (MS.NET doesn't)
 			#if __MonoCS__
-			gzipStream = new DeflateStream(gzippedMap, true);
+			gzipStream = new DeflateStream(mapPartStream, true);
 			#else
-			gzipStream = new DeflateStream(gzippedMap, CompressionMode.Decompress);
+			gzipStream = new DeflateStream(mapPartStream, CompressionMode.Decompress);
 			if (OpenTK.Configuration.RunningOnMono) {
 				throw new InvalidOperationException("You must compile ClassicalSharp with __MonoCS__ defined " +
 				                                    "to run on Mono, due to a limitation in Mono.");
 			}
 			#endif
 			
+			#if !ONLY_8BIT
+			#if __MonoCS__
+			gzipStream2 = new DeflateStream(mapPartStream, true);
+			#else
+			gzipStream2 = new DeflateStream(mapPartStream, CompressionMode.Decompress);
+			#endif
+			#endif
+			
 			mapSizeIndex = 0;
 			mapIndex = 0;
+			#if !ONLY_8BIT
+			mapIndex2 = 0;
+			#endif
 			mapReceiveStart = DateTime.UtcNow;
 		}
 		
 		void HandleLevelDataChunk() {
 			// Workaround for some servers that send LevelDataChunk before LevelInit
 			// due to their async packet sending behaviour.
-			if (gzipStream == null) HandleLevelInit();
-			int usedLength = reader.ReadUInt16();
-			gzippedMap.pos = 0;
-			gzippedMap.bufferPos = reader.index;
-			gzippedMap.len = usedLength;
+			if (gzipStream == null) StartLoadingState();
 			
-			if (gzipHeader.done || gzipHeader.ReadHeader(gzippedMap)) {
+			int usedLength = reader.ReadUInt16();
+			mapPartStream.pos = 0;
+			mapPartStream.bufferPos = reader.index;
+			mapPartStream.len = usedLength;
+			
+			reader.Skip(1024);
+			byte value = reader.ReadUInt8(); // progress in original classic, but we ignore it
+			
+			if (gzipHeader.done || gzipHeader.ReadHeader(mapPartStream)) {
 				if (mapSizeIndex < 4) {
 					mapSizeIndex += gzipStream.Read(mapSize, mapSizeIndex, 4 - mapSizeIndex);
 				}
@@ -120,27 +150,27 @@ namespace ClassicalSharp.Network.Protocols {
 				if (mapSizeIndex == 4) {
 					if (map == null) {
 						int size = mapSize[0] << 24 | mapSize[1] << 16 | mapSize[2] << 8 | mapSize[3];
-						#if USE16_BIT
-						if (reader.ExtendedBlocks) size *= 2;
-						#endif
 						map = new byte[size];
+						#if !ONLY_8BIT
+						if (reader.ExtendedBlocks) map2 = new byte[size];
+						#endif
 					}
+					
+					#if !ONLY_8BIT
+					if (reader.ExtendedBlocks && value != 0) {
+						mapIndex2 += gzipStream2.Read(map2, mapIndex2, map2.Length - mapIndex2);
+					} else {
+						mapIndex += gzipStream.Read(map, mapIndex, map.Length - mapIndex);
+					}
+					#else
 					mapIndex += gzipStream.Read(map, mapIndex, map.Length - mapIndex);
+					#endif
 				}
 			}
 			
-			reader.Skip(1025); // also skip progress since we calculate client side
 			float progress = map == null ? 0 : (float)mapIndex / map.Length;
 			game.WorldEvents.RaiseMapLoading(progress);
 		}
-		
-		#if USE16_BIT
-		static ushort[] UInt8sToUInt16s(byte[] src) {
-			ushort[] dst = new ushort[src.Length / 2];
-			Buffer.BlockCopy(src, 0, dst, 0, src.Length);
-			return dst;
-		}
-		#endif
 		
 		void HandleLevelFinalise() {
 			game.Gui.SetNewScreen(null);
@@ -157,21 +187,21 @@ namespace ClassicalSharp.Network.Protocols {
 			double loadingMs = (DateTime.UtcNow - mapReceiveStart).TotalMilliseconds;
 			Utils.LogDebug("map loading took: " + loadingMs);
 			
-			#if USE16_BIT
-			if (reader.ExtendedBlocks) {
-				game.World.SetNewMap(UInt8sToUInt16s(map), mapWidth, mapHeight, mapLength);
-			} else{
-				game.World.SetNewMap(Utils.UInt8sToUInt16s(map), mapWidth, mapHeight, mapLength);
-			}
-			#else
 			game.World.SetNewMap(map, mapWidth, mapHeight, mapLength);
+			#if !ONLY_8BIT
+			if (reader.ExtendedBlocks) game.World.blocks2 = map2;
 			#endif
 			game.WorldEvents.RaiseOnNewMapLoaded();
-			
-			map = null;
-			gzipStream.Dispose();
 			net.wom.CheckSendWomID();
+			
+			map = null;			
+			gzipStream.Dispose();
 			gzipStream = null;
+			#if !ONLY_8BIT
+			map2 = null;
+			gzipStream2.Dispose();
+			gzipStream2 = null;
+			#endif
 			GC.Collect();
 		}
 		
@@ -180,7 +210,7 @@ namespace ClassicalSharp.Network.Protocols {
 			int y = reader.ReadUInt16();
 			int z = reader.ReadUInt16();
 			BlockID block = reader.ReadBlock();
-			if (game.World.HasBlocks && game.World.IsValidPos(x, y, z)) {
+			if (game.World.IsValidPos(x, y, z)) {
 				game.UpdateBlock(x, y, z, block);
 			}
 		}
@@ -263,7 +293,7 @@ namespace ClassicalSharp.Network.Protocols {
 		}
 		
 		void HandleSetPermission() {
-			game.LocalPlayer.Hacks.SetUserType(reader.ReadUInt8());
+			game.LocalPlayer.Hacks.SetUserType(reader.ReadUInt8(), !net.cpeData.blockPerms);
 			game.LocalPlayer.Hacks.UpdateHacksState();
 		}
 		

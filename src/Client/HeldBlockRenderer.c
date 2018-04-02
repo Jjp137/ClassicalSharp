@@ -1,6 +1,5 @@
 #include "HeldBlockRenderer.h"
 #include "Block.h"
-#include "Matrix.h"
 #include "Game.h"
 #include "Inventory.h"
 #include "GraphicsAPI.h"
@@ -8,8 +7,8 @@
 #include "Camera.h"
 #include "ModelCache.h"
 #include "ExtMath.h"
-#include "Player.h"
 #include "Event.h"
+#include "Entity.h"
 
 BlockID held_block;
 Entity held_entity;
@@ -44,7 +43,7 @@ void HeldBlockRenderer_RenderModel(void) {
 }
 
 void HeldBlockRenderer_SetMatrix(void) {
-	Entity* player = &LocalPlayer_Instance.Base.Base;	
+	Entity* player = &LocalPlayer_Instance.Base;	
 	Vector3 eyePos = Entity_GetEyePosition(player);
 	Vector3 up = Vector3_UnitY;
 	Vector3 target = eyePos; target.Z -= 1.0f; /* Look straight down*/	
@@ -57,7 +56,7 @@ void HeldBlockRenderer_SetMatrix(void) {
 
 void HeldBlockRenderer_ResetHeldState(void) {
 	/* Based off details from http://pastebin.com/KFV0HkmD (Thanks goodlyay!) */
-	Entity* player = &LocalPlayer_Instance.Base.Base;
+	Entity* player = &LocalPlayer_Instance.Base;
 	held_entity.Position = Entity_GetEyePosition(player);
 
 	held_entity.Position.X -= Camera_BobbingHor;
@@ -75,8 +74,8 @@ void HeldBlockRenderer_ResetHeldState(void) {
 
 void HeldBlockRenderer_SetBaseOffset(void) {
 	bool sprite = Block_Draw[held_block] == DRAW_SPRITE;
-	Vector3 normalOffset = VECTOR3_CONST(0.56f, -0.72f, -0.72f);
-	Vector3 spriteOffset = VECTOR3_CONST(0.46f, -0.52f, -0.72f);
+	Vector3 normalOffset = { 0.56f, -0.72f, -0.72f };
+	Vector3 spriteOffset = { 0.46f, -0.52f, -0.72f };
 	Vector3 offset = sprite ? spriteOffset : normalOffset;
 
 	Vector3_Add(&held_entity.Position, &held_entity.Position, &offset);
@@ -124,7 +123,7 @@ void HeldBlockRenderer_ResetAnim(bool setLastHeld, Real64 period) {
 }
 
 PackedCol HeldBlockRenderer_GetCol(Entity* entity) {
-	Entity* player = &LocalPlayer_Instance.Base.Base;
+	Entity* player = &LocalPlayer_Instance.Base;
 	PackedCol col = player->VTABLE->GetCol(player);
 
 	/* Adjust pitch so angle when looking straight down is 0. */

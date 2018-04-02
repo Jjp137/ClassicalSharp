@@ -49,27 +49,27 @@ namespace ClassicalSharp.Gui.Screens {
 		
 		void ConstructWidgets() {
 			input = new ChatInputWidget(game, chatFont)
-				.SetLocation(Anchor.LeftOrTop, Anchor.BottomOrRight, 5, 5);
+				.SetLocation(Anchor.Min, Anchor.Max, 5, 5);
 			altText = new SpecialInputWidget(game, chatFont, input);
 			altText.Init();
 			UpdateAltTextY();
 			
 			status = new TextGroupWidget(game, 5, chatFont, chatUrlFont)
-				.SetLocation(Anchor.BottomOrRight, Anchor.LeftOrTop, 0, 0);
+				.SetLocation(Anchor.Max, Anchor.Min, 0, 0);
 			status.Init();
 			status.SetUsePlaceHolder(0, false);
 			status.SetUsePlaceHolder(1, false);
 			
 			bottomRight = new TextGroupWidget(game, 3, chatFont, chatUrlFont)
-				.SetLocation(Anchor.BottomOrRight, Anchor.BottomOrRight, 0, hud.BottomOffset + 15);
+				.SetLocation(Anchor.Max, Anchor.Max, 0, hud.BottomOffset + 15);
 			bottomRight.Init();
 			
 			normalChat = new TextGroupWidget(game, chatLines, chatFont, chatUrlFont)
-				.SetLocation(Anchor.LeftOrTop, Anchor.BottomOrRight, 10, hud.BottomOffset + 15);
+				.SetLocation(Anchor.Min, Anchor.Max, 10, hud.BottomOffset + 15);
 			normalChat.Init();
 			
 			clientStatus = new TextGroupWidget(game, game.Chat.ClientStatus.Length, chatFont, chatUrlFont)
-				.SetLocation(Anchor.LeftOrTop, Anchor.BottomOrRight, 10, hud.BottomOffset + 15);
+				.SetLocation(Anchor.Min, Anchor.Max, 10, hud.BottomOffset + 15);
 			clientStatus.Init();
 			
 			announcement = TextWidget.Create(game ,null, announcementFont)
@@ -93,7 +93,7 @@ namespace ClassicalSharp.Gui.Screens {
 			}
 			
 			if (chatInInputBuffer != null) {
-				OpenTextInputBar(chatInInputBuffer);
+				OpenInput(chatInInputBuffer);
 				chatInInputBuffer = null;
 			}
 		}
@@ -323,7 +323,7 @@ namespace ClassicalSharp.Gui.Screens {
 			return handled;
 		}
 		
-		public void OpenTextInputBar(string initialText) {
+		public void OpenInput(string initialText) {
 			game.CursorVisible = true;
 			suppressNextPress = true;
 			SetHandlesAllInput(true);
@@ -371,9 +371,9 @@ namespace ClassicalSharp.Gui.Screens {
 			}
 
 			if (key == game.Mapping(KeyBind.Chat)) {
-				OpenTextInputBar("");
+				OpenInput("");
 			} else if (key == Key.Slash) {
-				OpenTextInputBar("/");
+				OpenInput("/");
 			} else {
 				return false;
 			}
@@ -397,16 +397,16 @@ namespace ClassicalSharp.Gui.Screens {
 			return true;
 		}
 		
-		public override bool HandlesMouseClick(int mouseX, int mouseY, MouseButton button) {
+		public override bool HandlesMouseDown(int mouseX, int mouseY, MouseButton button) {
 			if (!HandlesAllInput || game.HideGui) return false;
 			
 			if (!normalChat.Bounds.Contains(mouseX, mouseY)) {
 				if (altText.Active && altText.Bounds.Contains(mouseX, mouseY)) {
-					altText.HandlesMouseClick(mouseX, mouseY, button);
+					altText.HandlesMouseDown(mouseX, mouseY, button);
 					UpdateAltTextY();
 					return true;
 				}
-				input.HandlesMouseClick(mouseX, mouseY, button);
+				input.HandlesMouseDown(mouseX, mouseY, button);
 				return true;
 			}
 			
@@ -423,15 +423,8 @@ namespace ClassicalSharp.Gui.Screens {
 			string url = Utils.StripColours(text);
 			
 			if (Utils.IsUrlPrefix(url, 0)) {
-				WarningOverlay overlay = new WarningOverlay(game, false, false);
-				overlay.Metadata = url;
-				overlay.SetHandlers(OpenUrl, AppendUrl);
-				overlay.lines[0] = "&eAre you sure you want to open this link?";
-				
-				overlay.lines[1] = url;
-				overlay.lines[2] = "Be careful - links from strangers may be websites that";
-				overlay.lines[3] = " have viruses, or things you may not want to open/see.";
-				game.Gui.ShowOverlay(overlay);
+				Overlay overlay = new UrlWarningOverlay(game, url);
+				game.Gui.ShowOverlay(overlay, false);
 			} else if (game.ClickableChat) {
 				input.Append(text);
 			}

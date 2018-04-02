@@ -1,8 +1,6 @@
 #ifndef CC_BLOCK_H
 #define CC_BLOCK_H
-#include "Typedefs.h"
 #include "BlockID.h"
-#include "String.h"
 #include "PackedCol.h"
 #include "Vectors.h"
 #include "Constants.h"
@@ -40,9 +38,6 @@
 #define COLLIDE_LIQUID_WATER 5 /* Water style 'swimming'/'bobbing' interaction when player collides. */
 #define COLLIDE_LIQUID_LAVA  6 /* Lava style 'swimming'/'bobbing' interaction when player collides. */
 #define COLLIDE_CLIMB_ROPE   7 /* Rope/Ladder style climbing interaction when player collides */
-
-UInt8 Block_NamesBuffer[String_BufferSize(STRING_SIZE) * BLOCK_COUNT];
-#define Block_NamePtr(i) &Block_NamesBuffer[String_BufferSize(STRING_SIZE) * i]
 
 bool Block_IsLiquid[BLOCK_COUNT];
 bool Block_BlocksLight[BLOCK_COUNT];
@@ -106,12 +101,9 @@ void Block_SetSide(TextureLoc texLoc, BlockID blockId);
 void Block_SetTex(TextureLoc texLoc, Face face, BlockID blockId);
 #define Block_GetTexLoc(block, face) Block_Textures[(block) * FACE_COUNT + (face)]
 
+bool Block_IsFaceHidden(BlockID block, BlockID other, Face face);
 void Block_UpdateCullingAll(void);
 void Block_UpdateCulling(BlockID block);
-/* Returns whether the face at the given face of the block
-should be drawn with the neighbour 'other' present on the other side of the face. */
-bool Block_IsFaceHidden(BlockID block, BlockID other, Face face);
-void Block_SetHidden(BlockID block, BlockID other, Face face, bool value);
 
 /* Attempts to find the rotated block based on the user's orientation and offset on selected block. */
 BlockID AutoRotate_RotateBlock(BlockID block);

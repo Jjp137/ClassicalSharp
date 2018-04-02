@@ -2,10 +2,12 @@
 #include "Funcs.h"
 #include "ExtMath.h"
 #include "TerrainAtlas.h"
-#include "Player.h"
 #include "Game.h"
+#include "Entity.h"
 
 UInt32 Block_DefinedCustomBlocks[BLOCK_COUNT >> 5];
+UInt8 Block_NamesBuffer[String_BufferSize(STRING_SIZE) * BLOCK_COUNT];
+#define Block_NamePtr(i) &Block_NamesBuffer[String_BufferSize(STRING_SIZE) * i]
 
 TextureLoc Block_TopTex[BLOCK_CPE_COUNT] = { 0,  1,  0,  2, 16,  4, 15, 17, 14, 14,
 30, 30, 18, 19, 32, 33, 34, 21, 22, 48, 49, 64, 65, 66, 67, 68, 69, 70, 71,
@@ -28,7 +30,7 @@ void Block_Reset(void) {
 }
 
 void Block_Init(void) {
-	Int32 count = Array_NumElements(Block_DefinedCustomBlocks);
+	Int32 count = Array_Elems(Block_DefinedCustomBlocks);
 	Int32 i;
 	for (i = 0; i < count; i++) {
 		Block_DefinedCustomBlocks[i] = 0;
@@ -171,16 +173,9 @@ void Block_ResetProps(BlockID block) {
 	Block_LightOffset[block] = Block_CalcLightOffset(block);
 
 	if (block >= BLOCK_CPE_COUNT) {
-#if USE16_BIT
-		/* give some random texture ids */
-		Block_SetTex((block * 10 + (block % 7) + 20) % 80, FACE_YMAX, block);
-		Block_SetTex((block * 8 + (block & 5) + 5) % 80, FACE_YMIN, block);
-		Block_SetSide((block * 4 + (block / 4) + 4) % 80, block);
-#else
 		Block_SetTex(0, FACE_YMAX, block);
 		Block_SetTex(0, FACE_YMIN, block);
 		Block_SetSide(0, block);
-#endif
 	} else {
 		Block_SetTex(Block_TopTex[block], FACE_YMAX, block);
 		Block_SetTex(Block_BottomTex[block], FACE_YMIN, block);
@@ -207,41 +202,6 @@ void Block_SetSide(TextureLoc texLoc, BlockID blockId) {
 
 void Block_SetTex(TextureLoc texLoc, Face face, BlockID blockId) {
 	Block_Textures[blockId * FACE_COUNT + face] = texLoc;
-}
-
-void Block_GetTextureRegion(BlockID block, Face face, Vector2* min, Vector2* max) {
-	Vector3 bbMin = Block_MinBB[block], bbMax = Block_MaxBB[block];
-
-	switch (face) {
-	case FACE_XMIN:
-	case FACE_XMAX:
-		min->X = bbMin.Z; min->Y = bbMin.Y;
-		max->X = bbMax.Z; max->Y = bbMax.Y;
-		if (Block_IsLiquid[block]) max->Y -= 1.5f / 16.0f;
-		break;
-
-	case FACE_ZMIN:
-	case FACE_ZMAX:
-		min->X = bbMin.X; min->Y = bbMin.Y;
-		max->X = bbMax.X; max->Y = bbMax.Y;
-		if (Block_IsLiquid[block]) max->Y -= 1.5f / 16.0f;
-		break;
-
-	case FACE_YMAX:
-	case FACE_YMIN:
-		min->X = bbMin.X; min->Y = bbMin.Z;
-		max->X = bbMax.X; max->Y = bbMax.Z;
-		break;
-	}
-}
-
-bool Block_FaceOccluded(BlockID block, BlockID other, Face face) {
-	Vector2 bMin, bMax, oMin, oMax;
-	Block_GetTextureRegion(block, face, &bMin, &bMax);
-	Block_GetTextureRegion(other, face, &oMin, &oMax);
-
-	return bMin.X >= oMin.X && bMin.Y >= oMin.Y
-		&& bMax.X <= oMax.X && bMax.Y <= oMax.Y;
 }
 
 
@@ -376,54 +336,6 @@ void Block_CalcStretch(BlockID block) {
 	}
 }
 
-void Block_CalcCulling(BlockID block, BlockID other) {
-	Vector3 bMin = Block_MinBB[block], bMax = Block_MaxBB[block];
-	Vector3 oMin = Block_MinBB[other], oMax = Block_MaxBB[other];
-	if (Block_IsLiquid[block]) bMax.Y -= 1.5f / 16.0f;
-	if (Block_IsLiquid[other]) oMax.Y -= 1.5f / 16.0f;
-
-	Block_Hidden[(block << BLOCK_SHIFT) | other] = 0; /* set all faces 'not hidden' */
-	if (Block_Draw[block] == DRAW_SPRITE) {
-		Block_SetHidden(block, other, FACE_XMIN, true);
-		Block_SetHidden(block, other, FACE_XMAX, true);
-		Block_SetHidden(block, other, FACE_ZMIN, true);
-		Block_SetHidden(block, other, FACE_ZMAX, true);
-		Block_SetHidden(block, other, FACE_YMIN, oMax.Y == 1.0f);
-		Block_SetHidden(block, other, FACE_YMAX, bMax.Y == 1.0f);
-	} else {
-		bool bothLiquid = Block_IsLiquid[block] && Block_IsLiquid[other];
-
-		Block_SetHidden(block, other, FACE_XMIN, oMax.X == 1.0f && bMin.X == 0.0f);
-		Block_SetHidden(block, other, FACE_XMAX, oMin.X == 0.0f && bMax.X == 1.0f);
-		Block_SetHidden(block, other, FACE_ZMIN, oMax.Z == 1.0f && bMin.Z == 0.0f);
-		Block_SetHidden(block, other, FACE_ZMAX, oMin.Z == 0.0f && bMax.Z == 1.0f);
-
-		Block_SetHidden(block, other, FACE_YMIN,
-			bothLiquid || (oMax.Y == 1.0f && bMin.Y == 0.0f));
-		Block_SetHidden(block, other, FACE_YMAX,
-			bothLiquid || (oMin.Y == 0.0f && bMax.Y == 1.0f));
-	}
-}
-
-void Block_UpdateCullingAll(void) {
-	Int32 block, neighbour;
-	for (block = BLOCK_AIR; block < BLOCK_COUNT; block++) {
-		Block_CalcStretch((BlockID)block);
-		for (neighbour = BLOCK_AIR; neighbour < BLOCK_COUNT; neighbour++) {
-			Block_CalcCulling((BlockID)block, (BlockID)neighbour);
-		}
-	}
-}
-
-void Block_UpdateCulling(BlockID block) {
-	Block_CalcStretch(block);
-	Int32 other;
-	for (other = BLOCK_AIR; other < BLOCK_COUNT; other++) {
-		Block_CalcCulling(block, (BlockID)other);
-		Block_CalcCulling((BlockID)other, block);
-	}
-}
-
 bool Block_IsHidden(BlockID block, BlockID other) {
 	/* Sprite blocks can never hide faces. */
 	if (Block_Draw[block] == DRAW_SPRITE) return false;
@@ -446,15 +358,57 @@ bool Block_IsHidden(BlockID block, BlockID other) {
 	return canSkip;
 }
 
-void Block_SetHidden(BlockID block, BlockID other, Face face, bool value) {
-	value = Block_IsHidden(block, other) && Block_FaceOccluded(block, other, face) && value;
-	Block_Hidden[(block << BLOCK_SHIFT) | other] |= (UInt8)(value << face);
+void Block_CalcCulling(BlockID block, BlockID other) {
+	if (!Block_IsHidden(block, other)) {
+		/* Block is not hidden at all, so we can just entirely skip per-face check */
+		Block_Hidden[(block * BLOCK_COUNT) + other] = 0;
+	} else {
+		Vector3 bMin = Block_MinBB[block], bMax = Block_MaxBB[block];
+		Vector3 oMin = Block_MinBB[other], oMax = Block_MaxBB[other];
+		if (Block_IsLiquid[block]) bMax.Y -= 1.50f / 16.0f;
+		if (Block_IsLiquid[other]) oMax.Y -= 1.50f / 16.0f;
+
+		/* Don't need to care about sprites here since they never cull faces */
+		bool bothLiquid = Block_IsLiquid[block] && Block_IsLiquid[other];
+		Int32 f = 0; /* mark all faces initially 'not hidden' */
+
+		/* Whether the 'texture region' of a face on block fits inside corresponding region on other block */
+		bool occludedX = (bMin.Z >= oMin.Z && bMax.Z <= oMax.Z) && (bMin.Y >= oMin.Y && bMax.Y <= oMax.Y);
+		bool occludedY = (bMin.X >= oMin.X && bMax.X <= oMax.X) && (bMin.Z >= oMin.Z && bMax.Z <= oMax.Z);
+		bool occludedZ = (bMin.X >= oMin.X && bMax.X <= oMax.X) && (bMin.Y >= oMin.Y && bMax.Y <= oMax.Y);
+
+		f |= occludedX && oMax.X == 1.0f && bMin.X == 0.0f ? (1 << FACE_XMIN) : 0;
+		f |= occludedX && oMin.X == 0.0f && bMax.X == 1.0f ? (1 << FACE_XMAX) : 0;
+		f |= occludedZ && oMax.Z == 1.0f && bMin.Z == 0.0f ? (1 << FACE_ZMIN) : 0;
+		f |= occludedZ && oMin.Z == 0.0f && bMax.Z == 1.0f ? (1 << FACE_ZMAX) : 0;
+		f |= occludedY && (bothLiquid || (oMax.Y == 1.0f && bMin.Y == 0.0f)) ? (1 << FACE_YMIN) : 0;
+		f |= occludedY && (bothLiquid || (oMin.Y == 0.0f && bMax.Y == 1.0f)) ? (1 << FACE_YMAX) : 0;
+		Block_Hidden[(block * BLOCK_COUNT) + other] = (UInt8)f;
+	}
 }
 
 bool Block_IsFaceHidden(BlockID block, BlockID other, Face face) {
-	return (Block_Hidden[(block << BLOCK_SHIFT) | other] & (1 << face)) != 0;
+	return (Block_Hidden[(block * BLOCK_COUNT) + other] & (1 << face)) != 0;
 }
 
+void Block_UpdateCullingAll(void) {
+	Int32 block, neighbour;
+	for (block = BLOCK_AIR; block < BLOCK_COUNT; block++) {
+		Block_CalcStretch((BlockID)block);
+		for (neighbour = BLOCK_AIR; neighbour < BLOCK_COUNT; neighbour++) {
+			Block_CalcCulling((BlockID)block, (BlockID)neighbour);
+		}
+	}
+}
+
+void Block_UpdateCulling(BlockID block) {
+	Block_CalcStretch(block);
+	Int32 other;
+	for (other = BLOCK_AIR; other < BLOCK_COUNT; other++) {
+		Block_CalcCulling(block, (BlockID)other);
+		Block_CalcCulling((BlockID)other, block);
+	}
+}
 
 
 #define AR_EQ1(s, x) (s.length >= 1 && Char_ToLower(s.buffer[0]) == x)
@@ -495,7 +449,7 @@ BlockID AutoRotate_RotateVertical(BlockID block, String* name, Vector3 offset) {
 BlockID AutoRotate_RotateOther(BlockID block, String* name, Vector3 offset) {
 	/* Fence type blocks */
 	if (AutoRotate_Find(BLOCK_INVALID, name, "-UD") == BLOCK_INVALID) {
-		Real32 headY = LocalPlayer_Instance.Base.Base.HeadY;
+		Real32 headY = LocalPlayer_Instance.Base.HeadY;
 		headY = LocationUpdate_Clamp(headY);
 
 		if (headY < 45.0f || (headY >= 135.0f && headY < 225.0f) || headY > 315.0f) {
@@ -517,7 +471,7 @@ BlockID AutoRotate_RotateOther(BlockID block, String* name, Vector3 offset) {
 }
 
 BlockID AutoRotate_RotateDirection(BlockID block, String* name, Vector3 offset) {
-	Real32 headY = LocalPlayer_Instance.Base.Base.HeadY;
+	Real32 headY = LocalPlayer_Instance.Base.HeadY;
 	headY = LocationUpdate_Clamp(headY);
 
 	if (headY >= 45.0f && headY < 135.0f) {

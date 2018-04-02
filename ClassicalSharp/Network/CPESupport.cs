@@ -1,11 +1,12 @@
 ﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 using System;
+using BlockID = System.UInt16;
 
 namespace ClassicalSharp.Network {
 
 	public sealed class CPESupport : IGameComponent {
 		
-		public void Init(Game game) { }
+		public void Init(Game game) { this.game = game; }
 		public void Ready(Game game) { }
 		public void OnNewMap(Game game) { }
 		public void OnNewMapLoaded(Game game) { }
@@ -14,15 +15,15 @@ namespace ClassicalSharp.Network {
 		internal int ServerExtensionsCount;
 		internal bool sendHeldBlock, useMessageTypes;
 		internal int envMapVer = 2, blockDefsExtVer = 2;
-		internal bool needD3Fix, extEntityPos, twoWayPing;
+		internal bool needD3Fix, extEntityPos, twoWayPing, blockPerms, fastMap;
+		Game game;
 		
 		public void Reset(Game game) {
 			ServerExtensionsCount = 0;
 			sendHeldBlock = false; useMessageTypes = false;
 			envMapVer = 2; blockDefsExtVer = 2;
-			needD3Fix = false; extEntityPos = false; twoWayPing = false;
-			game.UseCPEBlocks = false;
-			
+			needD3Fix = false; extEntityPos = false; twoWayPing = false; fastMap = false;
+			game.SupportsCPEBlocks = false;
 			NetworkProcessor net = (NetworkProcessor)game.Server;
 			net.Reset();
 		}
@@ -38,6 +39,8 @@ namespace ClassicalSharp.Network {
 				useMessageTypes = true;
 			} else if (ext == "ExtPlayerList") {
 				net.UsingExtPlayerList = true;
+			} else if (ext == "BlockPermissions") {
+				blockPerms = true;
 			} else if (ext == "PlayerClick") {
 				net.UsingPlayerClick = true;
 			} else if (ext == "EnvMapAppearance") {
@@ -62,9 +65,13 @@ namespace ClassicalSharp.Network {
 				net.writer.ExtendedPositions = true;
 			} else if (ext == "TwoWayPing") {
 				twoWayPing = true;
+			} else if (ext == "FastMap") {
+				net.packetSizes[Opcode.LevelInit] += 4;
+				fastMap = true;
 			}
-			#if USE16_BIT
-			else if (ext == "ExtBlocks") {
+			#if !ONLY_8BIT
+			else if (ext == "ExtendedBlocks") {
+				if (!game.UseCustomBlocks) return;
 				net.packetSizes[Opcode.SetBlock] += 1;
 				net.packetSizes[Opcode.CpeHoldThis] += 1;
 				net.packetSizes[Opcode.CpeDefineBlock] += 1;
@@ -72,23 +79,28 @@ namespace ClassicalSharp.Network {
 				net.packetSizes[Opcode.CpeUndefineBlock] += 1;
 				net.packetSizes[Opcode.CpeDefineBlockExt] += 1;
 				net.packetSizes[Opcode.CpeSetInventoryOrder] += 2;
-				// TODO: do this one more efficiently
-				net.packetSizes[Opcode.CpeBulkBlockUpdate] += 256;
+				net.packetSizes[Opcode.CpeBulkBlockUpdate] += 256 / 4;
 				
 				net.reader.ExtendedBlocks = true;
 				net.writer.ExtendedBlocks = true;
+				if (BlockInfo.Count < 768) {
+					BlockInfo.Allocate(768);
+					BlockInfo.Reset();
+					game.Inventory.Map = new BlockID[768];
+					game.Inventory.SetDefaultMapping();
+				}
 			}
 			#endif
 		}
 		
-		public static string[] ClientExtensions = {
+		public static string[] ClientExtensions = new string[] {
 			"ClickDistance", "CustomBlocks", "HeldBlock", "EmoteFix", "TextHotKey", "ExtPlayerList",
 			"EnvColors", "SelectionCuboid", "BlockPermissions", "ChangeModel", "EnvMapAppearance",
-			"EnvWeatherType", "MessageTypes", "HackControl", "PlayerClick", "FullCP437",
-			"LongerMessages", "BlockDefinitions", "BlockDefinitionsExt", "BulkBlockUpdate", "TextColors",
-			"EnvMapAspect", "EntityProperty", "ExtEntityPositions", "TwoWayPing", "InventoryOrder", "InstantMOTD",
-			#if USE16_BIT
-			"ExtBlocks",
+			"EnvWeatherType", "MessageTypes", "HackControl", "PlayerClick", "FullCP437", "LongerMessages", 
+			"BlockDefinitions", "BlockDefinitionsExt", "BulkBlockUpdate", "TextColors", "EnvMapAspect", 
+			"EntityProperty", "ExtEntityPositions", "TwoWayPing", "InventoryOrder", "InstantMOTD", "FastMap",
+			#if !ONLY_8BIT
+			"ExtendedBlocks",
 			#endif
 		};
 	}

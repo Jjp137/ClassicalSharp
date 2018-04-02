@@ -1,9 +1,6 @@
 #ifndef CC_WIDGETS_H
 #define CC_WIDGETS_H
 #include "Gui.h"
-#include "Texture.h"
-#include "PackedCol.h"
-#include "String.h"
 #include "BlockID.h"
 #include "Constants.h"
 #include "Entity.h"
@@ -11,10 +8,10 @@
    Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 */
 
-void Widget_SetLocation(Widget* widget, Anchor horAnchor, Anchor verAnchor, Int32 xOffset, Int32 yOffset);
+void Widget_SetLocation(Widget* widget, UInt8 horAnchor, UInt8 verAnchor, Int32 xOffset, Int32 yOffset);
 
 typedef struct TextWidget_ {
-	Widget Base;
+	Widget_Layout
 	Texture Texture;
 	Int32 DefaultHeight;
 	FontDesc Font;
@@ -28,27 +25,29 @@ void TextWidget_Create(TextWidget* widget, STRING_PURE String* text, FontDesc* f
 void TextWidget_SetText(TextWidget* widget, STRING_PURE String* text);
 
 
-typedef void (*ButtonWidget_SetValue)(STRING_TRANSIENT String* raw);
-typedef void (*ButtonWidget_GetValue)(STRING_TRANSIENT String* raw);
-typedef bool (*Gui_MouseHandler)(GuiElement* elem, Int32 x, Int32 y, MouseButton btn);
+typedef void (*ButtonWidget_Set)(STRING_TRANSIENT String* raw);
+typedef void (*ButtonWidget_Get)(STRING_TRANSIENT String* raw);
+typedef void (*ButtonWidget_Click)(GuiElement* elem, Int32 x, Int32 y, MouseButton btn);
+
 typedef struct ButtonWidget_ {
-	Widget Base;
+	Widget_Layout
 	Texture Texture;
 	Int32 DefaultHeight;
 	FontDesc Font;
 
 	String OptName;
-	ButtonWidget_GetValue GetValue;
-	ButtonWidget_SetValue SetValue;
-	Int32 MinWidth, MinHeight, Metadata;
+	ButtonWidget_Click OnClick;
+	ButtonWidget_Get GetValue;
+	ButtonWidget_Set SetValue;
+	Int32 MinWidth, MinHeight;
 } ButtonWidget;
 
-void ButtonWidget_Create(ButtonWidget* widget, STRING_PURE String* text, Int32 minWidth, FontDesc* font, Gui_MouseHandler onClick);
+void ButtonWidget_Create(ButtonWidget* widget, STRING_PURE String* text, Int32 minWidth, FontDesc* font, Button_WidgetClick onClick);
 void ButtonWidget_SetText(ButtonWidget* widget, STRING_PURE String* text);
 
 
 typedef struct ScrollbarWidget_ {
-	Widget Base;
+	Widget_Layout
 	Int32 TotalRows, ScrollY;
 	Real32 ScrollingAcc;
 	Int32 MouseOffset;
@@ -60,7 +59,7 @@ void ScrollbarWidget_ClampScrollY(ScrollbarWidget* widget);
 
 
 typedef struct HotbarWidget_ {
-	Widget Base;
+	Widget_Layout
 	Texture SelTex, BackTex;
 	Real32 BarHeight, SelBlockSize, ElemSize;
 	Real32 BarXOffset, BorderSize;
@@ -72,7 +71,7 @@ void HotbarWidget_Create(HotbarWidget* widget);
 
 
 typedef struct TableWidget_ {
-	Widget Base;
+	Widget_Layout
 	Int32 ElementsCount, ElementsPerRow, RowsCount;
 	Int32 LastCreatedIndex;
 	FontDesc Font;
@@ -91,39 +90,10 @@ void TableWidget_SetBlockTo(TableWidget* widget, BlockID block);
 void TableWidget_OnInventoryChanged(TableWidget* widget);
 
 
-typedef void (*SpecialInputAppendFunc)(void* userData, UInt8 c);
-typedef struct SpecialInputTab_ {
-	String Title;
-	Size2D TitleSize;
-	String Contents;
-	Int32 ItemsPerRow;
-	Int32 CharsPerItem;
-} SpecialInputTab;
-void SpecialInputTab_Init(SpecialInputTab* tab, STRING_REF String* title, 
-	Int32 itemsPerRow, Int32 charsPerItem, STRING_REF String* contents);
-
-typedef struct SpecialInputWidget_ {
-	Widget Base;
-	Size2D ElementSize;
-	Int32 SelectedIndex;
-	SpecialInputAppendFunc AppendFunc;
-	void* AppendObj;
-	Texture Tex;
-	FontDesc Font;
-	SpecialInputTab Tabs[5];
-	String ColString;
-	UInt8 ColBuffer[String_BufferSize(DRAWER2D_MAX_COLS * 4)];
-} SpecialInputWidget;
-
-void SpecialInputWidget_Create(SpecialInputWidget* widget, FontDesc* font, SpecialInputAppendFunc appendFunc, void* appendObj);
-void SpecialInputWidget_UpdateCols(SpecialInputWidget* widget);
-void SpecialInputWidget_SetActive(SpecialInputWidget* widget, bool active);
-
-
 #define INPUTWIDGET_MAX_LINES 3
 #define INPUTWIDGET_LEN STRING_SIZE
 typedef struct InputWidget_ {
-	Widget Base;
+	Widget_Layout
 	FontDesc Font;		
 	Int32 (*GetMaxLines)(void);
 	void (*RemakeTexture)(GuiElement* elem);  /* Remakes the raw texture containing all the chat lines. Also updates dimensions. */
@@ -205,7 +175,7 @@ void ChatInputWidget_Create(ChatInputWidget* widget, FontDesc* font);
 #define TEXTGROUPWIDGET_MAX_LINES 30
 #define TEXTGROUPWIDGET_LEN (STRING_SIZE * 2)
 typedef struct TextGroupWidget_ {
-	Widget Base;
+	Widget_Layout
 	Int32 LinesCount, DefaultHeight;
 	FontDesc Font, UnderlineFont;
 	bool PlaceholderHeight[TEXTGROUPWIDGET_MAX_LINES];
@@ -217,13 +187,14 @@ typedef struct TextGroupWidget_ {
 void TextGroupWidget_Create(TextGroupWidget* widget, Int32 linesCount, FontDesc* font, FontDesc* underlineFont);
 void TextGroupWidget_SetUsePlaceHolder(TextGroupWidget* widget, Int32 index, bool placeHolder);
 void TextGroupWidget_PushUpAndReplaceLast(TextGroupWidget* widget, STRING_PURE String* text);
-Int32 TextGroupWidget_GetUsedHeight(TextGroupWidget* widget);
+Int32 TextGroupWidget_UsedHeight(TextGroupWidget* widget);
 void TextGroupWidget_GetSelected(TextGroupWidget* widget, STRING_TRANSIENT String* text, Int32 mouseX, Int32 mouseY);
+void TextGroupWidget_GetText(TextGroupWidget* widget, Int32 index, STRING_TRANSIENT String* text);
 void TextGroupWidget_SetText(TextGroupWidget* widget, Int32 index, STRING_PURE String* text);
 
 
 typedef struct PlayerListWidget_ {
-	Widget Base;
+	Widget_Layout
 	FontDesc Font;
 	UInt16 NamesCount, ElementOffset;
 	Int32 XMin, XMax, YHeight;
@@ -235,4 +206,30 @@ typedef struct PlayerListWidget_ {
 
 void PlayerListWidget_Create(PlayerListWidget* widget, FontDesc* font, bool classic);
 void PlayerListWidget_GetNameUnder(PlayerListWidget* widget, Int32 mouseX, Int32 mouseY, STRING_TRANSIENT String* name);
+
+
+typedef void (*SpecialInputAppendFunc)(void* userData, UInt8 c);
+typedef struct SpecialInputTab_ {
+	Int32 ItemsPerRow, CharsPerItem;
+	Size2D TitleSize;
+	String Title, Contents;	
+} SpecialInputTab;
+void SpecialInputTab_Init(SpecialInputTab* tab, STRING_REF String* title, 
+	Int32 itemsPerRow, Int32 charsPerItem, STRING_REF String* contents);
+
+typedef struct SpecialInputWidget_ {
+	Widget_Layout
+	Size2D ElementSize;
+	Int32 SelectedIndex;
+	InputWidget* AppendObj;
+	Texture Tex;
+	FontDesc Font;
+	SpecialInputTab Tabs[5];
+	String ColString;
+	UInt8 ColBuffer[String_BufferSize(DRAWER2D_MAX_COLS * 4)];
+} SpecialInputWidget;
+
+void SpecialInputWidget_Create(SpecialInputWidget* widget, FontDesc* font, InputWidget* appendObj);
+void SpecialInputWidget_UpdateCols(SpecialInputWidget* widget);
+void SpecialInputWidget_SetActive(SpecialInputWidget* widget, bool active);
 #endif

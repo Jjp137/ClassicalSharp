@@ -1,4 +1,5 @@
 #include "Utils.h"
+#include "Constants.h"
 
 bool DateTime_IsLeapYear(Int32 year) {
 	if ((year % 4) != 0) return false;
@@ -7,7 +8,7 @@ bool DateTime_IsLeapYear(Int32 year) {
 }
 
 UInt16 DateTime_TotalDays[13] = { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365 };
-Int64 DateTime_TotalMilliseconds(DateTime* time) {
+Int64 DateTime_TotalMs(DateTime* time) {
 	/* Days from before this year */
 	Int32 days = 365 * (time->Year - 1), i;
 	/* Only need to check leap years for whether days need adding */
@@ -29,9 +30,9 @@ Int64 DateTime_TotalMilliseconds(DateTime* time) {
 	return seconds * DATETIME_MILLISECS_PER_SECOND + time->Milli;
 }
 
-Int64 DateTime_MillisecondsBetween(DateTime* start, DateTime* end) {
-	Int64 msStart = DateTime_TotalMilliseconds(start);
-	Int64 msEnd = DateTime_TotalMilliseconds(end);
+Int64 DateTime_MsBetween(DateTime* start, DateTime* end) {
+	Int64 msStart = DateTime_TotalMs(start);
+	Int64 msEnd   = DateTime_TotalMs(end);
 	return msEnd - msStart;
 }
 
@@ -49,11 +50,10 @@ bool Utils_IsValidInputChar(UInt8 c, bool supportsCP437) {
 }
 
 bool Utils_IsUrlPrefix(STRING_PURE String* value, Int32 index) {
-	String httpStr  = String_FromConst("http://");
-	String httpsStr = String_FromConst("https://");
-	Int32 http  = String_IndexOfString(value, &httpStr);
-	Int32 https = String_IndexOfString(value, &httpsStr);
-	return http == index || https == index;
+	String http = String_FromConst("http://");
+	String https = String_FromConst("https://");
+	return String_IndexOfString(value, &http) == index
+		|| String_IndexOfString(value, &https) == index;
 }
 
 Int32 Utils_AccumulateWheelDelta(Real32* accmulator, Real32 delta) {

@@ -1,15 +1,11 @@
 #ifndef CC_MODELCACHE_H
 #define CC_MODELCACHE_H
-#include "Typedefs.h"
 #include "String.h"
-#include "IModel.h"
-#include "GraphicsEnums.h"
-#include "Compiler.h"
-#include "Stream.h"
 #include "VertexStructs.h"
 /* Contains a cache of model instances and default textures for models.
    Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 */
+typedef struct IModel_ IModel;
 
 typedef struct CachedModel_ {
 	String Name;      /* Name associated with the model, all lowercase. */

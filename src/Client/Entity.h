@@ -1,17 +1,14 @@
 #ifndef CC_ENTITY_H
 #define CC_ENTITY_H
+#include "Texture.h"
 #include "EntityComponents.h"
-#include "IModel.h"
-#include "Typedefs.h"
-#include "Vectors.h"
-#include "AABB.h"
-#include "GraphicsEnums.h"
-#include "Matrix.h"
+#include "Physics.h"
 #include "GameStructs.h"
+#include "Constants.h"
 /* Represents an in-game entity.
    Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 */
-typedef struct IModel_ IModel; /* Forward declaration */
+typedef struct IModel_ IModel;
 
 /* Offset used to avoid floating point roundoff errors. */
 #define ENTITY_ADJUSTMENT 0.001f
@@ -21,7 +18,7 @@ typedef struct IModel_ IModel; /* Forward declaration */
 #define ENTITIES_MAX_COUNT 256
 #define ENTITIES_SELF_ID 255
 
-UInt32 Entities_NameMode;
+Int32 Entities_NameMode;
 #define NAME_MODE_NONE         0
 #define NAME_MODE_HOVERED      1
 #define NAME_MODE_ALL          2
@@ -29,7 +26,7 @@ UInt32 Entities_NameMode;
 #define NAME_MODE_ALL_UNSCALED 4
 extern const UInt8* NameMode_Names[5];
 
-UInt32 Entities_ShadowMode;
+Int32 Entities_ShadowMode;
 #define SHADOW_MODE_NONE          0
 #define SHADOW_MODE_SNAP_TO_BLOCK 1
 #define SHADOW_MODE_CIRCLE        2
@@ -38,8 +35,6 @@ extern const UInt8* ShadowMode_Names[4];
 
 #define ENTITY_TYPE_NONE 0
 #define ENTITY_TYPE_PLAYER 1
-
-typedef bool (*TouchesAny_Condition)(BlockID block);
 
 /* Represents a location update for an entity. Can be a relative position, full position, and/or an orientation update. */
 typedef struct LocationUpdate_ {
@@ -74,7 +69,6 @@ typedef struct EntityVTABLE_ {
 /* Contains a model, along with position, velocity, and rotation. May also contain other fields and properties. */
 typedef struct Entity_ {
 	EntityVTABLE* VTABLE;
-
 	Vector3 Position;
 	Real32 HeadX, HeadY, RotX, RotY, RotZ;
 	Vector3 Velocity, OldVelocity;
@@ -83,8 +77,7 @@ typedef struct Entity_ {
 	UInt8 ModelNameRaw[String_BufferSize(ENTITY_MAX_MODEL_LENGTH)];
 	BlockID ModelBlock; /* BlockID, if model name was originally a vaid block id. */
 	AABB ModelAABB;
-	Vector3 ModelScale;
-	Vector3 Size;
+	Vector3 ModelScale, Size;
 	Real32 StepSize;
 	
 	UInt8 SkinType, EntityType;
@@ -103,7 +96,7 @@ void Entity_GetPickingBounds(Entity* entity, AABB* bb);
 void Entity_GetBounds(Entity* entity, AABB* bb);
 void Entity_SetModel(Entity* entity, STRING_PURE String* model);
 void Entity_UpdateModelBounds(Entity* entity);
-bool Entity_TouchesAny(AABB* bb, TouchesAny_Condition condition);
+bool Entity_TouchesAny(AABB* bb, bool(*touches_condition)(BlockID block__));
 bool Entity_TouchesAnyRope(Entity* entity);	
 bool Entity_TouchesAnyLava(Entity* entity);
 bool Entity_TouchesAnyWater(Entity* entity);
@@ -133,4 +126,34 @@ IGameComponent TabList_MakeComponent(void);
 #define TabList_UNSAFE_GetPlayer(id) StringsBuffer_UNSAFE_Get(&TabList_Buffer, TabList_PlayerNames[id]);
 #define TabList_UNSAFE_GetList(id)   StringsBuffer_UNSAFE_Get(&TabList_Buffer, TabList_ListNames[id]);
 #define TabList_UNSAFE_GetGroup(id)  StringsBuffer_UNSAFE_Get(&TabList_Buffer, TabList_GroupNames[id]);
+
+
+#define Player_Layout Entity Base; UInt8 DisplayNameRaw[String_BufferSize(STRING_SIZE)]; \
+UInt8 SkinNameRaw[String_BufferSize(STRING_SIZE)]; bool FetchedSkin; Texture NameTex;
+
+/* Represents a player entity. */
+typedef struct Player_ { Player_Layout } Player;
+void Player_UpdateName(Player* player);
+void Player_ResetSkin(Player* player);
+
+/* Represents another entity in multiplayer */
+typedef struct NetPlayer_ {
+	Player_Layout
+	NetInterpComp Interp;
+	bool ShouldRender;
+} NetPlayer;
+
+/* Represents the user/player's own entity. */
+typedef struct LocalPlayer_ {
+	Player_Layout
+	Vector3 Spawn;
+	Real32 SpawnRotY, SpawnHeadX, ReachDistance;
+	HacksComp Hacks;
+	TiltComp Tilt;
+	InterpComp Interp;
+} LocalPlayer;
+
+LocalPlayer LocalPlayer_Instance;
+void LocalPlayer_Init(void);
+void NetPlayer_Init(NetPlayer* player);
 #endif

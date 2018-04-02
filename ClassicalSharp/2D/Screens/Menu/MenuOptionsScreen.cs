@@ -17,20 +17,17 @@ namespace ClassicalSharp.Gui.Screens {
 		
 		public override void Render(double delta) {
 			RenderMenuBounds();
-			int extClipY = extendedHelp == null ? 0 : widgets[widgets.Length - 3].Y;
-			int extEndY = extendedHelp == null ? 0 : extendedHelp.Y + extendedHelp.Height;
-			
-			if (extendedHelp != null && extEndY <= extClipY) {
-				int tableWidth = extendedHelp.Width, tableHeight = extendedHelp.Height;
-				int x = game.Width / 2 - tableWidth / 2 - 5;
-				int y = game.Height / 2 + extHelpY - 5;
-				game.Graphics.Draw2DQuad(x, y, tableWidth + 10, tableHeight + 10, tableCol);
-			}
-			
 			game.Graphics.Texturing = true;
 			RenderWidgets(widgets, delta);
 			
-			if (extendedHelp != null && extEndY <= extClipY) {
+			if (extendedHelp != null) {
+				game.Graphics.Texturing = false;
+				int tableWidth = extendedHelp.Width, tableHeight = extendedHelp.Height;
+				int x = game.Width  / 2 - tableWidth / 2 - 5;
+				int y = game.Height / 2 + extHelpY - 5;
+				
+				game.Graphics.Draw2DQuad(x, y, tableWidth + 10, tableHeight + 10, tableCol);
+				game.Graphics.Texturing = true;
 				extendedHelp.Render(delta);
 			}
 			game.Graphics.Texturing = false;
@@ -52,8 +49,7 @@ namespace ClassicalSharp.Gui.Screens {
 			if (key == Key.Escape) {
 				game.Gui.SetNewScreen(null);
 				return true;
-			} else if ((key == Key.Enter || key == Key.KeypadEnter)
-			           && input != null) {
+			} else if ((key == Key.Enter || key == Key.KeypadEnter) && input != null) {
 				ChangeSetting();
 				return true;
 			}
@@ -87,15 +83,19 @@ namespace ClassicalSharp.Gui.Screens {
 			base.Dispose();
 		}
 		
-		protected ButtonWidget selectedButton, activeButton;
-		protected override void WidgetSelected(Widget widget) {
-			ButtonWidget button = widget as ButtonWidget;
-			if (selectedButton == button || button == null ||
-			    button == widgets[widgets.Length - 2]) return;
+		protected ButtonWidget activeButton;
+		protected int selectedI = -1;
+		
+		public override bool HandlesMouseMove(int mouseX, int mouseY) {
+			int i = HandleMouseMove(widgets, mouseX, mouseY);
+			if (i == -1 || i == selectedI) return true;
+			if (descriptions == null || i >= descriptions.Length) return true;
 			
-			selectedButton = button;
-			if (activeButton != null) return;
-			UpdateDescription(selectedButton);
+			selectedI = i;
+			if (activeButton == null) {
+				UpdateDescription((ButtonWidget)widgets[i]);
+			}
+			return true;
 		}
 		
 		protected void UpdateDescription(ButtonWidget widget) {
@@ -134,12 +134,10 @@ namespace ClassicalSharp.Gui.Screens {
 		}
 		
 		void ShowExtendedHelp() {
-			bool canShow = input == null && selectedButton != null && descriptions != null;
-			if (!canShow) return;
+			if (input != null || descriptions == null) return;
+			if (selectedI < 0 || selectedI >= descriptions.Length) return;
 			
-			int index = IndexOfWidget(selectedButton);
-			if (index < 0 || index >= descriptions.Length) return;
-			string[] desc = descriptions[index];
+			string[] desc = descriptions[selectedI];
 			if (desc == null) return;
 			MakeExtendedHelp(desc);
 		}
@@ -149,7 +147,7 @@ namespace ClassicalSharp.Gui.Screens {
 		
 		void MakeExtendedHelp(string[] desc) {
 			extendedHelp = new TextGroupWidget(game, desc.Length, regularFont, null)
-				.SetLocation(Anchor.LeftOrTop, Anchor.LeftOrTop, 0, 0);
+				.SetLocation(Anchor.Min, Anchor.Min, 0, 0);
 			extendedHelp.Init();
 			for (int i = 0; i < desc.Length; i++)
 				extendedHelp.SetText(i, desc[i]);
@@ -165,12 +163,14 @@ namespace ClassicalSharp.Gui.Screens {
 			extendedHelp = null;
 		}
 		
-		protected void OnWidgetClick(Game game, Widget widget, MouseButton btn, int x, int y) {
+		void OnOKButtonClick(Game game, Widget widget, MouseButton btn, int x, int y) {
+			if (btn != MouseButton.Left) return;
+			ChangeSetting();
+		}
+		
+		protected void OnButtonClick(Game game, Widget widget, MouseButton btn, int x, int y) {
 			ButtonWidget button = widget as ButtonWidget;
 			if (btn != MouseButton.Left) return;
-			if (widget == widgets[widgets.Length - 1]) {
-				ChangeSetting(); return;
-			}
 			if (button == null) return;
 			DisposeExtendedHelp();
 			
@@ -190,14 +190,13 @@ namespace ClassicalSharp.Gui.Screens {
 			activeButton = button;
 			InputClosed();
 			
-			input = MenuInputWidget.Create(game, 400, 30,
-			                               button.GetValue(game), regularFont, validator)
+			input = MenuInputWidget.Create(game, 400, 30, button.GetValue(game), regularFont, validator)
 				.SetLocation(Anchor.Centre, Anchor.Centre, 0, 110);
 			input.ShowCaret = true;
 			input.OnClick = InputClick;
 			
 			widgets[widgets.Length - 2] = input;
-			widgets[widgets.Length - 1] = ButtonWidget.Create(game, 40, "OK", titleFont, OnWidgetClick)
+			widgets[widgets.Length - 1] = ButtonWidget.Create(game, 40, "OK", titleFont, OnOKButtonClick)
 				.SetLocation(Anchor.Centre, Anchor.Centre, 240, 110);
 
 			InputOpened();
@@ -206,7 +205,7 @@ namespace ClassicalSharp.Gui.Screens {
 		
 		void InputClick(Game game, Widget widget, MouseButton btn, int x, int y) {
 			if (btn != MouseButton.Left) return;
-			widget.HandlesMouseClick(x, y, btn);
+			widget.HandlesMouseDown(x, y, btn);
 		}
 		
 		void HandleEnumOption(ButtonWidget button, Type type) {

@@ -1,11 +1,13 @@
 #include "Picking.h"
 #include "ExtMath.h"
 #include "Game.h"
-#include "Intersection.h"
-#include "Player.h"
+#include "Physics.h"
+#include "Entity.h"
 #include "World.h"
 #include "Funcs.h"
-#include "Platform.h"
+#include "BlockID.h"
+#include "Block.h"
+#include "ErrorHandler.h"
 
 Real32 PickedPos_dist;
 void PickedPos_TestAxis(PickedPos* pos, Real32 dAxis, Face fAxis) {
@@ -17,7 +19,7 @@ void PickedPos_TestAxis(PickedPos* pos, Real32 dAxis, Face fAxis) {
 }
 
 void PickedPos_SetAsValid(PickedPos* pos, RayTracer* t, Vector3 intersect) {
-	Vector3I blockPos = VECTOR3I_CONST(t->X, t->Y, t->Z);
+	Vector3I blockPos  = { t->X, t->Y, t->Z };
 	pos->Valid         = true;
 	pos->BlockPos      = blockPos;
 	pos->Block         = t->Block;	
@@ -44,7 +46,7 @@ void PickedPos_SetAsValid(PickedPos* pos, RayTracer* t, Vector3 intersect) {
 }
 
 void PickedPos_SetAsInvalid(PickedPos* pos) {
-	Vector3I blockPos = VECTOR3I_CONST(-1, -1, -1);
+	Vector3I blockPos  = { -1, -1, -1 };
 	pos->Valid         = false;
 	pos->BlockPos      = blockPos;
 	pos->Block         = BLOCK_AIR;
@@ -81,7 +83,7 @@ void RayTracer_SetVectors(RayTracer* t, Vector3 origin, Vector3 dir) {
 	t->tMax.Y = RayTracer_Div(cellBoundary.Y - origin.Y, dir.Y); /* Boundary is a plane on the XZ axis. */
 	t->tMax.Z = RayTracer_Div(cellBoundary.Z - origin.Z, dir.Z); /* Boundary is a plane on the XY axis. */
 
-																 // Determine how far we must travel along the ray before we have crossed a gridcell.
+	/* Determine how far we must travel along the ray before we have crossed a gridcell. */
 	t->tDelta.X = RayTracer_Div((Real32)t->step.X, dir.X);
 	t->tDelta.Y = RayTracer_Div((Real32)t->step.Y, dir.Y);
 	t->tDelta.Z = RayTracer_Div((Real32)t->step.Z, dir.Z);
@@ -109,53 +111,53 @@ RayTracer tracer;
 #define PICKING_BORDER BLOCK_BEDROCK
 typedef bool(*IntersectTest)(PickedPos* pos);
 
-BlockID Picking_GetBlock(Int32 x, Int32 y, Int32 z, Vector3I origin) {
-	bool sides = WorldEnv_SidesBlock != BLOCK_AIR;
-	Int32 height = WorldEnv_SidesHeight;
-	if (height < 1) height = 1;
-	bool insideMap = World_IsValidPos_3I(origin);
-
-	/* handling of blocks inside the map, above, and on borders */
+BlockID Picking_InsideGetBlock(Int32 x, Int32 y, Int32 z) {
 	if (x >= 0 && z >= 0 && x < World_Width && z < World_Length) {
-		if (y >= World_Height) return 0;
-		if (sides && y == -1 && origin.Y > 0) return PICKING_BORDER;
-		if (sides && y == 0  && origin.Y < 0) return PICKING_BORDER;
-
-		if (sides && x == 0 && y >= 0 && y < height && origin.X < 0) return PICKING_BORDER;
-		if (sides && z == 0 && y >= 0 && y < height && origin.Z < 0) return PICKING_BORDER;
-		if (sides && x == World_MaxX && y >= 0 && y < height && origin.X >= World_Width)
-			return PICKING_BORDER;
-		if (sides && z == World_MaxZ && y >= 0 && y < height && origin.Z >= World_Length)
-			return PICKING_BORDER;
+		if (y >= World_Height) return BLOCK_AIR;
 		if (y >= 0) return World_GetBlock(x, y, z);
 	}
 
-	/* pick blocks on the map boundaries (when inside the map) */
-	if (!sides || !insideMap)   return BLOCK_AIR;
-	if (y == 0 && origin.Y < 0) return PICKING_BORDER;
+	/* bedrock on bottom or outside map */
+	bool sides = WorldEnv_SidesBlock != BLOCK_AIR;
+	Int32 height = WorldEnv_SidesHeight; if (height < 1) height = 1;
+	return sides && y < height ? PICKING_BORDER : BLOCK_AIR;
+}
 
-	bool validX = (x == -1 || x == World_Width) && (z >= 0 && z < World_Length);
-	bool validZ = (z == -1 || z == World_Length) && (x >= 0 && x < World_Width);
-	if (y >= 0 && y < height && (validX || validZ)) return PICKING_BORDER;
+BlockID Picking_OutsideGetBlock(Int32 x, Int32 y, Int32 z, Vector3I origin) {
+	if (x < 0 || z < 0 || x >= World_Width || z >= World_Length) return BLOCK_AIR;
+	bool sides = WorldEnv_SidesBlock != BLOCK_AIR;
+	/* handling of blocks inside the map, above, and on borders */
+
+	if (y >= World_Height) return BLOCK_AIR;
+	if (sides && y == -1 && origin.Y > 0) return PICKING_BORDER;
+	if (sides && y ==  0 && origin.Y < 0) return PICKING_BORDER;
+	Int32 height = WorldEnv_SidesHeight; if (height < 1) height = 1;
+
+	if (sides && x == 0          && y >= 0 && y < height && origin.X < 0)             return PICKING_BORDER;
+	if (sides && z == 0          && y >= 0 && y < height && origin.Z < 0)             return PICKING_BORDER;
+	if (sides && x == World_MaxX && y >= 0 && y < height && origin.X >= World_Width)  return PICKING_BORDER;
+	if (sides && z == World_MaxZ && y >= 0 && y < height && origin.Z >= World_Length) return PICKING_BORDER;
+	if (y >= 0) return World_GetBlock(x, y, z);
 	return BLOCK_AIR;
 }
 
 bool Picking_RayTrace(Vector3 origin, Vector3 dir, Real32 reach, PickedPos* pos, IntersectTest intersect) {
 	RayTracer_SetVectors(&tracer, origin, dir);
 	Real32 reachSq = reach * reach;
-	Vector3I pOrigin;
-	Vector3I_Floor(&pOrigin, &origin);
+	Vector3I pOrigin; Vector3I_Floor(&pOrigin, &origin);
+	bool insideMap = World_IsValidPos_3I(pOrigin);
 
 	Int32 i;
-	Vector3 blockPos;
+	Vector3 coords;
 	for (i = 0; i < 10000; i++) {
 		Int32 x = tracer.X, y = tracer.Y, z = tracer.Z;
-		blockPos.X = (Real32)x; blockPos.Y = (Real32)y; blockPos.Z = (Real32)z;
-		tracer.Block = Picking_GetBlock(x, y, z, pOrigin);
+		coords.X = (Real32)x; coords.Y = (Real32)y; coords.Z = (Real32)z;
+		tracer.Block = insideMap ?
+			Picking_InsideGetBlock(x, y, z) : Picking_OutsideGetBlock(x, y, z, pOrigin);
 
 		Vector3 minPos, maxPos;
-		Vector3_Add(&minPos, &blockPos, &Block_RenderMinBB[tracer.Block]);
-		Vector3_Add(&maxPos, &blockPos, &Block_RenderMaxBB[tracer.Block]);
+		Vector3_Add(&minPos, &coords, &Block_RenderMinBB[tracer.Block]);
+		Vector3_Add(&maxPos, &coords, &Block_RenderMaxBB[tracer.Block]);
 
 		Real32 dxMin = Math_AbsF(origin.X - minPos.X), dxMax = Math_AbsF(origin.X - maxPos.X);
 		Real32 dyMin = Math_AbsF(origin.Y - minPos.Y), dyMax = Math_AbsF(origin.Y - maxPos.Y);
@@ -191,8 +193,7 @@ bool Picking_ClipBlock(PickedPos* pos) {
 
 	if (lenSq <= reach * reach) {
 		PickedPos_SetAsValid(pos, &tracer, intersect);
-	}
-	else {
+	} else {
 		PickedPos_SetAsInvalid(pos);
 	}
 	return true;

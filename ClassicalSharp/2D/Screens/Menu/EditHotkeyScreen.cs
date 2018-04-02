@@ -28,14 +28,6 @@ namespace ClassicalSharp.Gui.Screens {
 			game.Graphics.Draw2DQuad(cX - 250, cY + 45, 500, 2, grey);
 		}
 		
-		public override bool HandlesMouseMove(int mouseX, int mouseY) {
-			return HandleMouseMove(widgets, mouseX, mouseY);
-		}
-		
-		public override bool HandlesMouseClick(int mouseX, int mouseY, MouseButton button) {
-			return HandleMouseClick(widgets, mouseX, mouseY, button);
-		}
-		
 		bool supressNextPress;
 		public override bool HandlesKeyPress(char key) {
 			if (supressNextPress) {
@@ -105,7 +97,7 @@ namespace ClassicalSharp.Gui.Screens {
 		
 		void InputClick(Game game, Widget widget, MouseButton btn, int x, int y) {
 			if (btn != MouseButton.Left) return;
-			widget.HandlesMouseClick(x, y, btn);
+			widget.HandlesMouseDown(x, y, btn);
 		}
 		
 		void LeaveOpenClick(Game game, Widget widget) {

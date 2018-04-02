@@ -1,11 +1,11 @@
 #include "GraphicsAPI.h"
 #include "ErrorHandler.h"
-#include "GraphicsEnums.h"
 #include "Platform.h"
 #include "Window.h"
 #include "GraphicsCommon.h"
 #include "Funcs.h"
 #include "Chat.h"
+#include "Game.h"
 #define WIN32_LEAN_AND_MEAN
 #define NOSERVICE
 #define NOMCX
@@ -31,7 +31,6 @@ FN_GLGENBUFFERS glGenBuffers;
 FN_GLBUFFERDATA glBufferData;
 FN_GLBUFFERSUBDATA glBufferSubData;
 
-
 bool gl_lists = false;
 Int32 gl_activeList = -1;
 #define gl_DYNAMICLISTID 1234567891
@@ -41,6 +40,12 @@ Int32 gl_blend[6] = { GL_ZERO, GL_ONE, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_
 Int32 gl_compare[8] = { GL_ALWAYS, GL_NOTEQUAL, GL_NEVER, GL_LESS, GL_LEQUAL, GL_EQUAL, GL_GEQUAL, GL_GREATER };
 Int32 gl_fogModes[3] = { GL_LINEAR, GL_EXP, GL_EXP2 };
 Int32 gl_matrixModes[3] = { GL_PROJECTION, GL_MODELVIEW, GL_TEXTURE };
+
+typedef void (*GL_SetupVBFunc)(void);
+typedef void (*GL_SetupVBRangeFunc)(Int32 startVertex);
+GL_SetupVBFunc gl_setupVBFunc;
+GL_SetupVBRangeFunc gl_setupVBRangeFunc;
+Int32 gl_batchStride, gl_batchFormat = -1;
 
 void GL_CheckVboSupport(void) {
 	String extensions = String_FromReadonly(glGetString(GL_EXTENSIONS));
@@ -89,12 +94,7 @@ void Gfx_Free(void) {
 	GLContext_Free();
 }
 
-#define GL_TOGGLE(cap)\
-if (enabled) {\
-glEnable(cap);\
-} else {\
-glDisable(cap);\
-}
+#define gl_Toggle(cap) if (enabled) { glEnable(cap); } else { glDisable(cap); }
 
 void GL_DoMipmaps(GfxResourceID texId, Int32 x, Int32 y, Bitmap* bmp, bool partial) {
 	UInt8* prev = bmp->Scan0;
@@ -162,7 +162,7 @@ void Gfx_DeleteTexture(GfxResourceID* texId) {
 	*texId = NULL;
 }
 
-void Gfx_SetTexturing(bool enabled) { GL_TOGGLE(GL_TEXTURE_2D); }
+void Gfx_SetTexturing(bool enabled) { gl_Toggle(GL_TEXTURE_2D); }
 void Gfx_EnableMipmaps(void) { }
 void Gfx_DisableMipmaps(void) { }
 
@@ -171,7 +171,7 @@ bool gl_fogEnable;
 bool Gfx_GetFog(void) { return gl_fogEnable; }
 void Gfx_SetFog(bool enabled) {
 	gl_fogEnable = enabled;
-	GL_TOGGLE(GL_FOG);
+	gl_Toggle(GL_FOG);
 }
 
 PackedCol gl_lastFogCol;
@@ -207,13 +207,13 @@ void Gfx_SetFogMode(Int32 mode) {
 }
 
 
-void Gfx_SetFaceCulling(bool enabled) { GL_TOGGLE(GL_CULL_FACE); }
-void Gfx_SetAlphaTest(bool enabled) { GL_TOGGLE(GL_ALPHA_TEST); }
+void Gfx_SetFaceCulling(bool enabled) { gl_Toggle(GL_CULL_FACE); }
+void Gfx_SetAlphaTest(bool enabled) { gl_Toggle(GL_ALPHA_TEST); }
 void Gfx_SetAlphaTestFunc(Int32 func, Real32 value) {
 	glAlphaFunc(gl_compare[func], value);
 }
 
-void Gfx_SetAlphaBlending(bool enabled) { GL_TOGGLE(GL_BLEND); }
+void Gfx_SetAlphaBlending(bool enabled) { gl_Toggle(GL_BLEND); }
 void Gfx_SetAlphaBlendFunc(Int32 srcFunc, Int32 dstFunc) {
 	glBlendFunc(gl_blend[srcFunc], gl_blend[dstFunc]);
 }
@@ -239,7 +239,7 @@ void Gfx_SetDepthWrite(bool enabled) {
 	glDepthMask(enabled);
 }
 
-void Gfx_SetDepthTest(bool enabled) { GL_TOGGLE(GL_DEPTH_TEST); }
+void Gfx_SetDepthTest(bool enabled) { gl_Toggle(GL_DEPTH_TEST); }
 void Gfx_SetDepthTestFunc(Int32 compareFunc) {
 	glDepthFunc(gl_compare[compareFunc]);
 }
@@ -273,7 +273,7 @@ GfxResourceID Gfx_CreateVb(void* vertices, Int32 vertexFormat, Int32 count) {
 		UInt16 indices[GFX_MAX_INDICES];
 		GfxCommon_MakeIndices(indices, ICOUNT(count));
 
-		Int32 stride = vertexFormat == VERTEX_FORMAT_P3FT2FC4B ? VertexP3fT2fC4b_Size : VertexP3fC4b_Size;
+		Int32 stride = vertexFormat == VERTEX_FORMAT_P3FT2FC4B ? (Int32)sizeof(VertexP3fT2fC4b) : (Int32)sizeof(VertexP3fC4b);
 		glVertexPointer(3, GL_FLOAT, stride, vertices);
 		glColorPointer(4, GL_UNSIGNED_BYTE, stride, (void*)((UInt8*)vertices + 12));
 		if (vertexFormat == VERTEX_FORMAT_P3FT2FC4B) {
@@ -331,35 +331,28 @@ void Gfx_DeleteIb(GfxResourceID* ib) {
 }
 
 
-typedef void (*GL_SetupVBFunc)(void);
-typedef void (*GL_SetupVBRangeFunc)(Int32 startVertex);
-GL_SetupVBFunc gl_setupVBFunc;
-GL_SetupVBRangeFunc gl_setupVBRangeFunc;
-Int32 gl_batchStride;
-Int32 gl_batchFormat = -1;
-
 void GL_SetupVbPos3fCol4b(void) {
-	glVertexPointer(3, GL_FLOAT, VertexP3fC4b_Size, (void*)0);
-	glColorPointer(4, GL_UNSIGNED_BYTE, VertexP3fC4b_Size, (void*)12);
+	glVertexPointer(3, GL_FLOAT,        sizeof(VertexP3fC4b), (void*)0);
+	glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(VertexP3fC4b), (void*)12);
 }
 
 void GL_SetupVbPos3fTex2fCol4b(void) {
-	glVertexPointer(3, GL_FLOAT, VertexP3fT2fC4b_Size, (void*)0);
-	glColorPointer(4, GL_UNSIGNED_BYTE, VertexP3fT2fC4b_Size, (void*)12);
-	glTexCoordPointer(2, GL_FLOAT, VertexP3fT2fC4b_Size, (void*)16);
+	glVertexPointer(3, GL_FLOAT,        sizeof(VertexP3fT2fC4b), (void*)0);
+	glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(VertexP3fT2fC4b), (void*)12);
+	glTexCoordPointer(2, GL_FLOAT,      sizeof(VertexP3fT2fC4b), (void*)16);
 }
 
 void GL_SetupVbPos3fCol4b_Range(Int32 startVertex) {
-	UInt32 offset = startVertex * VertexP3fC4b_Size;
-	glVertexPointer(3, GL_FLOAT, VertexP3fC4b_Size, (void*)(offset));
-	glColorPointer(4, GL_UNSIGNED_BYTE, VertexP3fC4b_Size, (void*)(offset + 12));
+	UInt32 offset = startVertex * (UInt32)sizeof(VertexP3fC4b);
+	glVertexPointer(3, GL_FLOAT,          sizeof(VertexP3fC4b), (void*)(offset));
+	glColorPointer(4, GL_UNSIGNED_BYTE,   sizeof(VertexP3fC4b), (void*)(offset + 12));
 }
 
 void GL_SetupVbPos3fTex2fCol4b_Range(Int32 startVertex) {
-	UInt32 offset = startVertex * VertexP3fT2fC4b_Size;
-	glVertexPointer(3, GL_FLOAT, VertexP3fT2fC4b_Size, (void*)(offset));
-	glColorPointer(4, GL_UNSIGNED_BYTE, VertexP3fT2fC4b_Size, (void*)(offset + 12));
-	glTexCoordPointer(2, GL_FLOAT, VertexP3fT2fC4b_Size, (void*)(offset + 16));
+	UInt32 offset = startVertex * (UInt32)sizeof(VertexP3fT2fC4b);
+	glVertexPointer(3,  GL_FLOAT,         sizeof(VertexP3fT2fC4b), (void*)(offset));
+	glColorPointer(4, GL_UNSIGNED_BYTE,   sizeof(VertexP3fT2fC4b), (void*)(offset + 12));
+	glTexCoordPointer(2, GL_FLOAT,        sizeof(VertexP3fT2fC4b), (void*)(offset + 16));
 }
 
 void Gfx_SetBatchFormat(Int32 vertexFormat) {
@@ -480,10 +473,10 @@ void Gfx_DrawIndexedVb_TrisT2fC4b(Int32 verticesCount, Int32 startVertex) {
 		return;
 	}
 
-	UInt32 offset = startVertex * VertexP3fT2fC4b_Size;
-	glVertexPointer(3, GL_FLOAT, VertexP3fT2fC4b_Size, (void*)(offset));
-	glColorPointer(4, GL_UNSIGNED_BYTE, VertexP3fT2fC4b_Size, (void*)(offset + 12));
-	glTexCoordPointer(2, GL_FLOAT, VertexP3fT2fC4b_Size, (void*)(offset + 16));
+	UInt32 offset = startVertex * (UInt32)sizeof(VertexP3fT2fC4b);
+	glVertexPointer(3, GL_FLOAT,          sizeof(VertexP3fT2fC4b), (void*)(offset));
+	glColorPointer(4, GL_UNSIGNED_BYTE,   sizeof(VertexP3fT2fC4b), (void*)(offset + 12));
+	glTexCoordPointer(2, GL_FLOAT,        sizeof(VertexP3fT2fC4b), (void*)(offset + 16));
 	glDrawElements(GL_TRIANGLES, ICOUNT(verticesCount), GL_UNSIGNED_SHORT, NULL);
 }
 

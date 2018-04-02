@@ -8,36 +8,39 @@
 #include "ExtMath.h"
 #include "Screens.h"
 #include "Camera.h"
+#include "InputHandler.h"
+#include "ErrorHandler.h"
 
 Screen* Gui_Status;
 void GuiElement_Recreate(GuiElement* elem) {
-	elem->Free(elem);
-	elem->Init(elem);
+	elem->VTABLE->Free(elem);
+	elem->VTABLE->Init(elem);
 }
 
-bool Gui_FalseKey(GuiElement* elem, Key key) { return false; }
-bool Gui_FalseKeyPress(GuiElement* elem, UInt8 keyChar) { return false; }
 bool Gui_FalseMouse(GuiElement* elem, Int32 x, Int32 y, MouseButton btn) { return false; }
+bool Gui_FalseKey(GuiElement* elem, Key key)                { return false; }
+bool Gui_FalseKeyPress(GuiElement* elem, UInt8 keyChar)     { return false; }
 bool Gui_FalseMouseMove(GuiElement* elem, Int32 x, Int32 y) { return false; }
-bool Gui_FalseMouseScroll(GuiElement* elem, Real32 delta) { return false; }
+bool Gui_FalseMouseScroll(GuiElement* elem, Real32 delta)   { return false; }
 
 void GuiElement_Reset(GuiElement* elem) {
-	elem->Init     = NULL;
-	elem->Render   = NULL;
-	elem->Free     = NULL;
-	elem->Recreate = GuiElement_Recreate;
+	elem->VTABLE->Init     = NULL;
+	elem->VTABLE->Render   = NULL;
+	elem->VTABLE->Free     = NULL;
+	elem->VTABLE->Recreate = GuiElement_Recreate;
 
-	elem->HandlesKeyDown     = Gui_FalseKey;
-	elem->HandlesKeyUp       = Gui_FalseKey;
-	elem->HandlesKeyPress    = Gui_FalseKeyPress;
-	elem->HandlesMouseDown   = Gui_FalseMouse;
-	elem->HandlesMouseUp     = Gui_FalseMouse;
-	elem->HandlesMouseMove   = Gui_FalseMouseMove;
-	elem->HandlesMouseScroll = Gui_FalseMouseScroll;
+	elem->VTABLE->HandlesKeyDown     = Gui_FalseKey;
+	elem->VTABLE->HandlesKeyUp       = Gui_FalseKey;
+	elem->VTABLE->HandlesKeyPress    = Gui_FalseKeyPress;
+
+	elem->VTABLE->HandlesMouseDown   = Gui_FalseMouse;
+	elem->VTABLE->HandlesMouseUp     = Gui_FalseMouse;
+	elem->VTABLE->HandlesMouseMove   = Gui_FalseMouseMove;
+	elem->VTABLE->HandlesMouseScroll = Gui_FalseMouseScroll;
 }
 
 void Screen_Reset(Screen* screen) {
-	GuiElement_Reset(&screen->Base);
+	GuiElement_Reset((GuiElement*)screen);
 	screen->HandlesAllInput = false;
 	screen->BlocksWorld     = false;
 	screen->HidesHUD        = false;
@@ -45,28 +48,32 @@ void Screen_Reset(Screen* screen) {
 	screen->OnResize        = NULL;
 }
 
-void Widget_DoReposition(Widget* w) {
+void Widget_DoReposition(GuiElement* elem) {
+	Widget* w = (Widget*)elem;
 	w->X = Gui_CalcPos(w->HorAnchor, w->XOffset, w->Width , Game_Width );
 	w->Y = Gui_CalcPos(w->VerAnchor, w->YOffset, w->Height, Game_Height);
 }
 
 void Widget_Init(Widget* widget) {
-	GuiElement_Reset(&widget->Base);
+	GuiElement_Reset((GuiElement*)widget);
 	widget->Active = false;
 	widget->Disabled = false;
-	widget->Base.HandlesMouseDown = NULL;
 	widget->X = 0; widget->Y = 0;
 	widget->Width = 0; widget->Height = 0;
-	widget->HorAnchor = ANCHOR_LEFT_OR_TOP;
-	widget->VerAnchor = ANCHOR_LEFT_OR_TOP;
+	widget->HorAnchor = ANCHOR_MIN;
+	widget->VerAnchor = ANCHOR_MIN;
 	widget->XOffset = 0; widget->YOffset = 0;
 	widget->Reposition = Widget_DoReposition;
 }
 
+bool Widget_Contains(Widget* widget, Int32 x, Int32 y) {
+	return Gui_Contains(widget->X, widget->Y, widget->Width, widget->Height, x, y);
+}
 
-Int32 Gui_CalcPos(Anchor anchor, Int32 offset, Int32 size, Int32 axisLen) {
-	if (anchor == ANCHOR_LEFT_OR_TOP)     return offset;
-	if (anchor == ANCHOR_BOTTOM_OR_RIGHT) return axisLen - size - offset;
+
+Int32 Gui_CalcPos(UInt8 anchor, Int32 offset, Int32 size, Int32 axisLen) {
+	if (anchor == ANCHOR_MIN)     return offset;
+	if (anchor == ANCHOR_MAX) return axisLen - size - offset;
 	return (axisLen - size) / 2 + offset;
 }
 
@@ -99,20 +106,20 @@ void Gui_Init(void) {
 }
 
 void Gui_Reset(void) {
-	UInt32 i;
-	for (i = 0; i < Gui_OverlayCount; i++) {
-		Gui_Overlays[i]->Base.Free(&Gui_Overlays[i]->Base);
+	Int32 i;
+	for (i = 0; i < Gui_OverlaysCount; i++) {
+		Gui_Overlays[i]->VTABLE->Free((GuiElement*)Gui_Overlays[i]);
 	}
-	Gui_OverlayCount = 0;
+	Gui_OverlaysCount = 0;
 }
 
 void Gui_Free(void) {
 	Event_UnregisterStream(&TextureEvents_FileChanged, NULL, Gui_FileChanged);
 	Gui_SetNewScreen(NULL);
-	Gui_Status->Base.Free(&Gui_Status->Base);
+	Gui_Status->VTABLE->Free((GuiElement*)Gui_Status);
 
 	if (Gui_Active != NULL) {
-		Gui_Active->Base.Free(&Gui_Active->Base);
+		Gui_Active->VTABLE->Free((GuiElement*)Gui_Active);
 	}
 	Gfx_DeleteTexture(&Gui_GuiTex);
 	Gfx_DeleteTexture(&Gui_GuiClassicTex);
@@ -129,7 +136,7 @@ IGameComponent Gui_MakeGameComponent(void) {
 }
 
 Screen* Gui_GetActiveScreen(void) {
-	return Gui_OverlayCount > 0 ? Gui_Overlays[0] : Gui_GetUnderlyingScreen();
+	return Gui_OverlaysCount > 0 ? Gui_Overlays[0] : Gui_GetUnderlyingScreen();
 }
 
 Screen* Gui_GetUnderlyingScreen(void) {
@@ -137,9 +144,9 @@ Screen* Gui_GetUnderlyingScreen(void) {
 }
 
 void Gui_SetScreen(Screen* screen, bool freeOld) {
-	game.Input.ScreenChanged(Gui_Active, screen);
+	InputHandler_ScreenChanged(Gui_Active, screen);
 	if (Gui_Active != NULL && freeOld) {
-		Gui_Active->Base.Free(&Gui_Active->Base);
+		Gui_Active->VTABLE->Free((GuiElement*)Gui_Active);
 	}
 
 	if (screen == NULL) {
@@ -150,7 +157,7 @@ void Gui_SetScreen(Screen* screen, bool freeOld) {
 	}
 
 	if (screen != NULL) {
-		screen->Base.Init(&screen->Base);
+		screen->VTABLE->Init((GuiElement*)screen);
 	}
 	Gui_Active = screen;
 }
@@ -158,52 +165,63 @@ void Gui_SetScreen(Screen* screen, bool freeOld) {
 void Gui_SetNewScreen(Screen* screen) { Gui_SetScreen(screen, true); }
 
 void Gui_RefreshHud(void) {
-	Gui_HUD->Base.Recreate(&Gui_HUD->Base);
+	Gui_HUD->VTABLE->Recreate((GuiElement*)Gui_HUD);
 }
 
-void Gui_ShowOverlay(Screen* overlay) {
-	if (Gui_OverlayCount == GUI_MAX_OVERLAYS) {
+void Gui_ShowOverlay(Screen* overlay, bool atFront) {
+	if (Gui_OverlaysCount == GUI_MAX_OVERLAYS) {
 		ErrorHandler_Fail("Cannot have more than 40 overlays");
 	}
 	bool visible = Game_GetCursorVisible();
-	if (Gui_OverlayCount == 0) Game_SetCursorVisible(true);
+	if (Gui_OverlaysCount == 0) Game_SetCursorVisible(true);
 
-	Gui_Overlays[Gui_OverlayCount++] = overlay;
-	if (Gui_OverlayCount == 1) Game_SetCursorVisible(visible); /* Save cursor visibility state */
-	overlay->Base.Init(&overlay->Base);
+	if (atFront) {
+		Int32 i;
+		/* Insert overlay at start of list */
+		for (i = Gui_OverlaysCount - 1; i > 0; i--) {
+			Gui_Overlays[i] = Gui_Overlays[i - 1];
+		}
+		Gui_Overlays[0] = overlay;
+	} else {
+		Gui_Overlays[Gui_OverlaysCount] = overlay;
+	}
+	Gui_OverlaysCount++;
+
+	if (Gui_OverlaysCount == 1) Game_SetCursorVisible(visible); /* Save cursor visibility state */
+	overlay->VTABLE->Init((GuiElement*)overlay);
 }
 
 void Gui_RenderGui(Real64 delta) {
 	GfxCommon_Mode2D(Game_Width, Game_Height);
 	if (Gui_Active == NULL || !Gui_Active->HidesHUD) {
-		Gui_Status->Base.Render(&Gui_Status->Base, delta);
+		Gui_Status->VTABLE->Render((GuiElement*)Gui_Status, delta);
 	}
 
 	if (Gui_Active == NULL || !Gui_Active->HidesHUD && !Gui_Active->RenderHUDOver) {
-		Gui_HUD->Base.Render(&Gui_HUD->Base, delta);
+		Gui_HUD->VTABLE->Render((GuiElement*)Gui_HUD, delta);
 	}
 	if (Gui_Active != NULL) {
-		Gui_Active->Base.Render(&Gui_Active->Base, delta);
+		Gui_Active->VTABLE->Render((GuiElement*)Gui_Active, delta);
 	}
 	if (Gui_Active != NULL && !Gui_Active->HidesHUD && Gui_Active->RenderHUDOver) {
-		Gui_HUD->Base.Render(&Gui_HUD->Base, delta);
+		Gui_HUD->VTABLE->Render((GuiElement*)Gui_HUD, delta);
 	}
 
-	if (Gui_OverlayCount > 0) {
-		Gui_Overlays[0]->Base.Render(&Gui_Overlays[0]->Base, delta);
+	if (Gui_OverlaysCount > 0) {
+		Gui_Overlays[0]->VTABLE->Render((GuiElement*)Gui_Overlays[0], delta);
 	}
 	GfxCommon_Mode3D();
 }
 
 void Gui_OnResize(void) {
 	if (Gui_Active != NULL) {
-		Gui_Active->OnResize(Gui_Active);
+		Gui_Active->OnResize((GuiElement*)Gui_Active);
 	}
-	Gui_HUD->OnResize(Gui_HUD);
+	Gui_HUD->OnResize((GuiElement*)Gui_HUD);
 
-	UInt32 i;
-	for (i = 0; i < Gui_OverlayCount; i++) {
-		Gui_Overlays[i]->OnResize(Gui_Overlays[i]);
+	Int32 i;
+	for (i = 0; i < Gui_OverlaysCount; i++) {
+		Gui_Overlays[i]->OnResize((GuiElement*)Gui_Overlays[i]);
 	}
 }
 
@@ -254,7 +272,7 @@ void TextAtlas_Add(TextAtlas* atlas, Int32 charI, VertexP3fT2fC4b** vertices) {
 void TextAtlas_AddInt(TextAtlas* atlas, Int32 value, VertexP3fT2fC4b** vertices) {
 	if (value < 0) TextAtlas_Add(atlas, 10, vertices); /* - sign */
 
-	UInt32 i, count = 0;
+	Int32 i, count = 0;
 	UInt8 digits[STRING_SIZE];
 	/* use a do while loop here, as we still want a '0' digit if input is 0 */
 	do {

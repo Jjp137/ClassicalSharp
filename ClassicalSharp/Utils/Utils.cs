@@ -19,7 +19,11 @@ namespace ClassicalSharp {
 	public delegate void Action();
 	// ################################################################
 	
-	public enum Anchor { LeftOrTop, Centre, BottomOrRight, }
+	public enum Anchor { 
+		Min,    // left or top
+		Centre, // middle
+		Max,    // right or bottom
+	}
 	
 	public static partial class Utils {
 		
@@ -237,21 +241,5 @@ namespace ClassicalSharp {
 			| NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint;
 		
 #endif
-
-		#if USE16_BIT
-		public static ushort[] UInt8sToUInt16s(byte[] src) {
-			ushort[] dst = new ushort[src.Length];
-			for (int i = 0; i < dst.Length; i++)
-				dst[i] = src[i];
-			return dst;
-		}
-		
-		public static byte[] UInt16sToUInt8s(ushort[] src) {
-			byte[] dst = new byte[src.Length];
-			for (int i = 0; i < dst.Length; i++)
-				dst[i] = (byte)src[i];
-			return dst;
-		}
-		#endif
 	}
 }

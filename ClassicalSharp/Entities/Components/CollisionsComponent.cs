@@ -2,12 +2,7 @@
 using System;
 using ClassicalSharp.Physics;
 using OpenTK;
-
-#if USE16_BIT
 using BlockID = System.UInt16;
-#else
-using BlockID = System.Byte;
-#endif
 
 namespace ClassicalSharp.Entities {
 	
@@ -56,10 +51,18 @@ namespace ClassicalSharp.Entities {
 			for (int i = 0; i < count; i++) {
 				// Unpack the block and coordinate data
 				State state = Searcher.stateCache[i];
-				bPos.X = state.X >> 3; bPos.Y = state.Y >> 3; bPos.Z = state.Z >> 3;				
+				#if !ONLY_8BIT
+				bPos.X = state.X >> 3; bPos.Y = state.Y >> 4; bPos.Z = state.Z >> 3;
+				int block = (state.X & 0x7) | (state.Y & 0xF) << 3 | (state.Z & 0x7) << 7;
+				#else
+				bPos.X = state.X >> 3; bPos.Y = state.Y >> 3; bPos.Z = state.Z >> 3;
 				int block = (state.X & 0x7) | (state.Y & 0x7) << 3 | (state.Z & 0x7) << 6;
-				blockBB.Min = bPos + BlockInfo.MinBB[block];
-				blockBB.Max = bPos + BlockInfo.MaxBB[block];
+				#endif
+				
+				blockBB.Min = BlockInfo.MinBB[block];
+				blockBB.Min.X += bPos.X; blockBB.Min.Y += bPos.Y; blockBB.Min.Z += bPos.Z;
+				blockBB.Max = BlockInfo.MaxBB[block];
+				blockBB.Max.X += bPos.X; blockBB.Max.Y += bPos.Y; blockBB.Max.Z += bPos.Z;
 				if (!entityExtentBB.Intersects(blockBB)) continue;
 				
 				// Recheck time to collide with block (as colliding with blocks modifies this)

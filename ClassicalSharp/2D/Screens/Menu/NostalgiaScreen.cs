@@ -28,7 +28,7 @@ namespace ClassicalSharp.Gui.Screens {
 		}
 		
 		protected override void ContextRecreated() {
-			ClickHandler onClick = OnWidgetClick;
+			ClickHandler onClick = OnButtonClick;
 			widgets = new Widget[] {
 				MakeOpt(-1, -150, "Classic hand model",  onClick, GetHand,   SetHand),
 				MakeOpt(-1, -100, "Classic walk anim",   onClick, GetAnim,   SetAnim),
@@ -40,7 +40,7 @@ namespace ClassicalSharp.Gui.Screens {
 				MakeOpt(1, -100, "Use CPE",              onClick, GetCPE,    SetCPE),
 				MakeOpt(1, -50, "Use server textures",   onClick, GetTexs,   SetTexs),
 
-				TextWidget.Create(game, "&eButtons on the right require a client restart", regularFont)
+				TextWidget.Create(game, "&eButtons on the right require restarting game", regularFont)
 					.SetLocation(Anchor.Centre, Anchor.Centre, 0, 100),
 				MakeBack(false, titleFont, SwitchBack),
 				null, null,

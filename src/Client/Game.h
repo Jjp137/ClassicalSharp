@@ -1,8 +1,6 @@
 #ifndef CC_GAME_H
 #define CC_GAME_H
-#include "Typedefs.h"
 #include "Stream.h"
-#include "GraphicsEnums.h"
 #include "Picking.h"
 #include "Options.h"
 /* Represents the game.

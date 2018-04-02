@@ -7,10 +7,11 @@
 #include "ServerConnection.h"
 #include "World.h"
 #include "Inventory.h"
-#include "Player.h"
+#include "Entity.h"
 #include "Window.h"
 #include "GraphicsAPI.h"
 #include "Funcs.h"
+#include "Block.h"
 
 void ChatLine_Make(ChatLine* line, STRING_TRANSIENT String* text) {
 	String dst = String_InitAndClearArray(line->Buffer);
@@ -117,19 +118,19 @@ void Chat_AppendLog(STRING_PURE String* text) {
 	Stream_WriteLine(&Chat_LogStream, &str);
 }
 
-void Chat_Add(STRING_PURE String* text) { Chat_AddOf(text, MESSAGE_TYPE_NORMAL); }
+void Chat_Add(STRING_PURE String* text) { Chat_AddOf(text, MSG_TYPE_NORMAL); }
 void Chat_AddOf(STRING_PURE String* text, Int32 msgType) {
-	if (msgType == MESSAGE_TYPE_NORMAL) {
+	if (msgType == MSG_TYPE_NORMAL) {
 		StringsBuffer_Add(&Chat_Log, text);
 		Chat_AppendLog(text);
-	} else if (msgType >= MESSAGE_TYPE_STATUS_1 && msgType <= MESSAGE_TYPE_STATUS_3) {
-		ChatLine_Make(&Chat_Status[msgType - MESSAGE_TYPE_STATUS_1], text);
-	} else if (msgType >= MESSAGE_TYPE_BOTTOMRIGHT_1 && msgType <= MESSAGE_TYPE_BOTTOMRIGHT_3) {
-		ChatLine_Make(&Chat_BottomRight[msgType - MESSAGE_TYPE_BOTTOMRIGHT_1], text);
-	} else if (msgType == MESSAGE_TYPE_ANNOUNCEMENT) {
+	} else if (msgType >= MSG_TYPE_STATUS_1 && msgType <= MSG_TYPE_STATUS_3) {
+		ChatLine_Make(&Chat_Status[msgType - MSG_TYPE_STATUS_1], text);
+	} else if (msgType >= MSG_TYPE_BOTTOMRIGHT_1 && msgType <= MSG_TYPE_BOTTOMRIGHT_3) {
+		ChatLine_Make(&Chat_BottomRight[msgType - MSG_TYPE_BOTTOMRIGHT_1], text);
+	} else if (msgType == MSG_TYPE_ANNOUNCEMENT) {
 		ChatLine_Make(&Chat_Announcement, text);
-	} else if (msgType >= MESSAGE_TYPE_CLIENTSTATUS_1 && msgType <= MESSAGE_TYPE_CLIENTSTATUS_3) {
-		ChatLine_Make(&Chat_ClientStatus[msgType - MESSAGE_TYPE_CLIENTSTATUS_1], text);
+	} else if (msgType >= MSG_TYPE_CLIENTSTATUS_1 && msgType <= MSG_TYPE_CLIENTSTATUS_3) {
+		ChatLine_Make(&Chat_ClientStatus[msgType - MSG_TYPE_CLIENTSTATUS_1], text);
 	}
 	Event_RaiseChat(&ChatEvents_ChatReceived, text, msgType);
 }
@@ -162,7 +163,7 @@ bool Commands_IsCommandPrefix(STRING_PURE String* input) {
 }
 
 void Commands_Register(ChatCommandConstructor constructor) {
-	if (commands_count == Array_NumElements(commands_list)) {
+	if (commands_count == Array_Elems(commands_list)) {
 		ErrorHandler_Fail("Commands_Register - hit max client commands");
 	}
 
@@ -248,7 +249,7 @@ void Commands_Execute(STRING_PURE String* input) {
 	}
 
 	String args[10];
-	UInt32 argsCount = Array_NumElements(args);
+	UInt32 argsCount = Array_Elems(args);
 	String_UNSAFE_Split(&text, ' ', args, &argsCount);
 
 	ChatCommand* cmd = Commands_GetMatch(&args[0]);
@@ -267,7 +268,7 @@ void HelpCommand_Execute(STRING_PURE String* args, UInt32 argsCount) {
 		if (cmd == NULL) return;
 
 		UInt32 i;
-		for (i = 0; i < Array_NumElements(cmd->Help); i++) {
+		for (i = 0; i < Array_Elems(cmd->Help); i++) {
 			String* help = &cmd->Help[i];
 			if (help->length == 0) continue;
 			Chat_Add(help);
@@ -284,7 +285,7 @@ void HelpCommand_Make(ChatCommand* cmd) {
 
 void GpuInfoCommand_Execute(STRING_PURE String* args, UInt32 argsCount) {
 	UInt32 i;
-	for (i = 0; i < Array_NumElements(Gfx_ApiInfo); i++) {
+	for (i = 0; i < Array_Elems(Gfx_ApiInfo); i++) {
 		if (Gfx_ApiInfo[i].length == 0) continue;
 		UInt8 msgBuffer[String_BufferSize(STRING_SIZE)];
 		String msg = String_InitAndClearArray(msgBuffer);
@@ -331,7 +332,8 @@ void ResolutionCommand_Execute(STRING_PURE String* args, UInt32 argsCount) {
 	} else if (width <= 0 || height <= 0) {
 		Chat_AddRaw(tmp, "&e/client: &cWidth and height must be above 0.");
 	} else {
-		Window_SetClientSize(Size2D_Make(width, height));
+		Size2D size = { width, height };
+		Window_SetClientSize(size);
 		Options_SetInt32(OPTION_WINDOW_WIDTH, width);
 		Options_SetInt32(OPTION_WINDOW_HEIGHT, height);
 	}
@@ -352,7 +354,7 @@ void ModelCommand_Execute(STRING_PURE String* args, UInt32 argsCount) {
 		String model = String_InitAndClearArray(modelBuffer);
 		String_AppendString(&model, &args[1]);
 		String_MakeLowercase(&model);
-		Entity_SetModel(&LocalPlayer_Instance.Base.Base, &model);
+		Entity_SetModel(&LocalPlayer_Instance.Base, &model);
 	}
 }
 
@@ -427,18 +429,18 @@ void CuboidCommand_BlockChanged(void* obj, Vector3I coords, BlockID oldBlock, Bl
 		String_AppendInt32(&msg, coords.Y); String_AppendConst(&msg, ", ");
 		String_AppendInt32(&msg, coords.Z);
 		String_AppendConst(&msg, "), place mark 2.");
-		Chat_AddOf(&msg, MESSAGE_TYPE_CLIENTSTATUS_3);
+		Chat_AddOf(&msg, MSG_TYPE_CLIENTSTATUS_3);
 	} else {
 		cuboid_mark2 = coords;
 		CuboidCommand_DoCuboid();
-		String empty = String_MakeNull(); Chat_AddOf(&empty, MESSAGE_TYPE_CLIENTSTATUS_3);
+		String empty = String_MakeNull(); Chat_AddOf(&empty, MSG_TYPE_CLIENTSTATUS_3);
 
 		if (!cuboid_persist) {
 			Event_UnregisterBlock(&UserEvents_BlockChanged, NULL, CuboidCommand_BlockChanged);
 		} else {
 			cuboid_mark1 = Vector3I_Create1(Int32_MaxValue);
 			String msg = String_FromConst("&eCuboid: &fPlace or delete a block.");
-			Chat_AddOf(&msg, MESSAGE_TYPE_CLIENTSTATUS_3);
+			Chat_AddOf(&msg, MSG_TYPE_CLIENTSTATUS_3);
 		}
 	}
 }
@@ -457,7 +459,7 @@ void CuboidCommand_Execute(STRING_PURE String* args, UInt32 argsCount) {
 	}
 
 	String msg = String_FromConst("&eCuboid: &fPlace or delete a block.");
-	Chat_AddOf(&msg, MESSAGE_TYPE_CLIENTSTATUS_3);
+	Chat_AddOf(&msg, MSG_TYPE_CLIENTSTATUS_3);
 	Event_RegisterBlock(&UserEvents_BlockChanged, NULL, CuboidCommand_BlockChanged);
 }
 
@@ -482,9 +484,9 @@ void TeleportCommand_Execute(STRING_PURE String* args, UInt32 argsCount) {
 			return;
 		}
 
-		Vector3 v = VECTOR3_CONST(x, y, z);
+		Vector3 v = { x, y, z };
 		LocationUpdate update; LocationUpdate_MakePos(&update, v, false);
-		Entity* entity = &LocalPlayer_Instance.Base.Base;
+		Entity* entity = &LocalPlayer_Instance.Base;
 		entity->VTABLE->SetLocation(entity, &update, false);
 	}
 }

@@ -4,6 +4,7 @@
 #include "Utils.h"
 #include "Funcs.h"
 #include "Platform.h"
+#include "Stream.h"
 
 #define OPT_NOT_FOUND UInt32_MaxValue
 StringsBuffer Options_Changed;
@@ -138,9 +139,6 @@ void Options_Set(const UInt8* keyRaw, STRING_PURE String* value) {
 }
 
 void Options_Load(void) {
-	/* Both of these are from when running from the launcher */
-	Program.CleanupMainDirectory();
-
 	void* file = NULL;
 	String path = String_FromConst("options.txt");
 	ReturnCode result = Platform_FileOpen(&file, &path, true);

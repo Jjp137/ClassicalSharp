@@ -3,9 +3,9 @@
 #include "Game.h"
 #include "Window.h"
 #include "GraphicsAPI.h"
-#include "Player.h"
 #include "Funcs.h"
 #include "Gui.h"
+#include "Entity.h"
 
 Real32 Camera_AdjustHeadX(Real32 value) {
 	if (value >= 90.00f && value <= 90.10f) return 90.10f * MATH_DEG2RAD;
@@ -16,7 +16,7 @@ Real32 Camera_AdjustHeadX(Real32 value) {
 }
 
 Vector3 PerspectiveCamera_GetDirVector(void) {
-	Entity* p = &LocalPlayer_Instance.Base.Base;
+	Entity* p = &LocalPlayer_Instance.Base;
 	Real32 yaw = p->HeadY * MATH_DEG2RAD;
 	Real32 pitch = Camera_AdjustHeadX(p->HeadX);
 	return Vector3_GetDirVector(yaw, pitch);
@@ -29,7 +29,7 @@ void PerspectiveCamera_GetProjection(Matrix* proj) {
 }
 
 void PerspectiveCamera_GetPickedBlock(PickedPos* pos) {
-	Entity* p = &LocalPlayer_Instance.Base.Base;
+	Entity* p = &LocalPlayer_Instance.Base;
 	Vector3 dir = PerspectiveCamera_GetDirVector();
 	Vector3 eyePos = Entity_GetEyePosition(p);
 	Real32 reach = LocalPlayer_Instance.ReachDistance;
@@ -58,7 +58,7 @@ void PerspectiveCamera_RegrabMouse(void) {
 	Int32 cenX = topLeft.X + Game_Width  / 2;
 	Int32 cenY = topLeft.Y + Game_Height / 2;
 
-	Point2D point = Point2D_Make(cenX, cenY);
+	Point2D point = { cenX, cenY };
 	Window_SetDesktopCursorPos(point);
 	previous = point;
 	delta = Point2D_Empty;
@@ -94,7 +94,7 @@ void PerspectiveCamera_UpdateMouseRotation(void) {
 		update.HeadX = player->Interp.Next.HeadX < 180.0f ? 89.9f : 270.1f;
 	}
 
-	Entity* e = &player->Base.Base;
+	Entity* e = &player->Base;
 	e->VTABLE->SetLocation(e, &update, false);
 }
 
@@ -108,7 +108,7 @@ void PerspectiveCamera_UpdateMouse(void) {
 void PerspectiveCamera_CalcViewBobbing(Real32 t, Real32 velTiltScale) {
 	if (!Game_ViewBobbing) { Camera_TiltM = Matrix_Identity; return; }
 	LocalPlayer* p = &LocalPlayer_Instance;
-	Entity* e = &p->Base.Base;
+	Entity* e = &p->Base;
 	Matrix Camera_tiltY, Camera_velX;
 
 	Matrix_RotateZ(&Camera_TiltM, -p->Tilt.TiltX * e->Anim.BobStrength);
@@ -143,7 +143,7 @@ void FirstPersonCamera_GetView(Matrix* mat) {
 
 Vector3 FirstPersonCamera_GetCameraPos(Real32 t) {
 	PerspectiveCamera_CalcViewBobbing(t, 1);
-	Entity* p = &LocalPlayer_Instance.Base.Base;
+	Entity* p = &LocalPlayer_Instance.Base;
 	Vector3 camPos = Entity_GetEyePosition(p);
 	camPos.Y += Camera_BobbingVer;
 
@@ -154,8 +154,9 @@ Vector3 FirstPersonCamera_GetCameraPos(Real32 t) {
 }
 
 Vector2 FirstPersonCamera_GetCameraOrientation(void) {
-	Entity* p = &LocalPlayer_Instance.Base.Base;
-	return Vector2_Create2(p->HeadY * MATH_DEG2RAD, p->HeadX * MATH_DEG2RAD);
+	Entity* p = &LocalPlayer_Instance.Base;
+	Vector2 ori = { p->HeadY * MATH_DEG2RAD, p->HeadX * MATH_DEG2RAD };
+	return ori;
 }
 
 bool FirstPersonCamera_Zoom(Real32 amount) { return false; }
@@ -173,7 +174,7 @@ void FirstPersonCamera_Init(Camera* cam) {
 Real32 dist_third = 3.0f, dist_forward = 3.0f;
 void ThirdPersonCamera_GetView(Matrix* mat) {
 	Vector3 cameraPos = Game_CurrentCameraPos;
-	Entity* p = &LocalPlayer_Instance.Base.Base;
+	Entity* p = &LocalPlayer_Instance.Base;
 	Vector3 targetPos = Entity_GetEyePosition(p);
 	targetPos.Y += Camera_BobbingVer;
 
@@ -184,7 +185,7 @@ void ThirdPersonCamera_GetView(Matrix* mat) {
 
 Vector3 ThirdPersonCamera_GetCameraPosShared(Real32 t, Real32 dist, bool forward) {
 	PerspectiveCamera_CalcViewBobbing(t, dist);
-	Entity* p = &LocalPlayer_Instance.Base.Base;
+	Entity* p = &LocalPlayer_Instance.Base;
 	Vector3 eyePos = Entity_GetEyePosition(p);
 	eyePos.Y += Camera_BobbingVer;
 
@@ -205,13 +206,15 @@ Vector3 ForwardThirdPersonCamera_GetCameraPos(Real32 t) {
 
 
 Vector2 ThirdPersonCamera_GetCameraOrientation(void) {
-	Entity* p = &LocalPlayer_Instance.Base.Base;
-	return Vector2_Create2(p->HeadY * MATH_DEG2RAD, p->HeadX * MATH_DEG2RAD);
+	Entity* p = &LocalPlayer_Instance.Base;
+	Vector2 ori = { p->HeadY * MATH_DEG2RAD, p->HeadX * MATH_DEG2RAD };
+	return ori;
 }
 
 Vector2 ForwardThirdPersonCamera_GetCameraOrientation(void) {
-	Entity* p = &LocalPlayer_Instance.Base.Base;
-	return Vector2_Create2(p->HeadY * MATH_DEG2RAD + MATH_PI, -p->HeadX * MATH_DEG2RAD);
+	Entity* p = &LocalPlayer_Instance.Base;
+	Vector2 ori = { p->HeadY * MATH_DEG2RAD + MATH_PI, -p->HeadX * MATH_DEG2RAD };
+	return ori;
 }
 
 bool ThirdPersonCamera_Zoom(Real32 amount) {
@@ -258,7 +261,7 @@ void Camera_CycleActive(void) {
 	if (Game_ClassicMode) return;
 
 	Int32 i = Camera_ActiveIndex;
-	i = (i + 1) % Array_NumElements(Camera_Cameras);
+	i = (i + 1) % Array_Elems(Camera_Cameras);
 
 	LocalPlayer* player = &LocalPlayer_Instance;
 	if (!player->Hacks.CanUseThirdPersonCamera || !player->Hacks.Enabled) { i = 0; }

@@ -11,23 +11,36 @@ namespace ClassicalSharp {
 	
 	internal static class Program {
 		
-		public const string AppName = "ClassicalSharp 0.99.9.92";
+		public const string AppName = "ClassicalSharp 0.99.9.93";
 		
 		public static string AppDirectory;
 		#if !LAUNCHER
 		[STAThread]
 		static void Main(string[] args) {
 			AppDirectory = AppDomain.CurrentDomain.BaseDirectory;
-			string logPath = Path.Combine(AppDirectory, "client.log");
-			ErrorHandler.InstallHandler(logPath);
 			CleanupMainDirectory();
-			Configuration.SkipPerfCountersHack();
 			
-			Utils.LogDebug("Starting " + AppName + "..");
 			string path = Path.Combine(Program.AppDirectory, "texpacks");
 			if (!File.Exists(Path.Combine(path, "default.zip"))) {
-				MessageDefaultZipMissing(); return;
+				Message("default.zip not found, try running the launcher first."); return;
 			}
+			
+			path = Path.Combine(AppDirectory, "OpenTK.dll");
+			if (!File.Exists(path)) { 
+				Message("OpenTK.dll needs to be in the same folder as the game"); return;
+			}
+			
+			// NOTE: we purposely put this in another method, as we need to ensure
+			// that we do not reference any OpenTK code directly in the main function
+			// (such as DisplayDevice), which otherwise causes native crash.
+			RunGame(args);
+		}
+		
+		static void RunGame(string[] args) {
+			string logPath = Path.Combine(AppDirectory, "client.log");
+			ErrorHandler.InstallHandler(logPath);
+			OpenTK.Configuration.SkipPerfCountersHack();
+			Utils.LogDebug("Starting " + AppName + "..");
 			
 			bool nullContext = true;
 			#if !USE_DX
@@ -48,11 +61,6 @@ namespace ClassicalSharp {
 			} else {
 				RunMultiplayer(args, nullContext, width, height);
 			}
-		}
-		
-		// put in separate function, because we don't want to load winforms assembly if possible
-		static void MessageDefaultZipMissing() {
-			MessageBox.Show("default.zip not found, try running the launcher first.", "Missing file");
 		}
 
 		static void SelectResolution(out int width, out int height) {
@@ -86,7 +94,9 @@ namespace ClassicalSharp {
 			// Quit SDL because the SDLWindow will initialize it again a moment later.
 			SDL.SDL_Quit();
 		}
-		
+
+		// put in separate function, because we don't want to load winforms assembly if possible
+		static void Message(string message) { MessageBox.Show(message, "Missing file"); }
 
 		static void RunMultiplayer(string[] args, bool nullContext, int width, int height) {
 			IPAddress ip = null;

@@ -3,12 +3,7 @@ using System;
 using ClassicalSharp.Model;
 using ClassicalSharp.Physics;
 using OpenTK;
-
-#if USE16_BIT
 using BlockID = System.UInt16;
-#else
-using BlockID = System.Byte;
-#endif
 
 namespace ClassicalSharp.Entities {
 	
@@ -299,13 +294,14 @@ namespace ClassicalSharp.Entities {
 					other.Position.Y  <= (entity.Position.Y + entity.Size.Y);
 				if (!yIntersects) continue;
 				
-				float dX = other.Position.X - entity.Position.X;
-				float dZ = other.Position.Z - entity.Position.Z;
-				float dist = dX * dX + dZ * dZ;
+				float dx = other.Position.X - entity.Position.X;
+				float dz = other.Position.Z - entity.Position.Z;
+				float dist = dx * dx + dz * dz;
 				if (dist < 0.002f || dist > 1f) continue; // TODO: range needs to be lower?
 				
-				Vector3 dir = Vector3.Normalize(dX, 0, dZ);
-				entity.Velocity -= dir * (1 - dist) / 32f; // TODO: should be 24/25
+				Vector3 dir = Vector3.Normalize(dx, 0, dz);
+				float pushStrength = (1 - dist) / 32f; // TODO: should be 24/25
+				entity.Velocity -= dir * pushStrength;
 			}
 		}
 	}

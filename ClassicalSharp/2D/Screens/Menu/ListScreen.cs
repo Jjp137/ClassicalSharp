@@ -5,9 +5,9 @@ using ClassicalSharp.Gui.Widgets;
 using OpenTK.Input;
 
 namespace ClassicalSharp.Gui.Screens {
-	public abstract class FilesScreen : ClickableScreen {
+	public abstract class ListScreen : ClickableScreen {
 		
-		public FilesScreen(Game game) : base(game) {
+		public ListScreen(Game game) : base(game) {
 			HandlesAllInput = true;
 		}
 		
@@ -38,10 +38,10 @@ namespace ClassicalSharp.Gui.Screens {
 			
 			buttons = new ButtonWidget[] {
 				MakeText(0, -100, Get(0)),
-				MakeText(0, -50, Get(1)),
-				MakeText(0,   0, Get(2)),
-				MakeText(0, 50, Get(3)),
-				MakeText(0, 100, Get(4)),
+				MakeText(0, -50,  Get(1)),
+				MakeText(0,   0,  Get(2)),
+				MakeText(0, 50,   Get(3)),
+				MakeText(0, 100,  Get(4)),
 				
 				Make(-220, 0, "<", MoveBackwards),
 				Make(220, 0, ">", MoveForwards),
@@ -113,11 +113,11 @@ namespace ClassicalSharp.Gui.Screens {
 		}
 		
 		public override bool HandlesMouseMove(int mouseX, int mouseY) {
-			return HandleMouseMove(buttons, mouseX, mouseY);
+			return HandleMouseMove(buttons, mouseX, mouseY) >= 0;
 		}
 		
-		public override bool HandlesMouseClick(int mouseX, int mouseY, MouseButton button) {
-			return HandleMouseClick(buttons, mouseX, mouseY, button);
+		public override bool HandlesMouseDown(int mouseX, int mouseY, MouseButton button) {
+			return HandleMouseDown(buttons, mouseX, mouseY, button);
 		}
 		
 		public override void OnResize(int width, int height) {

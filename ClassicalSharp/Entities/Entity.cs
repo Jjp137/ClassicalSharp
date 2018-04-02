@@ -3,12 +3,7 @@ using System;
 using ClassicalSharp.Model;
 using ClassicalSharp.Physics;
 using OpenTK;
-
-#if USE16_BIT
 using BlockID = System.UInt16;
-#else
-using BlockID = System.Byte;
-#endif
 
 namespace ClassicalSharp.Entities {
 	
@@ -127,8 +122,10 @@ namespace ClassicalSharp.Entities {
 			}
 			
 			ModelBlock = Block.Air;
-			if (BlockID.TryParse(ModelName, out ModelBlock)) {
+			BlockID block;
+			if (BlockID.TryParse(ModelName, out block) && block <= BlockInfo.MaxDefined) {
 				ModelName = "block";
+				ModelBlock = block;
 			}
 			
 			Model = game.ModelCache.Get(ModelName);
@@ -197,14 +194,12 @@ namespace ClassicalSharp.Entities {
 			}
 			return false;
 		}
-		
-		#if USE16_BIT		
+			
 		/// <summary> Determines whether any of the blocks that intersect the
 		/// given bounding box satisfy the given condition. </summary>
 		public bool TouchesAny(AABB bounds, Predicate<byte> condition) {
 			return TouchesAny(bounds, delegate(BlockID bl) { return condition((byte)bl); });
 		}
-		#endif
 		
 		/// <summary> Determines whether any of the blocks that intersect the
 		/// bounding box of this entity are rope. </summary>

@@ -159,20 +159,20 @@ namespace ClassicalSharp.Gui.Screens {
 			return chat.HandlesKeyUp(key) || hotbar.HandlesKeyUp(key);
 		}
 		
-		public void OpenTextInputBar(string text) {
-			chat.OpenTextInputBar(text);
-		}
+		public void OpenInput(string text) { chat.OpenInput(text); }
+		
+		public void AppendInput(string text) { chat.input.Append(text); }
 		
 		public override bool HandlesMouseScroll(float delta) {
 			return chat.HandlesMouseScroll(delta);
 		}
 		
-		public override bool HandlesMouseClick(int mouseX, int mouseY, MouseButton button) {
+		public override bool HandlesMouseDown(int mouseX, int mouseY, MouseButton button) {
 			if (button != MouseButton.Left || !HandlesAllInput) return false;
 			
 			string name;
 			if (playerList == null || (name = playerList.GetNameUnder(mouseX, mouseY)) == null)
-				return chat.HandlesMouseClick(mouseX, mouseY, button);
+				return chat.HandlesMouseDown(mouseX, mouseY, button);
 			chat.AppendTextToInput(name + " ");
 			return true;
 		}

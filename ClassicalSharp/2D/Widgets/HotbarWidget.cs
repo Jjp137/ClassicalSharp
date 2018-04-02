@@ -4,19 +4,14 @@ using System.Drawing;
 using ClassicalSharp.GraphicsAPI;
 using ClassicalSharp.Gui.Screens;
 using OpenTK.Input;
-
-#if USE16_BIT
 using BlockID = System.UInt16;
-#else
-using BlockID = System.Byte;
-#endif
 
 namespace ClassicalSharp.Gui.Widgets {
 	public class HotbarWidget : Widget {
 		
 		public HotbarWidget(Game game) : base(game) {
 			HorizontalAnchor = Anchor.Centre;
-			VerticalAnchor = Anchor.BottomOrRight;
+			VerticalAnchor = Anchor.Max;
 		}
 		
 		Texture selTex, backTex;
@@ -126,7 +121,7 @@ namespace ClassicalSharp.Gui.Widgets {
 			return true;
 		}
 		
-		public override bool HandlesMouseClick(int mouseX, int mouseY, MouseButton button) {
+		public override bool HandlesMouseDown(int mouseX, int mouseY, MouseButton button) {
 			if (button != MouseButton.Left || !Bounds.Contains(mouseX, mouseY))
 				return false;
 			InventoryScreen screen = game.Gui.ActiveScreen as InventoryScreen;
@@ -147,7 +142,7 @@ namespace ClassicalSharp.Gui.Widgets {
 		
 		float deltaAcc;
 		public override bool HandlesMouseScroll(float delta) {
-			if (game.Input.AltDown) {
+			if (game.Input.IsKeyDown(KeyBind.HotbarSwitching)) {
 				int index = game.Inventory.Offset / Inventory.BlocksPerRow;
 				game.Inventory.Offset = ScrolledIndex(delta, index, 1) * Inventory.BlocksPerRow;
 				altHandled = true;

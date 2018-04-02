@@ -3,6 +3,7 @@
 #include "Funcs.h"
 #include "Platform.h"
 #include "ExtMath.h"
+#include "ErrorHandler.h"
 
 void DrawTextArgs_Make(DrawTextArgs* args, STRING_REF String* text, FontDesc* font, bool useShadow) {
 	args->Text = *text;
@@ -26,7 +27,7 @@ Int32 Drawer2D_Widths[256];
 void Drawer2D_CalculateTextWidths(void) {
 	Int32 width = Drawer2D_FontBitmap.Width, height = Drawer2D_FontBitmap.Height;
 	Int32 i;
-	for (i = 0; i < Array_NumElements(Drawer2D_Widths); i++) {
+	for (i = 0; i < Array_Elems(Drawer2D_Widths); i++) {
 		Drawer2D_Widths[i] = 0;
 	}
 
@@ -77,7 +78,7 @@ void Drawer2D_HexEncodedCol(Int32 i, Int32 hex, UInt8 lo, UInt8 hi) {
 
 void Drawer2D_Init(void) {
 	UInt32 i;
-	PackedCol col = PackedCol_Create4(0, 0, 0, 0);
+	PackedCol col = PACKEDCOL_CONST(0, 0, 0, 0);
 	for (i = 0; i < DRAWER2D_MAX_COLS; i++) {
 		Drawer2D_Cols[i] = col;
 	}
@@ -130,7 +131,7 @@ Int32 Drawer2D_FontHeight(FontDesc* font, bool useShadow) {
 
 Texture Drawer2D_MakeTextTexture(DrawTextArgs* args, Int32 windowX, Int32 windowY) {
 	Size2D size = Drawer2D_MeasureText(args);
-	if (Size2D_Equals(size, Size2D_Empty)) {
+	if (size.Width == 0.0f && size.Height == 0.0f) {
 		return Texture_FromOrigin(NULL, windowX, windowY, 0, 0, 1.0f, 1.0f);
 	}
 
@@ -343,7 +344,7 @@ void Drawer2D_DrawBitmapText(DrawTextArgs* args, Int32 x, Int32 y) {
 Size2D Drawer2D_MeasureBitmapText(DrawTextArgs* args) {
 	if (Drawer2D_IsEmptyText(&args->Text)) return Size2D_Empty;
 	Int32 textHeight = Drawer2D_AdjTextSize(args->Font.Size);
-	Size2D total = Size2D_Make(0, Drawer2D_CellSize(textHeight));
+	Size2D total = { 0, Drawer2D_CellSize(textHeight) };
 	Int32 point = Math_Floor(args->Font.Size);
 
 	String text = args->Text;

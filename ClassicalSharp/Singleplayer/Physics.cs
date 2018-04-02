@@ -3,17 +3,12 @@ using System;
 using System.Collections.Generic;
 using ClassicalSharp.Map;
 using ClassicalSharp.Events;
-
-#if USE16_BIT
 using BlockID = System.UInt16;
-#else
-using BlockID = System.Byte;
-#endif
 using BlockRaw = System.Byte;
 
 namespace ClassicalSharp.Singleplayer {
 	
-	public delegate void PhysicsAction(int index, BlockID block);
+	public delegate void PhysicsAction(int index, BlockRaw block);
 
 	public class PhysicsBase {
 		Game game;
@@ -54,7 +49,7 @@ namespace ClassicalSharp.Singleplayer {
 		
 		int tickCount = 0;
 		public void Tick() {
-			if (!Enabled || game.World.blocks1 == null) return;
+			if (!Enabled || !game.World.HasBlocks) return;
 			
 			//if ((tickCount % 5) == 0) {
 			liquid.TickLava();
@@ -68,19 +63,19 @@ namespace ClassicalSharp.Singleplayer {
 			if (!Enabled) return;
 			Vector3I p = e.Coords;
 			int index = (p.Y * length + p.Z) * width + p.X;
-			BlockID block = e.Block;
+			BlockRaw newB = (BlockRaw)e.Block, oldB = (BlockRaw)e.OldBlock;
 			
-			if (block == Block.Air && IsEdgeWater(p.X, p.Y, p.Z)) { 
-				block = Block.StillWater; 
+			if (newB == Block.Air && IsEdgeWater(p.X, p.Y, p.Z)) { 
+				newB = Block.StillWater; 
 				game.UpdateBlock(p.X, p.Y, p.Z, Block.StillWater);
 			}
 			
-			if (e.Block == 0) {
-				PhysicsAction delete = OnDelete[e.OldBlock];
-				if (delete != null) delete(index, e.OldBlock);
+			if (newB == Block.Air) {
+				PhysicsAction delete = OnDelete[oldB];
+				if (delete != null) delete(index, oldB);
 			} else {
-				PhysicsAction place = OnPlace[block];
-				if (place != null) place(index, block);
+				PhysicsAction place = OnPlace[newB];
+				if (place != null) place(index, newB);
 			}
 			ActivateNeighbours(p.X, p.Y, p.Z, index);
 		}
@@ -97,7 +92,7 @@ namespace ClassicalSharp.Singleplayer {
 		
 		/// <summary> Activates the block at the particular packed coordinates. </summary>
 		public void Activate(int index) {
-			BlockRaw block = map.blocks1[index];
+			BlockRaw block = map.blocks[index];
 			PhysicsAction activate = OnActivate[block];
 			if (activate != null) activate(index, block);
 		}
@@ -108,7 +103,7 @@ namespace ClassicalSharp.Singleplayer {
 				return false;
 			
 			return y >= env.SidesHeight && y < env.EdgeHeight 
-				&& (x == 0 || z == 0 || x == (map.Width - 1) || z == (map.Length - 1));
+				&& (x == 0 || z == 0 || x == map.MaxX || z == map.MaxZ);
 		}
 		
 		void ResetMap(object sender, EventArgs e) {
@@ -137,17 +132,17 @@ namespace ClassicalSharp.Singleplayer {
 				
 				// Inlined 3 random ticks for this chunk
 				int index = rnd.Next(lo, hi);
-				BlockRaw block = map.blocks1[index];
+				BlockRaw block = map.blocks[index];
 				PhysicsAction tick = OnRandomTick[block];
 				if (tick != null) tick(index, block);
 				
 				index = rnd.Next(lo, hi);
-				block = map.blocks1[index];
+				block = map.blocks[index];
 				tick = OnRandomTick[block];
 				if (tick != null) tick(index, block);
 				
 				index = rnd.Next(lo, hi);
-				block = map.blocks1[index];
+				block = map.blocks[index];
 				tick = OnRandomTick[block];
 				if (tick != null) tick(index, block);
 			}

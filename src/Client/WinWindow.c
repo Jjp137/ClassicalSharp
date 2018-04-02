@@ -1,9 +1,14 @@
 #include "Window.h"
-#include <Windows.h>
 #include "Platform.h"
 #include "Input.h"
 #include "Event.h"
 #include "String.h"
+#include "ErrorHandler.h"
+#define WIN32_LEAN_AND_MEAN
+#define NOSERVICE
+#define NOMCX
+#define NOIME
+#include <Windows.h>
 
 #define win_Style WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN
 #define win_StyleEx WS_EX_WINDOWEDGE | WS_EX_APPWINDOW
@@ -208,14 +213,14 @@ LRESULT CALLBACK Window_Procedure(HWND handle, UINT message, WPARAM wParam, LPAR
 	case WM_WINDOWPOSCHANGED:
 		pos = (WINDOWPOS*)lParam;
 		if (pos->hwnd == win_Handle) {
-			Point2D new_location = Point2D_Make(pos->x, pos->y);
-			if (!Point2D_Equals(Window_GetLocation(), new_location)) {
+			Point2D loc = Window_GetLocation();
+			if (loc.X != pos->x || loc.Y != pos->y) {
 				win_Bounds.X = pos->x; win_Bounds.Y = pos->y;
 				Event_RaiseVoid(&WindowEvents_Moved);
 			}
 
-			Size2D new_size = Size2D_Make(pos->cx, pos->cy);
-			if (!Size2D_Equals(Window_GetSize(), new_size)) {
+			Size2D size = Window_GetSize();
+			if (size.Width != pos->cx || size.Height != pos->cy) {
 				win_Bounds.Width = pos->cx; win_Bounds.Height = pos->cy;
 
 				RECT rect;
@@ -527,24 +532,28 @@ void Window_SetBounds(Rectangle2D rect) {
 	SetWindowPos(win_Handle, NULL, rect.X, rect.Y, rect.Width, rect.Height, 0);
 }
 
-Point2D Window_GetLocation(void) { return Point2D_Make(win_Bounds.X, win_Bounds.Y); }
+Point2D Window_GetLocation(void) { 
+	Point2D point = { win_Bounds.X, win_Bounds.Y }; return point;
+}
 void Window_SetLocation(Point2D point) {
 	SetWindowPos(win_Handle, NULL, point.X, point.Y, 0, 0, SWP_NOSIZE);
 }
 
-Size2D Window_GetSize(void) { return Size2D_Make(win_Bounds.Width, win_Bounds.Height); }
+Size2D Window_GetSize(void) {
+	Size2D size = { win_Bounds.Width, win_Bounds.Height }; return size;
+}
 void Window_SetSize(Size2D size) {
 	SetWindowPos(win_Handle, NULL, 0, 0, size.Width, size.Height, SWP_NOMOVE);
 }
 
 Rectangle2D Window_GetClientRectangle(void) { return win_ClientRect; }
 void Window_SetClientRectangle(Rectangle2D rect) {
-	Size2D size = Size2D_Make(rect.Width, rect.Height);
+	Size2D size = { rect.Width, rect.Height };
 	Window_SetClientSize(size);
 }
 
 Size2D Window_GetClientSize(void) {
-	return Size2D_Make(win_ClientRect.Width, win_ClientRect.Height);
+	Size2D size = { win_ClientRect.Width, win_ClientRect.Height }; return size;
 }
 void Window_SetClientSize(Size2D size) {
 	DWORD style = GetWindowLongA(win_Handle, GWL_STYLE);
@@ -553,7 +562,8 @@ void Window_SetClientSize(Size2D size) {
 	rect.right = size.Width; rect.bottom = size.Height;
 
 	AdjustWindowRect(&rect, style, false);
-	Window_SetSize(Size2D_Make(RECT_WIDTH(rect), RECT_HEIGHT(rect)));
+	Size2D adjSize = { RECT_WIDTH(rect), RECT_HEIGHT(rect) };
+	Window_SetSize(adjSize);
 }
 
 /* TODO: Set window icon
@@ -583,8 +593,7 @@ void Window_SetVisible(bool visible) {
 			BringWindowToTop(win_Handle);
 			SetForegroundWindow(win_Handle);
 		}
-	}
-	else {
+	} else {
 		ShowWindow(win_Handle, SW_HIDE);
 	}
 }
@@ -659,8 +668,8 @@ Point2D Window_PointToScreen(Point2D p) {
 	ErrorHandler_Fail("PointToScreen NOT IMPLEMENTED");
 }
 
-MSG msg;
 void Window_ProcessEvents(void) {
+	MSG msg;
 	while (PeekMessageA(&msg, NULL, 0, 0, 1)) {
 		TranslateMessage(&msg);
 		DispatchMessageA(&msg);

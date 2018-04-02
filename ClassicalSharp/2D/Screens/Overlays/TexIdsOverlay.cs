@@ -100,8 +100,7 @@ namespace ClassicalSharp.Gui.Screens {
 		}
 		
 		public override bool HandlesKeyDown(Key key) {
-			if (key == Key.F10 || key == game.Input.Keys[KeyBind.PauseOrExit]) {
-				Dispose();
+			if (key == game.Input.Keys[KeyBind.IDOverlay] || key == game.Input.Keys[KeyBind.PauseOrExit]) {
 				CloseOverlay();
 				return true;
 			}
@@ -126,7 +125,7 @@ namespace ClassicalSharp.Gui.Screens {
 			DisposeWidgets(widgets);
 			widgets = new Widget[1];
 			widgets[0] = TextWidget.Create(game, "Texture ID reference sheet", titleFont)
-				.SetLocation(Anchor.Centre, Anchor.LeftOrTop, 0, yOffset - 30);
+				.SetLocation(Anchor.Centre, Anchor.Min, 0, yOffset - 30);
 		}
 	}
 }

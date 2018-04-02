@@ -2,11 +2,10 @@
 #include "Constants.h"
 #include "Event.h"
 #include "ExtMath.h"
-#include "FrustumCulling.h"
 #include "Funcs.h"
 #include "Game.h"
 #include "GraphicsAPI.h"
-#include "Player.h"
+#include "Entity.h"
 #include "MapRenderer.h"
 #include "Platform.h"
 #include "TerrainAtlas.h"
@@ -14,6 +13,7 @@
 #include "World.h"
 #include "Builder.h"
 #include "Utils.h"
+#include "ErrorHandler.h"
 
 void ChunkInfo_Reset(ChunkInfo* chunk, Int32 x, Int32 y, Int32 z) {
 	chunk->CentreX = (UInt16)(x + 8);
@@ -238,8 +238,8 @@ void ChunkUpdater_UpdateChunks(Real64 delta) {
 
 	LocalPlayer* p = &LocalPlayer_Instance;
 	Vector3 camPos = Game_CurrentCameraPos;
-	Real32 headX = p->Base.Base.HeadX;
-	Real32 headY = p->Base.Base.HeadY;
+	Real32 headX = p->Base.HeadX;
+	Real32 headY = p->Base.HeadY;
 
 	bool samePos = Vector3_Equals(&camPos, &cu_lastCamPos) && headX == cu_lastHeadX && headY == cu_lastHeadY;
 	MapRenderer_RenderChunksCount = samePos ?

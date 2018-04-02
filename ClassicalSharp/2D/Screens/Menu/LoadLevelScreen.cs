@@ -6,15 +6,10 @@ using ClassicalSharp.Map;
 using ClassicalSharp.Gui.Widgets;
 using ClassicalSharp.Textures;
 using OpenTK.Input;
-
-#if USE16_BIT
 using BlockID = System.UInt16;
-#else
-using BlockID = System.Byte;
-#endif
 
 namespace ClassicalSharp.Gui.Screens {
-	public sealed class LoadLevelScreen : FilesScreen {
+	public sealed class LoadLevelScreen : ListScreen {
 		
 		public LoadLevelScreen(Game game) : base(game) {
 			titleText = "Select a level";
@@ -76,11 +71,7 @@ namespace ClassicalSharp.Gui.Screens {
 					game.Inventory.SetDefaultMapping();
 					
 					byte[] blocks = importer.Load(fs, game, out width, out height, out length);
-					#if USE16_BIT
-					game.World.SetNewMap(Utils.UInt8sToUInt16s(blocks), width, height, length);
-					#else
 					game.World.SetNewMap(blocks, width, height, length);
-					#endif
 					
 					game.WorldEvents.RaiseOnNewMapLoaded();
 					if (game.UseServerTextures && game.World.TextureUrl != null)

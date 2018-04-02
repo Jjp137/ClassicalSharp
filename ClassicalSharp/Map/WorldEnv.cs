@@ -1,12 +1,7 @@
 ﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 using System;
 using ClassicalSharp.Events;
-
-#if USE16_BIT
 using BlockID = System.UInt16;
-#else
-using BlockID = System.Byte;
-#endif
 
 namespace ClassicalSharp.Map {
 
@@ -26,7 +21,7 @@ namespace ClassicalSharp.Map {
 		
 		/// <summary> Colour applied to the clouds. </summary>
 		public FastColour CloudsCol = DefaultCloudsColour;
-		public static readonly FastColour DefaultCloudsColour =  new FastColour(0xFF, 0xFF, 0xFF);
+		public static readonly FastColour DefaultCloudsColour = new FastColour(0xFF, 0xFF, 0xFF);
 		
 		/// <summary> Height of the clouds in world space. </summary>
 		public int CloudHeight;
@@ -192,9 +187,10 @@ namespace ClassicalSharp.Map {
 		/// <summary> Sets sunlight colour, and raises
 		/// EnvVariableChanged event with variable 'SunlightColour'. </summary>
 		public void SetSunlight(FastColour col) {
-			if (!Set(col, ref Sunlight, EnvVar.SunlightColour)) return;
+			if (col == Sunlight) return;
 			
-			FastColour.GetShaded(Sunlight, out SunXSide,
+			Sunlight = col;
+			FastColour.GetShaded(col, out SunXSide,
 			                     out SunZSide, out SunYBottom);
 			Sun = Sunlight.Pack();
 			game.WorldEvents.RaiseEnvVariableChanged(EnvVar.SunlightColour);
@@ -203,9 +199,10 @@ namespace ClassicalSharp.Map {
 		/// <summary> Sets current shadowlight colour, and raises
 		/// EnvVariableChanged event with variable 'ShadowlightColour'. </summary>
 		public void SetShadowlight(FastColour col) {
-			if (!Set(col, ref Shadowlight, EnvVar.ShadowlightColour)) return;
+			if (col == Shadowlight) return;
 			
-			FastColour.GetShaded(Shadowlight, out ShadowXSide,
+			Shadowlight = col;
+			FastColour.GetShaded(col, out ShadowXSide,
 			                     out ShadowZSide, out ShadowYBottom);
 			Shadow = Shadowlight.Pack();
 			game.WorldEvents.RaiseEnvVariableChanged(EnvVar.ShadowlightColour);

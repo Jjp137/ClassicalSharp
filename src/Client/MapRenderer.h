@@ -1,15 +1,12 @@
 #ifndef CC_MAPRENDERER_H
 #define CC_MAPRENDERER_H
-#include "Typedefs.h"
 #include "TerrainAtlas.h"
 #include "ChunkUpdater.h"
 /* Renders the blocks of the world by subdividing it into chunks.
    Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 */
 
-Int32 MapRenderer_ChunksX;
-Int32 MapRenderer_ChunksY;
-Int32 MapRenderer_ChunksZ;
+Int32 MapRenderer_ChunksX, MapRenderer_ChunksY, MapRenderer_ChunksZ;
 #define MapRenderer_Pack(cx, cy, cz) (((cz) * MapRenderer_ChunksY + (cy)) * MapRenderer_ChunksX + (cx))
 /* TODO: Swap Y and Z? Make sure to update ChunkUpdater's ResetChunkCache and ClearChunkCache methods! */
 

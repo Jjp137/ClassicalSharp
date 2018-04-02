@@ -10,8 +10,8 @@ namespace ClassicalSharp.Gui.Widgets {
 	public sealed class SpecialInputWidget : Widget {
 
 		public SpecialInputWidget(Game game, Font font, InputWidget input) : base(game) {
-			HorizontalAnchor = Anchor.LeftOrTop;
-			VerticalAnchor = Anchor.BottomOrRight;
+			HorizontalAnchor = Anchor.Min;
+			VerticalAnchor = Anchor.Max;
 			this.font = font;
 			this.input = input;
 			Active = false;
@@ -72,7 +72,7 @@ namespace ClassicalSharp.Gui.Widgets {
 		}
 		
 		int selectedIndex = 0;
-		public override bool HandlesMouseClick(int mouseX, int mouseY, MouseButton button) {
+		public override bool HandlesMouseDown(int mouseX, int mouseY, MouseButton button) {
 			mouseX -= X; mouseY -= Y;
 			if (IntersectsHeader(mouseX, mouseY)) {
 				Redraw();

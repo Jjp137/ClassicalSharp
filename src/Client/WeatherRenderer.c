@@ -5,7 +5,6 @@
 #include "Event.h"
 #include "Game.h"
 #include "GraphicsAPI.h"
-#include "GraphicsEnums.h"
 #include "GraphicsCommon.h"
 #include "PackedCol.h"
 #include "Platform.h"
@@ -13,6 +12,8 @@
 #include "VertexStructs.h"
 #include "World.h"
 #include "Particle.h"
+#include "ErrorHandler.h"
+#include "Stream.h"
 
 GfxResourceID weather_rainTex;
 GfxResourceID weather_snowTex;
@@ -37,15 +38,14 @@ void WeatherRenderer_InitHeightmap(void) {
 }
 
 Int32 WeatherRenderer_CalcHeightAt(Int32 x, Int32 maxY, Int32 z, Int32 index) {
-	Int32 mapIndex = (maxY * World_Length + z) * World_Width + x;
-	Int32 y = maxY;
-	for (y = maxY; y >= 0; y--) {
-		UInt8 draw = Block_Draw[World_Blocks[mapIndex]];
+	Int32 i = (maxY * World_Length + z) * World_Width + x, y;
+
+	for (y = maxY; y >= 0; y--, i -= World_OneY) {
+		UInt8 draw = Block_Draw[World_Blocks[i]];
 		if (!(draw == DRAW_GAS || draw == DRAW_SPRITE)) {
 			Weather_Heightmap[index] = (Int16)y;
 			return y;
 		}
-		mapIndex -= World_OneY;
 	}
 	Weather_Heightmap[index] = -1;
 	return -1;
@@ -173,7 +173,7 @@ void WeatherRenderer_Render(Real64 deltaTime) {
 	Gfx_SetAlphaArgBlend(true);
 
 	Gfx_SetBatchFormat(VERTEX_FORMAT_P3FT2FC4B);
-	UInt32 vCount = (UInt32)(ptr - vertices) / VertexP3fT2fC4b_Size;
+	UInt32 vCount = (UInt32)(ptr - vertices) / (UInt32)sizeof(VertexP3fT2fC4b);
 	GfxCommon_UpdateDynamicVb_IndexedTris(weather_vb, vertices, vCount);
 
 	Gfx_SetAlphaArgBlend(false);
@@ -196,9 +196,9 @@ void WeatherRenderer_Init(void) {
 	weather_lastPos = Vector3I_Create1(Int32_MaxValue);
 	WeatherRenderer_ContextRecreated(NULL);
 
-	Event_RegisterStream(&TextureEvents_FileChanged, NULL, &WeatherRenderer_FileChanged);
-	Event_RegisterVoid(&GfxEvents_ContextLost,       NULL, &WeatherRenderer_ContextLost);
-	Event_RegisterVoid(&GfxEvents_ContextRecreated,  NULL, &WeatherRenderer_ContextRecreated);
+	Event_RegisterStream(&TextureEvents_FileChanged, NULL, WeatherRenderer_FileChanged);
+	Event_RegisterVoid(&GfxEvents_ContextLost,       NULL, WeatherRenderer_ContextLost);
+	Event_RegisterVoid(&GfxEvents_ContextRecreated,  NULL, WeatherRenderer_ContextRecreated);
 }
 
 void WeatherRenderer_Reset(void) {
@@ -213,9 +213,9 @@ void WeatherRenderer_Free(void) {
 	WeatherRenderer_ContextLost(NULL);
 	WeatherRenderer_Reset();
 
-	Event_UnregisterStream(&TextureEvents_FileChanged, NULL, &WeatherRenderer_FileChanged);
-	Event_UnregisterVoid(&GfxEvents_ContextLost,       NULL, &WeatherRenderer_ContextLost);
-	Event_UnregisterVoid(&GfxEvents_ContextRecreated,  NULL, &WeatherRenderer_ContextRecreated);
+	Event_UnregisterStream(&TextureEvents_FileChanged, NULL, WeatherRenderer_FileChanged);
+	Event_UnregisterVoid(&GfxEvents_ContextLost,       NULL, WeatherRenderer_ContextLost);
+	Event_UnregisterVoid(&GfxEvents_ContextRecreated,  NULL, WeatherRenderer_ContextRecreated);
 }
 
 IGameComponent WeatherRenderer_MakeGameComponent(void) {

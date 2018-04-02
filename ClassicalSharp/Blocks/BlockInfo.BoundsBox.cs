@@ -1,13 +1,8 @@
-﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
+// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 using System;
 using OpenTK;
 using ClassicalSharp;
-
-#if USE16_BIT
 using BlockID = System.UInt16;
-#else
-using BlockID = System.Byte;
-#endif
 
 namespace ClassicalSharp {
 	
@@ -48,9 +43,9 @@ namespace ClassicalSharp {
 		
 		internal static void RecalculateSpriteBB() {
 			using (FastBitmap fastBmp = new FastBitmap(TerrainAtlas2D.Atlas, true, true)) {
-				for (int b = 0; b <= MaxDefined; b++) {
-					if (Draw[b] != DrawType.Sprite) continue;
-					RecalculateBB((BlockID)b, fastBmp);
+				for (int i = 0; i < Count; i++) {
+					if (Draw[i] != DrawType.Sprite) continue;
+					RecalculateBB((BlockID)i, fastBmp);
 				}
 			}
 		}

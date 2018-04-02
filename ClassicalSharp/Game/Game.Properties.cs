@@ -123,7 +123,7 @@ namespace ClassicalSharp {
 		public List<ScheduledTask> Tasks = new List<ScheduledTask>();
 
 		/// <summary> Whether x to stone brick tiles should be used. </summary>
-		public bool UseCPEBlocks = false;
+		public bool SupportsCPEBlocks = false;
 		
 		/// <summary> Account username of the player. </summary>
 		public string Username;
@@ -197,15 +197,12 @@ namespace ClassicalSharp {
 		public Vector3 CurrentCameraPos;
 		
 		public Animations Animations;
-		internal int CloudsTex;
 		internal bool screenshotRequested;
 		
 		internal EntryList AcceptedUrls = new EntryList("texturecache", "acceptedurls.txt"); 
 		internal EntryList DeniedUrls = new EntryList("texturecache", "deniedurls.txt");
 		internal EntryList ETags = new EntryList("texturecache", "etags.txt");
 		internal EntryList LastModified = new EntryList("texturecache", "lastmodified.txt");
-		
-		PluginLoader plugins;		
 		
 		/// <summary> Calculates the amount that the hotbar widget should be scaled by when rendered. </summary>
 		/// <remarks> Affected by both the current resolution of the window, as well as the

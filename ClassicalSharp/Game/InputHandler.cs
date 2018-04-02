@@ -115,10 +115,10 @@ namespace ClassicalSharp {
 		}
 
 		void MouseButtonDown(object sender, MouseButtonEventArgs e) {
-			if (!game.Gui.ActiveScreen.HandlesMouseClick(e.X, e.Y, e.Button)) {
-				bool left = e.Button == MouseButton.Left;
+			if (!game.Gui.ActiveScreen.HandlesMouseDown(e.X, e.Y, e.Button)) {
+				bool left   = e.Button == MouseButton.Left;
 				bool middle = e.Button == MouseButton.Middle;
-				bool right = e.Button == MouseButton.Right;
+				bool right  = e.Button == MouseButton.Right;
 				PickBlocks(false, left, middle, right);
 			} else {
 				picking.lastClick = DateTime.UtcNow;
@@ -189,7 +189,7 @@ namespace ClassicalSharp {
 			if (!more) {
 				game.Server.SendChat(text);
 			} else if (game.Gui.activeScreen == null) {
-				game.Gui.hudScreen.OpenTextInputBar(text);
+				game.Gui.hudScreen.OpenInput(text);
 			}
 		}
 		
@@ -246,7 +246,7 @@ namespace ClassicalSharp {
 			} else if (game.Mode.HandlesKeyDown(key)) {
 			} else if (key == Keys[KeyBind.IDOverlay]) {
 				if (game.Gui.overlays.Count > 0) return true;
-				game.Gui.ShowOverlay(new TexIdsOverlay(game));
+				game.Gui.ShowOverlay(new TexIdsOverlay(game), false);
 			} else {
 				return false;
 			}

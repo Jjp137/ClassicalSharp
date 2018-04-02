@@ -24,12 +24,7 @@ using OpenTK.Input;
 using Android.Graphics;
 #endif
 using PathIO = System.IO.Path; // Android.Graphics.Path clash otherwise
-
-#if USE16_BIT
 using BlockID = System.UInt16;
-#else
-using BlockID = System.Byte;
-#endif
 
 namespace ClassicalSharp {
 
@@ -322,7 +317,6 @@ namespace ClassicalSharp {
 			
 			Graphics.DeleteIb(ref defaultIb);
 			Drawer2D.DisposeInstance();
-			Graphics.DeleteTexture(ref CloudsTex);
 			Graphics.Dispose();
 			
 			if (Options.OptionsChanged.Count == 0) return;
@@ -413,7 +407,7 @@ namespace ClassicalSharp {
 			}
 			
 			if (EnvRenderer == null) {
-				EnvRenderer = new StandardEnvRenderer(); Components.Add(EnvRenderer);
+				EnvRenderer = new EnvRenderer(); Components.Add(EnvRenderer);
 				EnvRenderer.legacy = legacy;
 				EnvRenderer.minimal = minimal;
 			} else {
@@ -423,15 +417,12 @@ namespace ClassicalSharp {
 		}
 		
 		void TextureChangedCore(object sender, TextureEventArgs e) {
-			byte[] data = e.Data;
 			if (e.Name == "terrain.png") {
-				Bitmap atlas = Platform.ReadBmp32Bpp(Drawer2D, data);
+				Bitmap atlas = Platform.ReadBmp32Bpp(Drawer2D, e.Data);
 				if (ChangeTerrainAtlas(atlas)) return;
 				atlas.Dispose();
-			} else if (e.Name == "cloud.png" || e.Name == "clouds.png") {
-				UpdateTexture(ref CloudsTex, e.Name, data, false);
 			} else if (e.Name == "default.png") {
-				Bitmap bmp = Platform.ReadBmp32Bpp(Drawer2D, data);
+				Bitmap bmp = Platform.ReadBmp32Bpp(Drawer2D, e.Data);
 				Drawer2D.SetFontBitmap(bmp);
 				Events.RaiseChatFontChanged();
 			}

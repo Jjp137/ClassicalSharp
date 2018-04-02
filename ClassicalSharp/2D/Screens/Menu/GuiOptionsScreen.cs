@@ -15,7 +15,7 @@ namespace ClassicalSharp.Gui.Screens {
 		}
 		
 		protected override void ContextRecreated() {
-			ClickHandler onClick = OnWidgetClick;
+			ClickHandler onClick = OnButtonClick;
 			widgets = new Widget[] {
 				MakeOpt(-1, -150, "Black text shadows", onClick, GetShadows,   SetShadows),
 				MakeOpt(-1, -100, "Show FPS",           onClick, GetShowFPS,   SetShowFPS),
@@ -85,15 +85,11 @@ namespace ClassicalSharp.Gui.Screens {
 		}
 		
 		void HandleFontChange() {
-			int selIndex = IndexOfWidget(selectedButton);
 			game.Events.RaiseChatFontChanged();
 			Recreate();
 			game.Gui.RefreshHud();
-			
-			if (selIndex >= 0) {
-				selectedButton = (ButtonWidget)widgets[selIndex];
-				if (selectedButton != null) selectedButton.Active = true;
-			}
+			selectedI = -1;
+			HandlesMouseMove(game.Mouse.X, game.Mouse.Y);
 		}
 		
 		void MakeValidators() {

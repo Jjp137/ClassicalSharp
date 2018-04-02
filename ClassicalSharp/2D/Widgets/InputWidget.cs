@@ -316,7 +316,7 @@ namespace ClassicalSharp.Gui.Widgets {
 		
 		public override bool HandlesKeyUp(Key key) { return true; }
 		
-		public override bool HandlesMouseClick(int mouseX, int mouseY, MouseButton button) {
+		public override bool HandlesMouseDown(int mouseX, int mouseY, MouseButton button) {
 			if (button == MouseButton.Left)
 				SetCaretToCursor(mouseX, mouseY);
 			return true;
@@ -411,7 +411,7 @@ namespace ClassicalSharp.Gui.Widgets {
 			UpdateCaret();
 		}
 		
-		static char[] trimChars = {'\r', '\n', '\v', '\f', ' ', '\t', '\0'};
+		static char[] trimChars = new char[] {'\r', '\n', '\v', '\f', ' ', '\t', '\0'};
 		bool OtherKey(Key key) {
 			int maxChars = UsedLines * MaxCharsPerLine;
 			if (key == Key.V && Text.Length < maxChars) {

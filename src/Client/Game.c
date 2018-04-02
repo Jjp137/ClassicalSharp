@@ -11,6 +11,7 @@
 #include "ExtMath.h"
 #include "Gui.h"
 #include "Window.h"
+#include "Event.h"
 
 Int32 Game_GetWindowScale(void) {
 	Real32 windowScale = min(Game_Width / 640.0f, Game_Height / 480.0f);
@@ -39,7 +40,7 @@ bool Game_GetCursorVisible(void) { return Game_CursorVisible; }
 void Game_SetCursorVisible(bool visible) {
 	/* Defer mouse visibility changes */
 	Game_realCursorVisible = visible;
-	if (Gui_OverlayCount > 0) return;
+	if (Gui_OverlaysCount > 0) return;
 
 	/* Only set the value when it has changed */
 	if (Game_CursorVisible == visible) return;

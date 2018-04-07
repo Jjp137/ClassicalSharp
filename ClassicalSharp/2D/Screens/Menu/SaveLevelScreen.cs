@@ -21,7 +21,6 @@ namespace ClassicalSharp.Gui.Screens {
 			RenderMenuBounds();
 			game.Graphics.Texturing = true;
 			RenderWidgets(widgets, delta);
-			input.Render(delta);
 			if (desc != null) desc.Render(delta);
 			game.Graphics.Texturing = false;
 			
@@ -39,11 +38,8 @@ namespace ClassicalSharp.Gui.Screens {
 		
 		public override bool HandlesKeyDown(Key key) {
 			RemoveOverwrites();
-			if (key == Key.Escape) {
-				game.Gui.SetNewScreen(null);
-				return true;
-			}
-			return input.HandlesKeyDown(key);
+			if (input.HandlesKeyDown(key)) return true;
+			return base.HandlesKeyDown(key);
 		}
 		
 		public override bool HandlesKeyUp(Key key) {
@@ -59,7 +55,6 @@ namespace ClassicalSharp.Gui.Screens {
 		}
 		
 		protected override void ContextLost() {
-			input.Dispose();
 			DisposeDescWidget();
 			base.ContextLost();
 		}
@@ -75,16 +70,11 @@ namespace ClassicalSharp.Gui.Screens {
 				ButtonWidget.Create(game, 200, "Save schematic", titleFont, SaveSchematic)
 					.SetLocation(Anchor.Centre, Anchor.Centre, -150, 120),
 				TextWidget.Create(game, "&eCan be imported into MCEdit", regularFont)
-					.SetLocation(Anchor.Centre, Anchor.Centre, 110, 120),
-				null,
+					.SetLocation(Anchor.Centre, Anchor.Centre, 110, 120),				
 				MakeBack(false, titleFont, SwitchPause),
+				input,
+				null, // description widget placeholder				
 			};
-		}
-		
-		
-		public override void OnResize(int width, int height) {
-			input.Reposition();
-			base.OnResize(width, height);
 		}
 		
 		public override void Dispose() {
@@ -92,17 +82,10 @@ namespace ClassicalSharp.Gui.Screens {
 			base.Dispose();
 		}
 		
-		void SaveClassic(Game game, Widget widget, MouseButton btn, int x, int y) {
-			DoSave(widget, btn, ".cw");
-		}
+		void SaveClassic(Game game, Widget widget) { DoSave(widget, ".cw"); }	
+		void SaveSchematic(Game game, Widget widget) { DoSave(widget, ".schematic"); }
 		
-		void SaveSchematic(Game game, Widget widget, MouseButton btn, int x, int y) {
-			DoSave(widget, btn, ".schematic");
-		}
-		
-		void DoSave(Widget widget, MouseButton mouseBtn, string ext) {
-			if (mouseBtn != MouseButton.Left) return;
-			
+		void DoSave(Widget widget, string ext) {
 			string text = input.Text.ToString();
 			if (text.Length == 0) {
 				MakeDescWidget("&ePlease enter a filename"); return;
@@ -111,9 +94,10 @@ namespace ClassicalSharp.Gui.Screens {
 			text = Path.Combine(Program.AppDirectory, "maps");
 			text = Path.Combine(text, file);
 			
-			if (File.Exists(text) && ((ButtonWidget)widget).OptName == null) {
-				((ButtonWidget)widget).SetText("&cOverwrite existing?");
-				((ButtonWidget)widget).OptName = "O";
+			ButtonWidget btn = (ButtonWidget)widget;
+			if (File.Exists(text) && btn.OptName == null) {
+				btn.SetText("&cOverwrite existing?");
+				btn.OptName = "O";
 			} else {
 				// NOTE: We don't immediately save here, because otherwise the 'saving...'
 				// will not be rendered in time because saving is done on the main thread.

@@ -146,8 +146,9 @@ namespace ClassicalSharp
 			{ SDL.SDL_BUTTON_LEFT, MouseButton.Left },
 			{ SDL.SDL_BUTTON_MIDDLE, MouseButton.Middle },
 			{ SDL.SDL_BUTTON_RIGHT, MouseButton.Right },
-			{ SDL.SDL_BUTTON_X1, MouseButton.Button1 },
-			{ SDL.SDL_BUTTON_X2, MouseButton.Button2 },
+			// TODO: handle Key.XButton1 and Key.XButton2
+			//{ SDL.SDL_BUTTON_X1, MouseButton.Button1 },
+			//{ SDL.SDL_BUTTON_X2, MouseButton.Button2 },
 		};
 	}
 }

@@ -94,6 +94,9 @@ typedef struct DisconnectScreen_ {
 } DisconnectScreen;
 
 
+/*########################################################################################################################*
+*-----------------------------------------------------InventoryScreen-----------------------------------------------------*
+*#########################################################################################################################*/
 GuiElementVTABLE InventoryScreen_VTABLE;
 InventoryScreen InventoryScreen_Instance;
 void InventoryScreen_OnBlockChanged(void* obj) {
@@ -119,6 +122,11 @@ void InventoryScreen_Init(GuiElement* elem) {
 	screen->Table.Font = screen->Font;
 	screen->Table.ElementsPerRow = Game_PureClassic ? 9 : 10;
 	Elem_Init(&screen->Table);
+
+	/* User is holding invalid block */
+	if (screen->Table.SelectedIndex == -1) {
+		TableWidget_MakeDescTex(&screen->Table, Inventory_SelectedBlock);
+	}
 
 	Key_KeyRepeat = true;
 	Event_RegisterVoid(&BlockEvents_PermissionsChanged, screen, InventoryScreen_OnBlockChanged);
@@ -235,6 +243,9 @@ Screen* InventoryScreen_MakeInstance(void) {
 extern Screen* InventoryScreen_UNSAFE_RawPointer = (Screen*)&InventoryScreen_Instance;
 
 
+/*########################################################################################################################*
+*-------------------------------------------------------StatusScreen------------------------------------------------------*
+*#########################################################################################################################*/
 GuiElementVTABLE StatusScreen_VTABLE;
 StatusScreen StatusScreen_Instance;
 void StatusScreen_MakeText(StatusScreen* screen, STRING_TRANSIENT String* status) {
@@ -263,7 +274,6 @@ void StatusScreen_MakeText(StatusScreen* screen, STRING_TRANSIENT String* status
 		}
 	}
 }
-
 
 void StatusScreen_DrawPosition(StatusScreen* screen) {
 	TextAtlas* atlas = &screen->PosAtlas;
@@ -426,6 +436,9 @@ IGameComponent StatusScreen_MakeComponent(void) {
 }
 
 
+/*########################################################################################################################*
+*------------------------------------------------------LoadingScreen------------------------------------------------------*
+*#########################################################################################################################*/
 GuiElementVTABLE LoadingScreen_VTABLE;
 LoadingScreen LoadingScreen_Instance;
 void LoadingScreen_SetTitle(LoadingScreen* screen) {
@@ -601,6 +614,9 @@ Screen* LoadingScreen_MakeInstance(STRING_PURE String* title, STRING_PURE String
 }
 
 
+/*########################################################################################################################*
+*--------------------------------------------------GeneratingMapScreen----------------------------------------------------*
+*#########################################################################################################################*/
 GuiElementVTABLE GeneratingMapScreen_VTABLE;
 GeneratingMapScreen GeneratingMapScreen_Instance;
 void GeneratingScreen_Render(GuiElement* elem, Real64 delta) {
@@ -632,6 +648,9 @@ Screen* GeneratingScreen_MakeInstance(void) {
 }
 
 
+/*########################################################################################################################*
+*--------------------------------------------------------ChatScreen-------------------------------------------------------*
+*#########################################################################################################################*/
 GuiElementVTABLE ChatScreen_VTABLE;
 ChatScreen ChatScreen_Instance;
 Int32 ChatScreen_BottomOffset(void) { return ((HUDScreen*)Gui_HUD)->Hotbar.Height; }
@@ -1131,6 +1150,9 @@ Screen* ChatScreen_MakeInstance(void) {
 }
 
 
+/*########################################################################################################################*
+*--------------------------------------------------------HUDScreen--------------------------------------------------------*
+*#########################################################################################################################*/
 GuiElementVTABLE HUDScreenVTABLE;
 HUDScreen HUDScreen_Instance;
 #define CH_EXTENT 16
@@ -1348,6 +1370,9 @@ void HUDScreen_AppendInput(Screen* hud, STRING_PURE String* text) {
 }
 
 
+/*########################################################################################################################*
+*----------------------------------------------------DisconnectScreen-----------------------------------------------------*
+*#########################################################################################################################*/
 GuiElementVTABLE DisconnectScreen_VTABLE;
 DisconnectScreen DisconnectScreen_Instance;
 #define DISCONNECT_DELAY_MS 5000

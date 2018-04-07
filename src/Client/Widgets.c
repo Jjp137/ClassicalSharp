@@ -24,6 +24,10 @@ void Widget_SetLocation(Widget* widget, UInt8 horAnchor, UInt8 verAnchor, Int32 
 	widget->Reposition((GuiElement*)widget);
 }
 
+
+/*########################################################################################################################*
+*-------------------------------------------------------TextWidget--------------------------------------------------------*
+*#########################################################################################################################*/
 void TextWidget_SetHeight(TextWidget* widget, Int32 height) {
 	if (widget->ReducePadding) {
 		Drawer2D_ReducePadding_Height(&height, widget->Font.Size, 4);
@@ -96,6 +100,10 @@ void TextWidget_SetText(TextWidget* widget, STRING_PURE String* text) {
 	}
 }
 
+
+/*########################################################################################################################*
+*------------------------------------------------------ButtonWidget-------------------------------------------------------*
+*#########################################################################################################################*/
 #define BUTTON_uWIDTH (200.0f / 256.0f)
 Texture Button_ShadowTex   = { 0, 0, 0, 0, 0,  0.0f, 66.0f / 256.0f, 200.0f / 256.0f,  86.0f / 256.0f };
 Texture Button_SelectedTex = { 0, 0, 0, 0, 0,  0.0f, 86.0f / 256.0f, 200.0f / 256.0f, 106.0f / 256.0f };
@@ -158,7 +166,7 @@ void ButtonWidget_Render(GuiElement* elem, Real64 delta) {
 }
 
 GuiElementVTABLE ButtonWidget_VTABLE;
-void ButtonWidget_Create(ButtonWidget* widget, STRING_PURE String* text, Int32 minWidth, FontDesc* font, ButtonWidget_Click onClick) {
+void ButtonWidget_Create(ButtonWidget* widget, STRING_PURE String* text, Int32 minWidth, FontDesc* font, Widget_LeftClick onClick) {
 	widget->VTABLE = &ButtonWidget_VTABLE;
 	Widget_Init((Widget*)widget);
 	widget->VTABLE->Init   = ButtonWidget_Init;
@@ -170,7 +178,7 @@ void ButtonWidget_Create(ButtonWidget* widget, STRING_PURE String* text, Int32 m
 	Elem_Init(widget);
 	widget->MinWidth = minWidth; widget->MinHeight = 40;
 	ButtonWidget_SetText(widget, text);
-	widget->OnClick = onClick;
+	widget->MenuClick = onClick;
 }
 
 void ButtonWidget_SetText(ButtonWidget* widget, STRING_PURE String* text) {
@@ -192,6 +200,9 @@ void ButtonWidget_SetText(ButtonWidget* widget, STRING_PURE String* text) {
 }
 
 
+/*########################################################################################################################*
+*-----------------------------------------------------ScrollbarWidget-----------------------------------------------------*
+*#########################################################################################################################*/
 #define TABLE_MAX_ROWS_DISPLAYED 8
 #define SCROLL_WIDTH 22
 #define SCROLL_BORDER 2
@@ -315,6 +326,9 @@ void ScrollbarWidget_ClampScrollY(ScrollbarWidget* widget) {
 }
 
 
+/*########################################################################################################################*
+*------------------------------------------------------HotbarWidget-------------------------------------------------------*
+*#########################################################################################################################*/
 void HotbarWidget_RenderHotbarOutline(HotbarWidget* widget) {
 	GfxResourceID texId = Game_UseClassicGui ? Gui_GuiClassicTex : Gui_GuiTex;
 	widget->BackTex.ID = texId;
@@ -494,6 +508,9 @@ void HotbarWidget_Create(HotbarWidget* widget) {
 }
 
 
+/*########################################################################################################################*
+*-------------------------------------------------------TableWidget-------------------------------------------------------*
+*#########################################################################################################################*/
 Int32 Table_X(TableWidget* widget) { return widget->X - 5 - 10; }
 Int32 Table_Y(TableWidget* widget) { return widget->Y - 5 - 30; }
 Int32 Table_Width(TableWidget* widget) { 
@@ -570,10 +587,16 @@ void TableWidget_RecreateDescTex(TableWidget* widget) {
 
 	Gfx_DeleteTexture(&widget->DescTex.ID);
 	if (widget->SelectedIndex == -1) return;
+	BlockID block = widget->Elements[widget->SelectedIndex];
+	TableWidget_MakeDescTex(widget, block);
+}
+
+void TableWidget_MakeDescTex(TableWidget* widget, BlockID block) {
+	Gfx_DeleteTexture(&widget->DescTex.ID);
+	if (block == BLOCK_AIR) return;
 
 	UInt8 descBuffer[String_BufferSize(STRING_SIZE * 2)];
 	String desc = String_InitAndClearArray(descBuffer);
-	BlockID block = widget->Elements[widget->SelectedIndex];
 	TableWidget_MakeBlockDesc(&desc, block);
 
 	DrawTextArgs args;
@@ -582,9 +605,17 @@ void TableWidget_RecreateDescTex(TableWidget* widget) {
 	TableWidget_UpdateDescTexPos(widget);
 }
 
-bool TableWidget_Show(BlockID block) {
-	if (block == BLOCK_AIR) return false;
+bool TableWidget_RowEmpty(TableWidget* widget, Int32 i) {
+	Int32 max = min(i + widget->ElementsPerRow, (Int32)Array_Elems(Inventory_Map));
 
+	Int32 j;
+	for (j = i; j < max; j++) {
+		if (Inventory_Map[j] != BLOCK_AIR) return false;
+	}
+	return true;
+}
+
+bool TableWidget_Show(BlockID block) {
 	if (block < BLOCK_CPE_COUNT) {
 		Int32 count = Game_UseCPEBlocks ? BLOCK_CPE_COUNT : BLOCK_ORIGINAL_COUNT;
 		return block < count;
@@ -595,11 +626,14 @@ bool TableWidget_Show(BlockID block) {
 void TableWidget_RecreateElements(TableWidget* widget) {
 	widget->ElementsCount = 0;
 	Int32 count = Game_UseCPE ? BLOCK_COUNT : BLOCK_ORIGINAL_COUNT, i;
-	for (i = 0; i < count; i++) {
-		BlockID block = Inventory_Map[i];
-		if (TableWidget_Show(block)) {
-			widget->ElementsCount++;
+	for (i = 0; i < count;) {
+		if ((i % widget->ElementsPerRow) == 0 && TableWidget_RowEmpty(widget, i)) {
+			i += widget->ElementsPerRow; continue;
 		}
+
+		BlockID block = Inventory_Map[i];
+		if (TableWidget_Show(block)) { widget->ElementsCount++; }
+		i++;
 	}
 
 	widget->RowsCount = Math_CeilDiv(widget->ElementsCount, widget->ElementsPerRow);
@@ -608,15 +642,20 @@ void TableWidget_RecreateElements(TableWidget* widget) {
 
 	Int32 index = 0;
 	for (i = 0; i < count; i++) {
-		BlockID block = Inventory_Map[i];
-		if (TableWidget_Show(block)) {
-			widget->Elements[index++] = block;
+		if ((i % widget->ElementsPerRow) == 0 && TableWidget_RowEmpty(widget, i)) {
+			i += widget->ElementsPerRow; continue;
 		}
+
+		BlockID block = Inventory_Map[i];
+		if (TableWidget_Show(block)) { widget->Elements[index++] = block; }
+		i++;
 	}
 }
 
 void TableWidget_Init(GuiElement* elem) {
 	TableWidget* widget = (TableWidget*)elem;
+	widget->LastX = Mouse_X; widget->LastY = Mouse_Y;
+
 	ScrollbarWidget_Create(&widget->Scroll);
 	TableWidget_RecreateElements(widget);
 	Widget_Reposition(widget);
@@ -726,7 +765,7 @@ bool TableWidget_HandlesMouseDown(GuiElement* elem, Int32 x, Int32 y, MouseButto
 
 	if (Elem_HandlesMouseDown(&widget->Scroll, x, y, btn)) {
 		return true;
-	} else if (widget->SelectedIndex != -1) {
+	} else if (widget->SelectedIndex != -1 && widget->Elements[widget->SelectedIndex] != BLOCK_AIR) {
 		Inventory_SetSelectedBlock(widget->Elements[widget->SelectedIndex]);
 		widget->PendingClose = true;
 		return true;
@@ -764,6 +803,9 @@ bool TableWidget_HandlesMouseScroll(GuiElement* elem, Real32 delta) {
 bool TableWidget_HandlesMouseMove(GuiElement* elem, Int32 x, Int32 y) {
 	TableWidget* widget = (TableWidget*)elem;
 	if (Elem_HandlesMouseMove(&widget->Scroll, x, y)) return true;
+
+	if (widget->LastX == x && widget->LastY == y) return true;
+	widget->LastX = x; widget->LastY = y;
 
 	widget->SelectedIndex = -1;
 	Int32 blockSize = widget->BlockSize;
@@ -841,6 +883,7 @@ void TableWidget_OnInventoryChanged(TableWidget* widget) {
 	if (widget->SelectedIndex >= widget->ElementsCount) {
 		widget->SelectedIndex = widget->ElementsCount - 1;
 	}
+	widget->LastX = -1; widget->LastY = -1;
 
 	widget->Scroll.ScrollY = widget->SelectedIndex / widget->ElementsPerRow;
 	ScrollbarWidget_ClampScrollY(&widget->Scroll);
@@ -848,6 +891,9 @@ void TableWidget_OnInventoryChanged(TableWidget* widget) {
 }
 
 
+/*########################################################################################################################*
+*-------------------------------------------------------InputWidget-------------------------------------------------------*
+*#########################################################################################################################*/
 bool InputWidget_ControlDown(void) {
 #if CC_BUILD_OSX
 	return Key_IsWinPressed();
@@ -1142,6 +1188,8 @@ void InputWidget_EndKey(InputWidget* widget) {
 
 bool InputWidget_OtherKey(InputWidget* widget, Key key) {
 	Int32 maxChars = widget->GetMaxLines() * INPUTWIDGET_LEN;
+	if (!InputWidget_ControlDown()) return false;
+
 	if (key == Key_V && widget->Text.length < maxChars) {
 		UInt8 textBuffer[String_BufferSize(INPUTWIDGET_MAX_LINES * STRING_SIZE)];
 		String text = String_InitAndClearArray(textBuffer);
@@ -1210,7 +1258,7 @@ bool InputWidget_HandlesKeyDown(GuiElement* elem, Key key) {
 		InputWidget_HomeKey(widget);
 	} else if (key == Key_End) {
 		InputWidget_EndKey(widget);
-	} else if (InputWidget_ControlDown() && !InputWidget_OtherKey(widget, key)) {
+	} else if (!InputWidget_OtherKey(widget, key)) {
 		return false;
 	}
 	return true;
@@ -1226,35 +1274,36 @@ bool InputWidget_HandlesKeyPress(GuiElement* elem, UInt8 key) {
 
 bool InputWidget_HandlesMouseDown(GuiElement* elem, Int32 x, Int32 y, MouseButton button) {
 	InputWidget* widget = (InputWidget*)elem;
-	if (button == MouseButton_Left) {
-		x -= widget->InputTex.X; y -= widget->InputTex.Y;
-		DrawTextArgs args; DrawTextArgs_MakeEmpty(&args, &widget->Font, true);
-		Int32 offset = 0, charHeight = widget->CaretTex.Height;
+	if (button != MouseButton_Left) return true;
 
-		Int32 charX, i;
-		for (i = 0; i < widget->GetMaxLines(); i++) {
-			String* line = &widget->Lines[i];
-			Int32 xOffset = i == 0 ? widget->PrefixWidth : 0;
-			if (line->length == 0) continue;
+	x -= widget->InputTex.X; y -= widget->InputTex.Y;
+	DrawTextArgs args; DrawTextArgs_MakeEmpty(&args, &widget->Font, true);
+	Int32 offset = 0, charHeight = widget->CaretTex.Height;
 
-			for (charX = 0; charX < line->length; charX++) {
-				args.Text = String_UNSAFE_Substring(line, 0, charX);
-				Int32 charOffset = Drawer2D_MeasureText(&args).Width + xOffset;
+	Int32 charX, i;
+	for (i = 0; i < widget->GetMaxLines(); i++) {
+		String* line = &widget->Lines[i];
+		Int32 xOffset = i == 0 ? widget->PrefixWidth : 0;
+		if (line->length == 0) continue;
 
-				args.Text = String_UNSAFE_Substring(line, charX, 1);
-				Int32 charWidth = Drawer2D_MeasureText(&args).Width;
+		for (charX = 0; charX < line->length; charX++) {
+			args.Text = String_UNSAFE_Substring(line, 0, charX);
+			Int32 charOffset = Drawer2D_MeasureText(&args).Width + xOffset;
 
-				if (Gui_Contains(charOffset, i * charHeight, charWidth, charHeight, x, y)) {
-					widget->CaretPos = offset + charX;
-					InputWidget_UpdateCaret(widget);
-					return true;
-				}
+			args.Text = String_UNSAFE_Substring(line, charX, 1);
+			Int32 charWidth = Drawer2D_MeasureText(&args).Width;
+
+			if (Gui_Contains(charOffset, i * charHeight, charWidth, charHeight, x, y)) {
+				widget->CaretPos = offset + charX;
+				InputWidget_UpdateCaret(widget);
+				return true;
 			}
-			offset += line->length;
 		}
-		widget->CaretPos = -1;
-		InputWidget_UpdateCaret(widget);
+		offset += line->length;
 	}
+
+	widget->CaretPos = -1;
+	InputWidget_UpdateCaret(widget);
 	return true;
 }
 
@@ -1293,6 +1342,9 @@ void InputWidget_Create(InputWidget* widget, FontDesc* font, STRING_REF String* 
 }
 
 
+/*########################################################################################################################*
+*---------------------------------------------------MenuInputValidator----------------------------------------------------*
+*#########################################################################################################################*/
 bool MenuInputValidator_AlwaysValidChar(MenuInputValidator* validator, UInt8 c) { return true; }
 bool MenuInputValidator_AlwaysValidString(MenuInputValidator* validator, STRING_PURE String* s) { return true; }
 
@@ -1466,6 +1518,9 @@ MenuInputValidator MenuInputValidator_String(void) {
 }
 
 
+/*########################################################################################################################*
+*-----------------------------------------------------MenuInputWidget-----------------------------------------------------*
+*#########################################################################################################################*/
 void MenuInputWidget_Render(GuiElement* elem, Real64 delta) {
 	InputWidget* widget = (InputWidget*)elem;
 	PackedCol backCol = PACKEDCOL_CONST(30, 30, 30, 200);
@@ -1563,6 +1618,9 @@ void MenuInputWidget_Create(MenuInputWidget* widget, Int32 width, Int32 height, 
 }
 
 
+/*########################################################################################################################*
+*-----------------------------------------------------ChatInputWidget-----------------------------------------------------*
+*#########################################################################################################################*/
 void ChatInputWidget_Render(GuiElement* elem, Real64 delta) {
 	ChatInputWidget* widget = (ChatInputWidget*)elem;
 	InputWidget* input = (InputWidget*)elem;
@@ -1758,6 +1816,9 @@ void ChatInputWidget_Create(ChatInputWidget* widget, FontDesc* font) {
 }
 
 
+/*########################################################################################################################*
+*----------------------------------------------------PlayerListWidget-----------------------------------------------------*
+*#########################################################################################################################*/
 #define GROUP_NAME_ID UInt16_MaxValue
 #define LIST_COLUMN_PADDING 5
 #define LIST_BOUNDS_SIZE 10
@@ -2133,6 +2194,9 @@ void PlayerListWidget_Create(PlayerListWidget* widget, FontDesc* font, bool clas
 }
 
 
+/*########################################################################################################################*
+*-----------------------------------------------------TextGroupWidget-----------------------------------------------------*
+*#########################################################################################################################*/
 void TextGroupWidget_PushUpAndReplaceLast(TextGroupWidget* widget, STRING_PURE String* text) {
 	Int32 y = widget->Y;
 	Gfx_DeleteTexture(&widget->Textures[0].ID);
@@ -2335,8 +2399,9 @@ void TextGroupWidget_Create(TextGroupWidget* widget, Int32 linesCount, FontDesc*
 }
 
 
-
-
+/*########################################################################################################################*
+*---------------------------------------------------SpecialInputWidget----------------------------------------------------*
+*#########################################################################################################################*/
 void SpecialInputWidget_UpdateColString(SpecialInputWidget* widget) {
 	UInt32 count = 0, i;
 	for (i = 0; i < DRAWER2D_MAX_COLS; i++) {

@@ -12,7 +12,7 @@ namespace ClassicalSharp.Gui.Screens {
 		const int keyI = 0, modifyI = 1, actionI = 2;
 		HotkeyList hotkeys;
 		Hotkey curHotkey, origHotkey;
-		Widget focusWidget;
+		int selectedI = -1;
 		static FastColour grey = new FastColour(150, 150, 150);
 		
 		public EditHotkeyScreen(Game game, Hotkey original) : base(game) {
@@ -38,14 +38,10 @@ namespace ClassicalSharp.Gui.Screens {
 		}
 		
 		public override bool HandlesKeyDown(Key key) {
-			if (key == Key.Escape) {
-				game.Gui.SetNewScreen(null);
-				return true;
-			} else if (focusWidget != null) {
-				FocusKeyDown(key);
-				return true;
+			if (selectedI >= 0) {
+				FocusKeyDown(key); return true;
 			}
-			return widgets[actionI].HandlesKeyDown(key);
+			return widgets[actionI].HandlesKeyDown(key) || base.HandlesKeyDown(key);
 		}
 		
 		public override bool HandlesKeyUp(Key key) {
@@ -66,38 +62,32 @@ namespace ClassicalSharp.Gui.Screens {
 			string staysOpen = curHotkey.StaysOpen ? "ON" : "OFF";
 			bool existed = origHotkey.BaseKey != Key.Unknown;
 			
+			InputWidget input;
+			input = MenuInputWidget.Create(game, 500, 30, curHotkey.Text, regularFont, new StringValidator())
+					.SetLocation(Anchor.Centre, Anchor.Centre, 0, -35);
+			input.ShowCaret = true;
+			
 			widgets = new Widget[] {
 				Make(0, -150, "Key: " + curHotkey.BaseKey, 300, titleFont, BaseKeyClick),
-				Make(0, -100, "Modifiers:" + flags, 300, titleFont, ModifiersClick),
-				
-				MenuInputWidget.Create(game, 500, 30, curHotkey.Text, regularFont, new StringValidator())
-					.SetLocation(Anchor.Centre, Anchor.Centre, 0, -35),
+				Make(0, -100, "Modifiers:" + flags, 300, titleFont, ModifiersClick),			
+				input,
 				Make(-100, 10, "Input stays open: " + staysOpen, 300, titleFont, LeaveOpenClick),
 				
 				Make(0, 80, existed ? "Save changes" : "Add hotkey", 300, titleFont, SaveChangesClick),
 				Make(0, 130, existed ? "Remove hotkey" : "Cancel", 300, titleFont, RemoveHotkeyClick),				
 				MakeBack(false, titleFont, SwitchPause),
 			};
-			
-			((InputWidget)widgets[actionI]).ShowCaret = true;
-			widgets[actionI].OnClick = InputClick;
 		}
 		
 		public override void Dispose() {
 			game.Keyboard.KeyRepeat = false;
-			focusWidget = null;
+			selectedI = -1;
 			base.Dispose();
 		}
 		
-		ButtonWidget Make(int x, int y, string text, int width,
-		                  Font font, SimpleClickHandler onClick) {
-			return ButtonWidget.Create(game, width, text, font, LeftOnly(onClick))
+		ButtonWidget Make(int x, int y, string text, int width, Font font, ClickHandler onClick) {
+			return ButtonWidget.Create(game, width, text, font, onClick)
 				.SetLocation(Anchor.Centre, Anchor.Centre, x, y);
-		}
-		
-		void InputClick(Game game, Widget widget, MouseButton btn, int x, int y) {
-			if (btn != MouseButton.Left) return;
-			widget.HandlesMouseDown(x, y, btn);
 		}
 		
 		void LeaveOpenClick(Game game, Widget widget) {
@@ -105,7 +95,7 @@ namespace ClassicalSharp.Gui.Screens {
 			curHotkey.StaysOpen = !curHotkey.StaysOpen;
 			string staysOpen = curHotkey.StaysOpen ? "ON" : "OFF";
 			staysOpen = "Input stays open: " + staysOpen;
-			SetButton(widgets[3], staysOpen);
+			SetButton(3, staysOpen);
 		}
 		
 		void SaveChangesClick(Game game, Widget widget) {
@@ -133,50 +123,50 @@ namespace ClassicalSharp.Gui.Screens {
 		}
 		
 		void BaseKeyClick(Game game, Widget widget) {
-			focusWidget = widgets[keyI];
-			SetButton(widgets[keyI], "Key: press a key..");
+			selectedI = keyI;
+			SetButton(keyI, "Key: press a key..");
 			supressNextPress = true;
 		}
 		
 		void ModifiersClick(Game game, Widget widget) {
-			focusWidget = widgets[modifyI];
-			SetButton(widgets[modifyI], "Modifiers: press a key..");
+			selectedI = modifyI;
+			SetButton(modifyI, "Modifiers: press a key..");
 			supressNextPress = true;
 		}
 		
 		void FocusKeyDown(Key key) {
-			if (focusWidget == widgets[keyI]) {
+			if (selectedI == keyI) {
 				curHotkey.BaseKey = key;
-				SetButton(widgets[keyI], "Key: " + curHotkey.BaseKey);
+				SetButton(keyI, "Key: " + curHotkey.BaseKey);
 				supressNextPress = true;
-			} else if (focusWidget == widgets[modifyI]) {
+			} else if (selectedI == modifyI) {
 				if (key == Key.ControlLeft || key == Key.ControlRight) curHotkey.Flags |= 1;
 				else if (key == Key.ShiftLeft || key == Key.ShiftRight) curHotkey.Flags |= 2;
 				else if (key == Key.AltLeft || key == Key.AltRight) curHotkey.Flags |= 4;
 				else curHotkey.Flags = 0;
 				
 				string flags = HotkeyListScreen.MakeFlagsString(curHotkey.Flags);
-				SetButton(widgets[modifyI], "Modifiers:" + flags);
+				SetButton(modifyI, "Modifiers:" + flags);
 				supressNextPress = true;
 			}
-			focusWidget = null;
+			selectedI = -1;
 		}
 		
 		void LostFocus() {
-			if (focusWidget == null) return;
+			if (selectedI == -1) return;
 			
-			if (focusWidget == widgets[keyI]) {
-				SetButton(widgets[keyI], "Key: " + curHotkey.BaseKey);
-			} else if (focusWidget == widgets[modifyI]) {
+			if (selectedI == keyI) {
+				SetButton(keyI, "Key: " + curHotkey.BaseKey);
+			} else if (selectedI == modifyI) {
 				string flags = HotkeyListScreen.MakeFlagsString(curHotkey.Flags);
-				SetButton(widgets[modifyI], "Modifiers:" + flags);
+				SetButton(modifyI, "Modifiers:" + flags);
 			}
-			focusWidget = null;
+			selectedI = -1;
 			supressNextPress = false;
 		}
 		
-		void SetButton(Widget widget, string text) {
-			((ButtonWidget)widget).SetText(text);
+		void SetButton(int i, string text) {
+			((ButtonWidget)widgets[i]).SetText(text);
 		}
 	}
 }

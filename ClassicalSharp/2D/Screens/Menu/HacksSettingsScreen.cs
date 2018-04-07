@@ -185,8 +185,7 @@ namespace ClassicalSharp.Gui.Screens {
 				.SetLocation(Anchor.Centre, Anchor.Centre, 0, 150);
 		}
 		
-		void DefaultButtonClick(Game game, Widget widget, MouseButton btn, int x, int y) {
-			if (btn != MouseButton.Left) return;
+		void DefaultButtonClick(Game game, Widget widget) {
 			int index = IndexOfWidget(activeButton);
 			string defValue = defaultValues[index];
 			

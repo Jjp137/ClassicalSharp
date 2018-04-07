@@ -324,13 +324,14 @@ namespace ClassicalSharp.Network.Protocols {
 			int value = reader.ReadInt32();
 			WorldEnv env = game.World.Env;
 			Utils.Clamp(ref value, -0xFFFFFF, 0xFFFFFF);
+			int maxBlock = BlockInfo.Count - 1;
 			
 			switch (type) {
 				case 0:
-					Utils.Clamp(ref value, 0, BlockInfo.MaxDefined);
+					Utils.Clamp(ref value, 0, maxBlock);
 					env.SetSidesBlock((BlockID)value); break;
 				case 1:
-					Utils.Clamp(ref value, 0, BlockInfo.MaxDefined);
+					Utils.Clamp(ref value, 0, maxBlock);
 					env.SetEdgeBlock((BlockID)value); break;
 				case 2:
 					env.SetEdgeLevel(value); break;
@@ -406,8 +407,8 @@ namespace ClassicalSharp.Network.Protocols {
 			BlockID order = reader.ReadBlock();
 			
 			game.Inventory.Remove(block);
-			if (order != 255) {
-				game.Inventory.Insert(order, block);
+			if (order != 255 && order != 0) {
+				game.Inventory.Map[order - 1] = block;
 			}
 		}
 		

@@ -45,7 +45,7 @@ namespace ClassicalSharp.Gui.Screens {
 				#endif
 				
 				// Other
-				ButtonWidget.Create(game, 120, "Quit game", titleFont, LeftOnly(QuitGame))
+				ButtonWidget.Create(game, 120, "Quit game", titleFont, QuitGame)
 					.SetLocation(Anchor.Max, Anchor.Max, 5, 5),
 				MakeBack(true, titleFont, SwitchGame),
 			};
@@ -53,13 +53,12 @@ namespace ClassicalSharp.Gui.Screens {
 		
 		void MakeClassic() {
 			widgets = new Widget[] {
-				MakeClassic(0, -100, "Options...",            SwitchClassicOptions),
-				MakeClassic(0,  -50, "Generate new level...", SwitchClassicGenLevel),
-				MakeClassic(0,    0, "Load level...",         SwitchLoadLevel),
-				MakeClassic(0,   50, "Save level...",         SwitchSaveLevel),
+				MakeClassic(-100, "Options...",            SwitchClassicOptions),
+				MakeClassic( -50, "Generate new level...", SwitchClassicGenLevel),
+				MakeClassic(   0, "Load level...",         SwitchLoadLevel),
+				MakeClassic(  50, "Save level...",         SwitchSaveLevel),
 				
-				game.ClassicMode ? null :
-					MakeClassic(0, 150, "Nostalgia options...", SwitchNostalgiaOptions),				
+				game.ClassicMode ? null : MakeClassic(150, "Nostalgia options...", SwitchNostalgiaOptions),				
 				MakeBack(400, "Back to game", 25, titleFont, SwitchGame),
 			};
 		}
@@ -80,20 +79,14 @@ namespace ClassicalSharp.Gui.Screens {
 			widgets[4].Disabled = !game.LocalPlayer.Hacks.CanAnyHacks; // select texture pack
 		}
 		
-		ButtonWidget Make(int dir, int y, string text, SimpleClickHandler onClick) {
-			return ButtonWidget.Create(game, 300, text, titleFont, LeftOnly(onClick))
+		ButtonWidget Make(int dir, int y, string text, ClickHandler onClick) {
+			return ButtonWidget.Create(game, 300, text, titleFont, onClick)
 				.SetLocation(Anchor.Centre, Anchor.Centre, dir * 160, y);
 		}
 		
-		ButtonWidget MakeClassic(int x, int y, string text, SimpleClickHandler onClick) {
-			return ButtonWidget.Create(game, 400, text, titleFont, LeftOnly(onClick))
-				.SetLocation(Anchor.Centre, Anchor.Centre, x, y);
-		}
-		
-		public override bool HandlesKeyDown(Key key) {
-			if (key == Key.Escape)
-				game.Gui.SetNewScreen(null);
-			return key < Key.F1 || key > Key.F35;
+		ButtonWidget MakeClassic(int y, string text, ClickHandler onClick) {
+			return ButtonWidget.Create(game, 400, text, titleFont, onClick)
+				.SetLocation(Anchor.Centre, Anchor.Centre, 0, y);
 		}
 		
 		public override void Dispose() {

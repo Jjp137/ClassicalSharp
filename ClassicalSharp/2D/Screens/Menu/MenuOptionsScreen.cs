@@ -46,16 +46,13 @@ namespace ClassicalSharp.Gui.Screens {
 		}
 		
 		public override bool HandlesKeyDown(Key key) {
-			if (key == Key.Escape) {
-				game.Gui.SetNewScreen(null);
-				return true;
-			} else if ((key == Key.Enter || key == Key.KeypadEnter) && input != null) {
-				ChangeSetting();
-				return true;
+			if (input != null) {
+				if (input.HandlesKeyDown(key)) return true;
+				if (key == Key.Enter || key == Key.KeypadEnter) {
+					ChangeSetting(); return true;
+				}
 			}
-			if (input == null)
-				return key < Key.F1 || key > Key.F35;
-			return input.HandlesKeyDown(key);
+			return base.HandlesKeyDown(key);
 		}
 		
 		public override bool HandlesKeyUp(Key key) {
@@ -163,14 +160,12 @@ namespace ClassicalSharp.Gui.Screens {
 			extendedHelp = null;
 		}
 		
-		void OnOKButtonClick(Game game, Widget widget, MouseButton btn, int x, int y) {
-			if (btn != MouseButton.Left) return;
+		void OnOKButtonClick(Game game, Widget widget) {
 			ChangeSetting();
 		}
 		
-		protected void OnButtonClick(Game game, Widget widget, MouseButton btn, int x, int y) {
+		protected void OnButtonClick(Game game, Widget widget) {
 			ButtonWidget button = widget as ButtonWidget;
-			if (btn != MouseButton.Left) return;
 			if (button == null) return;
 			DisposeExtendedHelp();
 			
@@ -193,7 +188,6 @@ namespace ClassicalSharp.Gui.Screens {
 			input = MenuInputWidget.Create(game, 400, 30, button.GetValue(game), regularFont, validator)
 				.SetLocation(Anchor.Centre, Anchor.Centre, 0, 110);
 			input.ShowCaret = true;
-			input.OnClick = InputClick;
 			
 			widgets[widgets.Length - 2] = input;
 			widgets[widgets.Length - 1] = ButtonWidget.Create(game, 40, "OK", titleFont, OnOKButtonClick)
@@ -201,11 +195,6 @@ namespace ClassicalSharp.Gui.Screens {
 
 			InputOpened();
 			UpdateDescription(activeButton);
-		}
-		
-		void InputClick(Game game, Widget widget, MouseButton btn, int x, int y) {
-			if (btn != MouseButton.Left) return;
-			widget.HandlesMouseDown(x, y, btn);
 		}
 		
 		void HandleEnumOption(ButtonWidget button, Type type) {

@@ -30,14 +30,14 @@ namespace ClassicalSharp.Gui.Screens {
 					.SetLocation(Anchor.Centre, Anchor.Centre, 0, 75),
 			};
 		}
+		
+		public override bool HandlesKeyDown(Key key) { return true; }
 
-		void GenLevelClick(Game g, Widget w, MouseButton btn, int x, int y) {
-			if (btn != MouseButton.Left) return;
+		void GenLevelClick(Game g, Widget w) {
 			game.Gui.SetNewScreen(new GenLevelScreen(game));
 		}
 		
-		void LoadLevelClick(Game g, Widget w, MouseButton btn, int x, int y) {
-			if (btn != MouseButton.Left) return;
+		void LoadLevelClick(Game g, Widget w) {
 			game.Gui.SetNewScreen(new LoadLevelScreen(game));
 		}
 	}

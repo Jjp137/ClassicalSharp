@@ -19,17 +19,12 @@ namespace ClassicalSharp.Gui.Screens {
 		}
 		
 		public override bool HandlesKeyDown(Key key) {
-			if (key == Key.Escape) {
-				game.Gui.SetNewScreen(null);
-				return true;
-			}
-			return selected == null ? (key < Key.F1 || key > Key.F35) :
-				selected.HandlesKeyDown(key);
+			if (selected != null && selected.HandlesKeyDown(key)) return true;
+			return base.HandlesKeyDown(key);
 		}
 		
 		public override bool HandlesKeyUp(Key key) {
-			return selected == null ? true :
-				selected.HandlesKeyUp(key);
+			return selected == null ? true : selected.HandlesKeyUp(key);
 		}
 		
 		public override void Init() {
@@ -67,7 +62,7 @@ namespace ClassicalSharp.Gui.Screens {
 				.SetLocation(Anchor.Centre, Anchor.Centre, 0, y);
 			
 			input.Active = false;
-			input.OnClick = InputClick;
+			input.MenuClick = InputClick;
 			return input;
 		}
 		
@@ -86,22 +81,19 @@ namespace ClassicalSharp.Gui.Screens {
 			base.Dispose();
 		}
 		
-		void InputClick(Game game, Widget widget, MouseButton btn, int x, int y) {
-			if (btn != MouseButton.Left) return;
+		void InputClick(Game game, Widget widget) {
 			if (selected != null) selected.ShowCaret = false;
 			
 			selected = (MenuInputWidget)widget;
-			selected.HandlesMouseDown(x, y, btn);
+			selected.HandlesMouseDown(game.Mouse.X, game.Mouse.Y, MouseButton.Left);
 			selected.ShowCaret = true;
 		}
 		
-		void GenFlatgrassClick(Game game, Widget widget, MouseButton btn, int x, int y) {
-			if (btn != MouseButton.Left) return;
+		void GenFlatgrassClick(Game game, Widget widget) {
 			GenerateMap(new FlatGrassGenerator());
 		}
 		
-		void GenNotchyClick(Game game, Widget widget, MouseButton btn, int x, int y) {
-			if (btn != MouseButton.Left) return;
+		void GenNotchyClick(Game game, Widget widget) {
 			GenerateMap(new NotchyGenerator());
 		}
 		
@@ -141,14 +133,6 @@ namespace ClassicalSharp.Gui.Screens {
 	public sealed class ClassicGenLevelScreen : MenuScreen {	
 		public ClassicGenLevelScreen(Game game) : base(game) { }
 		
-		public override bool HandlesKeyDown(Key key) {
-			if (key == Key.Escape) {
-				game.Gui.SetNewScreen(null);
-				return true;
-			}
-			return true;
-		}
-		
 		public override void Init() {
 			base.Init();
 			titleFont = new Font(game.FontName, 16, FontStyle.Bold);
@@ -168,17 +152,9 @@ namespace ClassicalSharp.Gui.Screens {
 			};
 		}
 		
-		void GenSmallClick(Game game, Widget widget, MouseButton btn, int x, int y) {
-			if (btn == MouseButton.Left) DoGen(128);
-		}
-		
-		void GenMediumClick(Game game, Widget widget, MouseButton btn, int x, int y) {
-			if (btn == MouseButton.Left) DoGen(256);
-		}
-		
-		void GenHugeClick(Game game, Widget widget, MouseButton btn, int x, int y) {
-			if (btn == MouseButton.Left) DoGen(512);
-		}
+		void GenSmallClick(Game game, Widget widget) { DoGen(128); }		
+		void GenMediumClick(Game game, Widget widget) { DoGen(256); }
+		void GenHugeClick(Game game, Widget widget) { DoGen(512); }
 		
 		void DoGen(int size) {
 			int seed = new Random().Next();

@@ -30,16 +30,16 @@ namespace Launcher {
 		}
 		
 		public static void SaveToOptions() {
-			Options.Set("launcher-back-col", BackgroundCol.ToRGBHexString());
-			Options.Set("launcher-btn-border-col", ButtonBorderCol.ToRGBHexString());
-			Options.Set("launcher-btn-fore-active-col", ButtonForeActiveCol.ToRGBHexString());
-			Options.Set("launcher-btn-fore-inactive-col", ButtonForeCol.ToRGBHexString());
-			Options.Set("launcher-btn-highlight-inactive-col", ButtonHighlightCol.ToRGBHexString());
+			Options.Set("launcher-back-col", BackgroundCol.ToHex());
+			Options.Set("launcher-btn-border-col", ButtonBorderCol.ToHex());
+			Options.Set("launcher-btn-fore-active-col", ButtonForeActiveCol.ToHex());
+			Options.Set("launcher-btn-fore-inactive-col", ButtonForeCol.ToHex());
+			Options.Set("launcher-btn-highlight-inactive-col", ButtonHighlightCol.ToHex());
 		}
 		
 		static void Get(string key, ref FastColour col) {
 			FastColour defaultCol = col;
-			string value = Options.Get(key);
+			string value = Options.Get(key, null);
 			if (String.IsNullOrEmpty(value)) return;
 			
 			if (!FastColour.TryParse(value, out col))

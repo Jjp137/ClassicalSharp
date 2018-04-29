@@ -13,11 +13,12 @@ namespace ClassicalSharp.GraphicsAPI {
 	public unsafe class OpenGLESApi : IGraphicsApi {
 		
 		public OpenGLESApi() {
+			MinZNear = 0.1f;
 			InitFields();
 			int texDims;
 			GL.GetInteger(All.MaxTextureSize, &texDims);
 			textureDims = texDims;
-			base.InitDynamicBuffers();
+			base.InitCommon();
 			// TODO: Support mipmaps
 			
 			setupBatchFuncCol4b = SetupVbPos3fCol4b;
@@ -329,7 +330,7 @@ namespace ClassicalSharp.GraphicsAPI {
 		}
 		
 		// Based on http://www.opentk.com/doc/graphics/save-opengl-rendering-to-disk
-		public override void TakeScreenshot(string output, int width, int height) {
+		public override void TakeScreenshot(Stream output, int width, int height) {
 			using (Bitmap bmp = Bitmap.CreateBitmap(width, height, Bitmap.Config.Argb8888)) { // ignore alpha component
 				using (FastBitmap fastBmp = new FastBitmap(bmp, true)) {
 					GL.ReadPixels(0, 0, width, height, All.BgraExt, All.UnsignedByte, fastBmp.Scan0);
@@ -342,8 +343,7 @@ namespace ClassicalSharp.GraphicsAPI {
 						}
 					}
 				}
-				using (FileStream fs = File.Create(output))
-					Platform.WriteBmp(bmp, fs);
+				Platform.WriteBmp(bmp, output);
 			}
 		}
 		

@@ -10,27 +10,40 @@ namespace ClassicalSharp.Gui.Screens {
 		
 		public override void Init() {
 			base.Init();
-			ContextRecreated();
-			MakeValidators();
+			validators = new MenuInputValidator[widgets.Length];
+			defaultValues = new string[widgets.Length];
+			
+			validators[2]    = new RealValidator(0.25f, 4f);
+			defaultValues[2] = "1";
+			validators[3]    = new RealValidator(0.25f, 4f);
+			defaultValues[3] = "1";
+			validators[6]    = new RealValidator(0.25f, 4f);
+			defaultValues[6] = "1";
+			validators[7]    = new IntegerValidator(0, 30);
+			defaultValues[7] = "10";
+			validators[9]    = new StringValidator();
+			defaultValues[9] = "Arial";
 		}
 		
 		protected override void ContextRecreated() {
-			ClickHandler onClick = OnButtonClick;
+			ClickHandler onClick = OnInputClick;
+			ClickHandler onBool = OnBoolClick;
+				
 			widgets = new Widget[] {
-				MakeOpt(-1, -150, "Black text shadows", onClick, GetShadows,   SetShadows),
-				MakeOpt(-1, -100, "Show FPS",           onClick, GetShowFPS,   SetShowFPS),
-				MakeOpt(-1, -50, "Hotbar scale",        onClick, GetHotbar,    SetHotbar),
-				MakeOpt(-1, 0, "Inventory scale",       onClick, GetInventory, SetInventory),
-				MakeOpt(-1, 50, "Tab auto-complete",    onClick, GetTabAuto,   SetTabAuto),
+				MakeOpt(-1, -150, "Black text shadows", onBool,  GetShadows,   SetShadows),
+				MakeOpt(-1, -100, "Show FPS",           onBool,  GetShowFPS,   SetShowFPS),
+				MakeOpt(-1,  -50, "Hotbar scale",       onClick, GetHotbar,    SetHotbar),
+				MakeOpt(-1,    0, "Inventory scale",    onClick, GetInventory, SetInventory),
+				MakeOpt(-1,   50, "Tab auto-complete",  onBool,  GetTabAuto,   SetTabAuto),
 
-				MakeOpt(1, -150, "Clickable chat",      onClick, GetClickable, SetClickable),
+				MakeOpt(1, -150, "Clickable chat",      onBool,  GetClickable, SetClickable),
 				MakeOpt(1, -100, "Chat scale",          onClick, GetChatScale, SetChatScale),
-				MakeOpt(1, -50, "Chat lines",           onClick, GetChatlines, SetChatlines),
-				MakeOpt(1, 0, "Use system font",        onClick, GetUseFont,   SetUseFont),
-				MakeOpt(1, 50, "Font",                  onClick, GetFont,      SetFont),
+				MakeOpt(1,  -50, "Chat lines",          onClick, GetChatlines, SetChatlines),
+				MakeOpt(1,    0, "Use system font",     onBool,  GetUseFont,   SetUseFont),
+				MakeOpt(1,   50, "Font",                onClick, GetFont,      SetFont),
 				
 				MakeBack(false, titleFont, SwitchOptions),
-				null, null,
+				null, null, null,
 			};
 		}
 		
@@ -90,22 +103,6 @@ namespace ClassicalSharp.Gui.Screens {
 			game.Gui.RefreshHud();
 			selectedI = -1;
 			HandlesMouseMove(game.Mouse.X, game.Mouse.Y);
-		}
-		
-		void MakeValidators() {
-			validators = new MenuInputValidator[] {
-				new BooleanValidator(),
-				new BooleanValidator(),
-				new RealValidator(0.25f, 4f),
-				new RealValidator(0.25f, 4f),
-				new BooleanValidator(),
-				
-				new BooleanValidator(),
-				new RealValidator(0.25f, 4f),
-				new IntegerValidator(0, 30),
-				new BooleanValidator(),
-				new StringValidator(),
-			};
 		}
 	}
 }

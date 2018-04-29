@@ -1,8 +1,6 @@
 ﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 using System;
-using System.Drawing;
 using ClassicalSharp.Gui.Widgets;
-using OpenTK.Input;
 
 namespace ClassicalSharp.Gui.Screens {
 	public class PauseScreen : MenuScreen {
@@ -12,7 +10,6 @@ namespace ClassicalSharp.Gui.Screens {
 		
 		public override void Init() {
 			base.Init();
-			titleFont = new Font(game.FontName, 16, FontStyle.Bold);
 			game.Events.HackPermissionsChanged += CheckHacksAllowed;
 			ContextRecreated();
 		}

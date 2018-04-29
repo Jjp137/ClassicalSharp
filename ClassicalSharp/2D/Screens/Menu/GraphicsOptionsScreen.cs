@@ -13,24 +13,34 @@ namespace ClassicalSharp.Gui.Screens {
 		
 		public override void Init() {
 			base.Init();
-			ContextRecreated();
-			MakeValidators();
+			validators = new MenuInputValidator[widgets.Length];
+			defaultValues = new string[widgets.Length];
+			
+			validators[0]    = new EnumValidator(typeof(FpsLimitMethod));
+			validators[1]    = new IntegerValidator(8, 4096);
+			defaultValues[1] = "512";
+			validators[3]    = new EnumValidator(typeof(NameMode));
+			validators[4]    = new EnumValidator(typeof(EntityShadow));
+			
 			MakeDescriptions();
 		}
 		
 		protected override void ContextRecreated() {
-			ClickHandler onClick = OnButtonClick;
+			ClickHandler onClick = OnInputClick;
+			ClickHandler onEnum = OnEnumClick;
+			ClickHandler onBool = OnBoolClick;
+			
 			widgets = new Widget[] {
-				MakeOpt(-1, -50, "FPS mode",         onClick, GetFPS,      SetFPS),
+				MakeOpt(-1, -50, "FPS mode",         onEnum,  GetFPS,      SetFPS),
 				MakeOpt(-1, 0, "View distance",      onClick, GetViewDist, SetViewDist),
-				MakeOpt(-1, 50, "Advanced lighting", onClick, GetSmooth,   SetSmooth),
+				MakeOpt(-1, 50, "Advanced lighting", onBool,  GetSmooth,   SetSmooth),
 				
-				MakeOpt(1, -50, "Names",             onClick, GetNames,    SetNames),
-				MakeOpt(1, 0, "Shadows",             onClick, GetShadows,  SetShadows),
-				MakeOpt(1, 50, "Mipmaps",            onClick, GetMipmaps,  SetMipmaps),
+				MakeOpt(1, -50, "Names",             onEnum,  GetNames,    SetNames),
+				MakeOpt(1, 0, "Shadows",             onEnum,  GetShadows,  SetShadows),
+				MakeOpt(1, 50, "Mipmaps",            onBool,  GetMipmaps,  SetMipmaps),
 				
 				MakeBack(false, titleFont, SwitchOptions),
-				null, null,
+				null, null, null,
 			};
 		}
 
@@ -40,9 +50,9 @@ namespace ClassicalSharp.Gui.Screens {
 		static string GetSmooth(Game g) { return GetBool(g.SmoothLighting); }
 		static void SetSmooth(Game g, string v) {
 			g.SmoothLighting = SetBool(v, OptionsKey.SmoothLighting);
-			ChunkMeshBuilder builder = g.MapRenderer.DefaultMeshBuilder();
-			g.MapRenderer.SetMeshBuilder(builder);
-			g.MapRenderer.Refresh();
+			ChunkMeshBuilder builder = g.ChunkUpdater.DefaultMeshBuilder();
+			g.ChunkUpdater.SetMeshBuilder(builder);
+			g.ChunkUpdater.Refresh();
 		}
 		
 		static string GetNames(Game g) { return g.Entities.NamesMode.ToString(); }
@@ -64,60 +74,37 @@ namespace ClassicalSharp.Gui.Screens {
 			g.Graphics.Mipmaps = SetBool(v, OptionsKey.Mipmaps);
 			
 			string url = g.World.TextureUrl;
-			if (url == null) {
-				TexturePack.ExtractDefault(g); return;
-			}
-			
-			using (Stream data = TextureCache.GetStream(url)) {
-				if (data == null) {
-					TexturePack.ExtractDefault(g); return;
-				}
-				
-				if (url.Contains(".zip")) {
-					TexturePack extractor = new TexturePack();
-					extractor.Extract(data, g);
-				} else {
-					TexturePack.ExtractTerrainPng(g, data, url);
-				}
-			}
-		}
-		
-		void MakeValidators() {
-			validators = new MenuInputValidator[] {
-				new EnumValidator(typeof(FpsLimitMethod)),
-				new IntegerValidator(8, 4096),
-				new BooleanValidator(),
-				
-				new EnumValidator(typeof(NameMode)),
-				new EnumValidator(typeof(EntityShadow)),
-				new BooleanValidator(),
-			};
+			// always force a reload from cache
+			g.World.TextureUrl = "~`#$_^*()@";
+			TexturePack.ExtractCurrent(g, url);
+			g.World.TextureUrl = url;
 		}
 		
 		void MakeDescriptions() {
-			descriptions = new string[widgets.Length][];
-			descriptions[0] = new string[] {
+			string[][] descs = new string[widgets.Length][];
+			descs[0] = new string[] {
 				"&eVSync: &fNumber of frames rendered is at most the monitor's refresh rate.",
 				"&e30/60/120 FPS: &f30/60/120 frames rendered at most each second.",
 				"&eNoLimit: &fRenders as many frames as possible each second.",
 				"&cUsing NoLimit mode is discouraged.",
 			};
-			descriptions[2] = new string[] {
+			descs[2] = new string[] {
 				"&cNote: &eSmooth lighting is still experimental and can heavily reduce performance.",
 			};
-			descriptions[3] = new string[] {
+			descs[3] = new string[] {
 				"&eNone: &fNo names of players are drawn.",
 				"&eHovered: &fName of the targeted player is drawn see-through.",
 				"&eAll: &fNames of all other players are drawn normally.",
 				"&eAllHovered: &fAll names of players are drawn see-through.",
 				"&eAllUnscaled: &fAll names of players are drawn see-through without scaling.",
 			};
-			descriptions[4] = new string[] {
+			descs[4] = new string[] {
 				"&eNone: &fNo entity shadows are drawn.",
 				"&eSnapToBlock: &fA square shadow is shown on block you are directly above.",
 				"&eCircle: &fA circular shadow is shown across the blocks you are above.",
 				"&eCircleAll: &fA circular shadow is shown underneath all entities.",
 			};
+			descriptions = descs;
 		}
 	}
 }

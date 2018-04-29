@@ -15,13 +15,13 @@ namespace ClassicalSharp.Audio {
 		Thread musicThread;
 		Game game;
 		
-		public void Init(Game game) {
+		void IGameComponent.Init(Game game) {
 			this.game = game;
-			string path = Path.Combine(Program.AppDirectory, "audio");
-			if (Directory.Exists(path))
-				files = Directory.GetFiles(path);
-			else
+			if (Platform.DirectoryExists("audio")) {
+				files = Platform.DirectoryFiles("audio");
+			} else {
 				files = new string[0];
+			}
 						
 			game.MusicVolume = GetVolume(OptionsKey.MusicVolume, OptionsKey.UseMusic);
 			SetMusic(game.MusicVolume);
@@ -39,10 +39,10 @@ namespace ClassicalSharp.Audio {
 			return volume;
 		}
 
-		public void Ready(Game game) { }
-		public void Reset(Game game) { }
-		public void OnNewMap(Game game) { }
-		public void OnNewMapLoaded(Game game) { }
+		void IGameComponent.Ready(Game game) { }
+		void IGameComponent.Reset(Game game) { }
+		void IGameComponent.OnNewMap(Game game) { }
+		void IGameComponent.OnNewMapLoaded(Game game) { }
 		
 		public void SetMusic(int volume) {
 			if (volume > 0) InitMusic();
@@ -75,10 +75,10 @@ namespace ClassicalSharp.Audio {
 			Random rnd = new Random();
 			while (!disposingMusic) {
 				string file = musicFiles[rnd.Next(0, musicFiles.Length)];
-				string path = Path.Combine(Program.AppDirectory, file);
 				Utils.LogDebug("playing music file: " + file);
 				
-				using (FileStream fs = File.OpenRead(path)) {
+				string path = Path.Combine("audio", file);
+				using (Stream fs = Platform.FileOpen(path)) {
 					OggContainer container = new OggContainer(fs);
 					try {
 						musicOut.SetVolume(game.MusicVolume / 100.0f);
@@ -88,7 +88,7 @@ namespace ClassicalSharp.Audio {
 						return;
 					} catch (Exception ex) {
 						ErrorHandler.LogError("AudioPlayer.DoMusicThread()", ex);
-						game.Chat.Add("&cError while trying to play music file " + Path.GetFileName(file));
+						game.Chat.Add("&cError while trying to play music file " + file);
 					}
 				}
 				if (disposingMusic) break;
@@ -110,7 +110,7 @@ namespace ClassicalSharp.Audio {
 		}
 		
 		bool disposingMusic;
-		public void Dispose() {
+		void IDisposable.Dispose() {
 			DisposeMusic();
 			DisposeSound();
 			musicHandle.Close();

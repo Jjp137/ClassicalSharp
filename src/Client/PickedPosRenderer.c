@@ -68,10 +68,10 @@ void PickedPosRenderer_ZQuad(Real32 z, Real32 x1, Real32 y1, Real32 x2, Real32 y
 	          v.Y = y1; *pickedPos_ptr++ = v;
 }
 
-void PickedPosRenderer_UpdateState(PickedPos* selected) {
+void PickedPosRenderer_Update(PickedPos* selected) {
 	pickedPos_ptr = pickedPos_vertices;
 	Vector3 delta;
-	Vector3_Subtract(&delta, &Game_CurrentCameraPos, &selected->Min);
+	Vector3_Sub(&delta, &Game_CurrentCameraPos, &selected->Min);
 	Real32 dist = Vector3_LengthSquared(&delta);
 
 	Real32 offset = 0.01f;
@@ -126,7 +126,7 @@ void PickedPosRenderer_UpdateState(PickedPos* selected) {
 	PickedPosRenderer_ZQuad(p2.Z, p1.X, p2.Y, p2.X, p2.Y - size);
 }
 
-IGameComponent PickedPosRenderer_MakeGameComponent(void) {
+IGameComponent PickedPosRenderer_MakeComponent(void) {
 	IGameComponent comp = IGameComponent_MakeEmpty();
 	comp.Init = PickedPosRenderer_Init;
 	comp.Free = PickedPosRenderer_Free;

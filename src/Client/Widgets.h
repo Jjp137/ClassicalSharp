@@ -25,22 +25,21 @@ void TextWidget_Create(TextWidget* widget, STRING_PURE String* text, FontDesc* f
 void TextWidget_SetText(TextWidget* widget, STRING_PURE String* text);
 
 
-typedef void (*ButtonWidget_Set)(STRING_TRANSIENT String* raw);
 typedef void (*ButtonWidget_Get)(STRING_TRANSIENT String* raw);
-
+typedef void (*ButtonWidget_Set)(STRING_PURE String* raw);
 typedef struct ButtonWidget_ {
 	Widget_Layout
 	Texture Texture;
 	Int32 DefaultHeight;
 	FontDesc Font;
 
-	String OptName;
+	const UInt8* OptName;
 	ButtonWidget_Get GetValue;
 	ButtonWidget_Set SetValue;
 	Int32 MinWidth, MinHeight;
 } ButtonWidget;
 
-void ButtonWidget_Create(ButtonWidget* widget, STRING_PURE String* text, Int32 minWidth, FontDesc* font, Widget_LeftClick onClick);
+void ButtonWidget_Create(ButtonWidget* widget, Int32 minWidth, STRING_PURE String* text, FontDesc* font, Widget_LeftClick onClick);
 void ButtonWidget_SetText(ButtonWidget* widget, STRING_PURE String* text);
 
 
@@ -148,7 +147,6 @@ MenuInputValidator MenuInputValidator_Integer(Int32 min, Int32 max);
 MenuInputValidator MenuInputValidator_Seed(void);
 MenuInputValidator MenuInputValidator_Real(Real32 min, Real32 max);
 MenuInputValidator MenuInputValidator_Path(void);
-MenuInputValidator MenuInputValidator_Boolean(void);
 MenuInputValidator MenuInputValidator_Enum(const UInt8** names, UInt32 namesCount);
 MenuInputValidator MenuInputValidator_String(void);
 
@@ -180,11 +178,11 @@ typedef struct TextGroupWidget_ {
 	FontDesc Font, UnderlineFont;
 	bool PlaceholderHeight[TEXTGROUPWIDGET_MAX_LINES];
 	UInt8 LineLengths[TEXTGROUPWIDGET_MAX_LINES];
-	Texture Textures[TEXTGROUPWIDGET_MAX_LINES];
-	UInt8 Buffer[String_BufferSize(TEXTGROUPWIDGET_MAX_LINES * TEXTGROUPWIDGET_LEN)];
+	Texture* Textures;
+	UInt8* Buffer;
 } TextGroupWidget;
 
-void TextGroupWidget_Create(TextGroupWidget* widget, Int32 linesCount, FontDesc* font, FontDesc* underlineFont);
+void TextGroupWidget_Create(TextGroupWidget* widget, Int32 linesCount, FontDesc* font, FontDesc* underlineFont, STRING_REF Texture* textures, STRING_REF UInt8* buffer);
 void TextGroupWidget_SetUsePlaceHolder(TextGroupWidget* widget, Int32 index, bool placeHolder);
 void TextGroupWidget_PushUpAndReplaceLast(TextGroupWidget* widget, STRING_PURE String* text);
 Int32 TextGroupWidget_UsedHeight(TextGroupWidget* widget);

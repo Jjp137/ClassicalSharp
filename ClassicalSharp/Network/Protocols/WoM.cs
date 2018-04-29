@@ -11,9 +11,15 @@ namespace ClassicalSharp.Network.Protocols {
 		
 		public WoMProtocol(Game game) : base(game) { }
 		
-		string womEnvIdentifier = "womenv_0";
-		int womCounter = 0;
-		internal bool sendWomId = false, sentWomId = false;
+		string womEnvIdentifier;
+		int womCounter;
+		bool sendWomId, sentWomId;
+		
+		public override void Reset() {
+			womEnvIdentifier = "womenv_0";
+			womCounter = 0;
+			sendWomId = false; sentWomId = false;
+		}
 
 		public override void Tick() {
 			Request item;
@@ -32,9 +38,8 @@ namespace ClassicalSharp.Network.Protocols {
 			string url = "http://" + host;
 			url = url.Replace("$U", game.Username);
 			
-			// NOTE: this (should, I did test this) ensure that if the user quickly changes to a
-			// different world, the environment settings from the last world are not loaded in the
-			// new world if the async 'get request' didn't complete before the new world was loaded.
+			// Ensure that if the user quickly changes to a different world, env settings from old world aren't
+			// applied in the new world if the async 'get env request' didn't complete before the old world was unloaded
 			womCounter++;
 			womEnvIdentifier = "womenv_" + womCounter;
 			game.Downloader.AsyncGetString(url, true, womEnvIdentifier);
@@ -59,13 +64,13 @@ namespace ClassicalSharp.Network.Protocols {
 				string value = line.Substring(sepIndex + 1).TrimStart();
 				
 				if (key == "environment.cloud") {
-					FastColour col = ParseWomColour(value, WorldEnv.DefaultCloudsColour);
+					FastColour col = ParseWomColour(value, WorldEnv.DefaultCloudsCol);
 					game.World.Env.SetCloudsColour(col);
 				} else if (key == "environment.sky") {
-					FastColour col = ParseWomColour(value, WorldEnv.DefaultSkyColour);
+					FastColour col = ParseWomColour(value, WorldEnv.DefaultSkyCol);
 					game.World.Env.SetSkyColour(col);
 				} else if (key == "environment.fog") {
-					FastColour col = ParseWomColour(value, WorldEnv.DefaultFogColour);
+					FastColour col = ParseWomColour(value, WorldEnv.DefaultFogCol);
 					game.World.Env.SetFogColour(col);
 				} else if (key == "environment.level") {
 					int waterLevel = 0;

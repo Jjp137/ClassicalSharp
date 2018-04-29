@@ -1,8 +1,6 @@
 ﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 using System;
-using System.Drawing;
 using ClassicalSharp.Gui.Widgets;
-using ClassicalSharp.Singleplayer;
 
 namespace ClassicalSharp.Gui.Screens {
 	public sealed class NostalgiaScreen : MenuOptionsScreen {
@@ -10,40 +8,23 @@ namespace ClassicalSharp.Gui.Screens {
 		public NostalgiaScreen(Game game) : base(game) {
 		}
 		
-		public override void Init() {
-			base.Init();
-			ContextRecreated();
-			
-			validators = new MenuInputValidator[] {
-				new BooleanValidator(),
-				new BooleanValidator(),
-				new BooleanValidator(),
-				new BooleanValidator(),
-				new BooleanValidator(),
-				
-				new BooleanValidator(),
-				new BooleanValidator(),
-				new BooleanValidator(),
-			};
-		}
-		
 		protected override void ContextRecreated() {
-			ClickHandler onClick = OnButtonClick;
+			ClickHandler onBool = OnBoolClick;
+			
 			widgets = new Widget[] {
-				MakeOpt(-1, -150, "Classic hand model",  onClick, GetHand,   SetHand),
-				MakeOpt(-1, -100, "Classic walk anim",   onClick, GetAnim,   SetAnim),
-				MakeOpt(-1, -50, "Classic gui textures", onClick, GetGui,    SetGui),
-				MakeOpt(-1, 0, "Classic player list",    onClick, GetList,   SetList),
-				MakeOpt(-1, 50, "Classic options",       onClick, GetOpts,   SetOpts),
+				MakeOpt(-1, -150, "Classic hand model",  onBool, GetHand,   SetHand),
+				MakeOpt(-1, -100, "Classic walk anim",   onBool, GetAnim,   SetAnim),
+				MakeOpt(-1, -50, "Classic gui textures", onBool, GetGui,    SetGui),
+				MakeOpt(-1, 0, "Classic player list",    onBool, GetList,   SetList),
+				MakeOpt(-1, 50, "Classic options",       onBool, GetOpts,   SetOpts),
 
-				MakeOpt(1, -150, "Allow custom blocks",  onClick, GetCustom, SetCustom),
-				MakeOpt(1, -100, "Use CPE",              onClick, GetCPE,    SetCPE),
-				MakeOpt(1, -50, "Use server textures",   onClick, GetTexs,   SetTexs),
+				MakeOpt(1, -150, "Allow custom blocks",  onBool, GetCustom, SetCustom),
+				MakeOpt(1, -100, "Use CPE",              onBool, GetCPE,    SetCPE),
+				MakeOpt(1, -50, "Use server textures",   onBool, GetTexs,   SetTexs),
 
-				TextWidget.Create(game, "&eButtons on the right require restarting game", regularFont)
+				TextWidget.Create(game, "&eButtons on the right require restarting game", textFont)
 					.SetLocation(Anchor.Centre, Anchor.Centre, 0, 100),
 				MakeBack(false, titleFont, SwitchBack),
-				null, null,
 			};
 		}
 		
@@ -65,14 +46,14 @@ namespace ClassicalSharp.Gui.Screens {
 		static string GetOpts(Game g) { return GetBool(g.UseClassicOptions); }
 		static void SetOpts(Game g, string v) { g.UseClassicOptions = SetBool(v, OptionsKey.UseClassicOptions); }
 		
-		static string GetCustom(Game g) { return GetBool(g.UseCustomBlocks); }
-		static void SetCustom(Game g, string v) { g.UseCustomBlocks = SetBool(v, OptionsKey.UseCustomBlocks); }
+		static string GetCustom(Game g) { return GetBool(g.AllowCustomBlocks); }
+		static void SetCustom(Game g, string v) { g.AllowCustomBlocks = SetBool(v, OptionsKey.UseCustomBlocks); }
 		
 		static string GetCPE(Game g) { return GetBool(g.UseCPE); }
 		static void SetCPE(Game g, string v) { g.UseCPE = SetBool(v, OptionsKey.UseCPE); }
 		
-		static string GetTexs(Game g) { return GetBool(g.UseServerTextures); }
-		static void SetTexs(Game g, string v) { g.UseServerTextures = SetBool(v, OptionsKey.UseServerTextures); }
+		static string GetTexs(Game g) { return GetBool(g.AllowServerTextures); }
+		static void SetTexs(Game g, string v) { g.AllowServerTextures = SetBool(v, OptionsKey.UseServerTextures); }
 		
 		static void SwitchBack(Game g, Widget w) {
 			if (g.UseClassicOptions) {

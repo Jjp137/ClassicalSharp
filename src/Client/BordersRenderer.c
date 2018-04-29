@@ -47,9 +47,8 @@ void BordersRenderer_RenderSides(Real64 delta) {
 }
 
 void BordersRenderer_RenderEdges(Real64 delta) {
-	if (borders_edgesVb == NULL) return;
 	BlockID block = WorldEnv_EdgeBlock;
-	BordersRenderer_SetupState(block, borders_sideTexId, borders_sidesVb);
+	BordersRenderer_SetupState(block, borders_edgeTexId, borders_edgesVb);
 
 	/* Do not draw water when we cannot see it. */
 	/* Fixes some 'depth bleeding through' issues with 16 bit depth buffers on large maps. */
@@ -181,7 +180,7 @@ void BordersRenderer_RebuildSides(Int32 y, Int32 axisSize) {
 	VertexP3fT2fC4b v[4096];
 	VertexP3fT2fC4b* ptr = v;
 	if (borders_sidesVertices > 4096) {
-		ptr = Platform_MemAlloc(borders_sidesVertices * sizeof(VertexP3fT2fC4b));
+		ptr = Platform_MemAlloc(borders_sidesVertices, sizeof(VertexP3fT2fC4b));
 		if (ptr == NULL) ErrorHandler_Fail("BordersRenderer_Sides - failed to allocate memory");
 	}
 	VertexP3fT2fC4b* temp = ptr;
@@ -207,7 +206,7 @@ void BordersRenderer_RebuildSides(Int32 y, Int32 axisSize) {
 	BordersRenderer_DrawX(World_Width, 0, World_Length, y1, y2, axisSize, col, &temp);
 
 	borders_sidesVb = Gfx_CreateVb(v, VERTEX_FORMAT_P3FT2FC4B, borders_sidesVertices);
-	if (borders_sidesVertices > 4096) Platform_MemFree(ptr);
+	if (borders_sidesVertices > 4096) Platform_MemFree(&ptr);
 }
 
 void BordersRenderer_RebuildEdges(Int32 y, Int32 axisSize) {
@@ -224,7 +223,7 @@ void BordersRenderer_RebuildEdges(Int32 y, Int32 axisSize) {
 	VertexP3fT2fC4b v[4096];
 	VertexP3fT2fC4b* ptr = v;
 	if (borders_edgesVertices > 4096) {
-		ptr = Platform_MemAlloc(borders_edgesVertices * sizeof(VertexP3fT2fC4b));
+		ptr = Platform_MemAlloc(borders_edgesVertices, sizeof(VertexP3fT2fC4b));
 		if (ptr == NULL) ErrorHandler_Fail("BordersRenderer_Edges - failed to allocate memory");
 	}
 	VertexP3fT2fC4b* temp = ptr;
@@ -241,7 +240,7 @@ void BordersRenderer_RebuildEdges(Int32 y, Int32 axisSize) {
 	}
 
 	borders_edgesVb = Gfx_CreateVb(ptr, VERTEX_FORMAT_P3FT2FC4B, borders_edgesVertices);
-	if (borders_edgesVertices > 4096) Platform_MemFree(ptr);
+	if (borders_edgesVertices > 4096) Platform_MemFree(&ptr);
 }
 
 
@@ -271,7 +270,7 @@ void BordersRenderer_ContextRecreated(void* obj) {
 }
 
 void BordersRenderer_ResetSidesAndEdges(void) {
-	BordersRenderer_CalculateRects((Int32)Game_ViewDistance);
+	BordersRenderer_CalculateRects(Game_ViewDistance);
 	BordersRenderer_ContextRecreated(NULL);
 }
 void BordersRenderer_ResetSidesAndEdges_Handler(void* obj) {
@@ -300,7 +299,7 @@ void BordersRenderer_UseLegacyMode(bool legacy) {
 }
 
 void BordersRenderer_Init(void) {
-	Event_RegisterInt32(&WorldEvents_EnvVarChanged,    NULL, BordersRenderer_EnvVariableChanged);
+	Event_RegisterInt(&WorldEvents_EnvVarChanged,    NULL, BordersRenderer_EnvVariableChanged);
 	Event_RegisterVoid(&GfxEvents_ViewDistanceChanged, NULL, BordersRenderer_ResetSidesAndEdges_Handler);
 	Event_RegisterVoid(&TextureEvents_AtlasChanged,    NULL, BordersRenderer_ResetTextures);
 	Event_RegisterVoid(&GfxEvents_ContextLost,         NULL, BordersRenderer_ContextLost);
@@ -309,7 +308,7 @@ void BordersRenderer_Init(void) {
 
 void BordersRenderer_Free(void) {
 	BordersRenderer_ContextLost(NULL);
-	Event_UnregisterInt32(&WorldEvents_EnvVarChanged,    NULL, BordersRenderer_EnvVariableChanged);
+	Event_UnregisterInt(&WorldEvents_EnvVarChanged,    NULL, BordersRenderer_EnvVariableChanged);
 	Event_UnregisterVoid(&GfxEvents_ViewDistanceChanged, NULL, BordersRenderer_ResetSidesAndEdges_Handler);
 	Event_UnregisterVoid(&TextureEvents_AtlasChanged,    NULL, BordersRenderer_ResetTextures);
 	Event_UnregisterVoid(&GfxEvents_ContextLost,         NULL, BordersRenderer_ContextLost);
@@ -324,7 +323,7 @@ void BordersRenderer_Reset(void) {
 }
 
 
-IGameComponent BordersRenderer_MakeGameComponent(void) {
+IGameComponent BordersRenderer_MakeComponent(void) {
 	IGameComponent comp = IGameComponent_MakeEmpty();
 	comp.Init = BordersRenderer_Init;
 	comp.Free = BordersRenderer_Free;

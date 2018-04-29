@@ -7,31 +7,42 @@ namespace ClassicalSharp.GraphicsAPI {
 	/// <summary> Abstracts a 3D graphics rendering API. </summary>
 	public abstract unsafe partial class IGraphicsApi {
 		
-		protected void InitDynamicBuffers() {
+		public int defaultIb;
+		
+		protected void InitCommon() {
 			quadVb = CreateDynamicVb(VertexFormat.P3fC4b, 4);
 			texVb = CreateDynamicVb(VertexFormat.P3fT2fC4b, 4);
+			
+			const int maxIndices = 65536 / 4 * 6;
+			ushort* indices = stackalloc ushort[maxIndices];
+			MakeIndices(indices, maxIndices);
+			defaultIb = CreateIb((IntPtr)indices, maxIndices);
+		}
+		
+		protected void DisposeCommon() {
+			DeleteVb(ref quadVb);
+			DeleteVb(ref texVb);
+			DeleteIb(ref defaultIb);
 		}
 		
 		public virtual void Dispose() {
-			DeleteVb(ref quadVb);
-			DeleteVb(ref texVb);
+			DisposeCommon();
 		}
 		
 		public void LoseContext(string reason) {
 			LostContext = true;
 			Utils.LogDebug("Lost graphics context" + reason);
-			if (ContextLost != null) ContextLost();
 			
-			DeleteVb(ref quadVb);
-			DeleteVb(ref texVb);
+			if (ContextLost != null) ContextLost();
+			DisposeCommon();
 		}
 		
 		public void RecreateContext() {
 			LostContext = false;
 			Utils.LogDebug("Recreating graphics context");
-			if (ContextRecreated != null) ContextRecreated();
 			
-			InitDynamicBuffers();
+			if (ContextRecreated != null) ContextRecreated();		
+			InitCommon();
 		}
 		
 		
@@ -66,25 +77,29 @@ namespace ClassicalSharp.GraphicsAPI {
 		internal int quadVb;
 		public virtual void Draw2DQuad(int x, int y, int width, int height,
 		                               FastColour col) {
-			int c = col.Pack();
-			quadVerts[0] = new VertexP3fC4b(x, y, 0, c);
-			quadVerts[1] = new VertexP3fC4b(x + width, y, 0, c);
-			quadVerts[2] = new VertexP3fC4b(x + width, y + height, 0, c);
-			quadVerts[3] = new VertexP3fC4b(x, y + height, 0, c);
+			VertexP3fC4b[] verts = quadVerts;
+			VertexP3fC4b v; v.Z = 0; v.Colour = col.Pack();
+			
+			v.X = x;         v.Y = y;          verts[0] = v;
+			v.X = x + width;                   verts[1] = v;
+			                 v.Y = y + height; verts[2] = v;
+			v.X = x;                           verts[3] = v;
 			SetBatchFormat(VertexFormat.P3fC4b);
-			UpdateDynamicVb_IndexedTris(quadVb, quadVerts, 4);
+			UpdateDynamicVb_IndexedTris(quadVb, verts, 4);
 		}
 		
 		public virtual void Draw2DQuad(int x, int y, int width, int height,
 		                               FastColour topCol, FastColour bottomCol) {
-			int c = topCol.Pack();
-			quadVerts[0] = new VertexP3fC4b(x, y, 0, c);
-			quadVerts[1] = new VertexP3fC4b(x + width, y, 0, c);
-			c = bottomCol.Pack();
-			quadVerts[2] = new VertexP3fC4b(x + width, y + height, 0, c);
-			quadVerts[3] = new VertexP3fC4b(x, y + height, 0, c);
+			VertexP3fC4b[] verts = quadVerts;
+			VertexP3fC4b v; v.Z = 0; v.Colour = topCol.Pack();
+			v.X = x;         v.Y = y;          verts[0] = v;
+			v.X = x + width;                   verts[1] = v;
+			
+			v.Colour = bottomCol.Pack();
+			                 v.Y = y + height; verts[2] = v;
+			v.X = x;                           verts[3] = v;
 			SetBatchFormat(VertexFormat.P3fC4b);
-			UpdateDynamicVb_IndexedTris(quadVb, quadVerts, 4);
+			UpdateDynamicVb_IndexedTris(quadVb, verts, 4);
 		}
 		
 		internal VertexP3fT2fC4b[] texVerts = new VertexP3fT2fC4b[4];
@@ -109,7 +124,7 @@ namespace ClassicalSharp.GraphicsAPI {
 			VertexP3fT2fC4b v; v.Z = 0; v.Colour = col;
 			v.X = x1; v.Y = y1; v.U = tex.U1; v.V = tex.V1; vertices[index++] = v;
 			v.X = x2;           v.U = tex.U2;               vertices[index++] = v;
-			v.Y = y2;                         v.V = tex.V2; vertices[index++] = v;
+			          v.Y = y2;               v.V = tex.V2; vertices[index++] = v;
 			v.X = x1;           v.U = tex.U1;               vertices[index++] = v;
 		}
 		bool hadFog;
@@ -142,13 +157,6 @@ namespace ClassicalSharp.GraphicsAPI {
 			DepthTest = true;
 			AlphaBlending = false;
 			if (hadFog) Fog = true;
-		}
-		
-		internal unsafe int MakeDefaultIb() {
-			const int maxIndices = 65536 / 4 * 6;
-			ushort* indices = stackalloc ushort[maxIndices];
-			MakeIndices(indices, maxIndices);
-			return CreateIb((IntPtr)indices, maxIndices);
 		}
 		
 		internal unsafe void MakeIndices(ushort* indices, int iCount) {

@@ -98,8 +98,7 @@ void Window_SetHiddenBorder(bool hidden) {
 }
 
 void Window_EnableMouseTracking(void) {
-	TRACKMOUSEEVENT me;
-	Platform_MemSet(&me, 0, sizeof(TRACKMOUSEEVENT));
+	TRACKMOUSEEVENT me = { 0 };
 	me.cbSize = sizeof(TRACKMOUSEEVENT);
 	me.hwndTrack = win_Handle;
 	me.dwFlags = TME_LEAVE;
@@ -176,7 +175,7 @@ Key Window_MapKey(WPARAM key) {
 	case VK_LEFT: return Key_Left;
 	case VK_RIGHT: return Key_Right;
 	}
-	return Key_Unknown;
+	return Key_None;
 }
 
 LRESULT CALLBACK Window_Procedure(HWND handle, UINT message, WPARAM wParam, LPARAM lParam) {
@@ -241,9 +240,9 @@ LRESULT CALLBACK Window_Procedure(HWND handle, UINT message, WPARAM wParam, LPAR
 	case WM_STYLECHANGED:
 		if (wParam == GWL_STYLE) {
 			DWORD style = ((STYLESTRUCT*)lParam)->styleNew;
-			if ((style & WS_POPUP) != 0) {
+			if (style & WS_POPUP) {
 				win_hiddenBorder = true;
-			} else if ((style & WS_THICKFRAME) != 0) {
+			} else if (style & WS_THICKFRAME) {
 				win_hiddenBorder = false;
 			}
 		}
@@ -265,8 +264,9 @@ LRESULT CALLBACK Window_Procedure(HWND handle, UINT message, WPARAM wParam, LPAR
 
 
 	case WM_CHAR:
-		keyChar = Convert_UnicodeToCP437((UInt16)wParam);
-		Event_RaiseInt32(&KeyEvents_Press, keyChar);
+		if (Convert_TryUnicodeToCP437((UInt16)wParam, &keyChar)) {
+			Event_RaiseInt(&KeyEvents_Press, keyChar);
+		}
 		break;
 
 	case WM_MOUSEMOVE:
@@ -294,7 +294,7 @@ LRESULT CALLBACK Window_Procedure(HWND handle, UINT message, WPARAM wParam, LPAR
 		break;
 
 	case WM_MOUSEWHEEL:
-		wheel_delta = HIWORD(wParam) / (Real32)WHEEL_DELTA;
+		wheel_delta = ((short)HIWORD(wParam)) / (Real32)WHEEL_DELTA;
 		Mouse_SetWheel(Mouse_Wheel + wheel_delta);
 		return 0;
 
@@ -343,8 +343,8 @@ LRESULT CALLBACK Window_Procedure(HWND handle, UINT message, WPARAM wParam, LPAR
 			/* The behavior of this key is very strange. Unlike Control and Alt, there is no extended bit
 			to distinguish between left and right keys. Moreover, pressing both keys and releasing one
 			may result in both keys being held down (but not always).*/
-			lShiftDown = (GetKeyState(VK_LSHIFT) >> 15) == 1;
-			rShiftDown = (GetKeyState(VK_RSHIFT) >> 15) == 1;
+			lShiftDown = ((USHORT)GetKeyState(VK_LSHIFT)) >> 15;
+			rShiftDown = ((USHORT)GetKeyState(VK_RSHIFT)) >> 15;
 
 			if (!pressed || lShiftDown != rShiftDown) {
 				Key_SetPressed(Key_ShiftLeft, lShiftDown);
@@ -378,7 +378,7 @@ LRESULT CALLBACK Window_Procedure(HWND handle, UINT message, WPARAM wParam, LPAR
 
 		default:
 			mappedKey = Window_MapKey(wParam);
-			if (mappedKey != Key_Unknown) {
+			if (mappedKey != Key_None) {
 				Key_SetPressed(mappedKey, pressed);
 			}
 			return 0;
@@ -430,8 +430,7 @@ void Window_Create(Int32 x, Int32 y, Int32 width, Int32 height, STRING_REF Strin
 	RECT rect; rect.left = x; rect.top = y; rect.right = x + width; rect.bottom = y + height;
 	AdjustWindowRectEx(&rect, win_Style, false, win_StyleEx);
 
-	WNDCLASSEXA wc;
-	Platform_MemSet(&wc, 0, sizeof(WNDCLASSEXA));
+	WNDCLASSEXA wc = { 0 };
 	wc.cbSize = sizeof(WNDCLASSEXA);
 	wc.style = CS_OWNDC;
 	wc.hInstance = win_Instance;
@@ -478,16 +477,16 @@ void Window_GetClipboardText(STRING_TRANSIENT String* value) {
 		if (hGlobal == NULL) { CloseClipboard(); return; }
 		LPVOID src = GlobalLock(hGlobal);
 
-		/* TODO: Trim space / tabs from start and end of clipboard text */
+		UInt8 c;
 		if (isUnicode) {
 			UInt16* text = (UInt16*)src;
-			while (*text != NULL) {
-				String_Append(value, Convert_UnicodeToCP437(*text)); text++;
+			for (; *text != NULL; text++) {
+				if (Convert_TryUnicodeToCP437(*text, &c)) String_Append(value, c);
 			}
 		} else {
 			UInt8* text = (UInt8*)src;
-			while (*text != NULL) {
-				String_Append(value, *text); text++;
+			for (; *text != NULL; text++) {
+				if (Convert_TryUnicodeToCP437(*text, &c)) String_Append(value, c);
 			}
 		}
 
@@ -500,7 +499,6 @@ void Window_GetClipboardText(STRING_TRANSIENT String* value) {
 void Window_SetClipboardText(STRING_PURE String* value) {
 	/* retry up to 10 times*/
 	Int32 i;
-	value->length = 0;
 	for (i = 0; i < 10; i++) {
 		if (!OpenClipboard(win_Handle)) {
 			Platform_ThreadSleep(100);
@@ -664,8 +662,12 @@ Point2D Window_PointToClient(Point2D point) {
 	return Point2D_Make(p.x, p.y);
 }
 
-Point2D Window_PointToScreen(Point2D p) {
-	ErrorHandler_Fail("PointToScreen NOT IMPLEMENTED");
+Point2D Window_PointToScreen(Point2D point) {
+	POINT p; p.x = point.X; p.y = point.Y;
+	if (!ClientToScreen(win_Handle, &p)) {
+		ErrorHandler_FailWithCode(GetLastError(), "Converting point from screen to client coordinates");
+	}
+	return Point2D_Make(p.x, p.y);
 }
 
 void Window_ProcessEvents(void) {
@@ -701,8 +703,7 @@ void Window_SetCursorVisible(bool visible) {
 void GLContext_SelectGraphicsMode(GraphicsMode mode) {
 	ColorFormat color = mode.Format;
 
-	PIXELFORMATDESCRIPTOR pfd;
-	Platform_MemSet(&pfd, 0, sizeof(PIXELFORMATDESCRIPTOR));
+	PIXELFORMATDESCRIPTOR pfd = { 0 };
 	pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
 	pfd.nVersion = 1;
 	pfd.dwFlags = PFD_SUPPORT_OPENGL | PFD_DRAW_TO_WINDOW;
@@ -741,7 +742,7 @@ typedef BOOL (WINAPI *FN_WGLSWAPINTERVAL)(int interval);
 typedef int (WINAPI *FN_WGLGETSWAPINTERVAL)(void);
 FN_WGLSWAPINTERVAL wglSwapIntervalEXT;
 FN_WGLGETSWAPINTERVAL wglGetSwapIntervalEXT;
-bool GLContext_vSync;
+bool GLContext_supports_vSync;
 
 void GLContext_Init(GraphicsMode mode) {
 	GLContext_SelectGraphicsMode(mode);
@@ -760,7 +761,7 @@ void GLContext_Init(GraphicsMode mode) {
 
 	wglGetSwapIntervalEXT = (FN_WGLGETSWAPINTERVAL)GLContext_GetAddress("wglGetSwapIntervalEXT");
 	wglSwapIntervalEXT = (FN_WGLSWAPINTERVAL)GLContext_GetAddress("wglSwapIntervalEXT");
-	GLContext_vSync = wglGetSwapIntervalEXT != NULL && wglSwapIntervalEXT != NULL;
+	GLContext_supports_vSync = wglGetSwapIntervalEXT != NULL && wglSwapIntervalEXT != NULL;
 }
 
 void GLContext_Update(void) { }
@@ -783,10 +784,10 @@ void GLContext_SwapBuffers(void) {
 }
 
 bool GLContext_GetVSync(void) {
-	return GLContext_vSync && wglGetSwapIntervalEXT();
+	return GLContext_supports_vSync && wglGetSwapIntervalEXT();
 }
 
 void GLContext_SetVSync(bool enabled) {
-	if (GLContext_vSync) wglSwapIntervalEXT(enabled ? 1 : 0);
+	if (GLContext_supports_vSync) wglSwapIntervalEXT(enabled ? 1 : 0);
 }
 #endif

@@ -1,4 +1,4 @@
-#include "EntityComponents.h"
+﻿#include "EntityComponents.h"
 #include "ExtMath.h"
 #include "World.h"
 #include "Block.h"
@@ -14,7 +14,11 @@
 #include "ModelCache.h"
 #include "Physics.h"
 #include "IModel.h"
+#include "Audio.h"
 
+/*########################################################################################################################*
+*----------------------------------------------------AnimatedComponent----------------------------------------------------*
+*#########################################################################################################################*/
 #define ANIM_MAX_ANGLE (110 * MATH_DEG2RAD)
 #define ANIM_ARM_MAX (60.0f * MATH_DEG2RAD)
 #define ANIM_LEG_MAX (80.0f * MATH_DEG2RAD)
@@ -32,9 +36,9 @@ void AnimatedComp_DoTilt(Real32* tilt, bool reduce) {
 }
 
 void AnimatedComp_PerpendicularAnim(AnimatedComp* anim, Real32 flapSpeed, Real32 idleXRot, Real32 idleZRot, bool left) {
-	Real32 verAngle = 0.5f + 0.5f * Math_Sin(anim->WalkTime * flapSpeed);
+	Real32 verAngle = 0.5f + 0.5f * Math_SinF(anim->WalkTime * flapSpeed);
 	Real32 zRot = -idleZRot - verAngle * anim->Swing * ANIM_MAX_ANGLE;
-	Real32 horAngle = Math_Cos(anim->WalkTime) * anim->Swing * ANIM_ARM_MAX * 1.5f;
+	Real32 horAngle = Math_CosF(anim->WalkTime) * anim->Swing * ANIM_ARM_MAX * 1.5f;
 	Real32 xRot = idleXRot + horAngle;
 
 	if (left) {
@@ -55,12 +59,13 @@ void AnimatedComp_Init(AnimatedComp* anim) {
 	anim->BobStrength = 1.0f; anim->BobStrengthO = 1.0f; anim->BobStrengthN = 1.0f;
 }
 
-void AnimatedComp_Update(AnimatedComp* anim, Vector3 oldPos, Vector3 newPos, Real64 delta, bool onGround) {
+void AnimatedComp_Update(Entity* entity, Vector3 oldPos, Vector3 newPos, Real64 delta) {
+	AnimatedComp* anim = &entity->Anim;
 	anim->WalkTimeO = anim->WalkTimeN;
 	anim->SwingO    = anim->SwingN;
 	Real32 dx = newPos.X - oldPos.X;
 	Real32 dz = newPos.Z - oldPos.Z;
-	Real32 distance = Math_Sqrt(dx * dx + dz * dz);
+	Real32 distance = Math_SqrtF(dx * dx + dz * dz);
 
 	if (distance > 0.05f) {
 		Real32 walkDelta = distance * 2 * (Real32)(20 * delta);
@@ -75,38 +80,41 @@ void AnimatedComp_Update(AnimatedComp* anim, Vector3 oldPos, Vector3 newPos, Rea
 	anim->BobStrengthO = anim->BobStrengthN;
 	Int32 i;
 	for (i = 0; i < 3; i++) {
-		AnimatedComp_DoTilt(&anim->BobStrengthN, !Game_ViewBobbing || !onGround);
+		AnimatedComp_DoTilt(&anim->BobStrengthN, !Game_ViewBobbing || !entity->OnGround);
 	}
 }
 
-
-void AnimatedComp_GetCurrent(AnimatedComp* anim, Real32 t, bool calcHumanAnims) {
+void AnimatedComp_GetCurrent(Entity* entity, Real32 t) {
+	AnimatedComp* anim = &entity->Anim;
 	anim->Swing = Math_Lerp(anim->SwingO, anim->SwingN, t);
 	anim->WalkTime = Math_Lerp(anim->WalkTimeO, anim->WalkTimeN, t);
 	anim->BobStrength = Math_Lerp(anim->BobStrengthO, anim->BobStrengthN, t);
 
 	Real32 idleTime = (Real32)Game_Accumulator;
-	Real32 idleXRot = Math_Sin(idleTime * ANIM_IDLE_XPERIOD) * ANIM_IDLE_MAX;
-	Real32 idleZRot = ANIM_IDLE_MAX + Math_Cos(idleTime * ANIM_IDLE_ZPERIOD) * ANIM_IDLE_MAX;
+	Real32 idleXRot = Math_SinF(idleTime * ANIM_IDLE_XPERIOD) * ANIM_IDLE_MAX;
+	Real32 idleZRot = ANIM_IDLE_MAX + Math_CosF(idleTime * ANIM_IDLE_ZPERIOD) * ANIM_IDLE_MAX;
 
-	anim->LeftArmX = (Math_Cos(anim->WalkTime) * anim->Swing * ANIM_ARM_MAX) - idleXRot;
+	anim->LeftArmX = (Math_CosF(anim->WalkTime)  * anim->Swing * ANIM_ARM_MAX) - idleXRot;
 	anim->LeftArmZ = -idleZRot;
-	anim->LeftLegX = -(Math_Cos(anim->WalkTime) * anim->Swing * ANIM_LEG_MAX);
+	anim->LeftLegX = -(Math_CosF(anim->WalkTime) * anim->Swing * ANIM_LEG_MAX);
 	anim->LeftLegZ = 0;
 
 	anim->RightLegX = -anim->LeftLegX; anim->RightLegZ = -anim->LeftLegZ;
 	anim->RightArmX = -anim->LeftArmX; anim->RightArmZ = -anim->LeftArmZ;
 
-	anim->BobbingHor   = Math_Cos(anim->WalkTime)            * anim->Swing * (2.5f / 16.0f);
-	anim->BobbingVer   = Math_AbsF(Math_Sin(anim->WalkTime)) * anim->Swing * (2.5f / 16.0f);
-	anim->BobbingModel = Math_AbsF(Math_Cos(anim->WalkTime)) * anim->Swing * (4.0f / 16.0f);
+	anim->BobbingHor   = Math_CosF(anim->WalkTime)            * anim->Swing * (2.5f / 16.0f);
+	anim->BobbingVer   = Math_AbsF(Math_SinF(anim->WalkTime)) * anim->Swing * (2.5f / 16.0f);
+	anim->BobbingModel = Math_AbsF(Math_CosF(anim->WalkTime)) * anim->Swing * (4.0f / 16.0f);
 
-	if (calcHumanAnims && !Game_SimpleArmsAnim) {
+	if (entity->Model->CalcHumanAnims && !Game_SimpleArmsAnim) {
 		AnimatedComp_CalcHumanAnim(anim, idleXRot, idleZRot);
 	}
 }
 
 
+/*########################################################################################################################*
+*------------------------------------------------------TiltComponent------------------------------------------------------*
+*#########################################################################################################################*/
 void TiltComp_Init(TiltComp* anim) {
 	anim->TiltX = 0.0f; anim->TiltY = 0.0f; anim->VelTiltStrength = 1.0f;
 	anim->VelTiltStrengthO = 1.0f; anim->VelTiltStrengthN = 1.0f;
@@ -119,7 +127,7 @@ void TiltComp_Update(TiltComp* anim, Real64 delta) {
 	/* TODO: the Tilt code was designed for 60 ticks/second, fix it up for 20 ticks/second */
 	Int32 i;
 	for (i = 0; i < 3; i++) {
-		AnimatedComp_DoTilt(&anim->VelTiltStrengthN, p->Hacks.Noclip || p->Hacks.Flying);
+		AnimatedComp_DoTilt(&anim->VelTiltStrengthN, p->Hacks.Floating);
 	}
 }
 
@@ -128,11 +136,14 @@ void TiltComp_GetCurrent(TiltComp* anim, Real32 t) {
 	anim->VelTiltStrength = Math_Lerp(anim->VelTiltStrengthO, anim->VelTiltStrengthN, t);
 
 	AnimatedComp* pAnim = &p->Base.Anim;
-	anim->TiltX = Math_Cos(pAnim->WalkTime) * pAnim->Swing * (0.15f * MATH_DEG2RAD);
-	anim->TiltY = Math_Sin(pAnim->WalkTime) * pAnim->Swing * (0.15f * MATH_DEG2RAD);
+	anim->TiltX = Math_CosF(pAnim->WalkTime) * pAnim->Swing * (0.15f * MATH_DEG2RAD);
+	anim->TiltY = Math_SinF(pAnim->WalkTime) * pAnim->Swing * (0.15f * MATH_DEG2RAD);
 }
 
 
+/*########################################################################################################################*
+*-----------------------------------------------------HacksComponent------------------------------------------------------*
+*#########################################################################################################################*/
 void HacksComp_SetAll(HacksComp* hacks, bool allowed) {
 	hacks->CanAnyHacks = allowed; hacks->CanFly = allowed;
 	hacks->CanNoclip = allowed; hacks->CanRespawn = allowed;
@@ -162,11 +173,13 @@ bool HacksComp_Floating(HacksComp* hacks) {
 	return hacks->Noclip || hacks->Flying;
 }
 
-String HacksComp_UNSAFE_FlagValue(String* flag, HacksComp* hacks) {
+String HacksComp_UNSAFE_FlagValue(const UInt8* flagRaw, HacksComp* hacks) {
 	String* joined = &hacks->HacksFlags;
-	Int32 start = String_IndexOfString(joined, flag);
+	String flag = String_FromReadonly(flagRaw);
+
+	Int32 start = String_IndexOfString(joined, &flag);
 	if (start < 0) return String_MakeNull();
-	start += flag->length;
+	start += flag.length;
 
 	Int32 end = String_IndexOf(joined, ' ', start);
 	if (end < 0) end = joined->length;
@@ -175,8 +188,7 @@ String HacksComp_UNSAFE_FlagValue(String* flag, HacksComp* hacks) {
 }
 
 void HacksComp_ParseHorizontalSpeed(HacksComp* hacks) {
-	String horSpeedFlag = String_FromConst("horspeed=");
-	String speedStr = HacksComp_UNSAFE_FlagValue(&horSpeedFlag, hacks);
+	String speedStr = HacksComp_UNSAFE_FlagValue("horspeed=", hacks);
 	if (speedStr.length == 0) return;
 
 	Real32 speed = 0.0f;
@@ -185,8 +197,7 @@ void HacksComp_ParseHorizontalSpeed(HacksComp* hacks) {
 }
 
 void HacksComp_ParseMultiSpeed(HacksComp* hacks) {
-	String jumpsFlag = String_FromConst("jumps=");
-	String jumpsStr = HacksComp_UNSAFE_FlagValue(&jumpsFlag, hacks);
+	String jumpsStr = HacksComp_UNSAFE_FlagValue("jumps=", hacks);
 	if (jumpsStr.length == 0 || Game_ClassicMode) return;
 
 	Int32 jumps = 0;
@@ -282,6 +293,9 @@ void HacksComp_UpdateState(HacksComp* hacks) {
 }
 
 
+/*########################################################################################################################*
+*--------------------------------------------------InterpolationComponent-------------------------------------------------*
+*#########################################################################################################################*/
 void InterpComp_RemoveOldestRotY(InterpComp* interp) {
 	Int32 i;
 	for (i = 0; i < Array_Elems(interp->RotYStates); i++) {
@@ -308,26 +322,26 @@ void InterpComp_AdvanceRotY(InterpComp* interp) {
 void InterpComp_LerpAngles(InterpComp* interp, Entity* entity, Real32 t) {
 	InterpState* prev = &interp->Prev;
 	InterpState* next = &interp->Next;
+
 	entity->HeadX = Math_LerpAngle(prev->HeadX, next->HeadX, t);
 	entity->HeadY = Math_LerpAngle(prev->HeadY, next->HeadY, t);
-	entity->RotX = Math_LerpAngle(prev->RotX, next->RotX, t);
-	entity->RotY = Math_LerpAngle(interp->PrevRotY, interp->NextRotY, t);
-	entity->RotZ = Math_LerpAngle(prev->RotZ, next->RotZ, t);
+	entity->RotX  = Math_LerpAngle(prev->RotX,  next->RotX, t);
+	entity->RotY  = Math_LerpAngle(interp->PrevRotY, interp->NextRotY, t);
+	entity->RotZ  = Math_LerpAngle(prev->RotZ,  next->RotZ, t);
 }
 
 void InterpComp_SetPos(InterpState* state, LocationUpdate* update) {
-	if (update->RelativePosition) {
-		Vector3_Add(&state->Pos, &state->Pos, &update->Pos);
+	if (update->RelativePos) {
+		Vector3_AddBy(&state->Pos, &update->Pos);
 	} else {
 		state->Pos = update->Pos;
 	}
 }
 
-Real32 NetInterpComp_Next(Real32 next, Real32 cur) {
-	if (next == MATH_POS_INF) return cur;
-	return next;
-}
 
+/*########################################################################################################################*
+*----------------------------------------------NetworkInterpolationComponent----------------------------------------------*
+*#########################################################################################################################*/
 void NetInterpComp_RemoveOldestState(NetInterpComp* interp) {
 	Int32 i;
 	for (i = 0; i < Array_Elems(interp->States); i++) {
@@ -346,78 +360,85 @@ void NetInterpComp_AddState(NetInterpComp* interp, InterpState state) {
 void NetInterpComp_SetLocation(NetInterpComp* interp, LocationUpdate* update, bool interpolate) {
 	InterpState last = interp->Cur;
 	InterpState* cur = &interp->Cur;
-	if (update->IncludesPosition) {
-		InterpComp_SetPos(cur, update);
-	}
+	UInt8 flags = update->Flags;
 
-	cur->RotX = NetInterpComp_Next(update->RotX, cur->RotX);
-	cur->RotZ = NetInterpComp_Next(update->RotZ, cur->RotZ);
-	cur->HeadX = NetInterpComp_Next(update->HeadX, cur->HeadX);
-	cur->HeadY = NetInterpComp_Next(update->RotY, cur->HeadY);
+	if (flags & LOCATIONUPDATE_FLAG_POS)   InterpComp_SetPos(cur, update);
+	if (flags & LOCATIONUPDATE_FLAG_ROTX)  cur->RotX  = update->RotX;
+	if (flags & LOCATIONUPDATE_FLAG_ROTZ)  cur->RotZ  = update->RotZ;
+	if (flags & LOCATIONUPDATE_FLAG_HEADX) cur->HeadX = update->HeadX;
+	if (flags & LOCATIONUPDATE_FLAG_HEADY) cur->HeadY = update->HeadY;
 
 	if (!interpolate) {
-		interp->Base.Prev = *cur; interp->Base.PrevRotY = cur->HeadY;
-		interp->Base.Next = *cur; interp->Base.NextRotY = cur->HeadY;
-		interp->Base.RotYCount = 0; interp->StatesCount = 0;
+		interp->Prev = *cur; interp->PrevRotY = cur->HeadY;
+		interp->Next = *cur; interp->NextRotY = cur->HeadY;
+		interp->RotYCount = 0; interp->StatesCount = 0;
 	} else {
 		/* Smoother interpolation by also adding midpoint. */
 		InterpState mid;
 		Vector3_Lerp(&mid.Pos, &last.Pos, &cur->Pos, 0.5f);
-		mid.RotX = Math_LerpAngle(last.RotX, cur->RotX, 0.5f);
-		mid.RotZ = Math_LerpAngle(last.RotZ, cur->RotZ, 0.5f);
+		mid.RotX  = Math_LerpAngle(last.RotX,  cur->RotX,  0.5f);
+		mid.RotZ  = Math_LerpAngle(last.RotZ,  cur->RotZ,  0.5f);
 		mid.HeadX = Math_LerpAngle(last.HeadX, cur->HeadX, 0.5f);
 		mid.HeadY = Math_LerpAngle(last.HeadY, cur->HeadY, 0.5f);
 		NetInterpComp_AddState(interp, mid);
 		NetInterpComp_AddState(interp, *cur);
 
 		/* Head rotation lags behind body a tiny bit */
-		InterpComp_AddRotY(&interp->Base, Math_LerpAngle(last.HeadY, cur->HeadY, 0.33333333f));
-		InterpComp_AddRotY(&interp->Base, Math_LerpAngle(last.HeadY, cur->HeadY, 0.66666667f));
-		InterpComp_AddRotY(&interp->Base, Math_LerpAngle(last.HeadY, cur->HeadY, 1.00000000f));
+		InterpComp_AddRotY((InterpComp*)interp, Math_LerpAngle(last.HeadY, cur->HeadY, 0.33333333f));
+		InterpComp_AddRotY((InterpComp*)interp, Math_LerpAngle(last.HeadY, cur->HeadY, 0.66666667f));
+		InterpComp_AddRotY((InterpComp*)interp, Math_LerpAngle(last.HeadY, cur->HeadY, 1.00000000f));
 	}
 }
 
 void NetInterpComp_AdvanceState(NetInterpComp* interp) {
-	interp->Base.Prev = interp->Base.Next;
+	interp->Prev = interp->Next;
 	if (interp->StatesCount > 0) {
-		interp->Base.Next = interp->States[0];
+		interp->Next = interp->States[0];
 		NetInterpComp_RemoveOldestState(interp);
 	}
-	InterpComp_AdvanceRotY(&interp->Base);
+	InterpComp_AdvanceRotY((InterpComp*)interp);
 }
 
-Real32 LocalInterpComp_Next(Real32 next, Real32 cur, Real32* last, bool interpolate) {
-	if (next == MATH_POS_INF) return cur;
-	if (!interpolate) *last = next;
-	return next;
+
+/*########################################################################################################################*
+*-----------------------------------------------LocalInterpolationComponent-----------------------------------------------*
+*#########################################################################################################################*/
+void LocalInterpComp_Angle(Real32* prev, Real32* next, Real32 value, bool interpolate) {
+	*next = value;
+	if (!interpolate) *prev = value;
 }
 
 void LocalInterpComp_SetLocation(InterpComp* interp, LocationUpdate* update, bool interpolate) {
 	Entity* entity = &LocalPlayer_Instance.Base;
 	InterpState* prev = &interp->Prev;
 	InterpState* next = &interp->Next;
+	UInt8 flags = update->Flags;
 
-	if (update->IncludesPosition) {
+	if (flags & LOCATIONUPDATE_FLAG_POS) {
 		InterpComp_SetPos(next, update);
-		Real32 blockOffset = next->Pos.Y - Math_Floor(next->Pos.Y);
-		if (blockOffset < ENTITY_ADJUSTMENT) {
-			next->Pos.Y += ENTITY_ADJUSTMENT;
-		}
-		if (!interpolate) {
-			prev->Pos = next->Pos;
-			entity->Position = next->Pos;
-		}
+		/* If server sets Y position exactly on ground, push up a tiny bit */
+		Real32 yOffset = next->Pos.Y - Math_Floor(next->Pos.Y);
+		if (yOffset < ENTITY_ADJUSTMENT) { next->Pos.Y += ENTITY_ADJUSTMENT; }
+		if (!interpolate) { prev->Pos = next->Pos; entity->Position = next->Pos; }
 	}
 
-	next->RotX = LocalInterpComp_Next(update->RotX, next->RotX, &prev->RotX, interpolate);
-	next->RotZ = LocalInterpComp_Next(update->RotZ, next->RotZ, &prev->RotZ, interpolate);
-	next->HeadX = LocalInterpComp_Next(update->HeadX, next->HeadX, &prev->HeadX, interpolate);
-	next->HeadY = LocalInterpComp_Next(update->RotY, next->HeadY, &prev->HeadY, interpolate);
+	if (flags & LOCATIONUPDATE_FLAG_HEADX) {
+		LocalInterpComp_Angle(&prev->HeadX, &next->HeadX, update->HeadX, interpolate);
+	}
+	if (flags & LOCATIONUPDATE_FLAG_HEADY) {
+		LocalInterpComp_Angle(&prev->HeadY, &next->HeadY, update->HeadY, interpolate);
+	}
+	if (flags & LOCATIONUPDATE_FLAG_ROTX) {
+		LocalInterpComp_Angle(&prev->RotX, &next->RotX, update->RotX, interpolate);
+	}
+	if (flags & LOCATIONUPDATE_FLAG_ROTZ) {
+		LocalInterpComp_Angle(&prev->RotZ, &next->RotZ, update->RotZ, interpolate);
+	}
 
-	if (update->RotY != MATH_POS_INF) {
+	if (flags & LOCATIONUPDATE_FLAG_HEADY) {
 		if (!interpolate) {
-			interp->NextRotY = update->RotY;
-			entity->RotY = update->RotY;
+			interp->NextRotY = update->HeadY;
+			entity->RotY     = update->HeadY;
 			interp->RotYCount = 0;
 		} else {
 			/* Body Y rotation lags slightly behind */
@@ -428,7 +449,6 @@ void LocalInterpComp_SetLocation(InterpComp* interp, LocationUpdate* update, boo
 			interp->NextRotY = interp->RotYStates[0];
 		}
 	}
-
 	InterpComp_LerpAngles(interp, entity, 0.0f);
 }
 
@@ -440,6 +460,9 @@ void LocalInterpComp_AdvanceState(InterpComp* interp) {
 }
 
 
+/*########################################################################################################################*
+*-----------------------------------------------------ShadowComponent-----------------------------------------------------*
+*#########################################################################################################################*/
 Real32 ShadowComponent_radius = 7.0f;
 typedef struct ShadowData_ { Real32 Y; BlockID Block; UInt8 A; } ShadowData;
 
@@ -638,4 +661,603 @@ void ShadowComponent_Draw(Entity* entity) {
 
 	UInt32 vCount = (UInt32)(ptr - vertices) / (UInt32)sizeof(VertexP3fT2fC4b);
 	GfxCommon_UpdateDynamicVb_IndexedTris(vb, vertices, vCount);
+}
+
+
+/*########################################################################################################################*
+*---------------------------------------------------CollisionsComponent---------------------------------------------------*
+*#########################################################################################################################*/
+/* Whether a collision occurred with any horizontal sides of any blocks */
+bool Collisions_HitHorizontal(CollisionsComp* comp) {
+	return comp->HitXMin || comp->HitXMax || comp->HitZMin || comp->HitZMax;
+}
+#define COLLISIONS_ADJ 0.001f
+
+void Collisions_ClipX(Entity* entity, Vector3* size, AABB* entityBB, AABB* extentBB) {
+	entity->Velocity.X = 0.0f;
+	entityBB->Min.X = entity->Position.X - size->X / 2; extentBB->Min.X = entityBB->Min.X;
+	entityBB->Max.X = entity->Position.X + size->X / 2; extentBB->Max.X = entityBB->Max.X;
+}
+
+void Collisions_ClipY(Entity* entity, Vector3* size, AABB* entityBB, AABB* extentBB) {
+	entity->Velocity.Y = 0.0f;
+	entityBB->Min.Y = entity->Position.Y;               extentBB->Min.Y = entityBB->Min.Y;
+	entityBB->Max.Y = entity->Position.Y + size->Y;     extentBB->Max.Y = entityBB->Max.Y;
+}
+
+void Collisions_ClipZ(Entity* entity, Vector3* size, AABB* entityBB, AABB* extentBB) {
+	entity->Velocity.Z = 0.0f;
+	entityBB->Min.Z = entity->Position.Z - size->Z / 2; extentBB->Min.Z = entityBB->Min.Z;
+	entityBB->Max.Z = entity->Position.Z + size->Z / 2; extentBB->Max.Z = entityBB->Max.Z;
+}
+
+bool Collisions_CanSlideThrough(AABB* adjFinalBB) {
+	Vector3I bbMin; Vector3I_Floor(&bbMin, &adjFinalBB->Min);
+	Vector3I bbMax; Vector3I_Floor(&bbMax, &adjFinalBB->Max);
+
+	AABB blockBB;
+	Vector3 v;
+	Int32 x, y, z;
+	for (y = bbMin.Y; y <= bbMax.Y; y++) { v.Y = (Real32)y;
+		for (z = bbMin.Z; z <= bbMax.Z; z++) { v.Z = (Real32)z;
+			for (x = bbMin.X; x <= bbMax.X; x++) { v.X = (Real32)x;
+				BlockID block = World_GetPhysicsBlock(x, y, z);
+				Vector3_Add(&blockBB.Min, &v, &Block_MinBB[block]);
+				Vector3_Add(&blockBB.Max, &v, &Block_MaxBB[block]);
+
+				if (!AABB_Intersects(&blockBB, adjFinalBB)) continue;
+				if (Block_Collide[block] == COLLIDE_SOLID) return false;
+			}
+		}
+	}
+	return true;
+}
+
+bool Collisions_DidSlide(CollisionsComp* comp, AABB* blockBB, Vector3* size, AABB* finalBB, AABB* entityBB, AABB* extentBB) {
+	Real32 yDist = blockBB->Max.Y - entityBB->Min.Y;
+	if (yDist > 0.0f && yDist <= comp->Entity->StepSize + 0.01f) {
+		Real32 blockBB_MinX = max(blockBB->Min.X, blockBB->Max.X - size->X / 2);
+		Real32 blockBB_MaxX = min(blockBB->Max.X, blockBB->Min.X + size->X / 2);
+		Real32 blockBB_MinZ = max(blockBB->Min.Z, blockBB->Max.Z - size->Z / 2);
+		Real32 blockBB_MaxZ = min(blockBB->Max.Z, blockBB->Min.Z + size->Z / 2);
+
+		AABB adjBB;
+		adjBB.Min.X = min(finalBB->Min.X, blockBB_MinX + COLLISIONS_ADJ);
+		adjBB.Max.X = max(finalBB->Max.X, blockBB_MaxX - COLLISIONS_ADJ);
+		adjBB.Min.Y = blockBB->Max.Y + COLLISIONS_ADJ;
+		adjBB.Max.Y = adjBB.Min.Y    + size->Y;
+		adjBB.Min.Z = min(finalBB->Min.Z, blockBB_MinZ + COLLISIONS_ADJ);
+		adjBB.Max.Z = max(finalBB->Max.Z, blockBB_MaxZ - COLLISIONS_ADJ);
+
+		if (!Collisions_CanSlideThrough(&adjBB)) return false;
+		comp->Entity->Position.Y = adjBB.Min.Y;
+		comp->Entity->OnGround = true;
+		Collisions_ClipY(comp->Entity, size, entityBB, extentBB);
+		return true;
+	}
+	return false;
+}
+
+void Collisions_ClipXMin(CollisionsComp* comp, AABB* blockBB, AABB* entityBB, bool wasOn, AABB* finalBB, AABB* extentBB, Vector3* size) {
+	if (!wasOn || !Collisions_DidSlide(comp, blockBB, size, finalBB, entityBB, extentBB)) {
+		comp->Entity->Position.X = blockBB->Min.X - size->X / 2 - COLLISIONS_ADJ;
+		Collisions_ClipX(comp->Entity, size, entityBB, extentBB);
+		comp->HitXMin = true;
+	}
+}
+
+void Collisions_ClipXMax(CollisionsComp* comp, AABB* blockBB, AABB* entityBB, bool wasOn, AABB* finalBB, AABB* extentBB, Vector3* size) {
+	if (!wasOn || !Collisions_DidSlide(comp, blockBB, size, finalBB, entityBB, extentBB)) {
+		comp->Entity->Position.X = blockBB->Max.X + size->X / 2 + COLLISIONS_ADJ;
+		Collisions_ClipX(comp->Entity, size, entityBB, extentBB);
+		comp->HitXMax = true;
+	}
+}
+
+void Collisions_ClipZMax(CollisionsComp* comp, AABB* blockBB, AABB* entityBB, bool wasOn, AABB* finalBB, AABB* extentBB, Vector3* size) {
+	if (!wasOn || !Collisions_DidSlide(comp, blockBB, size, finalBB, entityBB, extentBB)) {
+		comp->Entity->Position.Z = blockBB->Max.Z + size->Z / 2 + COLLISIONS_ADJ;
+		Collisions_ClipZ(comp->Entity, size, entityBB, extentBB);
+		comp->HitZMax = true;
+	}
+}
+
+void Collisions_ClipZMin(CollisionsComp* comp, AABB* blockBB, AABB* entityBB, bool wasOn, AABB* finalBB, AABB* extentBB, Vector3* size) {
+	if (!wasOn || !Collisions_DidSlide(comp, blockBB, size, finalBB, entityBB, extentBB)) {
+		comp->Entity->Position.Z = blockBB->Min.Z - size->Z / 2 - COLLISIONS_ADJ;
+		Collisions_ClipZ(comp->Entity, size, entityBB, extentBB);
+		comp->HitZMin = true;
+	}
+}
+
+void Collisions_ClipYMin(CollisionsComp* comp, AABB* blockBB, AABB* entityBB, AABB* extentBB, Vector3* size) {
+	comp->Entity->Position.Y = blockBB->Min.Y - size->Y - COLLISIONS_ADJ;
+	Collisions_ClipY(comp->Entity, size, entityBB, extentBB);
+	comp->HitYMin = true;
+}
+
+void Collisions_ClipYMax(CollisionsComp* comp, AABB* blockBB, AABB* entityBB, AABB* extentBB, Vector3* size) {
+	comp->Entity->Position.Y = blockBB->Max.Y + COLLISIONS_ADJ;
+	comp->Entity->OnGround = true;
+	Collisions_ClipY(comp->Entity, size, entityBB, extentBB);
+	comp->HitYMax = true;
+}
+
+void Collisions_CollideWithReachableBlocks(CollisionsComp* comp, Int32 count, AABB* entityBB, AABB* extentBB) {
+	Entity* entity = comp->Entity;
+	/* Reset collision detection states */
+	bool wasOn = entity->OnGround;
+	entity->OnGround = false;
+	comp->HitXMin = false; comp->HitYMin = false; comp->HitZMin = false;
+	comp->HitXMax = false; comp->HitYMax = false; comp->HitZMax = false;
+
+	AABB blockBB;
+	Vector3 bPos, size = entity->Size;
+	Int32 i;
+	for (i = 0; i < count; i++) {
+		/* Unpack the block and coordinate data */
+		SearcherState state = Searcher_States[i];
+		bPos.X = state.X >> 3; bPos.Y = state.Y >> 3; bPos.Z = state.Z >> 3;
+		Int32 block = (state.X & 0x7) | (state.Y & 0x7) << 3 | (state.Z & 0x7) << 6;
+
+		Vector3_Add(&blockBB.Min, &Block_MinBB[block], &bPos);
+		Vector3_Add(&blockBB.Max, &Block_MaxBB[block], &bPos);
+		if (!AABB_Intersects(extentBB, &blockBB)) continue;
+
+		/* Recheck time to collide with block (as colliding with blocks modifies this) */
+		Real32 tx, ty, tz;
+		Searcher_CalcTime(&entity->Velocity, entityBB, &blockBB, &tx, &ty, &tz);
+		if (tx > 1.0f || ty > 1.0f || tz > 1.0f) {
+			Platform_LogConst("t > 1 in physics calculation.. this shouldn't have happened.");
+		}
+
+		/* Calculate the location of the entity when it collides with this block */
+		Vector3 v = entity->Velocity; 
+		v.X *= tx; v.Y *= ty; v.Z *= tz;
+		AABB finalBB; /* Inlined ABBB_Offset */
+		Vector3_Add(&finalBB.Min, &entityBB->Min, &v);
+		Vector3_Add(&finalBB.Max, &entityBB->Max, &v);
+
+		/* if we have hit the bottom of a block, we need to change the axis we test first */
+		if (!comp->HitYMin) {
+			if (finalBB.Min.Y + COLLISIONS_ADJ >= blockBB.Max.Y) {
+				Collisions_ClipYMax(comp, &blockBB, entityBB, extentBB, &size);
+			} else if (finalBB.Max.Y - COLLISIONS_ADJ <= blockBB.Min.Y) {
+				Collisions_ClipYMin(comp, &blockBB, entityBB, extentBB, &size);
+			} else if (finalBB.Min.X + COLLISIONS_ADJ >= blockBB.Max.X) {
+				Collisions_ClipXMax(comp, &blockBB, entityBB, wasOn, &finalBB, extentBB, &size);
+			} else if (finalBB.Max.X - COLLISIONS_ADJ <= blockBB.Min.X) {
+				Collisions_ClipXMin(comp, &blockBB, entityBB, wasOn, &finalBB, extentBB, &size);
+			} else if (finalBB.Min.Z + COLLISIONS_ADJ >= blockBB.Max.Z) {
+				Collisions_ClipZMax(comp, &blockBB, entityBB, wasOn, &finalBB, extentBB, &size);
+			} else if (finalBB.Max.Z - COLLISIONS_ADJ <= blockBB.Min.Z) {
+				Collisions_ClipZMin(comp, &blockBB, entityBB, wasOn, &finalBB, extentBB, &size);
+			}
+			continue;
+		}
+
+		/* if flying or falling, test the horizontal axes first */
+		if (finalBB.Min.X + COLLISIONS_ADJ >= blockBB.Max.X) {
+			Collisions_ClipXMax(comp, &blockBB, entityBB, wasOn, &finalBB, extentBB, &size);
+		} else if (finalBB.Max.X - COLLISIONS_ADJ <= blockBB.Min.X) {
+			Collisions_ClipXMin(comp, &blockBB, entityBB, wasOn, &finalBB, extentBB, &size);
+		} else if (finalBB.Min.Z + COLLISIONS_ADJ >= blockBB.Max.Z) {
+			Collisions_ClipZMax(comp, &blockBB, entityBB, wasOn, &finalBB, extentBB, &size);
+		} else if (finalBB.Max.Z - COLLISIONS_ADJ <= blockBB.Min.Z) {
+			Collisions_ClipZMin(comp, &blockBB, entityBB, wasOn, &finalBB, extentBB, &size);
+		} else if (finalBB.Min.Y + COLLISIONS_ADJ >= blockBB.Max.Y) {
+			Collisions_ClipYMax(comp, &blockBB, entityBB, extentBB, &size);
+		} else if (finalBB.Max.Y - COLLISIONS_ADJ <= blockBB.Min.Y) {
+			Collisions_ClipYMin(comp, &blockBB, entityBB, extentBB, &size);
+		}
+	}
+}
+
+/* TODO: test for corner cases, and refactor this */
+void Collisions_MoveAndWallSlide(CollisionsComp* comp) {
+	Vector3 zero = Vector3_Zero;
+	Entity* entity = comp->Entity;
+	if (Vector3_Equals(&entity->Velocity, &zero)) return;
+
+	AABB entityBB, entityExtentBB;
+	Int32 count = Searcher_FindReachableBlocks(entity, &entityBB, &entityExtentBB);
+	Collisions_CollideWithReachableBlocks(comp, count, &entityBB, &entityExtentBB);
+}
+
+
+/*########################################################################################################################*
+*----------------------------------------------------PhysicsComponent-----------------------------------------------------*
+*#########################################################################################################################*/
+void PhysicsComp_Init(PhysicsComp* comp, Entity* entity) {
+	Platform_MemSet(comp, 0, sizeof(PhysicsComp));
+	comp->CanLiquidJump = true;
+	comp->Entity = entity;
+	comp->JumpVel       = 0.42f;
+	comp->UserJumpVel   = 0.42f;
+	comp->ServerJumpVel = 0.42f;
+}
+
+bool PhysicsComp_TouchesLiquid(BlockID block) { return Block_Collide[block] == COLLIDE_LIQUID; }
+void PhysicsComp_UpdateVelocityState(PhysicsComp* comp) {
+	Entity* entity = comp->Entity;
+	HacksComp* hacks = comp->Hacks;
+
+	if (hacks->Floating) {
+		entity->Velocity.Y = 0.0f; /* eliminate the effect of gravity */
+		Int32 dir = (hacks->FlyingUp || comp->Jumping) ? 1 : (hacks->FlyingDown ? -1 : 0);
+
+		entity->Velocity.Y += 0.12f * dir;
+		if (hacks->Speeding     && hacks->CanSpeed) entity->Velocity.Y += 0.12f * dir;
+		if (hacks->HalfSpeeding && hacks->CanSpeed) entity->Velocity.Y += 0.06f * dir;
+	} else if (comp->Jumping && Entity_TouchesAnyRope(entity) && entity->Velocity.Y > 0.02f) {
+		entity->Velocity.Y = 0.02f;
+	}
+
+	if (!comp->Jumping) {
+		comp->CanLiquidJump = false; return;
+	}
+
+	bool touchWater = Entity_TouchesAnyWater(entity);
+	bool touchLava  = Entity_TouchesAnyLava(entity);
+	if (touchWater || touchLava) {
+		AABB bounds; Entity_GetBounds(entity, &bounds);
+		Int32 feetY = Math_Floor(bounds.Min.Y), bodyY = feetY + 1;
+		Int32 headY = Math_Floor(bounds.Max.Y);
+		if (bodyY > headY) bodyY = headY;
+
+		bounds.Max.Y = bounds.Min.Y = feetY;
+		bool liquidFeet = Entity_TouchesAny(&bounds, PhysicsComp_TouchesLiquid);
+		bounds.Min.Y = min(bodyY, headY);
+		bounds.Max.Y = max(bodyY, headY);
+		bool liquidRest = Entity_TouchesAny(&bounds, PhysicsComp_TouchesLiquid);
+
+		bool pastJumpPoint = liquidFeet && !liquidRest && (Math_ModF(entity->Position.Y, 1.0f) >= 0.4f);
+		if (!pastJumpPoint) {
+			comp->CanLiquidJump = true;
+			entity->Velocity.Y += 0.04f;
+			if (hacks->Speeding     && hacks->CanSpeed) entity->Velocity.Y += 0.04f;
+			if (hacks->HalfSpeeding && hacks->CanSpeed) entity->Velocity.Y += 0.02f;
+		} else if (pastJumpPoint) {
+			/* either A) climb up solid on side B) jump bob in water */
+			if (Collisions_HitHorizontal(comp->Collisions)) {
+				entity->Velocity.Y += touchLava ? 0.30f : 0.13f;
+			} else if (comp->CanLiquidJump) {
+				entity->Velocity.Y += touchLava ? 0.20f : 0.10f;
+			}
+			comp->CanLiquidJump = false;
+		}
+	} else if (comp->UseLiquidGravity) {
+		entity->Velocity.Y += 0.04f;
+		if (hacks->Speeding     && hacks->CanSpeed) entity->Velocity.Y += 0.04f;
+		if (hacks->HalfSpeeding && hacks->CanSpeed) entity->Velocity.Y += 0.02f;
+		comp->CanLiquidJump = false;
+	} else if (Entity_TouchesAnyRope(entity)) {
+		entity->Velocity.Y += (hacks->Speeding && hacks->CanSpeed) ? 0.15f : 0.10f;
+		comp->CanLiquidJump = false;
+	} else if (entity->OnGround) {
+		PhysicsComp_DoNormalJump(comp);
+	}
+}
+
+void PhysicsComp_DoNormalJump(PhysicsComp* comp) {
+	Entity* entity = comp->Entity;
+	HacksComp* hacks = comp->Hacks;
+	if (comp->JumpVel == 0.0f || hacks->MaxJumps == 0) return;
+
+	entity->Velocity.Y = comp->JumpVel;
+	if (hacks->Speeding     && hacks->CanSpeed) entity->Velocity.Y += comp->JumpVel;
+	if (hacks->HalfSpeeding && hacks->CanSpeed) entity->Velocity.Y += comp->JumpVel / 2;
+	comp->CanLiquidJump = false;
+}
+
+bool PhysicsComp_TouchesSlipperyIce(BlockID b) { return Block_ExtendedCollide[b] == COLLIDE_SLIPPERY_ICE; }
+bool PhysicsComp_OnIce(Entity* entity) {
+	Vector3 under = entity->Position; under.Y -= 0.01f;
+	Vector3I underCoords; Vector3I_Floor(&underCoords, &under);
+	BlockID blockUnder = World_SafeGetBlock_3I(underCoords);
+	if (Block_ExtendedCollide[blockUnder] == COLLIDE_ICE) return true;
+
+	AABB bounds; Entity_GetBounds(entity, &bounds);
+	bounds.Min.Y -= 0.01f; bounds.Max.Y = bounds.Min.Y;
+	return Entity_TouchesAny(&bounds, PhysicsComp_TouchesSlipperyIce);
+}
+
+void PhysicsComp_MoveHor(PhysicsComp* comp, Vector3 vel, Real32 factor) {
+	Real32 dist = Math_SqrtF(vel.X * vel.X + vel.Z * vel.Z);
+	if (dist < 0.00001f) return;
+	if (dist < 1.0f) dist = 1.0f;
+
+	/* entity.Velocity += vel * (factor / dist) */
+	Entity* entity = comp->Entity;
+	Vector3_Mul1By(&vel, factor / dist);
+	Vector3_AddBy(&entity->Velocity, &vel);
+}
+
+void PhysicsComp_Move(PhysicsComp* comp, Vector3 drag, Real32 gravity, Real32 yMul) {
+	Entity* entity = comp->Entity;
+	entity->Velocity.Y *= yMul;
+	if (!comp->Hacks->Noclip) {
+		Collisions_MoveAndWallSlide(comp->Collisions);
+	}
+	Vector3_AddBy(&entity->Position, &entity->Velocity);
+
+	entity->Velocity.Y /= yMul;
+	Vector3_Mul3By(&entity->Velocity, &drag);
+	entity->Velocity.Y -= gravity;
+}
+
+void PhysicsComp_MoveFlying(PhysicsComp* comp, Vector3 vel, Real32 factor, Vector3 drag, Real32 gravity, Real32 yMul) {
+	Entity* entity = comp->Entity;
+	HacksComp* hacks = comp->Hacks;
+
+	PhysicsComp_MoveHor(comp, vel, factor);
+	Real32 yVel = Math_SqrtF(entity->Velocity.X * entity->Velocity.X + entity->Velocity.Z * entity->Velocity.Z);
+	/* make horizontal speed the same as vertical speed */
+	if ((vel.X != 0.0f || vel.Z != 0.0f) && yVel > 0.001f) {
+		entity->Velocity.Y = 0.0f;
+		yMul = 1.0f;
+		if (hacks->FlyingUp || comp->Jumping) entity->Velocity.Y += yVel;
+		if (hacks->FlyingDown)                entity->Velocity.Y -= yVel;
+	}
+	PhysicsComp_Move(comp, drag, gravity, yMul);
+}
+
+void PhysicsComp_MoveNormal(PhysicsComp* comp, Vector3 vel, Real32 factor, Vector3 drag, Real32 gravity, Real32 yMul) {
+	PhysicsComp_MoveHor(comp, vel, factor);
+	PhysicsComp_Move(comp, drag, gravity, yMul);
+}
+
+Real32 PhysicsComp_LowestModifier(PhysicsComp* comp, AABB* bounds, bool checkSolid) {
+	Vector3I bbMin, bbMax;
+	Vector3I_Floor(&bbMin, &bounds->Min);
+	Vector3I_Floor(&bbMax, &bounds->Max);
+	Real32 modifier = MATH_POS_INF;
+
+	bbMin.X = max(bbMin.X, 0); bbMax.X = min(bbMax.X, World_MaxX);
+	bbMin.Y = max(bbMin.Y, 0); bbMax.Y = min(bbMax.Y, World_MaxY);
+	bbMin.Z = max(bbMin.Z, 0); bbMax.Z = min(bbMax.Z, World_MaxZ);
+
+	AABB blockBB;
+	Vector3 v;
+	Int32 x, y, z;
+	for (y = bbMin.Y; y <= bbMax.Y; y++) { v.Y = (Real32)y;
+		for (z = bbMin.Z; z <= bbMax.Z; z++) { v.Z = (Real32)z;
+			for (x = bbMin.X; x <= bbMax.X; x++) { v.X = (Real32)x;
+				BlockID block = World_GetBlock(x, y, z);
+				if (block == BLOCK_AIR) continue;
+				UInt8 collide = Block_Collide[block];
+				if (collide == COLLIDE_SOLID && !checkSolid) continue;
+
+				Vector3_Add(&blockBB.Min, &v, &Block_MinBB[block]);
+				Vector3_Add(&blockBB.Max, &v, &Block_MaxBB[block]);
+				if (!AABB_Intersects(&blockBB, bounds)) continue;
+
+				modifier = min(modifier, Block_SpeedMultiplier[block]);
+				if (Block_ExtendedCollide[block] == COLLIDE_LIQUID) {
+					comp->UseLiquidGravity = true;
+				}
+			}
+		}
+	}
+	return modifier;
+}
+
+Real32 PhysicsComp_GetSpeed(HacksComp* hacks, Real32 speedMul) {
+	Real32 factor = hacks->Floating ? speedMul : 1.0f, speed = factor;
+	if (hacks->Speeding     && hacks->CanSpeed) speed += factor * hacks->SpeedMultiplier;
+	if (hacks->HalfSpeeding && hacks->CanSpeed) speed += factor * hacks->SpeedMultiplier / 2;
+	return hacks->CanSpeed ? speed : min(speed, 1.0f);
+}
+
+Real32 PhysicsComp_GetBaseSpeed(PhysicsComp* comp) {
+	AABB bounds; Entity_GetBounds(comp->Entity, &bounds);
+	comp->UseLiquidGravity = false;
+	Real32 baseModifier = PhysicsComp_LowestModifier(comp, &bounds, false);
+	bounds.Min.Y -= 0.5f / 16.0f; /* also check block standing on */
+	Real32 solidModifier = PhysicsComp_LowestModifier(comp, &bounds, true);
+
+	if (baseModifier == MATH_POS_INF && solidModifier == MATH_POS_INF) return 1.0f;
+	return baseModifier == MATH_POS_INF ? solidModifier : baseModifier;
+}
+
+#define LIQUID_GRAVITY 0.02f
+#define ROPE_GRAVITY   0.034f
+void PhysicsComp_PhysicsTick(PhysicsComp* comp, Vector3 vel) {
+	Entity* entity = comp->Entity;
+	HacksComp* hacks = comp->Hacks;
+
+	if (hacks->Noclip) entity->OnGround = false;
+	Real32 baseSpeed = PhysicsComp_GetBaseSpeed(comp);
+	Real32 verSpeed  = baseSpeed * (PhysicsComp_GetSpeed(hacks, 8.0f) / 5.0f);
+	Real32 horSpeed  = baseSpeed * PhysicsComp_GetSpeed(hacks, 8.0f / 5.0f) * hacks->BaseHorSpeed;
+	/* previously horSpeed used to be multiplied by factor of 0.02 in last case */
+	/* it's now multiplied by 0.1, so need to divide by 5 so user speed modifier comes out same */
+
+	/* TODO: this is a temp fix to avoid crashing for high horizontal speed */
+	if (horSpeed > 75.0f) horSpeed = 75.0f;
+	/* vertical speed never goes below: base speed * 1.0 */
+	if (verSpeed < baseSpeed) verSpeed = baseSpeed;
+
+	bool womSpeedBoost = hacks->CanDoubleJump && hacks->WOMStyleHacks;
+	if (!hacks->Floating && womSpeedBoost) {
+		if (comp->MultiJumps == 1)     { horSpeed *= 46.5f; verSpeed *= 7.5f; } 
+		else if (comp->MultiJumps > 1) { horSpeed *= 93.0f; verSpeed *= 10.0f; }
+	}
+
+	if (Entity_TouchesAnyWater(entity) && !hacks->Floating) {
+		Vector3 waterDrag = VECTOR3_CONST(0.8f, 0.8f, 0.8f);
+		PhysicsComp_MoveNormal(comp, vel, 0.02f * horSpeed, waterDrag, LIQUID_GRAVITY, verSpeed);
+	} else if (Entity_TouchesAnyLava(entity) && !hacks->Floating) {
+		Vector3 lavaDrag = VECTOR3_CONST(0.5f, 0.5f, 0.5f);
+		PhysicsComp_MoveNormal(comp, vel, 0.02f * horSpeed, lavaDrag, LIQUID_GRAVITY, verSpeed);
+	} else if (Entity_TouchesAnyRope(entity) && !hacks->Floating) {
+		Vector3 ropeDrag = VECTOR3_CONST(0.5f, 0.85f, 0.5f);
+		PhysicsComp_MoveNormal(comp, vel, 0.02f * 1.7f, ropeDrag, ROPE_GRAVITY, verSpeed);
+	} else {
+		Real32 factor  = hacks->Floating || entity->OnGround ? 0.1f : 0.02f;
+		Real32 gravity = comp->UseLiquidGravity ? LIQUID_GRAVITY : entity->Model->Gravity;
+
+		if (hacks->Floating) {
+			PhysicsComp_MoveFlying(comp, vel, factor * horSpeed, entity->Model->Drag, gravity, verSpeed);
+		} else {
+			PhysicsComp_MoveNormal(comp, vel, factor * horSpeed, entity->Model->Drag, gravity, verSpeed);
+		}
+
+		if (PhysicsComp_OnIce(entity) && !hacks->Floating) {
+			/* limit components to +-0.25f by rescaling vector to [-0.25, 0.25] */
+			if (Math_AbsF(entity->Velocity.X) > 0.25f || Math_AbsF(entity->Velocity.Z) > 0.25f) {
+				Real32 xScale = Math_AbsF(0.25f / entity->Velocity.X);
+				Real32 zScale = Math_AbsF(0.25f / entity->Velocity.Z);
+
+				Real32 scale = min(xScale, zScale);
+				entity->Velocity.X *= scale;
+				entity->Velocity.Z *= scale;
+			}
+		} else if (entity->OnGround || hacks->Flying) {
+			Vector3_Mul3By(&entity->Velocity, &entity->Model->GroundFriction); /* air drag or ground friction */
+		}
+	}
+
+	if (entity->OnGround) comp->MultiJumps = 0;
+}
+
+Real64 PhysicsComp_YPosAt(Int32 t, Real32 u) {
+	/* v(t, u) = (4 + u) * (0.98^t) - 4, where u = initial velocity */
+	/* x(t, u) = Σv(t, u) from 0 to t (since we work in discrete timesteps) */
+	/* plugging into Wolfram Alpha gives 1 equation as */
+	/* (0.98^t) * (-49u - 196) - 4t + 50u + 196 */
+	Real64 a = Math_Exp(-0.0202027 * t); /* ~0.98^t */
+	return a * (-49 * u - 196) - 4 * t + 50 * u + 196;
+}
+
+Real64 PhysicsComp_GetMaxHeight(Real32 u) {
+	/* equation below comes from solving diff(x(t, u))= 0 */
+	/* We only work in discrete timesteps, so test both rounded up and down */
+	Real64 t = 49.49831645 * Math_Log(0.247483075 * u + 0.9899323);
+	Real64 value_floor = PhysicsComp_YPosAt((Int32)t, u);
+	Real64 value_ceil  = PhysicsComp_YPosAt((Int32)t + 1, u);
+	return max(value_floor, value_ceil);
+}
+
+/* Calculates the jump velocity required such that when a client presses
+the jump binding they will be able to jump up to the given height. */
+void PhysicsComp_CalculateJumpVelocity(PhysicsComp* comp, Real32 jumpHeight) {
+	comp->JumpVel = 0.0f;
+	if (jumpHeight == 0.0f) return;
+
+	if (jumpHeight >= 256.0f) comp->JumpVel = 10.0f;
+	if (jumpHeight >= 512.0f) comp->JumpVel = 16.5f;
+	if (jumpHeight >= 768.0f) comp->JumpVel = 22.5f;
+
+	while (PhysicsComp_GetMaxHeight(comp->JumpVel) <= jumpHeight) { comp->JumpVel += 0.001f; }
+}
+
+void PhysicsComp_DoEntityPush(Entity* entity) {
+	Int32 id;
+	Vector3 dir; dir.Y = 0.0f;
+
+	for (id = 0; id < ENTITIES_MAX_COUNT; id++) {
+		Entity* other = Entities_List[id];
+		if (other == NULL || other == entity) continue;
+		if (!other->Model->Pushes) continue;
+
+		bool yIntersects =
+			entity->Position.Y <= (other->Position.Y  + other->Size.Y) &&
+			 other->Position.Y <= (entity->Position.Y + entity->Size.Y);
+		if (!yIntersects) continue;
+
+		dir.X = other->Position.X - entity->Position.X;
+		dir.Z = other->Position.Z - entity->Position.Z;
+		Real32 dist = dir.X	* dir.X + dir.Z * dir.Z;
+		if (dist < 0.002f || dist > 1.0f) continue; /* TODO: range needs to be lower? */
+
+		Vector3_Normalize(&dir, &dir);
+		Real32 pushStrength = (1 - dist) / 32.0f; /* TODO: should be 24/25 */
+		/* entity.Velocity -= dir * pushStrength */
+		Vector3_Mul1By(&dir, pushStrength);
+		Vector3_SubBy(&entity->Velocity, &dir);
+	}
+}
+
+
+/*########################################################################################################################*
+*----------------------------------------------------SoundsComponent------------------------------------------------------*
+*#########################################################################################################################*/
+Vector3 sounds_LastPos = { -1e25f, -1e25f, -1e25f };
+bool sounds_AnyNonAir;
+UInt8 sounds_Type;
+
+bool Sounds_CheckNonSolid(BlockID b) {
+	UInt8 type = Block_StepSounds[b];
+	UInt8 collide = Block_Collide[b];
+	if (type != SOUND_NONE && collide != COLLIDE_SOLID) sounds_Type = type;
+
+	if (Block_Draw[b] != DRAW_GAS) sounds_AnyNonAir = true;
+	return false;
+}
+
+bool Sounds_CheckSolid(BlockID b) {
+	UInt8 type = Block_StepSounds[b];
+	if (type != SOUND_NONE) sounds_Type = type;
+
+	if (Block_Draw[b] != DRAW_GAS) sounds_AnyNonAir = true;
+	return false;
+}
+
+void SoundComp_GetSound(LocalPlayer* p) {
+	Vector3 pos = p->Interp.Next.Pos;
+	AABB bounds; Entity_GetBounds(&p->Base, &bounds);
+	sounds_Type = SOUND_NONE;
+	sounds_AnyNonAir = false;
+
+	/* first check surrounding liquids/gas for sounds */
+	Entity_TouchesAny(&bounds, Sounds_CheckNonSolid);
+	if (sounds_Type != SOUND_NONE) return;
+
+	/* then check block standing on */
+	pos.Y -= 0.01f;
+	Vector3I feetPos; Vector3I_Floor(&feetPos, &pos);
+	BlockID blockUnder = World_SafeGetBlock_3I(feetPos);
+	Real32 maxY = feetPos.Y + Block_MaxBB[blockUnder].Y;
+
+	UInt8 typeUnder = Block_StepSounds[blockUnder];
+	UInt8 collideUnder = Block_Collide[blockUnder];
+	if (maxY >= pos.Y && collideUnder == COLLIDE_SOLID && typeUnder != SOUND_NONE) {
+		sounds_AnyNonAir = true; sounds_Type = typeUnder; return;
+	}
+
+	/* then check all solid blocks at feet */
+	bounds.Max.Y = bounds.Min.Y = pos.Y;
+	Entity_TouchesAny(&bounds, Sounds_CheckSolid);
+}
+
+bool SoundComp_DoPlaySound(LocalPlayer* p, Vector3 soundPos) {
+	Vector3 delta; Vector3_Sub(&delta, &sounds_LastPos, &soundPos);
+	Real32 distSq = Vector3_LengthSquared(&delta);
+	bool enoughDist = distSq > 1.75f * 1.75f;
+	/* just play every certain block interval when not animating */
+	if (p->Base.Anim.Swing < 0.999f) return enoughDist;
+
+	/* have our legs just crossed over the '0' point? */
+	Real32 oldLegRot, newLegRot;
+	if (Camera_Active->IsThirdPerson) {
+		oldLegRot = Math_CosF(p->Base.Anim.WalkTimeO);
+		newLegRot = Math_CosF(p->Base.Anim.WalkTimeN);
+	} else {
+		oldLegRot = Math_SinF(p->Base.Anim.WalkTimeO);
+		newLegRot = Math_SinF(p->Base.Anim.WalkTimeN);
+	}
+	return Math_Sign(oldLegRot) != Math_Sign(newLegRot);
+}
+
+void SoundComp_Tick(bool wasOnGround) {
+	LocalPlayer* p = &LocalPlayer_Instance;
+	Vector3 soundPos = p->Interp.Next.Pos;
+	SoundComp_GetSound(p);
+	if (!sounds_AnyNonAir) soundPos = Vector3_BigPos();
+
+	if (p->Base.OnGround && (SoundComp_DoPlaySound(p, soundPos) || !wasOnGround)) {
+		Audio_PlayStepSound(sounds_Type);
+		sounds_LastPos = soundPos;
+	}
 }

@@ -66,17 +66,19 @@ namespace ClassicalSharp.Gui {
 		
 		public Widget(Game game) : base(game) { }
 		
-		public ClickHandler MenuClick;		
+		public ClickHandler MenuClick;
 		public bool Active, Disabled;
 		public int X, Y, Width, Height;
 		public Anchor HorizontalAnchor, VerticalAnchor;
 		public int XOffset, YOffset;
 		
-		public Rectangle Bounds { get { return new Rectangle(X, Y, Width, Height); } }
-		
 		public virtual void Reposition() {
 			X = CalcPos(HorizontalAnchor, XOffset, Width, game.Width);
 			Y = CalcPos(VerticalAnchor, YOffset, Height, game.Height);
+		}
+		
+		public bool Contains(int x, int y) {
+			return GuiElement.Contains(X, Y, Width, Height, x, y);
 		}
 	}
 }

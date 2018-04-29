@@ -18,11 +18,11 @@ GfxResourceID env_cloudsVb, env_skyVb, env_cloudsTex;
 Int32 env_cloudVertices, env_skyVertices;
 
 Real32 EnvRenderer_BlendFactor(Real32 x) {
-	/* return -0.05 + 0.22 * (Math_LogE(x) * 0.25f); */
-	Real32 blend = -0.13f + 0.28f * (Math_LogE(x) * 0.25f);
-	if (blend < 0.0f) blend = 0.0f;
-	if (blend > 1.0f) blend = 1.0f;
-	return blend;
+	/* return -0.05 + 0.22 * (Math_Log(x) * 0.25f); */
+	Real64 blend = -0.13 + 0.28 * (Math_Log(x) * 0.25);
+	if (blend < 0.0) blend = 0.0;
+	if (blend > 1.0) blend = 1.0;
+	return (Real32)blend;
 }
 
 void EnvRenderer_BlockOn(Real32* fogDensity, PackedCol* fogCol) {
@@ -38,11 +38,11 @@ void EnvRenderer_BlockOn(Real32* fogDensity, PackedCol* fogCol) {
 
 	if (AABB_ContainsPoint(&blockBB, &pos) && Block_FogDensity[block] != 0.0f) {
 		*fogDensity = Block_FogDensity[block];
-		*fogCol = Block_FogColour[block];
+		*fogCol = Block_FogCol[block];
 	} else {
 		*fogDensity = 0.0f;
 		/* Blend fog and sky together */
-		Real32 blend = EnvRenderer_BlendFactor(Game_ViewDistance);
+		Real32 blend = EnvRenderer_BlendFactor((Real32)Game_ViewDistance);
 		*fogCol = PackedCol_Lerp(WorldEnv_FogCol, WorldEnv_SkyCol, blend);
 	}
 }
@@ -59,9 +59,12 @@ void EnvRenderer_RenderMinimal(Real64 deltaTime) {
 	/* TODO: rewrite this to avoid raising the event? want to avoid recreating vbos too many times often */
 	if (fogDensity != 0.0f) {
 		/* Exp fog mode: f = e^(-density*coord) */
-		/* Solve for f = 0.05 to figure out coord (good approx for fog end) */
-		Real32 dist = (Real32)Math_LogE(0.05f) / -fogDensity;
-		Game_SetViewDistance(dist, false);
+		/* Solve coord for f = 0.05 (good approx for fog end) */
+		/*   i.e. log(0.05) = -density * coord */
+
+		#define LOG_005 -2.99573227355399
+		Real64 dist = LOG_005 / -fogDensity;
+		Game_SetViewDistance((Int32)dist, false);
 	} else {
 		Game_SetViewDistance(Game_UserViewDistance, false);
 	}
@@ -75,7 +78,7 @@ void EnvRenderer_RenderClouds(Real64 deltaTime) {
 	Gfx_SetMatrixMode(MATRIX_TYPE_TEXTURE);
 	Matrix matrix = Matrix_Identity; matrix.Row3.X = offset; /* translate X axis */
 	Gfx_LoadMatrix(&matrix);
-	Gfx_SetMatrixMode(MATRIX_TYPE_MODELVIEW);
+	Gfx_SetMatrixMode(MATRIX_TYPE_VIEW);
 
 	Gfx_SetAlphaTest(true);
 	Gfx_SetTexturing(true);
@@ -88,7 +91,7 @@ void EnvRenderer_RenderClouds(Real64 deltaTime) {
 
 	Gfx_SetMatrixMode(MATRIX_TYPE_TEXTURE);
 	Gfx_LoadIdentityMatrix();
-	Gfx_SetMatrixMode(MATRIX_TYPE_MODELVIEW);
+	Gfx_SetMatrixMode(MATRIX_TYPE_VIEW);
 }
 
 void EnvRenderer_RenderSky(Real64 deltaTime) {
@@ -129,11 +132,13 @@ void EnvRenderer_UpdateFog(void) {
 		   0.99=z/end   --> z=end*0.99
 		     therefore
 		  d = -ln(0.01)/(end*0.99) */
-		Real32 density = -Math_LogE(0.01f) / (Game_ViewDistance * 0.99f);
-		Gfx_SetFogDensity(density);
+
+		#define LOG_001 -4.60517018598809
+		Real64 density = -(LOG_001) / (Game_ViewDistance * 0.99);
+		Gfx_SetFogDensity((Real32)density);
 	} else {
 		Gfx_SetFogMode(FOG_LINEAR);
-		Gfx_SetFogEnd(Game_ViewDistance);
+		Gfx_SetFogEnd((Real32)Game_ViewDistance);
 	}
 	Gfx_ClearColour(fogCol);
 	Gfx_SetFogColour(fogCol);
@@ -209,14 +214,14 @@ void EnvRenderer_RebuildClouds(Int32 extent, Int32 axisSize) {
 	VertexP3fT2fC4b v[4096];
 	VertexP3fT2fC4b* ptr = v;
 	if (env_cloudVertices > 4096) {
-		ptr = Platform_MemAlloc(env_cloudVertices * sizeof(VertexP3fT2fC4b));
+		ptr = Platform_MemAlloc(env_cloudVertices, sizeof(VertexP3fT2fC4b));
 		if (ptr == NULL) ErrorHandler_Fail("EnvRenderer_Clouds - failed to allocate memory");
 	}
 
 	EnvRenderer_DrawCloudsY(x1, z1, x2, z2, WorldEnv_CloudsHeight, axisSize, WorldEnv_CloudsCol, ptr);
 	env_cloudsVb = Gfx_CreateVb(ptr, VERTEX_FORMAT_P3FT2FC4B, env_cloudVertices);
 
-	if (env_cloudVertices > 4096) Platform_MemFree(ptr);
+	if (env_cloudVertices > 4096) Platform_MemFree(&ptr);
 }
 
 void EnvRenderer_RebuildSky(Int32 extent, Int32 axisSize) {
@@ -228,7 +233,7 @@ void EnvRenderer_RebuildSky(Int32 extent, Int32 axisSize) {
 	VertexP3fC4b v[4096];
 	VertexP3fC4b* ptr = v;
 	if (env_skyVertices > 4096) {
-		ptr = Platform_MemAlloc(env_skyVertices * sizeof(VertexP3fC4b));
+		ptr = Platform_MemAlloc(env_skyVertices, sizeof(VertexP3fC4b));
 		if (ptr == NULL) ErrorHandler_Fail("EnvRenderer_Sky - failed to allocate memory");
 	}
 
@@ -236,19 +241,19 @@ void EnvRenderer_RebuildSky(Int32 extent, Int32 axisSize) {
 	EnvRenderer_DrawSkyY(x1, z1, x2, z2, height, axisSize, WorldEnv_SkyCol, ptr);
 	env_skyVb = Gfx_CreateVb(ptr, VERTEX_FORMAT_P3FC4B, env_skyVertices);
 
-	if (env_skyVertices > 4096) Platform_MemFree(ptr);
+	if (env_skyVertices > 4096) Platform_MemFree(&ptr);
 }
 
 void EnvRenderer_ResetClouds(void) {
 	if (World_Blocks == NULL || Gfx_LostContext) return;
 	Gfx_DeleteVb(&env_cloudsVb);
-	EnvRenderer_RebuildClouds((Int32)Game_ViewDistance, EnvRenderer_Legacy ? 128 : 65536);
+	EnvRenderer_RebuildClouds(Game_ViewDistance, EnvRenderer_Legacy ? 128 : 65536);
 }
 
 void EnvRenderer_ResetSky(void) {
 	if (World_Blocks == NULL || Gfx_LostContext) return;
 	Gfx_DeleteVb(&env_skyVb);
-	EnvRenderer_RebuildSky((Int32)Game_ViewDistance, EnvRenderer_Legacy ? 128 : 65536);
+	EnvRenderer_RebuildSky(Game_ViewDistance, EnvRenderer_Legacy ? 128 : 65536);
 }
 
 void EnvRenderer_ContextLost(void* obj) {
@@ -275,10 +280,7 @@ void EnvRenderer_ResetAllEnv(void* obj) {
 }
 
 void EnvRenderer_FileChanged(void* obj, Stream* src) {
-	String cloud  = String_FromConst("cloud.png");
-	String clouds = String_FromConst("clouds.png");
-
-	if (String_CaselessEquals(&src->Name, &cloud) || String_CaselessEquals(&src->Name, &clouds)) {
+	if (String_CaselessEqualsConst(&src->Name, "cloud.png") || String_CaselessEqualsConst(&src->Name, "clouds.png")) {
 		Game_UpdateTexture(&env_cloudsTex, src, false);
 	}
 }
@@ -316,7 +318,7 @@ void EnvRenderer_Init(void) {
 	Event_RegisterVoid(&GfxEvents_ViewDistanceChanged, NULL, EnvRenderer_ResetAllEnv);
 	Event_RegisterVoid(&GfxEvents_ContextLost,         NULL, EnvRenderer_ContextLost);
 	Event_RegisterVoid(&GfxEvents_ContextRecreated,    NULL, EnvRenderer_ContextRecreated);
-	Event_RegisterInt32(&WorldEvents_EnvVarChanged,    NULL, EnvRenderer_EnvVariableChanged);
+	Event_RegisterInt(&WorldEvents_EnvVarChanged,    NULL, EnvRenderer_EnvVariableChanged);
 	Game_SetViewDistance(Game_UserViewDistance, false);
 }
 
@@ -338,10 +340,10 @@ void EnvRenderer_Free(void) {
 	Event_UnregisterVoid(&GfxEvents_ViewDistanceChanged, NULL, EnvRenderer_ResetAllEnv);
 	Event_UnregisterVoid(&GfxEvents_ContextLost,         NULL, EnvRenderer_ContextLost);
 	Event_UnregisterVoid(&GfxEvents_ContextRecreated,    NULL, EnvRenderer_ContextRecreated);
-	Event_UnregisterInt32(&WorldEvents_EnvVarChanged,    NULL, EnvRenderer_EnvVariableChanged);
+	Event_UnregisterInt(&WorldEvents_EnvVarChanged,    NULL, EnvRenderer_EnvVariableChanged);
 }
 
-IGameComponent EnvRenderer_MakeGameComponent(void) {
+IGameComponent EnvRenderer_MakeComponent(void) {
 	IGameComponent comp = IGameComponent_MakeEmpty();
 	comp.Init = EnvRenderer_Init;
 	comp.Reset = EnvRenderer_OnNewMap;

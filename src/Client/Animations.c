@@ -30,8 +30,8 @@ void LavaAnimation_Tick(UInt32* ptr, Int32 size) {
 	for (y = 0; y < size; y++) {
 		for (x = 0; x < size; x++) {
 			/* Calculate the colour at this coordinate in the heatmap */
-			Int32 xx = x + (Int32)(1.2f * Math_Sin(y * 22.5f * MATH_DEG2RAD));
-			Int32 yy = y + (Int32)(1.2f * Math_Sin(x * 22.5f * MATH_DEG2RAD));
+			Int32 xx = x + (Int32)(1.2f * Math_SinF(y * 22.5f * MATH_DEG2RAD));
+			Int32 yy = y + (Int32)(1.2f * Math_SinF(x * 22.5f * MATH_DEG2RAD));
 			Real32 lSoupHeat =
 				L_soupHeat[((yy - 1) & mask) << shift | ((xx - 1) & mask)] +
 				L_soupHeat[((yy - 1) & mask) << shift | (xx & mask)] +
@@ -141,10 +141,7 @@ bool anims_validated, anims_useLavaAnim, anims_useWaterAnim;
 void Animations_LogFail(STRING_TRANSIENT String* line, const UInt8* raw) {
 	UInt8 msgBuffer[String_BufferSize(128)];
 	String msg = String_InitAndClearArray(msgBuffer);
-
-	String_AppendConst(&msg, raw);
-	String_Append(&msg, ':'); String_Append(&msg, ' ');
-	String_AppendString(&msg, line);
+	String_Format2(&msg, "%c: %s", raw, line);
 	Chat_Add(&msg);
 }
 
@@ -198,7 +195,7 @@ void Animations_Draw(AnimationData* data, Int32 texId, Int32 size) {
 	UInt8* ptr = buffer;
 	if (size > ANIMS_FAST_SIZE) {
 		/* cannot allocate memory on the stack for very big animation.png frames */
-		ptr = Platform_MemAlloc(Bitmap_DataSize(size, size));
+		ptr = Platform_MemAlloc(size * size, BITMAP_SIZEOF_PIXEL);
 		if (ptr == NULL) ErrorHandler_Fail("Failed to allocate memory for anim frame");
 	}
 
@@ -219,7 +216,7 @@ void Animations_Draw(AnimationData* data, Int32 texId, Int32 size) {
 
 	Int32 y = rowNum * Atlas2D_ElementSize;
 	Gfx_UpdateTexturePart(Atlas1D_TexIds[index], 0, y, &animPart, Gfx_Mipmaps);
-	if (size > ANIMS_FAST_SIZE) Platform_MemFree(ptr);
+	if (size > ANIMS_FAST_SIZE) Platform_MemFree(&ptr);
 }
 
 void Animations_Apply(AnimationData* data) {
@@ -240,22 +237,19 @@ bool Animations_IsDefaultZip(void) {
 	UInt8 texPackBuffer[String_BufferSize(STRING_SIZE)];
 	String texPack = String_InitAndClearArray(texPackBuffer);
 
-	Options_Get(OPTION_DEFAULT_TEX_PACK, &texPack);
-	String defaultZip = String_FromConst("default.zip");
-	return texPack.length == 0 || String_CaselessEquals(&texPack, &defaultZip);
+	Options_Get(OPT_DEFAULT_TEX_PACK, &texPack, "default.zip");
+	return String_CaselessEqualsConst(&texPack, "default.zip");
 }
 
 void Animations_Clear(void) {
 	anims_count = 0;
-	if (anims_bmp.Scan0 == NULL) return;
-	Platform_MemFree(anims_bmp.Scan0);
-	anims_bmp.Scan0 = NULL;
+	Platform_MemFree(&anims_bmp.Scan0);
 	anims_validated = false;
 }
 
 void Animations_Validate(void) {
 	anims_validated = true;
-	UInt8 msgBuffer[String_BufferSize(128)];
+	UInt8 msgBuffer[String_BufferSize(STRING_SIZE * 2)];
 	String msg = String_InitAndClearArray(msgBuffer);
 	UInt32 i, j;
 
@@ -265,14 +259,10 @@ void Animations_Validate(void) {
 		Int32 maxX = data.FrameX + data.FrameSize * data.StatesCount;
 		String_Clear(&msg);
 
-		if (data.FrameSize > Atlas2D_ElementSize) {		
-			String_AppendConst(&msg, "&cAnimation frames for tile (");
-			String_AppendInt32(&msg, data.TileX); String_AppendConst(&msg, ", "); String_AppendInt32(&msg, data.TileY);
-			String_AppendConst(&msg, ") are bigger than the size of a tile in terrain.png");
+		if (data.FrameSize > Atlas2D_ElementSize) {
+			String_Format2(&msg, "&cAnimation frames for tile (%b, %b) are bigger than the size of a tile in terrain.png", &data.TileX, &data.TileY);
 		} else if (maxX > anims_bmp.Width || maxY > anims_bmp.Height) {
-			String_AppendConst(&msg, "&cSome of the animation frames for tile (");
-			String_AppendInt32(&msg, data.TileX); String_AppendConst(&msg, ", "); String_AppendInt32(&msg, data.TileY);
-			String_AppendConst(&msg, ") are at coordinates outside animations.png");
+			String_Format2(&msg, "&cSome of the animation frames for tile (%b, %b) are at coordinates outside animations.png", &data.TileX, &data.TileY);
 		} else {
 			continue;
 		}
@@ -320,21 +310,14 @@ void Animations_PackChanged(void* obj) {
 }
 
 void Animations_FileChanged(void* obj, Stream* stream) {
-	String animPng = String_FromConst("animation.png");
-	String animsPng = String_FromConst("animations.png");
-	String animTxt = String_FromConst("animation.txt");
-	String animsTxt = String_FromConst("animations.txt");
-	String lavaAnim = String_FromConst("uselavaanim");
-	String waterAnim = String_FromConst("usewateranim");
-
 	String* name = &stream->Name;
-	if (String_CaselessEquals(name, &animPng) || String_CaselessEquals(name, &animsPng)) {
+	if (String_CaselessEqualsConst(name, "animation.png") || String_CaselessEqualsConst(name, "animations.png")) {
 		Bitmap_DecodePng(&anims_bmp, stream);
-	} else if (String_CaselessEquals(name, &animTxt) || String_CaselessEquals(name, &animsTxt)) {
+	} else if (String_CaselessEqualsConst(name, "animation.txt") || String_CaselessEqualsConst(name, "animations.txt")) {
 		Animations_ReadDescription(stream);
-	} else if (String_CaselessEquals(name, &lavaAnim)) {
+	} else if (String_CaselessEqualsConst(name, "uselavaanim")) {
 		anims_useLavaAnim = true;
-	} else if (String_CaselessEquals(name, &waterAnim)) {
+	} else if (String_CaselessEqualsConst(name, "usewateranim")) {
 		anims_useWaterAnim = true;
 	}
 }

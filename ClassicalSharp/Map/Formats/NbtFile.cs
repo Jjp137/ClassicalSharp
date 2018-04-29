@@ -22,7 +22,6 @@ namespace ClassicalSharp.Map {
 		End, Int8, Int16, Int32, Int64,
 		Real32, Real64, Int8Array, String,
 		List, Compound, Int32Array,
-		Invalid = 255,
 	}
 
 	public sealed class NbtFile {
@@ -40,6 +39,8 @@ namespace ClassicalSharp.Map {
 		
 		
 		public void Write(NbtTagType v) { writer.Write((byte)v); }
+		
+		public void Write(NbtTagType v, string name) { writer.Write((byte)v); Write(name); }
 		
 		public void WriteInt32(int v) { writer.Write(IPAddress.HostToNetworkOrder(v)); }
 		
@@ -61,10 +62,9 @@ namespace ClassicalSharp.Map {
 		}
 		
 		public void WriteCpeExtCompound(string name, int version) {
-			Write(NbtTagType.Compound); Write(name);
-			
-			Write(NbtTagType.Int32);
-			Write("ExtensionVersion"); WriteInt32(version);
+			Write(NbtTagType.Compound, name);		
+			Write(NbtTagType.Int32, "ExtensionVersion"); 
+			WriteInt32(version);
 		}
 		
 		
@@ -82,9 +82,7 @@ namespace ClassicalSharp.Map {
 		
 		public unsafe NbtTag ReadTag(byte typeId, bool readTagName) {
 			NbtTag tag = default(NbtTag);
-			if (typeId == 0) {
-				tag.TagId = NbtTagType.Invalid; return tag;
-			}
+			if (typeId == 0) return tag;
 			
 			tag.Name = readTagName ? ReadString() : null;
 			tag.TagId = (NbtTagType)typeId;			
@@ -118,10 +116,10 @@ namespace ClassicalSharp.Map {
 					tag.Value = list; break;
 					
 				case NbtTagType.Compound:
+					byte childTagId;
 					Dictionary<string, NbtTag> children = new Dictionary<string, NbtTag>();
-					NbtTag child;
-					while ((child = ReadTag(reader.ReadByte(), true)).TagId != NbtTagType.Invalid) {
-						children[child.Name] = child;
+					while ((childTagId = reader.ReadByte()) != (byte)NbtTagType.End) {
+						NbtTag child = ReadTag(childTagId, true); children[child.Name] = child;
 					}
 					tag.Value = children; break;
 					

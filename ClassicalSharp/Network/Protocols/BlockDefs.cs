@@ -10,14 +10,13 @@ namespace ClassicalSharp.Network.Protocols {
 		
 		public CPEProtocolBlockDefs(Game game) : base(game) { }
 		
-		public override void Init() { Reset(); }
-		
 		public override void Reset() {
-			if (!game.UseCPE || !game.UseCustomBlocks) return;
+			if (!game.UseCPE || !game.AllowCustomBlocks) return;
 			net.Set(Opcode.CpeDefineBlock, HandleDefineBlock, 80);
 			net.Set(Opcode.CpeUndefineBlock, HandleRemoveBlockDefinition, 2);
 			net.Set(Opcode.CpeDefineBlockExt, HandleDefineBlockExt, 85);
-		}
+		}		
+		public override void Tick() { }
 		
 		internal void HandleDefineBlock() {
 			BlockID block = HandleDefineBlockCommonStart(reader, false);
@@ -62,18 +61,15 @@ namespace ClassicalSharp.Network.Protocols {
 		}
 		
 		void HandleDefineBlockExt() {
-			if (!game.UseCustomBlocks) {
-				net.SkipPacketData(Opcode.CpeDefineBlockExt); return;
-			}
 			BlockID block = HandleDefineBlockCommonStart(reader, net.cpeData.blockDefsExtVer >= 2);
 			Vector3 min, max;
 			
-			min.X = reader.ReadUInt8() / 16f; Utils.Clamp(ref min.X, 0, 15/16f);
-			min.Y = reader.ReadUInt8() / 16f; Utils.Clamp(ref min.Y, 0, 15/16f);
-			min.Z = reader.ReadUInt8() / 16f; Utils.Clamp(ref min.Z, 0, 15/16f);
-			max.X = reader.ReadUInt8() / 16f; Utils.Clamp(ref max.X, 1/16f, 1);
-			max.Y = reader.ReadUInt8() / 16f; Utils.Clamp(ref max.Y, 1/16f, 1);
-			max.Z = reader.ReadUInt8() / 16f; Utils.Clamp(ref max.Z, 1/16f, 1);
+			min.X = reader.ReadUInt8() / 16f; Utils.Clamp(ref min.X, 0, 1);
+			min.Y = reader.ReadUInt8() / 16f; Utils.Clamp(ref min.Y, 0, 1);
+			min.Z = reader.ReadUInt8() / 16f; Utils.Clamp(ref min.Z, 0, 1);
+			max.X = reader.ReadUInt8() / 16f; Utils.Clamp(ref max.X, 0, 1);
+			max.Y = reader.ReadUInt8() / 16f; Utils.Clamp(ref max.Y, 0, 1);
+			max.Z = reader.ReadUInt8() / 16f; Utils.Clamp(ref max.Z, 0, 1);
 			
 			BlockInfo.MinBB[block] = min;
 			BlockInfo.MaxBB[block] = max;
@@ -104,10 +100,10 @@ namespace ClassicalSharp.Network.Protocols {
 			OnBlockUpdated(block, didBlockLight);
 			
 			byte sound = reader.ReadUInt8();
-			if (sound < breakSnds.Length) {
-				BlockInfo.StepSounds[block] = stepSnds[sound];
-				BlockInfo.DigSounds[block] = breakSnds[sound];
-			}
+			BlockInfo.StepSounds[block] = sound;
+			BlockInfo.DigSounds[block]  = sound;			
+			if (sound == SoundType.Glass) BlockInfo.StepSounds[block] = SoundType.Stone;
+			
 			BlockInfo.FullBright[block] = reader.ReadUInt8() != 0;
 			return block;
 		}
@@ -118,21 +114,13 @@ namespace ClassicalSharp.Network.Protocols {
 				BlockInfo.SpriteOffset[block] = blockDraw;
 				blockDraw = DrawType.Sprite;
 			}
-			BlockInfo.LightOffset[block] = BlockInfo.CalcLightOffset(block);
+			BlockInfo.Draw[block] = blockDraw;
 			
 			byte fogDensity = reader.ReadUInt8();
 			BlockInfo.FogDensity[block] = fogDensity == 0 ? 0 : (fogDensity + 1) / 128f;
-			BlockInfo.FogColour[block] = new FastColour(
-				reader.ReadUInt8(), reader.ReadUInt8(), reader.ReadUInt8());
-			BlockInfo.Tinted[block] = BlockInfo.FogColour[block] != FastColour.Black && BlockInfo.Name[block].IndexOf('#') >= 0;
+			BlockInfo.FogColour[block] = new FastColour(reader.ReadUInt8(), reader.ReadUInt8(), reader.ReadUInt8());
 			
-			BlockInfo.SetBlockDraw(block, blockDraw);
-			BlockInfo.CalcRenderBounds(block);
-			BlockInfo.UpdateCulling(block);
-			
-			game.Inventory.AddDefault(block);
-			BlockInfo.SetCustomDefined(block, true);
-			game.Events.RaiseBlockDefinitionChanged();
+			BlockInfo.DefineCustom(game, block);
 		}
 		
 		#if FALSE
@@ -164,19 +152,5 @@ namespace ClassicalSharp.Network.Protocols {
 			reader.Skip(total - (reader.index - start));
 		}
 		#endif
-		
-		internal static byte[] stepSnds = new byte[10] {
-			SoundType.None, SoundType.Wood, SoundType.Gravel,
-			SoundType.Grass, SoundType.Stone, SoundType.Metal,
-			SoundType.Stone, SoundType.Cloth, SoundType.Sand,
-			SoundType.Snow,
-		};
-		
-		internal static byte[] breakSnds = new byte[10] {
-			SoundType.None, SoundType.Wood, SoundType.Gravel,
-			SoundType.Grass, SoundType.Stone, SoundType.Metal,
-			SoundType.Glass, SoundType.Cloth, SoundType.Sand,
-			SoundType.Snow,
-		};
 	}
 }

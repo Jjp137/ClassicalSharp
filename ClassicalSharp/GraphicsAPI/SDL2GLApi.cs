@@ -1,6 +1,7 @@
 // ClassicalSharp copyright 2014-2016 UnknownShadow200 | Licensed under MIT
 #if !USE_DX && !ANDROID
 using System;
+using System.IO;
 using System.Runtime.InteropServices;
 
 using SDL2;
@@ -443,6 +444,7 @@ namespace ClassicalSharp.GraphicsAPI
 		public SDL2GLApi() {
 			GLFuncs.LoadEntryPoints();
 
+			MinZNear = 0.1f;
 			InitFields();
 			int texDims;
 			GLFuncs.GetIntegerv(GetPName.MaxTextureSize, &texDims);
@@ -451,7 +453,7 @@ namespace ClassicalSharp.GraphicsAPI
 			CustomMipmapsLevels = !glLists;
 			CheckVboSupport();
 			
-			base.InitDynamicBuffers();
+			base.InitCommon();
 
 			setupBatchFuncCol4b = SetupVbPos3fCol4b;
 			setupBatchFuncTex2fCol4b = SetupVbPos3fTex2fCol4b;
@@ -970,12 +972,14 @@ namespace ClassicalSharp.GraphicsAPI
 		}
 
 		// Based on http://www.opentk.com/doc/graphics/save-opengl-rendering-to-disk
-		public override void TakeScreenshot(string output, int width, int height) {
+		public override void TakeScreenshot(Stream output, int width, int height) {
 			using (Bitmap bmp = new Bitmap(width, height, BmpPixelFormat.Format32bppRgb)) { // ignore alpha component
-				using (FastBitmap fastBmp = new FastBitmap(bmp, true, false))
+				using (FastBitmap fastBmp = new FastBitmap(bmp, true, false)) {
 					GLFuncs.ReadPixels(0, 0, width, height, GlPixelFormat.Bgra, PixelType.UnsignedByte, fastBmp.Scan0);
+				}
+
 				bmp.RotateFlip(RotateFlipType.RotateNoneFlipY);
-				bmp.Save(output, ImageFormat.Png);
+				Platform.WriteBmp(bmp, output);
 			}
 		}
 

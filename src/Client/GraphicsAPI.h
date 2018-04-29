@@ -8,33 +8,24 @@
 /* Abstracts a 3D graphics rendering API.
    Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 */
+typedef struct Stream_ Stream;
+
 #define ICOUNT(verticesCount) (((verticesCount) >> 2) * 6)
 #define VERTEX_FORMAT_P3FC4B 0
 #define VERTEX_FORMAT_P3FT2FC4B 1
 
-#define COMPARE_FUNC_ALWAYS 0
-#define COMPARE_FUNC_NOTEQUAL 1
-#define COMPARE_FUNC_NEVER 2
-#define COMPARE_FUNC_LESS 3
-#define COMPARE_FUNC_LESSEQUAL 4
-#define COMPARE_FUNC_EQUAL 5
-#define COMPARE_FUNC_GREATEREQUAL 6
-#define COMPARE_FUNC_GREATER 7
+enum COMPARE_FUNC {
+	COMPARE_FUNC_ALWAYS, COMPARE_FUNC_NOTEQUAL,  COMPARE_FUNC_NEVER,
+	COMPARE_FUNC_LESS,   COMPARE_FUNC_LESSEQUAL, COMPARE_FUNC_EQUAL,
+	COMPARE_FUNC_GREATEREQUAL, COMPARE_FUNC_GREATER,
+};
+enum BLEND_FUNC {
+	BLEND_FUNC_ZERO,          BLEND_FUNC_ONE,       BLEND_FUNC_SRC_ALPHA,
+	BLEND_FUNC_INV_SRC_ALPHA, BLEND_FUNC_DST_ALPHA, BLEND_FUNC_INV_DST_ALPHA,
+};
 
-#define BLEND_FUNC_ZERO 0
-#define BLEND_FUNC_ONE 1
-#define BLEND_FUNC_SRC_ALPHA 2
-#define BLEND_FUNC_INV_SRC_ALPHA 3
-#define BLEND_FUNC_DST_ALPHA 4
-#define BLEND_FUNC_INV_DST_ALPHA 5
-
-#define FOG_LINEAR 0
-#define FOG_EXP 1
-#define FOG_EXP2 2
-
-#define MATRIX_TYPE_PROJECTION 0
-#define MATRIX_TYPE_MODELVIEW 1
-#define MATRIX_TYPE_TEXTURE 2
+enum FOG_FUNC { FOG_LINEAR, FOG_EXP, FOG_EXP2, };
+enum MATRIX_TYPE { MATRIX_TYPE_PROJECTION, MATRIX_TYPE_VIEW, MATRIX_TYPE_TEXTURE };
 
 void Gfx_Init(void);
 void Gfx_Free(void);
@@ -48,9 +39,10 @@ Matrix Gfx_View, Gfx_Projection;
 
 #define GFX_MAX_INDICES (65536 / 4 * 6)
 #define GFX_MAX_VERTICES 65536
+#define GFX_STRIDE_SIZES { 16, 24 }
 
 /* Callback invoked when the current context is lost, and is repeatedly invoked until the context can be retrieved. */
-ScheduledTaskCallback LostContextFunction;
+ScheduledTaskCallback Gfx_LostContextFunction;
 
 GfxResourceID Gfx_CreateTexture(Bitmap* bmp, bool managedPool, bool mipmaps);
 void Gfx_UpdateTexturePart(GfxResourceID texId, Int32 x, Int32 y, Bitmap* part, bool mipmaps);
@@ -97,7 +89,6 @@ void Gfx_DrawVb_Lines(Int32 verticesCount);
 void Gfx_DrawVb_IndexedTris_Range(Int32 verticesCount, Int32 startVertex);
 void Gfx_DrawVb_IndexedTris(Int32 verticesCount);
 void Gfx_DrawIndexedVb_TrisT2fC4b(Int32 verticesCount, Int32 startVertex);
-static Int32 Gfx_strideSizes[2] = { 16, 24 };
 
 void Gfx_SetMatrixMode(Int32 matrixType);
 void Gfx_LoadMatrix(Matrix* matrix);
@@ -105,8 +96,8 @@ void Gfx_LoadIdentityMatrix(void);
 void Gfx_CalcOrthoMatrix(Real32 width, Real32 height, Matrix* matrix);
 void Gfx_CalcPerspectiveMatrix(Real32 fov, Real32 aspect, Real32 zNear, Real32 zFar, Matrix* matrix);
 
-/* Outputs a .png screenshot of the backbuffer to the specified file. */
-void Gfx_TakeScreenshot(STRING_PURE String* output, Int32 width, Int32 height);
+/* Outputs a .png screenshot of the backbuffer */
+void Gfx_TakeScreenshot(Stream* output, Int32 width, Int32 height);
 /* Adds a warning to game's chat if this graphics API has problems with the current user's GPU. 
 Returns boolean of whether legacy rendering mode is needed. */
 bool Gfx_WarnIfNecessary(void);

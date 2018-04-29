@@ -2,6 +2,7 @@
 using System;
 using System.Drawing;
 using OpenTK;
+using System.IO;
 #if ANDROID
 using Android.Graphics;
 #else
@@ -20,7 +21,7 @@ namespace ClassicalSharp.GraphicsAPI {
 		public abstract bool Texturing { set; }
 		
 		public Matrix4 Projection, View;
-		internal float MinZNear = 0.1f;
+		internal float MinZNear; // MinZNear = 0.1f;
 		readonly FastBitmap bmpBuffer = new FastBitmap();
 		
 		/// <summary> Returns whether this graphics api had a valid context. </summary>
@@ -208,7 +209,7 @@ namespace ClassicalSharp.GraphicsAPI {
 		public abstract void LoadIdentityMatrix();
 		
 		/// <summary> Outputs a .png screenshot of the backbuffer to the specified file. </summary>
-		public abstract void TakeScreenshot(string output, int width, int height);
+		public abstract void TakeScreenshot(Stream output, int width, int height);
 		
 		/// <summary> Adds a warning to chat if this graphics API has problems with the current user's GPU. </summary>
 		public virtual bool WarnIfNecessary(Chat chat) { return false; }

@@ -182,14 +182,12 @@ namespace ClassicalSharp.Gui.Screens {
 		
 		static FastColour backColour = new FastColour(0, 0, 0, 127);
 		public void RenderBackground() {
-			int minIndex = Math.Min(0, game.Chat.Log.Count - chatLines);
-			int height = chatIndex == minIndex ? normalChat.GetUsedHeight() : normalChat.Height;
-			
-			int y = normalChat.Y + normalChat.Height - height - 5;
+			int usedHeight = normalChat.GetUsedHeight();
+			int y = normalChat.Y + normalChat.Height - usedHeight - 5;
 			int x = normalChat.X - 5;
 			int width = Math.Max(clientStatus.Width, normalChat.Width) + 10;
 			
-			int boxHeight = height + clientStatus.GetUsedHeight();
+			int boxHeight = usedHeight + clientStatus.GetUsedHeight();
 			if (boxHeight > 0) {
 				game.Graphics.Draw2DQuad(x, y, width, boxHeight + 10, backColour);
 			}
@@ -214,7 +212,12 @@ namespace ClassicalSharp.Gui.Screens {
 			altText.UpdateColours();
 			Recreate(normalChat, e.Code); Recreate(status, e.Code);
 			Recreate(bottomRight, e.Code); Recreate(clientStatus, e.Code);
+			
+			// Some servers have plugins that redefine colours constantly
+			// Preserve caret accumulator so caret blinking stays consistent
+			double caretAcc = input.caretAccumulator;
 			input.Recreate();
+			input.caretAccumulator = caretAcc;
 		}
 		
 		void Recreate(TextGroupWidget group, char code) {
@@ -400,8 +403,8 @@ namespace ClassicalSharp.Gui.Screens {
 		public override bool HandlesMouseDown(int mouseX, int mouseY, MouseButton button) {
 			if (!HandlesAllInput || game.HideGui) return false;
 			
-			if (!normalChat.Bounds.Contains(mouseX, mouseY)) {
-				if (altText.Active && altText.Bounds.Contains(mouseX, mouseY)) {
+			if (!normalChat.Contains(mouseX, mouseY)) {
+				if (altText.Active && altText.Contains(mouseX, mouseY)) {
 					altText.HandlesMouseDown(mouseX, mouseY, button);
 					UpdateAltTextY();
 					return true;
@@ -429,19 +432,6 @@ namespace ClassicalSharp.Gui.Screens {
 				input.Append(text);
 			}
 			return true;
-		}
-		
-		void OpenUrl(Overlay urlOverlay, bool always) {
-			try {
-				Process.Start(urlOverlay.Metadata);
-			} catch (Exception ex) {
-				ErrorHandler.LogError("ChatScreen.OpenUrl", ex);
-			}
-		}
-		
-		void AppendUrl(Overlay urlOverlay, bool always) {
-			if (!game.ClickableChat) return;
-			input.Append(urlOverlay.Metadata);
 		}
 		
 		int ClampIndex(int index) {

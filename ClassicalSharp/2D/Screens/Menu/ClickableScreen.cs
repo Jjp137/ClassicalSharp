@@ -24,7 +24,7 @@ namespace ClassicalSharp.Gui.Screens {
 			// iterate backwards (because last elements rendered are shown over others)
 			for (int i = widgets.Length - 1; i >= 0; i--) {
 				Widget widget = widgets[i];
-				if (widget == null || !widget.Bounds.Contains(mouseX, mouseY)) continue;
+				if (widget == null || !widget.Contains(mouseX, mouseY)) continue;
 				if (widget.Disabled) return i;
 				
 				if (widget.MenuClick != null && button == MouseButton.Left) {
@@ -45,7 +45,7 @@ namespace ClassicalSharp.Gui.Screens {
 			
 			for (int i = widgets.Length - 1; i >= 0; i--) {
 				Widget widget = widgets[i];
-				if (widget == null || !widget.Bounds.Contains(mouseX, mouseY)) continue;
+				if (widget == null || !widget.Contains(mouseX, mouseY)) continue;
 				
 				widget.Active = true;
 				return i;
@@ -53,6 +53,13 @@ namespace ClassicalSharp.Gui.Screens {
 			return -1;
 		}
 
+		protected static int IndexWidget(Widget[] widgets, Widget w) {
+			for (int i = 0; i < widgets.Length; i++) {
+				if (widgets[i] == w) return i;
+			}
+			return -1;
+		}
+		
 		protected ButtonWidget MakeBack(bool toGame, Font font, ClickHandler onClick) {
 			int width = game.UseClassicOptions ? 400 : 200;
 			return MakeBack(width, toGame ? "Back to game" : "Cancel", 25, font, onClick);
@@ -67,7 +74,7 @@ namespace ClassicalSharp.Gui.Screens {
 		protected static void SwitchPause(Game g, Widget w) { g.Gui.SetNewScreen(new PauseScreen(g)); }
 		
 				
-		protected static void DisposeWidgets<T>(T[] widgets) where T : Widget {
+		protected static void DisposeWidgets(Widget[] widgets) {
 			if (widgets == null) return;
 			
 			for (int i = 0; i < widgets.Length; i++) {
@@ -75,7 +82,7 @@ namespace ClassicalSharp.Gui.Screens {
 			}
 		}
 		
-		protected static void RepositionWidgets<T>(T[] widgets) where T : Widget {
+		protected static void RepositionWidgets(Widget[] widgets) {
 			if (widgets == null) return;
 			
 			for (int i = 0; i < widgets.Length; i++) {
@@ -83,7 +90,7 @@ namespace ClassicalSharp.Gui.Screens {
 			}
 		}
 		
-		protected static void RenderWidgets<T>(T[] widgets, double delta) where T : Widget {
+		protected static void RenderWidgets(Widget[] widgets, double delta) {
 			if (widgets == null) return;
 			
 			for (int i = 0; i < widgets.Length; i++) {

@@ -16,7 +16,7 @@
 "U", "V", "W", "X", "Y", "Z"
 
 const UInt8* Key_Names[Key_Count] = {
-	"Unknown",
+	"None",
 	"ShiftLeft", "ShiftRight", "ControlLeft", "ControlRight",
 	"AltLeft", "AltRight", "WinLeft", "WinRight", "Menu",
 	Key_Function_Names,
@@ -66,9 +66,9 @@ void Key_SetPressed(Key key, bool pressed) {
 		Key_States[key] = pressed;
 
 		if (pressed) {
-			Event_RaiseInt32(&KeyEvents_Down, key);
+			Event_RaiseInt(&KeyEvents_Down, key);
 		} else {
-			Event_RaiseInt32(&KeyEvents_Up, key);
+			Event_RaiseInt(&KeyEvents_Up, key);
 		}
 	}
 }
@@ -89,9 +89,9 @@ void Mouse_SetPressed(MouseButton btn, bool pressed) {
 		MouseButton_States[btn] = pressed;
 
 		if (pressed) {
-			Event_RaiseInt32(&MouseEvents_Down, btn);
+			Event_RaiseInt(&MouseEvents_Down, btn);
 		} else {
-			Event_RaiseInt32(&MouseEvents_Up, btn);
+			Event_RaiseInt(&MouseEvents_Up, btn);
 		}
 	}
 }
@@ -99,7 +99,7 @@ void Mouse_SetPressed(MouseButton btn, bool pressed) {
 void Mouse_SetWheel(Real32 wheel) {
 	Real32 delta = wheel - Mouse_Wheel;
 	Mouse_Wheel = wheel;
-	Event_RaiseReal32(&MouseEvents_Wheel, delta);
+	Event_RaiseReal(&MouseEvents_Wheel, delta);
 }
 
 void Mouse_SetPosition(Int32 x, Int32 y) {
@@ -116,9 +116,9 @@ Key KeyBind_Defaults[KeyBind_Count] = {
 	Key_Tab, Key_ShiftLeft, Key_X, Key_Z,
 	Key_Q, Key_E, Key_AltLeft, Key_F3,
 	Key_F12, Key_F11, Key_F5, Key_F1,
-	Key_F7, Key_C, Key_ControlLeft, Key_Unknown,
-	Key_Unknown, Key_Unknown, Key_F6, Key_AltLeft, 
-	Key_F8, Key_G, Key_F10,
+	Key_F7, Key_C, Key_ControlLeft, Key_None,
+	Key_None, Key_None, Key_F6, Key_AltLeft, 
+	Key_F8, Key_G, Key_F10, Key_None,
 };
 const UInt8* KeyBind_Names[KeyBind_Count] = {
 	"Forward", "Back", "Left", "Right",
@@ -129,7 +129,7 @@ const UInt8* KeyBind_Names[KeyBind_Count] = {
 	"Screenshot", "Fullscreen", "ThirdPerson", "HideGUI",
 	"AxisLines", "ZoomScrolling", "HalfSpeed", "MouseLeft",
 	"MouseMiddle", "MouseRight", "AutoRotate", "HotbarSwitching",
-	"SmoothCamera", "DropBlock", "IDOverlay",
+	"SmoothCamera", "DropBlock", "IDOverlay", "BreakableLiquids",
 };
 
 Key KeyBind_Get(KeyBind binding) { return KeyBind_Keys[binding]; }
@@ -145,9 +145,10 @@ void KeyBind_Load(void) {
 
 	for (i = 0; i < KeyBind_Count; i++) {
 		KeyBind_MakeName(name);
-		Key mapping = Options_GetEnum(name.buffer, KeyBind_Keys[i], Key_Names, Key_Count);
+		Key mapping = Options_GetEnum(name.buffer, KeyBind_Defaults[i], Key_Names, Key_Count);
 		if (mapping != Key_Escape) KeyBind_Keys[i] = mapping;
 	}
+	KeyBind_Keys[KeyBind_PauseOrExit] = Key_Escape;
 }
 
 void KeyBind_Save(void) {
@@ -157,7 +158,7 @@ void KeyBind_Save(void) {
 
 	for (i = 0; i < KeyBind_Count; i++) {
 		KeyBind_MakeName(name);
-		String value = String_FromReadonly(Key_Names[i]);
+		String value = String_FromReadonly(Key_Names[KeyBind_Keys[i]]);
 		Options_Set(name.buffer, &value);
 	}
 }
@@ -263,7 +264,7 @@ bool Hotkeys_IsHotkey(Key key, STRING_TRANSIENT String* text, bool* moreInput) {
 	UInt8 flags = 0;
 	if (Key_IsControlPressed()) flags |= HOTKEYS_FLAG_CTRL;
 	if (Key_IsShiftPressed())   flags |= HOTKEYS_FLAG_SHIFT;
-	if (Key_IsAltPressed())     flags |= HOTKEYS_FLAT_ALT;
+	if (Key_IsAltPressed())     flags |= HOTKEYS_FLAG_ALT;
 
 	String_Clear(text);
 	*moreInput = false;
@@ -302,9 +303,9 @@ void Hotkeys_Init(void) {
 		String strText      = String_UNSAFE_SubstringAt(&value, valueSplit + 1);
 
 		/* Then try to parse the key and value */
-		Key hotkey = Utils_ParseEnum(&strKey, Key_Unknown, Key_Names, Array_Elems(Key_Names));
+		Key hotkey = Utils_ParseEnum(&strKey, Key_None, Key_Names, Array_Elems(Key_Names));
 		UInt8 flags; bool moreInput;
-		if (hotkey == Key_Unknown || strText.length == 0 || !Convert_TryParseUInt8(&strFlags, &flags) 
+		if (hotkey == Key_None || strText.length == 0 || !Convert_TryParseUInt8(&strFlags, &flags) 
 			|| !Convert_TryParseBool(&strMoreInput, &moreInput)) { continue; }
 
 		Hotkeys_Add(hotkey, flags, &strText, moreInput);
@@ -315,8 +316,7 @@ void Hotkeys_UserRemovedHotkey(Key baseKey, UInt8 flags) {
 	UInt8 keyBuffer[String_BufferSize(STRING_SIZE)];
 	String key = String_InitAndClearArray(keyBuffer);
 
-	String_AppendConst(&key, "hotkey-"); String_AppendConst(&key, Key_Names[baseKey]);
-	String_Append(&key, '&');            String_AppendInt32(&key, flags);
+	String_Format2(&key, "hotkey-%c&%b", Key_Names[baseKey], &flags);
 	Options_Set(key.buffer, NULL);
 }
 
@@ -326,10 +326,7 @@ void Hotkeys_UserAddedHotkey(Key baseKey, UInt8 flags, bool moreInput, STRING_PU
 	UInt8 valueBuffer[String_BufferSize(STRING_SIZE * 2)];
 	String value = String_InitAndClearArray(valueBuffer);
 
-	String_AppendConst(&key, "hotkey-"); String_AppendConst(&key, Key_Names[baseKey]);
-	String_Append(&key, '&');            String_AppendInt32(&key, flags);
-
-	String_AppendBool(&value, moreInput); String_Append(&value, '&');
-	String_AppendString(&value, text);
+	String_Format2(&key, "hotkey-%c&%b", Key_Names[baseKey], &flags);
+	String_Format2(&value, "%t&%s", &moreInput, text);
 	Options_Set(key.buffer, &value);
 }

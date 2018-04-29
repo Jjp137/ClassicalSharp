@@ -103,8 +103,13 @@ void IModel_Render(IModel* model, Entity* entity) {
 void IModel_SetupState(IModel* model, Entity* entity) {
 	model->index = 0;
 	PackedCol col = entity->VTABLE->GetCol(entity);
-	IModel_uScale = 1.0f / 64.0f; 
-	IModel_vScale = 1.0f / 32.0f;
+
+	bool _64x64 = entity->SkinType != SKIN_TYPE_64x32;
+	/* only apply when using humanoid skins */
+	_64x64 &= model->UsesHumanSkin || entity->MobTextureId != NULL;
+
+	IModel_uScale = entity->uScale * 0.015625f;
+	IModel_vScale = entity->vScale * (_64x64 ? 0.015625f : 0.03125f);
 
 	IModel_Cols[0] = col;
 	if (!entity->NoShade) {
@@ -118,8 +123,9 @@ void IModel_SetupState(IModel* model, Entity* entity) {
 	IModel_Cols[5] = IModel_Cols[4];
 
 	Real32 yawDelta = entity->HeadY - entity->RotY;
-	IModel_cosHead = Math_Cos(yawDelta * MATH_DEG2RAD);
-	IModel_sinHead = Math_Sin(yawDelta * MATH_DEG2RAD);
+	IModel_cosHead = Math_CosF(yawDelta * MATH_DEG2RAD);
+	IModel_sinHead = Math_SinF(yawDelta * MATH_DEG2RAD);
+	IModel_ActiveModel = model;
 }
 
 void IModel_UpdateVB(void) {
@@ -131,7 +137,7 @@ void IModel_UpdateVB(void) {
 GfxResourceID IModel_GetTexture(Entity* entity) {
 	IModel* model = IModel_ActiveModel;
 	GfxResourceID pTex = model->UsesHumanSkin ? entity->TextureId : entity->MobTextureId;
-	return pTex > 0 ? pTex : ModelCache_Textures[model->defaultTexIndex].TexID;
+	return pTex != NULL ? pTex : ModelCache_Textures[model->defaultTexIndex].TexID;
 }
 
 void IModel_DrawPart(ModelPart part) {
@@ -158,9 +164,9 @@ void IModel_DrawPart(ModelPart part) {
 
 void IModel_DrawRotate(Real32 angleX, Real32 angleY, Real32 angleZ, ModelPart part, bool head) {
 	IModel* model = IModel_ActiveModel;
-	Real32 cosX = Math_Cos(-angleX), sinX = Math_Sin(-angleX);
-	Real32 cosY = Math_Cos(-angleY), sinY = Math_Sin(-angleY);
-	Real32 cosZ = Math_Cos(-angleZ), sinZ = Math_Sin(-angleZ);
+	Real32 cosX = Math_CosF(-angleX), sinX = Math_SinF(-angleX);
+	Real32 cosY = Math_CosF(-angleY), sinY = Math_SinF(-angleY);
+	Real32 cosZ = Math_CosF(-angleZ), sinZ = Math_SinF(-angleZ);
 	Real32 x = part.RotX, y = part.RotY, z = part.RotZ;
 
 	ModelVertex* src = &model->vertices[part.Offset];
@@ -255,26 +261,24 @@ void BoxDesc_RotatedBox(BoxDesc* desc, Int32 x1, Int32 y1, Int32 z1, Int32 x2, I
 }
 
 
-ModelPart BoxDesc_BuildBox(IModel* m, BoxDesc* desc) {
+void BoxDesc_BuildBox(ModelPart* part, IModel* m, BoxDesc* desc) {
 	Int32 sidesW = desc->SidesW, bodyW = desc->BodyW, bodyH = desc->BodyH;
 	Real32 x1 = desc->X1, y1 = desc->Y1, z1 = desc->Z1;
 	Real32 x2 = desc->X2, y2 = desc->Y2, z2 = desc->Z2;
 	Int32 x = desc->TexX, y = desc->TexY;
 
-	BoxDesc_YQuad(m, x + sidesW, y, bodyW, sidesW, x2, x1, z2, z1, y2, false); /* top */
+	BoxDesc_YQuad(m, x + sidesW, y, bodyW, sidesW, x1, x2, z2, z1, y2, true); /* top */
 	BoxDesc_YQuad(m, x + sidesW + bodyW, y, bodyW, sidesW, x2, x1, z2, z1, y1, false); /* bottom */
-	BoxDesc_ZQuad(m, x + sidesW, y + sidesW, bodyW, bodyH, x2, x1, y1, y2, z1, false); /* front */
-	BoxDesc_ZQuad(m, x + sidesW + bodyW + sidesW, y + sidesW, bodyW, bodyH, x1, x2, y1, y2, z2, false); /* back */
-	BoxDesc_XQuad(m, x, y + sidesW, sidesW, bodyH, z2, z1, y1, y2, x2, false); /* left */
-	BoxDesc_XQuad(m, x + sidesW + bodyW, y + sidesW, sidesW, bodyH, z1, z2, y1, y2, x1, false); /* right */
+	BoxDesc_ZQuad(m, x + sidesW, y + sidesW, bodyW, bodyH, x1, x2, y1, y2, z1, true); /* front */
+	BoxDesc_ZQuad(m, x + sidesW + bodyW + sidesW, y + sidesW, bodyW, bodyH, x2, x1, y1, y2, z2, true); /* back */
+	BoxDesc_XQuad(m, x, y + sidesW, sidesW, bodyH, z1, z2, y1, y2, x2, true); /* left */
+	BoxDesc_XQuad(m, x + sidesW + bodyW, y + sidesW, sidesW, bodyH, z2, z1, y1, y2, x1, true); /* right */
 
-	ModelPart part;
-	ModelPart_Init(&part, m->index - IMODEL_BOX_VERTICES, IMODEL_BOX_VERTICES,
+	ModelPart_Init(part, m->index - IMODEL_BOX_VERTICES, IMODEL_BOX_VERTICES,
 		desc->RotX, desc->RotY, desc->RotZ);
-	return part;
 }
 
-ModelPart BoxDesc_BuildRotatedBox(IModel* m, BoxDesc* desc) {
+void BoxDesc_BuildRotatedBox(ModelPart* part, IModel* m, BoxDesc* desc) {
 	Int32 sidesW = desc->SidesW, bodyW = desc->BodyW, bodyH = desc->BodyH;
 	Real32 x1 = desc->X1, y1 = desc->Y1, z1 = desc->Z1;
 	Real32 x2 = desc->X2, y2 = desc->Y2, z2 = desc->Z2;
@@ -295,10 +299,8 @@ ModelPart BoxDesc_BuildRotatedBox(IModel* m, BoxDesc* desc) {
 		m->vertices[i] = vertex;
 	}
 
-	ModelPart part;
-	ModelPart_Init(&part, m->index - IMODEL_BOX_VERTICES, IMODEL_BOX_VERTICES,
+	ModelPart_Init(part, m->index - IMODEL_BOX_VERTICES, IMODEL_BOX_VERTICES,
 		desc->RotX, desc->RotY, desc->RotZ);
-	return part;
 }
 
 

@@ -31,10 +31,11 @@ FN_GLGENBUFFERS glGenBuffers;
 FN_GLBUFFERDATA glBufferData;
 FN_GLBUFFERSUBDATA glBufferSubData;
 
-bool gl_lists = false;
+Int32 Gfx_strideSizes[2] = GFX_STRIDE_SIZES;
 Int32 gl_activeList = -1;
 #define gl_DYNAMICLISTID 1234567891
 void* gl_dynamicListData;
+bool gl_lists, gl_vsync;
 
 Int32 gl_blend[6] = { GL_ZERO, GL_ONE, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_DST_ALPHA, GL_ONE_MINUS_DST_ALPHA };
 Int32 gl_compare[8] = { GL_ALWAYS, GL_NOTEQUAL, GL_NEVER, GL_LESS, GL_LEQUAL, GL_EQUAL, GL_GEQUAL, GL_GREATER };
@@ -77,10 +78,11 @@ void GL_CheckVboSupport(void) {
 }
 
 void Gfx_Init(void) {
+	Gfx_MinZNear = 0.1f;
 	GraphicsMode mode = GraphicsMode_MakeDefault();
 	GLContext_Init(mode);
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &Gfx_MaxTextureDimensions);
-	gl_lists = Options_GetBool(OPTION_FORCE_OLD_OPENGL, false);
+	gl_lists = Options_GetBool(OPT_FORCE_OLD_OPENGL, false);
 	Gfx_CustomMipmapsLevels = !gl_lists;
 
 	GL_CheckVboSupport();
@@ -105,9 +107,8 @@ void GL_DoMipmaps(GfxResourceID texId, Int32 x, Int32 y, Bitmap* bmp, bool parti
 		x /= 2; y /= 2;
 		if (width > 1) width /= 2;
 		if (height > 1) height /= 2;
-		UInt32 size = Bitmap_DataSize(width, height);
 
-		UInt8* cur = Platform_MemAlloc(size);
+		UInt8* cur = Platform_MemAlloc(width * height, BITMAP_SIZEOF_PIXEL);
 		if (cur == NULL) ErrorHandler_Fail("Allocating memory for mipmaps");
 		GfxCommon_GenMipmaps(width, height, cur, prev);
 
@@ -118,10 +119,10 @@ void GL_DoMipmaps(GfxResourceID texId, Int32 x, Int32 y, Bitmap* bmp, bool parti
 			glTexImage2D(GL_TEXTURE_2D, lvl, GL_RGBA, width, height, 0, GL_BGRA_EXT, GL_UNSIGNED_BYTE, cur);
 		}
 
-		if (prev != bmp->Scan0) Platform_MemFree(prev);
+		if (prev != bmp->Scan0) Platform_MemFree(&prev);
 		prev = cur;
 	}
-	if (prev != bmp->Scan0) Platform_MemFree(prev);
+	if (prev != bmp->Scan0) Platform_MemFree(&prev);
 }
 
 GfxResourceID Gfx_CreateTexture(Bitmap* bmp, bool managedPool, bool mipmaps) {
@@ -185,7 +186,7 @@ void Gfx_SetFogColour(PackedCol col) {
 Real32 gl_lastFogEnd = -1, gl_lastFogDensity = -1;
 void Gfx_SetFogDensity(Real32 value) {
 	if (value == gl_lastFogDensity) return;
-	glFogf(GL_FOG_DENSITY, gl_lastFogDensity);
+	glFogf(GL_FOG_DENSITY, value);
 	gl_lastFogDensity = value;
 }
 
@@ -195,7 +196,7 @@ void Gfx_SetFogStart(Real32 value) {
 
 void Gfx_SetFogEnd(Real32 value) {
 	if (value == gl_lastFogEnd) return;
-	glFogf(GL_FOG_END, gl_lastFogEnd);
+	glFogf(GL_FOG_END, value);
 	gl_lastFogEnd = value;
 }
 
@@ -499,6 +500,30 @@ void Gfx_CalcPerspectiveMatrix(Real32 fov, Real32 aspect, Real32 zNear, Real32 z
 }
 
 
+void Gfx_TakeScreenshot(Stream* output, Int32 width, Int32 height) {
+	Bitmap bmp; Bitmap_Allocate(&bmp, width, height);
+	glReadPixels(0, 0, width, height, GL_BGRA_EXT, GL_UNSIGNED_BYTE, bmp.Scan0);
+	UInt8 tmp[PNG_MAX_DIMS * BITMAP_SIZEOF_PIXEL];
+
+	/* flip vertically around y */
+	Int32 x, y;
+	UInt32 stride = (UInt32)(bmp.Width) * BITMAP_SIZEOF_PIXEL;
+	for (y = 0; y < height / 2; y++) {
+		UInt32* src = Bitmap_GetRow(&bmp, y);
+		UInt32* dst = Bitmap_GetRow(&bmp, y);
+
+		Platform_MemCpy(tmp, src, stride);
+		Platform_MemCpy(src, dst, stride);
+		Platform_MemCpy(dst, tmp, stride);
+		/*for (x = 0; x < bmp.Width; x++) {
+			UInt32 temp = dst[x]; dst[x] = src[x]; src[x] = temp;
+		}*/
+	}
+
+	Bitmap_EncodePng(&bmp, output);
+	Platform_MemFree(&bmp.Scan0);
+}
+
 bool Gfx_WarnIfNecessary(void) {
 	if (gl_lists) {
 		Chat_AddRaw(tmp1, "&cYou are using the very outdated OpenGL backend.");
@@ -506,8 +531,7 @@ bool Gfx_WarnIfNecessary(void) {
 		Chat_AddRaw(tmp3, "&cIt is likely you need to install video card drivers.");
 	}
 
-	UInt8* rendererRaw = glGetString(GL_RENDERER);
-	String renderer = String_FromRaw(rendererRaw, UInt16_MaxValue);
+	String renderer = String_FromReadonly(glGetString(GL_RENDERER));
 	String intel = String_FromConst("Intel");
 	if (!String_ContainsString(&renderer, &intel)) return false;
 
@@ -515,6 +539,13 @@ bool Gfx_WarnIfNecessary(void) {
 	Chat_AddRaw(tmp5, "&cVSync may not work, and you may see disappearing clouds and map edges.");
 	Chat_AddRaw(tmp6, "&cFor Windows, try downloading the Direct3D 9 build instead.");
 	return true;
+}
+
+
+void Gfx_SetVSync(bool value) {
+	if (gl_vsync == value) return;
+	gl_vsync = value;
+	GLContext_SetVSync(value);
 }
 
 void Gfx_BeginFrame(void) { }

@@ -1,16 +1,17 @@
 #ifndef CC_GFXCOMMON_H
 #define CC_GFXCOMMON_H
 #include "String.h"
-#include "Texture.h"
 #include "VertexStructs.h"
 
 /* Provides common/shared methods for a 3D graphics rendering API.
    Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 */
+typedef struct Texture_ Texture;
 
+GfxResourceID GfxCommon_defaultIb;
 void GfxCommon_Init(void);
 void GfxCommon_Free(void);
-void GfxCommon_LoseContext(STRING_PURE String* reason);
+void GfxCommon_LoseContext(const UInt8* reason);
 void GfxCommon_RecreateContext(void);
 
 /* Binds and draws the specified subset of the vertices in the current dynamic vertex buffer
@@ -29,9 +30,7 @@ void GfxCommon_Make2DQuad(Texture* tex, PackedCol col, VertexP3fT2fC4b** vertice
 void GfxCommon_Mode2D(Int32 width, Int32 height);
 void GfxCommon_Mode3D(void);
 
-GfxResourceID GfxCommon_MakeDefaultIb(void);
 void GfxCommon_MakeIndices(UInt16* indices, Int32 iCount);
-
 void GfxCommon_SetupAlphaState(UInt8 draw);
 void GfxCommon_RestoreAlphaState(UInt8 draw);
 

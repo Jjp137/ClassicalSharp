@@ -19,17 +19,17 @@ namespace ClassicalSharp.Gui.Screens {
 			statusBuffer = new StringBuffer(128);
 		}
 
-		public void Init(Game game) { }
+		void IGameComponent.Init(Game game) { }
 		public void Ready(Game game) { Init(); }
-		public void Reset(Game game) { }
-		public void OnNewMap(Game game) { }
-		public void OnNewMapLoaded(Game game) { }
+		void IGameComponent.Reset(Game game) { }
+		void IGameComponent.OnNewMap(Game game) { }
+		void IGameComponent.OnNewMapLoaded(Game game) { }
 		
 		TextWidget status, hackStates;
 		TextAtlas posAtlas;
 		public override void Render(double delta) {
 			UpdateStatus(delta);
-			if (game.HideGui || !game.ShowFPS) return;			
+			if (game.HideGui || !game.ShowFPS) return;
 			game.Graphics.Texturing = true;
 			status.Render(delta);
 			

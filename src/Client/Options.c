@@ -6,8 +6,13 @@
 #include "Platform.h"
 #include "Stream.h"
 
+const UInt8* FpsLimit_Names[FpsLimit_Count] = {
+	"LimitVSync", "Limit30FPS", "Limit60FPS", "Limit120FPS", "LimitNone",
+};
 #define OPT_NOT_FOUND UInt32_MaxValue
 StringsBuffer Options_Changed;
+
+bool Options_HasAnyChanged(void) { return Options_Changed.Count > 0;  }
 
 void Options_Init(void) {
 	StringsBuffer_Init(&Options_Keys);
@@ -23,7 +28,7 @@ void Options_Free(void) {
 
 bool Options_HasChanged(STRING_PURE String* key) {
 	UInt32 i;
-	for (i = 0; i < Options_Keys.Count; i++) {
+	for (i = 0; i < Options_Changed.Count; i++) {
 		String curKey = StringsBuffer_UNSAFE_Get(&Options_Changed, i);
 		if (String_CaselessEquals(&curKey, key)) return true;
 	}
@@ -61,11 +66,16 @@ bool Options_TryGetValue(const UInt8* keyRaw, STRING_TRANSIENT String* value) {
 	return false;
 }
 
-void Options_Get(const UInt8* key, STRING_TRANSIENT String* value) {
+void Options_Get(const UInt8* key, STRING_TRANSIENT String* value, const UInt8* defValue) {
 	String str;
 	Options_TryGetValue(key, &str);
 	String_Clear(value);
-	String_AppendString(value, &str);
+
+	if (str.length > 0) {
+		String_AppendString(value, &str);
+	} else {
+		String_AppendConst(value, defValue);
+	}
 }
 
 Int32 Options_GetInt(const UInt8* key, Int32 min, Int32 max, Int32 defValue) {
@@ -117,8 +127,16 @@ Int32 Options_Insert(STRING_PURE String* key, STRING_PURE String* value) {
 	return Options_Keys.Count;
 }
 
+void Options_SetBool(const UInt8* keyRaw, bool value) {
+	if (value) {
+		String str = String_FromConst("True");  Options_Set(keyRaw, &str);
+	} else {
+		String str = String_FromConst("False"); Options_Set(keyRaw, &str);
+	}
+}
+
 void Options_SetInt32(const UInt8* keyRaw, Int32 value) {
-	UInt8 numBuffer[String_BufferSize(STRING_INT32CHARS)];
+	UInt8 numBuffer[String_BufferSize(STRING_INT_CHARS)];
 	String numStr = String_InitAndClearArray(numBuffer);
 	String_AppendInt32(&numStr, value);
 	Options_Set(keyRaw, &numStr);
@@ -139,9 +157,9 @@ void Options_Set(const UInt8* keyRaw, STRING_PURE String* value) {
 }
 
 void Options_Load(void) {
-	void* file = NULL;
+	void* file;
 	String path = String_FromConst("options.txt");
-	ReturnCode result = Platform_FileOpen(&file, &path, true);
+	ReturnCode result = Platform_FileOpen(&file, &path);
 
 	if (result == ReturnCode_FileNotFound) return;
 	/* TODO: Should we just log failure to open? */
@@ -149,7 +167,7 @@ void Options_Load(void) {
 
 	UInt8 lineBuffer[String_BufferSize(2048)];
 	String line = String_InitAndClearArray(lineBuffer);
-	Stream stream; Stream_FromFile(&stream, &file, &path);
+	Stream stream; Stream_FromFile(&stream, file, &path);
 
 	/* Remove all the unchanged options */
 	UInt32 i;
@@ -180,25 +198,22 @@ void Options_Load(void) {
 }
 
 void Options_Save(void) {
-	void* file = NULL;
+	void* file;
 	String path = String_FromConst("options.txt");
-	ReturnCode result = Platform_FileOpen(&file, &path, true);
+	ReturnCode result = Platform_FileCreate(&file, &path);
 
 	/* TODO: Should we just log failure to save? */
 	ErrorHandler_CheckOrFail(result, "Options - Saving");
 
 	UInt8 lineBuffer[String_BufferSize(2048)];
 	String line = String_InitAndClearArray(lineBuffer);
-	Stream stream; Stream_FromFile(&stream, &file, &path);
+	Stream stream; Stream_FromFile(&stream, file, &path);
 	UInt32 i;
 
 	for (i = 0; i < Options_Keys.Count; i++) {
 		String key   = StringsBuffer_UNSAFE_Get(&Options_Keys,   i);
 		String value = StringsBuffer_UNSAFE_Get(&Options_Values, i);
-
-		String_AppendString(&line, &key);
-		String_Append(&line, '=');
-		String_AppendString(&line, &value);
+		String_Format2(&line, "%s=%s", &key, &value);
 
 		Stream_WriteLine(&stream, &line);
 		String_Clear(&line);

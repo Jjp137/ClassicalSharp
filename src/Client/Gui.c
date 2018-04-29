@@ -83,15 +83,11 @@ bool Gui_Contains(Int32 recX, Int32 recY, Int32 width, Int32 height, Int32 x, In
 }
 
 void Gui_FileChanged(void* obj, Stream* stream) {
-	String gui        = String_FromConst("gui.png");
-	String guiClassic = String_FromConst("gui_classic.png");
-	String icons      = String_FromConst("icons.png");
-
-	if (String_CaselessEquals(&stream->Name, &gui)) {
+	if (String_CaselessEqualsConst(&stream->Name, "gui.png")) {
 		Game_UpdateTexture(&Gui_GuiTex, stream, false);
-	} else if (String_CaselessEquals(&stream->Name, &guiClassic)) {
+	} else if (String_CaselessEqualsConst(&stream->Name, "gui_classic.png")) {
 		Game_UpdateTexture(&Gui_GuiClassicTex, stream, false);
-	} else if (String_CaselessEquals(&stream->Name, &icons)) {
+	} else if (String_CaselessEqualsConst(&stream->Name, "icons.png")) {
 		Game_UpdateTexture(&Gui_IconsTex, stream, false);
 	}
 }
@@ -109,26 +105,24 @@ void Gui_Init(void) {
 void Gui_Reset(void) {
 	Int32 i;
 	for (i = 0; i < Gui_OverlaysCount; i++) {
-		Gui_Overlays[i]->VTABLE->Free((GuiElement*)Gui_Overlays[i]);
+		Elem_TryFree(Gui_Overlays[i]);
 	}
 	Gui_OverlaysCount = 0;
 }
 
 void Gui_Free(void) {
 	Event_UnregisterStream(&TextureEvents_FileChanged, NULL, Gui_FileChanged);
-	Gui_SetNewScreen(NULL);
-	Gui_Status->VTABLE->Free((GuiElement*)Gui_Status);
+	Gui_ReplaceActive(NULL);
+	Elem_TryFree(Gui_Status);
 
-	if (Gui_Active != NULL) {
-		Gui_Active->VTABLE->Free((GuiElement*)Gui_Active);
-	}
+	if (Gui_Active != NULL) { Elem_TryFree(Gui_Active); }
 	Gfx_DeleteTexture(&Gui_GuiTex);
 	Gfx_DeleteTexture(&Gui_GuiClassicTex);
 	Gfx_DeleteTexture(&Gui_IconsTex);
 	Gui_Reset();
 }
 
-IGameComponent Gui_MakeGameComponent(void) {
+IGameComponent Gui_MakeComponent(void) {
 	IGameComponent comp = IGameComponent_MakeEmpty();
 	comp.Init  = Gui_Init;
 	comp.Reset = Gui_Reset;
@@ -144,32 +138,30 @@ Screen* Gui_GetUnderlyingScreen(void) {
 	return Gui_Active == NULL ? Gui_HUD : Gui_Active;
 }
 
-void Gui_SetScreen(Screen* screen, bool freeOld) {
+void Gui_ReplaceActive(Screen* screen) { 
+	Gui_FreeActive();
+	Gui_SetActive(screen);
+}
+void Gui_FreeActive(void) {
+	if (Gui_Active != NULL) { Elem_TryFree(Gui_Active); }
+}
+
+void Gui_SetActive(Screen* screen) {
 	InputHandler_ScreenChanged(Gui_Active, screen);
-	if (Gui_Active != NULL && freeOld) {
-		Gui_Active->VTABLE->Free((GuiElement*)Gui_Active);
-	}
 
 	if (screen == NULL) {
-		Window_SetCursorVisible(false);
-		if (Window_GetFocused()) { Camera_ActiveCamera->RegrabMouse(); }
+		Game_SetCursorVisible(false);
+		if (Window_GetFocused()) { Camera_Active->RegrabMouse(); }
 	} else if (Gui_Active == NULL) {
-		Window_SetCursorVisible(true);
+		Game_SetCursorVisible(true);
 	}
 
-	if (screen != NULL) {
-		screen->VTABLE->Init((GuiElement*)screen);
-	}
+	if (screen != NULL) { Elem_Init(screen); }
 	Gui_Active = screen;
 }
+void Gui_RefreshHud(void) { Elem_Recreate(Gui_HUD); }
 
-void Gui_SetNewScreen(Screen* screen) { Gui_SetScreen(screen, true); }
-
-void Gui_RefreshHud(void) {
-	Gui_HUD->VTABLE->Recreate((GuiElement*)Gui_HUD);
-}
-
-void Gui_ShowOverlay(Screen* overlay, bool atFront) {
+void Gui_ShowOverlay_Impl(Screen* overlay, bool atFront) {
 	if (Gui_OverlaysCount == GUI_MAX_OVERLAYS) {
 		ErrorHandler_Fail("Cannot have more than 40 overlays");
 	}
@@ -189,27 +181,27 @@ void Gui_ShowOverlay(Screen* overlay, bool atFront) {
 	Gui_OverlaysCount++;
 
 	if (Gui_OverlaysCount == 1) Game_SetCursorVisible(visible); /* Save cursor visibility state */
-	overlay->VTABLE->Init((GuiElement*)overlay);
+	Elem_Init(overlay);
 }
 
 void Gui_RenderGui(Real64 delta) {
 	GfxCommon_Mode2D(Game_Width, Game_Height);
 	if (Gui_Active == NULL || !Gui_Active->HidesHUD) {
-		Gui_Status->VTABLE->Render((GuiElement*)Gui_Status, delta);
+		Elem_Render(Gui_Status, delta);
 	}
 
 	if (Gui_Active == NULL || !Gui_Active->HidesHUD && !Gui_Active->RenderHUDOver) {
-		Gui_HUD->VTABLE->Render((GuiElement*)Gui_HUD, delta);
+		Elem_Render(Gui_HUD, delta);
 	}
 	if (Gui_Active != NULL) {
-		Gui_Active->VTABLE->Render((GuiElement*)Gui_Active, delta);
+		Elem_Render(Gui_Active, delta);
 	}
 	if (Gui_Active != NULL && !Gui_Active->HidesHUD && Gui_Active->RenderHUDOver) {
-		Gui_HUD->VTABLE->Render((GuiElement*)Gui_HUD, delta);
+		Elem_Render(Gui_HUD, delta);
 	}
 
 	if (Gui_OverlaysCount > 0) {
-		Gui_Overlays[0]->VTABLE->Render((GuiElement*)Gui_Overlays[0], delta);
+		Elem_Render(Gui_Overlays[0], delta);
 	}
 	GfxCommon_Mode3D();
 }
@@ -235,7 +227,7 @@ void TextAtlas_Make(TextAtlas* atlas, STRING_PURE String* chars, FontDesc* font,
 	size.Width += 16 * chars->length;
 
 	Platform_MemSet(atlas->Widths, 0, sizeof(atlas->Widths));
-	Bitmap bmp; Bitmap_AllocatePow2(&bmp, size.Width, size.Height);
+	Bitmap bmp; Bitmap_AllocateClearedPow2(&bmp, size.Width, size.Height);
 	Drawer2D_Begin(&bmp);
 		
 	Drawer2D_DrawText(&args, 0, 0);
@@ -248,7 +240,7 @@ void TextAtlas_Make(TextAtlas* atlas, STRING_PURE String* chars, FontDesc* font,
 
 	Drawer2D_End();
 	atlas->Tex = Drawer2D_Make2DTexture(&bmp, size, 0, 0);
-	Platform_MemFree(bmp.Scan0);
+	Platform_MemFree(&bmp.Scan0);
 
 	Drawer2D_ReducePadding_Tex(&atlas->Tex, Math_Floor(font->Size), 4);
 	atlas->Tex.U2 = (Real32)atlas->Offset / (Real32)bmp.Width;
@@ -271,17 +263,13 @@ void TextAtlas_Add(TextAtlas* atlas, Int32 charI, VertexP3fT2fC4b** vertices) {
 }
 
 void TextAtlas_AddInt(TextAtlas* atlas, Int32 value, VertexP3fT2fC4b** vertices) {
-	if (value < 0) TextAtlas_Add(atlas, 10, vertices); /* - sign */
+	if (value < 0) {
+		TextAtlas_Add(atlas, 10, vertices); value = -value; /* - sign */
+	}
 
-	Int32 i, count = 0;
-	UInt8 digits[STRING_SIZE];
-	/* use a do while loop here, as we still want a '0' digit if input is 0 */
-	do {
-		digits[count] = (UInt8)Math_AbsI(value % 10);
-		value /= 10; count++;
-	} while (value != 0);
-
-	for (i = 0; i < count; i++) {
-		TextAtlas_Add(atlas, digits[count - 1 - i], vertices);
+	UInt8 digits[STRING_INT_CHARS];
+	Int32 i, count = String_MakeUInt32((UInt32)value, digits);
+	for (i = count - 1; i >= 0; i--) {
+		TextAtlas_Add(atlas, digits[i] - '0' , vertices);
 	}
 }

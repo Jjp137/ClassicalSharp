@@ -25,7 +25,7 @@ Vector3 PerspectiveCamera_GetDirVector(void) {
 void PerspectiveCamera_GetProjection(Matrix* proj) {
 	Real32 fovy = Game_Fov * MATH_DEG2RAD;
 	Real32 aspectRatio = (Real32)Game_Width / (Real32)Game_Height;
-	Matrix_PerspectiveFieldOfView(proj, fovy, aspectRatio, Gfx_MinZNear, Game_ViewDistance);
+	Matrix_PerspectiveFieldOfView(proj, fovy, aspectRatio, Gfx_MinZNear, (Real32)Game_ViewDistance);
 }
 
 void PerspectiveCamera_GetPickedBlock(PickedPos* pos) {
@@ -148,8 +148,8 @@ Vector3 FirstPersonCamera_GetCameraPos(Real32 t) {
 	camPos.Y += Camera_BobbingVer;
 
 	Real32 headY = (p->HeadY * MATH_DEG2RAD);
-	camPos.X += Camera_BobbingHor * Math_Cos(headY);
-	camPos.Z += Camera_BobbingHor * Math_Sin(headY);
+	camPos.X += Camera_BobbingHor * Math_CosF(headY);
+	camPos.Z += Camera_BobbingHor * Math_SinF(headY);
 	return camPos;
 }
 
@@ -253,7 +253,7 @@ void Camera_Init(void) {
 	ThirdPersonCamera_Init(&Camera_Cameras[1]);
 	ForwardThirdPersonCamera_Init(&Camera_Cameras[2]);
 
-	Camera_ActiveCamera = &Camera_Cameras[0];
+	Camera_Active = &Camera_Cameras[0];
 	Camera_ActiveIndex = 0;
 }
 
@@ -266,6 +266,7 @@ void Camera_CycleActive(void) {
 	LocalPlayer* player = &LocalPlayer_Instance;
 	if (!player->Hacks.CanUseThirdPersonCamera || !player->Hacks.Enabled) { i = 0; }
 
-	Camera_ActiveCamera = &Camera_Cameras[i];
+	Camera_Active = &Camera_Cameras[i];
+	Camera_ActiveIndex = i;
 	Game_UpdateProjection();
 }

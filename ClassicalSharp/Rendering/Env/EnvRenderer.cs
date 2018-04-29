@@ -85,7 +85,7 @@ namespace ClassicalSharp.Renderers {
 			}
 		}
 		
-		public void Init(Game game) {
+		void IGameComponent.Init(Game game) {
 			this.game = game;
 			map = game.World;
 			ResetAllEnv(null, null);
@@ -98,14 +98,14 @@ namespace ClassicalSharp.Renderers {
 			game.SetViewDistance(game.UserViewDistance, false);
 		}
 		
-		public void Ready(Game game) { }
-		public void Reset(Game game) { OnNewMap(game); }
+		void IGameComponent.Ready(Game game) { }
+		void IGameComponent.Reset(Game game) { OnNewMap(game); }
 		public void OnNewMap(Game game) {
 			game.Graphics.Fog = false;
 			ContextLost();
 		}
 		
-		public void OnNewMapLoaded(Game game) {
+		void IGameComponent.OnNewMapLoaded(Game game) {
 			game.Graphics.Fog = !minimal;
 			ResetAllEnv(null, null);
 		}
@@ -121,7 +121,7 @@ namespace ClassicalSharp.Renderers {
 			ContextRecreated();
 		}
 		
-		public void Dispose() {
+		void IDisposable.Dispose() {
 			game.Graphics.DeleteTexture(ref cloudsTex);
 			ContextLost();
 			
@@ -160,9 +160,12 @@ namespace ClassicalSharp.Renderers {
 			// TODO: rewrite this to avoid raising the event? want to avoid recreating vbos too many times often
 			if (fogDensity != 0) {
 				// Exp fog mode: f = e^(-density*coord)
-				// Solve for f = 0.05 to figure out coord (good approx for fog end)
-				float dist = (float)Math.Log(0.05) / -fogDensity;
-				game.SetViewDistance(dist, false);
+				// Solve coord for f = 0.05 (good approx for fog end)
+				//   i.e. log(0.05) = -density * coord
+				
+				const double log005 = -2.99573227355399;
+				double dist = log005 / -fogDensity;
+				game.SetViewDistance((int)dist, false);
 			} else {
 				game.SetViewDistance(game.UserViewDistance, false);
 			}
@@ -233,7 +236,9 @@ namespace ClassicalSharp.Renderers {
 				// 0.99=z/end   --> z=end*0.99
 				//   therefore
 				// d = -ln(0.01)/(end*0.99)
-				double density = -Math.Log(0.01) / (game.ViewDistance * 0.99);
+				
+				const double log001 = -4.60517018598809;
+				double density = -log001 / (game.ViewDistance * 0.99);
 				gfx.SetFogDensity((float)density);
 			} else {
 				gfx.SetFogMode(Fog.Linear);
@@ -246,13 +251,13 @@ namespace ClassicalSharp.Renderers {
 		void ResetClouds() {
 			if (!map.HasBlocks || game.Graphics.LostContext) return;
 			game.Graphics.DeleteVb(ref cloudsVb);
-			RebuildClouds((int)game.ViewDistance, legacy ? 128 : 65536);
+			RebuildClouds(game.ViewDistance, legacy ? 128 : 65536);
 		}
 		
 		void ResetSky() {
 			if (!map.HasBlocks || game.Graphics.LostContext) return;
 			game.Graphics.DeleteVb(ref skyVb);
-			RebuildSky((int)game.ViewDistance, legacy ? 128 : 65536);
+			RebuildSky(game.ViewDistance, legacy ? 128 : 65536);
 		}
 		
 		void RebuildClouds(int extent, int axisSize) {

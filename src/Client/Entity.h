@@ -13,57 +13,56 @@ typedef struct IModel_ IModel;
 /* Offset used to avoid floating point roundoff errors. */
 #define ENTITY_ADJUSTMENT 0.001f
 /* Maxmimum number of characters in a model name. */
-#define ENTITY_MAX_MODEL_LENGTH 10
+#define ENTITY_MAX_MODEL_LENGTH 11
 
 #define ENTITIES_MAX_COUNT 256
 #define ENTITIES_SELF_ID 255
 
-Int32 Entities_NameMode;
-#define NAME_MODE_NONE         0
-#define NAME_MODE_HOVERED      1
-#define NAME_MODE_ALL          2
-#define NAME_MODE_ALL_HOVERED  3
-#define NAME_MODE_ALL_UNSCALED 4
-extern const UInt8* NameMode_Names[5];
+typedef enum NameMode_ {
+	NAME_MODE_NONE, NAME_MODE_HOVERED, NAME_MODE_ALL, NAME_MODE_ALL_HOVERED, NAME_MODE_ALL_UNSCALED, NAME_MODE_COUNT
+} NameMode;
+NameMode Entities_NameMode;
+extern const UInt8* NameMode_Names[NAME_MODE_COUNT];
 
-Int32 Entities_ShadowMode;
-#define SHADOW_MODE_NONE          0
-#define SHADOW_MODE_SNAP_TO_BLOCK 1
-#define SHADOW_MODE_CIRCLE        2
-#define SHADOW_MODE_CIRCLE_ALL    3
-extern const UInt8* ShadowMode_Names[4];
+typedef enum ShadowMode_ {
+	SHADOW_MODE_NONE, SHADOW_MODE_SNAP_TO_BLOCK, SHADOW_MODE_CIRCLE, SHADOW_MODE_CIRCLE_ALL, SHADOW_MODE_COUNT
+} ShadowMode;
+ShadowMode Entities_ShadowMode;
+extern const UInt8* ShadowMode_Names[SHADOW_MODE_COUNT];
 
 #define ENTITY_TYPE_NONE 0
 #define ENTITY_TYPE_PLAYER 1
 
+#define LOCATIONUPDATE_FLAG_POS   0x01
+#define LOCATIONUPDATE_FLAG_HEADX 0x02
+#define LOCATIONUPDATE_FLAG_HEADY 0x04
+#define LOCATIONUPDATE_FLAG_ROTX  0x08
+#define LOCATIONUPDATE_FLAG_ROTZ  0x10
 /* Represents a location update for an entity. Can be a relative position, full position, and/or an orientation update. */
 typedef struct LocationUpdate_ {
-	/* Position of the update (if included). */
 	Vector3 Pos;
-	/* Orientation of the update (if included). If not, has the value of MATH_POS_INF. */
-	Real32 RotX, RotY, RotZ, HeadX;
-	bool IncludesPosition, RelativePosition;
+	Real32 HeadX, HeadY, RotX, RotZ;
+	UInt8 Flags;
+	bool RelativePos;
 } LocationUpdate;
 
 /* Clamps the given angle so it lies between [0, 360). */
 Real32 LocationUpdate_Clamp(Real32 degrees);
-
-void LocationUpdate_Construct(LocationUpdate* update, Real32 x, Real32 y, Real32 z,
-	Real32 rotX, Real32 rotY, Real32 rotZ, Real32 headX, bool incPos, bool relPos);
 void LocationUpdate_Empty(LocationUpdate* update);
 void LocationUpdate_MakeOri(LocationUpdate* update, Real32 rotY, Real32 headX);
 void LocationUpdate_MakePos(LocationUpdate* update, Vector3 pos, bool rel);
 void LocationUpdate_MakePosAndOri(LocationUpdate* update, Vector3 pos, Real32 rotY, Real32 headX, bool rel);
 
+typedef struct Entity_ Entity;
 typedef struct EntityVTABLE_ {
-	void (*Tick)(struct Entity_* entity, ScheduledTask* task);
-	void (*SetLocation)(struct Entity_* entity, LocationUpdate* update, bool interpolate);
-	void (*RenderModel)(struct Entity_* entity, Real64 deltaTime, Real32 t);
-	void (*RenderName)(struct Entity_* entity);
-	void (*ContextLost)(struct Entity_* entity);
-	void (*ContextRecreated)(struct Entity_* entity);
-	void (*Despawn)(struct Entity_* entity);
-	PackedCol (*GetCol)(struct Entity_* entity);
+	void (*Tick)(Entity* entity, Real64 delta);
+	void (*SetLocation)(Entity* entity, LocationUpdate* update, bool interpolate);
+	void (*RenderModel)(Entity* entity, Real64 deltaTime, Real32 t);
+	void (*RenderName)(Entity* entity);
+	void (*ContextLost)(Entity* entity);
+	void (*ContextRecreated)(Entity* entity);
+	void (*Despawn)(Entity* entity);
+	PackedCol (*GetCol)(Entity* entity);
 } EntityVTABLE;
 
 /* Contains a model, along with position, velocity, and rotation. May also contain other fields and properties. */
@@ -142,6 +141,8 @@ typedef struct NetPlayer_ {
 	NetInterpComp Interp;
 	bool ShouldRender;
 } NetPlayer;
+void NetPlayer_Init(NetPlayer* player, STRING_PURE String* displayName, STRING_PURE String* skinName);
+NetPlayer NetPlayers_List[ENTITIES_SELF_ID];
 
 /* Represents the user/player's own entity. */
 typedef struct LocalPlayer_ {
@@ -151,9 +152,15 @@ typedef struct LocalPlayer_ {
 	HacksComp Hacks;
 	TiltComp Tilt;
 	InterpComp Interp;
+	CollisionsComp Collisions;
+	PhysicsComp Physics;
 } LocalPlayer;
 
 LocalPlayer LocalPlayer_Instance;
+IGameComponent LocalPlayer_MakeComponent(void);
 void LocalPlayer_Init(void);
-void NetPlayer_Init(NetPlayer* player);
+Real32 LocalPlayer_JumpHeight(void);
+void LocalPlayer_CheckHacksConsistency(void);
+void LocalPlayer_SetInterpPosition(Real32 t);
+bool LocalPlayer_HandlesKey(Int32 key);
 #endif

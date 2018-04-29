@@ -1,9 +1,10 @@
 #include "Utils.h"
 #include "Constants.h"
+#include "Bitmap.h"
 
 bool DateTime_IsLeapYear(Int32 year) {
-	if ((year % 4) != 0) return false;
-	if ((year % 100) != 0) return true;
+	if (year % 4) return false;
+	if (year % 100) return true;
 	return (year % 400) == 0;
 }
 
@@ -39,8 +40,7 @@ Int64 DateTime_MsBetween(DateTime* start, DateTime* end) {
 UInt32 Utils_ParseEnum(STRING_PURE String* text, UInt32 defValue, const UInt8** names, UInt32 namesCount) {
 	UInt32 i;
 	for (i = 0; i < namesCount; i++) {
-		String name = String_FromReadonly(names[i]);
-		if (String_CaselessEquals(text, &name)) return i;
+		if (String_CaselessEqualsConst(text, names[i])) return i;
 	}
 	return defValue;
 }
@@ -74,4 +74,17 @@ UInt8 Utils_GetSkinType(Bitmap* bmp) {
 	UInt32 pixel = Bitmap_GetPixel(bmp, 54 * scale, 20 * scale);
 	UInt8 alpha = (UInt8)(pixel >> 24);
 	return alpha >= 127 ? SKIN_TYPE_64x64 : SKIN_TYPE_64x64_SLIM;
+}
+
+UInt32 Utils_CRC32(UInt8* data, UInt32 length) {
+	UInt32 crc = 0xffffffffUL;
+	Int32 i, j;
+
+	for (i = 0; i < length; i++) {
+		crc ^= data[i];
+		for (j = 0; j < 8; j++) {
+			crc = (crc >> 1) ^ (crc & 1) * 0xEDB88320;
+		}
+	}
+	return crc ^ 0xffffffffUL;
 }

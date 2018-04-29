@@ -13,15 +13,13 @@ namespace ClassicalSharp.Gui.Screens {
 		
 		public LoadLevelScreen(Game game) : base(game) {
 			titleText = "Select a level";
-			string dir = Path.Combine(Program.AppDirectory, "maps");
-			string[] rawFiles = Directory.GetFiles(dir);
+			string[] rawFiles = Platform.DirectoryFiles("maps");
 			int count = 0;
 			
 			// Only add map files
 			for (int i = 0; i < rawFiles.Length; i++) {
 				string file = rawFiles[i];
-				if (file.EndsWith(".cw") || file.EndsWith(".dat")
-				    || file.EndsWith(".fcm") || file.EndsWith(".lvl")) {
+				if (file.EndsWith(".cw") || file.EndsWith(".dat") || file.EndsWith(".fcm") || file.EndsWith(".lvl")) {
 					count++;
 				} else {
 					rawFiles[i] = null;
@@ -30,21 +28,17 @@ namespace ClassicalSharp.Gui.Screens {
 			
 			entries = new string[count];
 			for (int i = 0, j = 0; i < rawFiles.Length; i++) {
-				string file = rawFiles[i];
-				if (file == null) continue;
-				entries[j] = Path.GetFileName(file); j++;
+				if (rawFiles[i] == null) continue;
+				entries[j] = rawFiles[i]; j++;
 			}
 			Array.Sort(entries);
 		}
 		
 		protected override void TextButtonClick(Game game, Widget widget) {
-			string path = Path.Combine(Program.AppDirectory, "maps");
-			path = Path.Combine(path, ((ButtonWidget)widget).Text);
-			if (File.Exists(path))
-				LoadMap(path);
-		}
-		
-		void LoadMap(string path) {
+			string file = GetCur(widget);
+			string path = Path.Combine("maps", file);
+			if (!Platform.FileExists(path)) return;
+			
 			IMapFormatImporter importer = null;
 			if (path.EndsWith(".dat")) {
 				importer = new MapDatImporter();
@@ -57,7 +51,7 @@ namespace ClassicalSharp.Gui.Screens {
 			}
 			
 			try {
-				using (FileStream fs = File.OpenRead(path)) {
+				using (Stream fs = Platform.FileOpen(path)) {
 					int width, height, length;
 					game.World.Reset();
 					game.WorldEvents.RaiseOnNewMap();
@@ -73,7 +67,7 @@ namespace ClassicalSharp.Gui.Screens {
 					game.World.SetNewMap(blocks, width, height, length);
 					
 					game.WorldEvents.RaiseOnNewMapLoaded();
-					if (game.UseServerTextures && game.World.TextureUrl != null)
+					if (game.AllowServerTextures && game.World.TextureUrl != null)
 						game.Server.RetrieveTexturePack(game.World.TextureUrl);
 					
 					LocalPlayer p = game.LocalPlayer;
@@ -82,7 +76,6 @@ namespace ClassicalSharp.Gui.Screens {
 				}
 			} catch (Exception ex) {
 				ErrorHandler.LogError("loading map", ex);
-				string file = Path.GetFileName(path);
 				game.Chat.Add("&eFailed to load map \"" + file + "\"");
 			}
 		}

@@ -11,9 +11,11 @@
 #include "Physics.h"
 
 void World_Reset(void) {
+	Platform_MemFree(&World_Blocks);
 	World_Width = 0; World_Height = 0; World_Length = 0;
 	World_MaxX = 0;  World_MaxY = 0;   World_MaxZ = 0;
-	World_Blocks = NULL; World_BlocksSize = 0;
+	World_BlocksSize = 0;
+	WorldEnv_Reset();
 
 	Random rnd;
 	Random_InitFromCurrentTime(&rnd);
@@ -64,21 +66,23 @@ BlockID World_SafeGetBlock_3I(Vector3I p) {
 }
 
 bool World_IsValidPos(Int32 x, Int32 y, Int32 z) {
-	return x >= 0 && y >= 0 && z >= 0 &&
+	return x >= 0 && y >= 0 && z >= 0 && 
 		x < World_Width && y < World_Height && z < World_Length;
 }
 
 bool World_IsValidPos_3I(Vector3I p) {
-	return p.X >= 0 && p.Y >= 0 && p.Z <= 0 &&
+	return p.X >= 0 && p.Y >= 0 && p.Z >= 0 &&
 		p.X < World_Width && p.Y < World_Height && p.Z < World_Length;
 }
 
 
 #define WorldEnv_Set(src, dst, var) \
-if (src != dst) { dst = src; Event_RaiseInt32(&WorldEvents_EnvVarChanged, var); }
+if (src != dst) { dst = src; Event_RaiseInt(&WorldEvents_EnvVarChanged, var); }
 
 #define WorldEnv_SetCol(src, dst, var)\
-if (!PackedCol_Equals(src, dst)) { dst = src; Event_RaiseInt32(&WorldEvents_EnvVarChanged, var); }
+if (!PackedCol_Equals(src, dst)) { dst = src; Event_RaiseInt(&WorldEvents_EnvVarChanged, var); }
+
+const UInt8* Weather_Names[3] = { "Sunny", "Rainy", "Snowy" };
 
 extern PackedCol WorldEnv_DefaultSkyCol    = PACKEDCOL_CONST(0x99, 0xCC, 0xFF, 0xFF);
 extern PackedCol WorldEnv_DefaultFogCol    = PACKEDCOL_CONST(0xFF, 0xFF, 0xFF, 0xFF);
@@ -193,7 +197,7 @@ void WorldEnv_SetSunCol(PackedCol col) {
 	WorldEnv_SunCol = col;
 	PackedCol_GetShaded(col, &WorldEnv_SunXSide, 
 		&WorldEnv_SunZSide, &WorldEnv_SunYBottom);
-	Event_RaiseInt32(&WorldEvents_EnvVarChanged, ENV_VAR_SUN_COL);
+	Event_RaiseInt(&WorldEvents_EnvVarChanged, ENV_VAR_SUN_COL);
 }
 
 void WorldEnv_SetShadowCol(PackedCol col) {
@@ -202,16 +206,15 @@ void WorldEnv_SetShadowCol(PackedCol col) {
 	WorldEnv_ShadowCol = col;
 	PackedCol_GetShaded(col, &WorldEnv_ShadowXSide,
 		&WorldEnv_ShadowZSide, &WorldEnv_ShadowYBottom);
-	Event_RaiseInt32(&WorldEvents_EnvVarChanged, ENV_VAR_SHADOW_COL);
+	Event_RaiseInt(&WorldEvents_EnvVarChanged, ENV_VAR_SHADOW_COL);
 }
 
-#define Respawn_NotFound -10000.0f
 Real32 Respawn_HighestFreeY(AABB* bb) {
 	Int32 minX = Math_Floor(bb->Min.X), maxX = Math_Floor(bb->Max.X);
 	Int32 minY = Math_Floor(bb->Min.Y), maxY = Math_Floor(bb->Max.Y);
 	Int32 minZ = Math_Floor(bb->Min.Z), maxZ = Math_Floor(bb->Max.Z);
 
-	Real32 spawnY = Respawn_NotFound;
+	Real32 spawnY = RESPAWN_NOT_FOUND;
 	AABB blockBB;
 	Int32 x, y, z;
 	Vector3 pos;
@@ -228,7 +231,7 @@ Real32 Respawn_HighestFreeY(AABB* bb) {
 
 				if (Block_Collide[block] != COLLIDE_SOLID) continue;
 				if (!AABB_Intersects(bb, &blockBB)) continue;
-				if (blockBB.Max.Y > spawnY) blockBB.Max.Y = spawnY;
+				if (blockBB.Max.Y > spawnY) spawnY = blockBB.Max.Y;
 			}
 		}
 	}
@@ -245,7 +248,7 @@ Vector3 Respawn_FindSpawnPosition(Real32 x, Real32 z, Vector3 modelSize) {
 	Int32 y;
 	for (y = World_Height; y >= 0; y--) {
 		Real32 highestY = Respawn_HighestFreeY(&bb);
-		if (highestY != Respawn_NotFound) {
+		if (highestY != RESPAWN_NOT_FOUND) {
 			spawn.Y = highestY; break;
 		}
 		bb.Min.Y -= 1.0f; bb.Max.Y -= 1.0f;

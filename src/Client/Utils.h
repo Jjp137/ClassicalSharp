@@ -1,7 +1,6 @@
 #ifndef CC_UTILS_H
 #define CC_UTILS_H
 #include "String.h"
-#include "Bitmap.h"
 /* Implements various utility functions.
    Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 */
@@ -16,12 +15,14 @@ typedef struct DateTime_ {
 	UInt8 Second; /* Second of this point in time, ranges from 0 to 59. */
 	UInt16 Milli; /* Milliseconds of this point in time, ranges from 0 to 999. */
 } DateTime;
+typedef struct Bitmap_ Bitmap;
 
 #define DATETIME_MILLISECS_PER_SECOND 1000
 #define DATETIME_SECONDS_PER_MINUTE 60
 #define DATETIME_SECONDS_PER_HOUR (60 * 60)
 #define DATETIME_SECONDS_PER_DAY (60 * 60 * 24)
 
+DateTime DateTime_FromTotalMs(Int64 ms);
 Int64 DateTime_TotalMs(DateTime* time);
 Int64 DateTime_MsBetween(DateTime* start, DateTime* end);
 
@@ -33,4 +34,5 @@ Int32 Utils_AccumulateWheelDelta(Real32* accmulator, Real32 delta);
 #define Utils_AdjViewDist(value) ((Int32)(1.4142135f * (value)))
 
 UInt8 Utils_GetSkinType(Bitmap* bmp);
+UInt32 Utils_CRC32(UInt8* data, UInt32 length);
 #endif

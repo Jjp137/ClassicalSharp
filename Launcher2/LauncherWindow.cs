@@ -73,6 +73,8 @@ namespace Launcher {
 			Window.FocusedChanged += FocusedChanged;
 			Window.WindowStateChanged += Resize;
 			Window.Keyboard.KeyDown += KeyDown;
+			
+			ClassicalSharp.Program.CleanupMainDirectory();
 			LoadFont();
 			logoFont = new Font(FontName, 32, FontStyle.Regular);
 			
@@ -89,7 +91,7 @@ namespace Launcher {
 		
 		void LoadFont() {
 			Options.Load();
-			FontName = Options.Get("gui-fontname") ?? "Arial";
+			FontName = Options.Get("gui-fontname", "Arial");;
 			try {
 				using (Font f = new Font(FontName, 16)) { }
 			} catch (Exception) {

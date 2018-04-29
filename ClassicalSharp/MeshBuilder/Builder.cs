@@ -119,8 +119,8 @@ namespace ClassicalSharp {
 						chunk[chunkIndex] = rawBlock;
 					}
 				}
-				outAllAir = allAir; outAllSolid = allSolid;
 			}
+			outAllAir = allAir; outAllSolid = allSolid;
 		}
 		
 		#if !ONLY_8BIT
@@ -152,8 +152,8 @@ namespace ClassicalSharp {
 							chunk[chunkIndex] = rawBlock;
 						}
 					}
-					outAllAir = allAir; outAllSolid = allSolid;
 				}
+				outAllAir = allAir; outAllSolid = allSolid;
 			}
 		}
 		#endif
@@ -335,10 +335,5 @@ namespace ClassicalSharp {
 			sidesLevel = Math.Max(0, game.World.Env.SidesHeight);
 			edgeLevel = Math.Max(0, game.World.Env.EdgeHeight);
 		}
-	}
-	
-	public struct ChunkPartInfo {
-		public int VbId, VerticesCount, SpriteCount;
-		public ushort LeftCount, RightCount, FrontCount, BackCount, BottomCount, TopCount;
 	}
 }

@@ -315,16 +315,13 @@ void Lighting_LightHint(Int32 startX, Int32 startZ) {
 
 
 void Lighting_Init(void) {
-	Event_RegisterInt32(&WorldEvents_EnvVarChanged, NULL, &Lighting_EnvVariableChanged);
+	Event_RegisterInt(&WorldEvents_EnvVarChanged, NULL, &Lighting_EnvVariableChanged);
 	Lighting_SetSun(WorldEnv_DefaultSunCol);
 	Lighting_SetShadow(WorldEnv_DefaultShadowCol);
 }
 
 void Lighting_Reset(void) {
-	if (Lighting_heightmap != NULL) {
-		Platform_MemFree(Lighting_heightmap);
-		Lighting_heightmap = NULL;
-	}
+	Platform_MemFree(&Lighting_heightmap);
 }
 
 void Lighting_OnNewMap(void) {
@@ -334,8 +331,7 @@ void Lighting_OnNewMap(void) {
 }
 
 void Lighting_OnNewMapLoaded(void) {
-	UInt32 size = World_Width * World_Length * sizeof(Int16);
-	Lighting_heightmap = Platform_MemAlloc(size);
+	Lighting_heightmap = Platform_MemAlloc(World_Width * World_Length, sizeof(Int16));
 	if (Lighting_heightmap == NULL) {
 		ErrorHandler_Fail("WorldLighting - failed to allocate heightmap");
 	}
@@ -343,12 +339,12 @@ void Lighting_OnNewMapLoaded(void) {
 }
 
 void Lighting_Free(void) {
-	Event_UnregisterInt32(&WorldEvents_EnvVarChanged, NULL, &Lighting_EnvVariableChanged);
+	Event_UnregisterInt(&WorldEvents_EnvVarChanged, NULL, &Lighting_EnvVariableChanged);
 	Lighting_Reset();
 }
 
 
-IGameComponent Lighting_MakeGameComponent(void) {
+IGameComponent Lighting_MakeComponent(void) {
 	IGameComponent comp = IGameComponent_MakeEmpty();
 	comp.Init = Lighting_Init;
 	comp.Free = Lighting_Free;

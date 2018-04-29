@@ -17,7 +17,7 @@ using Android.Graphics;
 namespace ClassicalSharp {
 	
 	/// <summary> Represents a connection to either a multiplayer server, or an internal single player server. </summary>
-	public abstract class IServerConnection {
+	public abstract class IServerConnection : IGameComponent {
 		
 		public bool IsSinglePlayer;
 		
@@ -35,6 +35,12 @@ namespace ClassicalSharp {
 		
 		public abstract void Tick(ScheduledTask task);
 		
+		public virtual void Init(Game game) { }
+		public virtual void Ready(Game game) { }		
+		public virtual void OnNewMapLoaded(Game game) { }
+		
+		public abstract void Reset(Game game);
+		public abstract void OnNewMap(Game game);
 		public abstract void Dispose();
 		
 		public string ServerName;
@@ -63,8 +69,7 @@ namespace ClassicalSharp {
 		protected int netTicks;
 		
 		protected internal void RetrieveTexturePack(string url) {
-			if (!game.AcceptedUrls.Has(url) && !game.DeniedUrls.Has(url)) {
-				game.Downloader.AsyncGetContentLength(url, true, "CL_" + url);
+			if (!TextureCache.HasAccepted(url) && !TextureCache.HasDenied(url)) {
 				Overlay warning = new TexPackOverlay(game, url);
 				game.Gui.ShowOverlay(warning, false);
 			} else {
@@ -73,13 +78,13 @@ namespace ClassicalSharp {
 		}
 		
 		internal void DownloadTexturePack(string url) {
-			if (game.DeniedUrls.Has(url)) return;
-			string path = TextureCache.MakePath(url), etag = null;
+			if (TextureCache.HasDenied(url)) return;
+			string etag = null;
 			DateTime lastModified = DateTime.MinValue;
 			
-			if (File.Exists(path)) {
-				lastModified = TextureCache.GetLastModified(url, path, game.LastModified);
-				etag = TextureCache.GetETag(url, path, game.ETags);
+			if (TextureCache.HasUrl(url)) {
+				lastModified = TextureCache.GetLastModified(url);
+				etag = TextureCache.GetETag(url);
 			}
 
 			TexturePack.ExtractCurrent(game, url);

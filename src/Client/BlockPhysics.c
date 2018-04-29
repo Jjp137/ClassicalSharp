@@ -35,7 +35,7 @@ void TickQueue_Init(TickQueue* queue) {
 
 void TickQueue_Clear(TickQueue* queue) {
 	if (queue->Buffer == NULL) return;
-	Platform_MemFree(queue->Buffer);
+	Platform_MemFree(&queue->Buffer);
 	TickQueue_Init(queue);
 }
 
@@ -46,7 +46,7 @@ void TickQueue_Resize(TickQueue* queue) {
 	UInt32 capacity = queue->BufferSize * 2;
 	if (capacity < 32) capacity = 32;
 
-	UInt32* newBuffer = Platform_MemAlloc(capacity * sizeof(UInt32));
+	UInt32* newBuffer = Platform_MemAlloc(capacity, sizeof(UInt32));
 	if (newBuffer == NULL) {
 		ErrorHandler_Fail("TickQueue - failed to allocate memory");
 	}
@@ -56,9 +56,7 @@ void TickQueue_Resize(TickQueue* queue) {
 		idx = (queue->Head + i) & queue->BufferMask;
 		newBuffer[i] = queue->Buffer[idx];
 	}
-	if (queue->Buffer != NULL) {
-		Platform_MemFree(queue->Buffer);
-	}
+	Platform_MemFree(&queue->Buffer);
 
 	queue->Buffer = newBuffer;
 	queue->BufferSize = capacity;
@@ -491,13 +489,13 @@ void Physics_Explode(Int32 x, Int32 y, Int32 z, Int32 power) {
 void Physics_HandleTnt(Int32 index, BlockID block) {
 	Int32 x, y, z;
 	World_Unpack(index, x, y, z);
-	Physics_Explode(z, y, z, 4);
+	Physics_Explode(x, y, z, 4);
 }
 
 void Physics_Init(void) {
 	Event_RegisterVoid(&WorldEvents_MapLoaded,    NULL, Physics_OnNewMapLoaded);
 	Event_RegisterBlock(&UserEvents_BlockChanged, NULL, Physics_BlockChanged);
-	Physics_Enabled = Options_GetBool(OPTION_BLOCK_PHYSICS, true);
+	Physics_Enabled = Options_GetBool(OPT_BLOCK_PHYSICS, true);
 	TickQueue_Init(&physics_lavaQ);
 	TickQueue_Init(&physics_waterQ);
 

@@ -1,6 +1,5 @@
 ﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 using System;
-using System.Drawing;
 using ClassicalSharp.Gui.Widgets;
 using ClassicalSharp.Singleplayer;
 
@@ -12,26 +11,37 @@ namespace ClassicalSharp.Gui.Screens {
 		
 		public override void Init() {
 			base.Init();
-			ContextRecreated();
-			MakeValidators();
+			validators = new MenuInputValidator[widgets.Length];
+			defaultValues = new string[widgets.Length];
+			
+			validators[0]    = new RealValidator(1, 1024);
+			defaultValues[0] = "5";
+			validators[1]    = new IntegerValidator(0, 100);
+			defaultValues[1] = "0";
+			validators[2]    = new IntegerValidator(0, 100);
+			defaultValues[2] = "0";
+			validators[7]    = new IntegerValidator(1, 200);
+			defaultValues[7] = "30";
 		}
 		
 		protected override void ContextRecreated() {
 			bool multi = !game.Server.IsSinglePlayer;
-			ClickHandler onClick = OnButtonClick;
+			ClickHandler onClick = OnInputClick;
+			ClickHandler onBool = OnBoolClick;
+			
 			widgets = new Widget[] {
 				multi ? null : MakeOpt(-1, -100, "Reach distance", onClick, GetReach,       SetReach),
 				MakeOpt(-1, -50, "Music volume",                   onClick, GetMusic,       SetMusic),
 				MakeOpt(-1, 0, "Sounds volume",                    onClick, GetSounds,      SetSounds),
-				MakeOpt(-1, 50, "View bobbing",                    onClick, GetViewBob,     SetViewBob),
+				MakeOpt(-1, 50, "View bobbing",                    onBool,  GetViewBob,     SetViewBob),
 
-				multi ? null : MakeOpt(1, -100, "Block physics",  onClick, GetPhysics,     SetPhysics),
-				MakeOpt(1, -50, "Auto close launcher",            onClick, GetAutoClose,   SetAutoClose),
-				MakeOpt(1, 0, "Invert mouse",                     onClick, GetInvert,      SetInvert),
+				multi ? null : MakeOpt(1, -100, "Block physics",  onBool,  GetPhysics,     SetPhysics),
+				MakeOpt(1, -50, "Auto close launcher",            onBool,  GetAutoClose,   SetAutoClose),
+				MakeOpt(1, 0, "Invert mouse",                     onBool,  GetInvert,      SetInvert),
 				MakeOpt(1, 50, "Mouse sensitivity",               onClick, GetSensitivity, SetSensitivity),
 
 				MakeBack(false, titleFont, SwitchOptions),
-				null, null,
+				null, null, null,
 			};
 		}
 		
@@ -70,21 +80,6 @@ namespace ClassicalSharp.Gui.Screens {
 		static void SetSensitivity(Game g, string v) {
 			g.MouseSensitivity = Int32.Parse(v);
 			Options.Set(OptionsKey.Sensitivity, v);
-		}
-		
-		void MakeValidators() {
-			IServerConnection network = game.Server;
-			validators = new MenuInputValidator[] {
-				network.IsSinglePlayer ? new RealValidator(1, 1024) : null,
-				new IntegerValidator(0, 100),
-				new IntegerValidator(0, 100),
-				new BooleanValidator(),
-				
-				network.IsSinglePlayer ? new BooleanValidator() : null,
-				new BooleanValidator(),
-				new BooleanValidator(),
-				new IntegerValidator(1, 200),
-			};
 		}
 	}
 }

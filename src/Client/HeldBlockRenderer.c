@@ -90,7 +90,7 @@ void HeldBlockRenderer_ProjectionChanged(void* obj) {
 	Real32 fov = 70.0f * MATH_DEG2RAD;
 	Real32 aspectRatio = (Real32)Game_Width / (Real32)Game_Height;
 	Real32 zNear = Gfx_MinZNear;
-	Gfx_CalcPerspectiveMatrix(fov, aspectRatio, zNear, Game_ViewDistance, &held_blockProjection);
+	Gfx_CalcPerspectiveMatrix(fov, aspectRatio, zNear, (Real32)Game_ViewDistance, &held_blockProjection);
 }
 
 /* Based off incredible gifs from (Thanks goodlyay!)
@@ -103,16 +103,16 @@ void HeldBlockRenderer_ProjectionChanged(void* obj) {
 */
 void HeldBlockRenderer_DigAnimation(void) {
 	Real32 t = held_time / held_period;
-	Real32 sinHalfCircle = Math_Sin(t * MATH_PI);
-	Real32 sqrtLerpPI = Math_Sqrt(t) * MATH_PI;
+	Real32 sinHalfCircle = Math_SinF(t * MATH_PI);
+	Real32 sqrtLerpPI = Math_SqrtF(t) * MATH_PI;
 
-	held_entity.Position.X -= Math_Sin(sqrtLerpPI)       * 0.4f;
-	held_entity.Position.Y += Math_Sin((sqrtLerpPI * 2)) * 0.2f;
+	held_entity.Position.X -= Math_SinF(sqrtLerpPI)       * 0.4f;
+	held_entity.Position.Y += Math_SinF((sqrtLerpPI * 2)) * 0.2f;
 	held_entity.Position.Z -= sinHalfCircle              * 0.2f;
 
-	Real32 sinHalfCircleWeird = Math_Sin(t * t * MATH_PI);
-	held_entity.RotY -= Math_Sin(sqrtLerpPI)  * 80.0f;
-	held_entity.HeadY -= Math_Sin(sqrtLerpPI) * 80.0f;
+	Real32 sinHalfCircleWeird = Math_SinF(t * t * MATH_PI);
+	held_entity.RotY -= Math_SinF(sqrtLerpPI)  * 80.0f;
+	held_entity.HeadY -= Math_SinF(sqrtLerpPI) * 80.0f;
 	held_entity.RotX += sinHalfCircleWeird    * 20.0f;
 }
 
@@ -172,7 +172,7 @@ void HeldBlockRenderer_DoAnimation(Real64 delta, Real32 lastSwingY) {
 
 	if (held_swinging || !held_breaking) {
 		Real32 t = held_time / held_period;
-		held_swingY = -0.4f * Math_Sin(t * MATH_PI);
+		held_swingY = -0.4f * Math_SinF(t * MATH_PI);
 		held_entity.Position.Y += held_swingY;
 
 		if (held_swinging) {
@@ -201,19 +201,19 @@ void HeldBlockRenderer_Render(Real64 delta) {
 
 	Gfx_SetMatrixMode(MATRIX_TYPE_PROJECTION);
 	Gfx_LoadMatrix(&held_blockProjection);
-	Gfx_SetMatrixMode(MATRIX_TYPE_MODELVIEW);
+	Gfx_SetMatrixMode(MATRIX_TYPE_VIEW);
 	Matrix view = Gfx_View;
 	HeldBlockRenderer_SetMatrix();
 
 	HeldBlockRenderer_ResetHeldState();
 	HeldBlockRenderer_DoAnimation(delta, lastSwingY);
 	HeldBlockRenderer_SetBaseOffset();
-	if (!Camera_ActiveCamera->IsThirdPerson) HeldBlockRenderer_RenderModel();
+	if (!Camera_Active->IsThirdPerson) HeldBlockRenderer_RenderModel();
 
 	Gfx_View = view;
 	Gfx_SetMatrixMode(MATRIX_TYPE_PROJECTION);
 	Gfx_LoadMatrix(&Gfx_Projection);
-	Gfx_SetMatrixMode(MATRIX_TYPE_MODELVIEW);
+	Gfx_SetMatrixMode(MATRIX_TYPE_VIEW);
 }
 
 void HeldBlockRenderer_Init(void) {

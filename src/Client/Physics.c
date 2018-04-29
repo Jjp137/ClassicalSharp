@@ -71,7 +71,7 @@ bool Intersection_RayIntersectsRotatedBox(Vector3 origin, Vector3 dir, Entity* t
 			  *                                     /
 												   /                           
 	*/
-	Vector3 delta; Vector3_Subtract(&delta, &origin, &target->Position); /* delta  = origin - target.Position */
+	Vector3 delta; Vector3_Sub(&delta, &origin, &target->Position); /* delta  = origin - target.Position */
 	delta = Intersection_InverseRotate(delta, target);                   /* delta  = UndoRotation(delta) */
 	Vector3_Add(&origin, &delta, &target->Position);                     /* origin = delta + target.Position */
 
@@ -123,14 +123,6 @@ bool Intersection_RayIntersectsBox(Vector3 origin, Vector3 dir, Vector3 min, Vec
 }
 
 
-
-void SearcherState_Init(SearcherState* state, Int32 x, Int32 y, Int32 z, BlockID block, Real32 tSquared) {
-	state->X = (x << 3) | (block & 0x07);
-	state->Y = (y << 3) | (block & 0x38) >> 3;
-	state->Z = (z << 3) | (block & 0xC0) >> 6;
-	state->tSquared = tSquared;
-}
-
 #define SEARCHER_STATES_MIN 64
 SearcherState Searcher_StatesInitial[SEARCHER_STATES_MIN];
 extern SearcherState* Searcher_States = Searcher_StatesInitial;
@@ -153,7 +145,7 @@ void Searcher_QuickSort(Int32 left, Int32 right) {
 	}
 }
 
-UInt32 Searcher_FindReachableBlocks(Entity* entity, AABB* entityBB, AABB* entityExtentBB) {
+Int32 Searcher_FindReachableBlocks(Entity* entity, AABB* entityBB, AABB* entityExtentBB) {
 	Vector3 vel = entity->Velocity;
 	Entity_GetBounds(entity, entityBB);
 
@@ -173,11 +165,11 @@ UInt32 Searcher_FindReachableBlocks(Entity* entity, AABB* entityBB, AABB* entity
 	UInt32 elements = (max.X - min.X + 1) * (max.Y - min.Y + 1) * (max.Z - min.Z + 1);
 	if (elements > Searcher_StatesCount) {
 		if (Searcher_StatesCount > SEARCHER_STATES_MIN) {
-			Platform_MemFree(Searcher_States);
+			Platform_MemFree(&Searcher_States);
 		}
 		Searcher_StatesCount = elements;
 
-		Searcher_States = Platform_MemAlloc(elements * sizeof(SearcherState));
+		Searcher_States = Platform_MemAlloc(elements, sizeof(SearcherState));
 		if (Searcher_States == NULL) {
 			ErrorHandler_Fail("Failed to allocate memory for Searcher_FindReachableBlocks");
 		}
@@ -185,7 +177,6 @@ UInt32 Searcher_FindReachableBlocks(Entity* entity, AABB* entityBB, AABB* entity
 
 	/* Order loops so that we minimise cache misses */
 	AABB blockBB;
-	UInt32 count = 0;
 	Int32 x, y, z;
 	SearcherState* curState = Searcher_States;
 
@@ -206,14 +197,17 @@ UInt32 Searcher_FindReachableBlocks(Entity* entity, AABB* entityBB, AABB* entity
 				Real32 tx, ty, tz;
 				Searcher_CalcTime(&vel, entityBB, &blockBB, &tx, &ty, &tz);
 				if (tx > 1.0f || ty > 1.0f || tz > 1.0f) continue;
-				Real32 tSquared = tx * tx + ty * ty + tz * tz;
 
-				SearcherState_Init(curState, x, y, z, block, tSquared);
+				curState->X = (x << 3) | (block  & 0x07);
+				curState->Y = (y << 3) | ((block & 0x38) >> 3);
+				curState->Z = (z << 3) | ((block & 0xC0) >> 6);
+				curState->tSquared = tx * tx + ty * ty + tz * tz;
 				curState++;
 			}
 		}
 	}
 
+	Int32 count = (Int32)(curState - Searcher_States);
 	if (count > 0) Searcher_QuickSort(0, count - 1);
 	return count;
 }
@@ -234,6 +228,6 @@ void Searcher_CalcTime(Vector3* vel, AABB *entityBB, AABB* blockBB, Real32* tx, 
 
 void Searcher_Free(void) {
 	if (Searcher_StatesCount > SEARCHER_STATES_MIN) {
-		Platform_MemFree(Searcher_States);
+		Platform_MemFree(&Searcher_States);
 	}
 }

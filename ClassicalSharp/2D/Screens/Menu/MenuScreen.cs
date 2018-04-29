@@ -1,7 +1,6 @@
 ﻿// Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 using System;
 using System.Drawing;
-using ClassicalSharp.Gui.Widgets;
 using OpenTK.Input;
 
 namespace ClassicalSharp.Gui.Screens {
@@ -10,15 +9,10 @@ namespace ClassicalSharp.Gui.Screens {
 		public MenuScreen(Game game) : base(game) {
 			HandlesAllInput = true;
 		}
+		
 		protected Widget[] widgets;
-		protected Font titleFont, regularFont;
-
-		protected int IndexOfWidget(Widget w) {
-			for (int i = 0; i < widgets.Length; i++) {
-				if (widgets[i] == w) return i;
-			}
-			return -1;
-		}
+		protected Font titleFont, textFont;
+		protected int IndexWidget(Widget w) { return IndexWidget(widgets, w); }
 		
 		public override void Render(double delta) {
 			RenderMenuBounds();
@@ -28,14 +22,17 @@ namespace ClassicalSharp.Gui.Screens {
 		}
 		
 		public override void Init() {
+			if (titleFont == null) titleFont = new Font(game.FontName, 16, FontStyle.Bold);
+			if (textFont == null) textFont = new Font(game.FontName, 16);
+			
 			game.Graphics.ContextLost += ContextLost;
 			game.Graphics.ContextRecreated += ContextRecreated;
 		}
 		
 		public override void Dispose() {
 			ContextLost();
-			if (titleFont != null) titleFont.Dispose();
-			if (regularFont != null) regularFont.Dispose();
+			if (titleFont != null) { titleFont.Dispose(); titleFont = null; }
+			if (textFont != null)  { textFont.Dispose(); textFont = null; }
 			
 			game.Graphics.ContextLost -= ContextLost;
 			game.Graphics.ContextRecreated -= ContextRecreated;

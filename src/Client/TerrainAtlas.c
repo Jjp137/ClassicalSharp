@@ -6,9 +6,9 @@
 #include "GraphicsAPI.h"
 #include "Platform.h"
 
-void Atlas2D_UpdateState(Bitmap bmp) {
-	Atlas2D_Bitmap = bmp;
-	Atlas2D_ElementSize = bmp.Width / ATLAS2D_ELEMENTS_PER_ROW;
+void Atlas2D_UpdateState(Bitmap* bmp) {
+	Atlas2D_Bitmap = *bmp;
+	Atlas2D_ElementSize = bmp->Width / ATLAS2D_ELEMENTS_PER_ROW;
 	Block_RecalculateSpriteBB();
 }
 
@@ -29,10 +29,9 @@ GfxResourceID Atlas2D_LoadTextureElement(TextureLoc texLoc) {
 	if (size > 64) {
 		Bitmap_Allocate(&element, size, size);
 		GfxResourceID texId = Atlas2D_LoadTextureElement_Raw(texLoc, &element);
-		Platform_MemFree(element.Scan0);
+		Platform_MemFree(&element.Scan0);
 		return texId;
 	} else {
-		// TODO: does this even work??
 		UInt8 scan0[Bitmap_DataSize(64, 64)];
 		Bitmap_Create(&element, size, size, scan0);
 		return Atlas2D_LoadTextureElement_Raw(texLoc, &element);
@@ -40,14 +39,13 @@ GfxResourceID Atlas2D_LoadTextureElement(TextureLoc texLoc) {
 }
 
 void Atlas2D_Free(void) {
-	if (Atlas2D_Bitmap.Scan0 == NULL) return;
-	Platform_MemFree(Atlas2D_Bitmap.Scan0);
+	Platform_MemFree(&Atlas2D_Bitmap.Scan0);
 }
 
 
 TextureRec Atlas1D_TexRec(TextureLoc texLoc, Int32 uCount, Int32* index) {
-	*index = texLoc / Atlas1D_ElementsPerAtlas;
-	Int32 y = texLoc % Atlas1D_ElementsPerAtlas;
+	*index  = Atlas1D_Index(texLoc);
+	Int32 y = Atlas1D_RowId(texLoc);
 
 	/* Adjust coords to be slightly inside - fixes issues with AMD/ATI cards. */
 	TextureRec rec;
@@ -74,20 +72,12 @@ void Atlas1D_Make1DTexture(Int32 i, Int32 atlas1DHeight, Int32* index) {
 	}
 
 	Atlas1D_TexIds[i] = Gfx_CreateTexture(&atlas1D, true, Gfx_Mipmaps);
-	Platform_MemFree(atlas1D.Scan0);
+	Platform_MemFree(&atlas1D.Scan0);
 }
 
 void Atlas1D_Convert2DTo1D(Int32 atlasesCount, Int32 atlas1DHeight) {
 	Atlas1D_Count = atlasesCount;
-	UInt8 logBuffer[String_BufferSize(STRING_SIZE * 2)];
-	String log = String_InitAndClearArray(logBuffer);
-
-	String_AppendConst(&log, "Loaded new atlas: ");
-	String_AppendInt32(&log, atlasesCount);
-	String_AppendConst(&log, " bmps, ");
-	String_AppendInt32(&log, Atlas1D_ElementsPerBitmap);
-	String_AppendConst(&log, " per bmp");
-	Platform_Log(&log);
+	Platform_Log2("Loaded new atlas: %i bmps, %i per bmp", &atlasesCount, &Atlas1D_ElementsPerBitmap);
 
 	Int32 index = 0, i;
 	for (i = 0; i < atlasesCount; i++) {

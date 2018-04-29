@@ -31,7 +31,6 @@ namespace ClassicalSharp.Singleplayer {
 				BlockInfo.CanPlace[i] = true;
 				BlockInfo.CanDelete[i] = true;
 			}
-			game.Downloader.AsyncGetSkin(game.LocalPlayer.SkinName, game.LocalPlayer.SkinName);
 			
 			game.Events.RaiseBlockPermissionsChanged();
 			int seed = new Random().Next();
@@ -66,6 +65,8 @@ namespace ClassicalSharp.Singleplayer {
 		public override void SendPlayerClick(MouseButton button, bool buttonDown, byte targetId, PickedPos pos) {
 		}
 		
+		public override void OnNewMap(Game game) { }
+		public override void Reset(Game game) { }
 		public override void Dispose() {
 			physics.Dispose();
 		}

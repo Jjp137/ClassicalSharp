@@ -15,6 +15,7 @@
 #include "Funcs.h"
 #include "Screens.h"
 #include "Block.h"
+#include "Menus.h"
 
 bool input_buttonsDown[3];
 Int32 input_pickingId = -1;
@@ -58,7 +59,7 @@ void InputHandler_ButtonStateChanged(MouseButton button, bool pressed) {
 
 void InputHandler_ScreenChanged(Screen* oldScreen, Screen* newScreen) {
 	if (oldScreen != NULL && oldScreen->HandlesAllInput) {
-		input_lastClick = Platform_CurrentUTCTime();
+		Platform_CurrentUTCTime(&input_lastClick);
 	}
 
 	if (ServerConnection_SupportsPlayerClick) {
@@ -85,10 +86,11 @@ void InputHandler_Toggle(Key key, bool* target, const UInt8* enableMsg, const UI
 	UInt8 msgBuffer[String_BufferSize(STRING_SIZE * 2)];
 	String msg = String_InitAndClearArray(msgBuffer);
 
-	String_AppendConst(&msg, (*target) ? enableMsg : disableMsg);
-	String_AppendConst(&msg, ". &ePress &a");
-	String_AppendConst(&msg, Key_Names[key]);
-	String_AppendConst(&msg, (*target) ? " &eto disable." : " &eto re-enable.");
+	if (*target) {
+		String_Format2(&msg, "%c. &ePress &a%c &eto disable.",   enableMsg,  Key_Names[key]);
+	} else {
+		String_Format2(&msg, "%c. &ePress &a%c &eto re-enable.", disableMsg, Key_Names[key]);
+	}
 	Chat_Add(&msg);
 }
 
@@ -130,7 +132,7 @@ bool InputHandler_DoFovZoom(Real32 deltaPrecise) {
 	HacksComp* h = &LocalPlayer_Instance.Hacks;
 	if (!h->Enabled || !h->CanAnyHacks || !h->CanUseThirdPersonCamera) return false;
 
-	if (input_fovIndex == -1.0f) input_fovIndex = Game_ZoomFov;
+	if (input_fovIndex == -1.0f) input_fovIndex = (Real32)Game_ZoomFov;
 	input_fovIndex -= deltaPrecise * 5.0f;
 
 	Math_Clamp(input_fovIndex, 1.0f, Game_DefaultFov);
@@ -172,12 +174,17 @@ bool InputHandler_HandleCoreKey(Key key) {
 			InputHandler_CycleDistanceForwards(viewDists, count);
 		}
 	} else if ((key == KeyBind_Get(KeyBind_PauseOrExit) || key == Key_Pause) && World_Blocks != NULL) {
-		Screen* screen = PauseScreen_MakeInstance();
-		Gui_SetNewScreen(screen);
+		Gui_FreeActive();
+		Gui_SetActive(PauseScreen_MakeInstance());
 	} else if (GameMode_HandlesKeyDown(key)) {
 	} else if (key == KeyBind_Get(KeyBind_IDOverlay)) {
 		if (Gui_OverlaysCount > 0) return true;
-		Gui_ShowOverlay(new TexIdsOverlay(), false);
+		Screen* overlay = TexIdsOverlay_MakeInstance();
+		Gui_ShowOverlay(overlay, false);
+	} else if (key == KeyBind_Get(KeyBind_BreakableLiquids)) {
+		InputHandler_Toggle(key, &Game_BreakableLiquids,
+			"  &eBreakable liquids is &aenabled",
+			"  &eBreakable liquids is &cdisabled");
 	} else {
 		return false;
 	}
@@ -276,7 +283,7 @@ bool InputHandler_CheckIsFree(BlockID block) {
 }
 
 void InputHandler_PickBlocks(bool cooldown, bool left, bool middle, bool right) {
-	DateTime now = Platform_CurrentUTCTime();
+	DateTime now; Platform_CurrentUTCTime(&now);
 	Int64 delta = DateTime_MsBetween(&input_lastClick, &now);
 	if (cooldown && delta < 250) return; /* 4 times per second */
 
@@ -327,10 +334,11 @@ void InputHandler_MouseWheel(void* obj, Real32 delta) {
 	if (active->VTABLE->HandlesMouseScroll(active, delta)) return;
 
 	bool hotbar = Key_IsAltPressed() || Key_IsControlPressed() || Key_IsShiftPressed();
-	if (!hotbar && Camera_ActiveCamera->Zoom(delta)) return;
+	if (!hotbar && Camera_Active->Zoom(delta)) return;
 	if (InputHandler_DoFovZoom(delta) || !Inventory_CanChangeHeldBlock) return;
 
-	game.Gui.hudScreen.hotbar.HandlesMouseScroll(delta);
+	Widget* hotbarW = HUDScreen_GetHotbar(Gui_HUD);
+	Elem_HandlesMouseScroll(hotbarW, delta);
 }
 
 void InputHandler_MouseMove(void* obj, Int32 xDelta, Int32 yDelta) {
@@ -338,7 +346,7 @@ void InputHandler_MouseMove(void* obj, Int32 xDelta, Int32 yDelta) {
 	active->VTABLE->HandlesMouseMove(active, Mouse_X, Mouse_Y);
 }
 
-void InputHandler_MouseDown(void* obj, MouseButton button) {
+void InputHandler_MouseDown(void* obj, Int32 button) {
 	GuiElement* active = (GuiElement*)Gui_GetActiveScreen();
 	if (!active->VTABLE->HandlesMouseDown(active, Mouse_X, Mouse_Y, button)) {
 		bool left   = button == MouseButton_Left;
@@ -346,11 +354,11 @@ void InputHandler_MouseDown(void* obj, MouseButton button) {
 		bool right  = button == MouseButton_Right;
 		InputHandler_PickBlocks(false, left, middle, right);
 	} else {
-		input_lastClick = Platform_CurrentUTCTime();
+		Platform_CurrentUTCTime(&input_lastClick);
 	}
 }
 
-void InputHandler_MouseUp(void* obj, MouseButton button) {
+void InputHandler_MouseUp(void* obj, Int32 button) {
 	GuiElement* active = (GuiElement*)Gui_GetActiveScreen();
 	if (!active->VTABLE->HandlesMouseUp(active, Mouse_X, Mouse_Y, button)) {
 		if (ServerConnection_SupportsPlayerClick && button <= MouseButton_Middle) {
@@ -372,7 +380,7 @@ bool InputHandler_SimulateMouse(Key key, bool pressed) {
 	return true;
 }
 
-void InputHandler_KeyDown(void* obj, Key key) {
+void InputHandler_KeyDown(void* obj, Int32 key) {
 	if (InputHandler_SimulateMouse(key, true)) return;
 	GuiElement* active = (GuiElement*)Gui_GetActiveScreen();
 
@@ -384,7 +392,7 @@ void InputHandler_KeyDown(void* obj, Key key) {
 		Game_ScreenshotRequested = true;
 	} else if (active->VTABLE->HandlesKeyDown(active, key)) {
 	} else if (InputHandler_HandleCoreKey(key)) {
-	} else if (LocalPlayer_Instance.Input.Handles(key)) {
+	} else if (LocalPlayer_HandlesKey(key)) {
 	} else {
 		UInt8 textBuffer[String_BufferSize(STRING_SIZE)];
 		String text = String_InitAndClearArray(textBuffer);
@@ -399,7 +407,7 @@ void InputHandler_KeyDown(void* obj, Key key) {
 	}
 }
 
-void InputHandler_KeyUp(void* obj, Key key) {
+void InputHandler_KeyUp(void* obj, Int32 key) {
 	if (InputHandler_SimulateMouse(key, false)) return;
 
 	if (key == KeyBind_Get(KeyBind_ZoomScrolling)) {
@@ -416,13 +424,13 @@ void InputHandler_KeyPress(void* obj, Int32 keyChar) {
 }
 
 void InputHandler_Init(void) {
-	Event_RegisterReal32(&MouseEvents_Wheel,    NULL, InputHandler_MouseWheel);
+	Event_RegisterReal(&MouseEvents_Wheel,    NULL, InputHandler_MouseWheel);
 	Event_RegisterMouseMove(&MouseEvents_Moved, NULL, InputHandler_MouseMove);
-	Event_RegisterInt32(&MouseEvents_Down,      NULL, InputHandler_MouseDown);
-	Event_RegisterInt32(&MouseEvents_Up,        NULL, InputHandler_MouseUp);
-	Event_RegisterInt32(&KeyEvents_Down,        NULL, InputHandler_KeyDown);
-	Event_RegisterInt32(&KeyEvents_Up,          NULL, InputHandler_KeyUp);
-	Event_RegisterInt32(&KeyEvents_Press,       NULL, InputHandler_KeyPress);
+	Event_RegisterInt(&MouseEvents_Down,      NULL, InputHandler_MouseDown);
+	Event_RegisterInt(&MouseEvents_Up,        NULL, InputHandler_MouseUp);
+	Event_RegisterInt(&KeyEvents_Down,        NULL, InputHandler_KeyDown);
+	Event_RegisterInt(&KeyEvents_Up,          NULL, InputHandler_KeyUp);
+	Event_RegisterInt(&KeyEvents_Press,       NULL, InputHandler_KeyPress);
 
 	KeyBind_Init();
 	Hotkeys_Init();

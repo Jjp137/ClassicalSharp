@@ -138,6 +138,7 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <AdditionalOptions>
       </AdditionalOptions>
+      <EnableEnhancedInstructionSet>NoExtensions</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -166,6 +167,7 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <AdditionalOptions>
       </AdditionalOptions>
+      <EnableEnhancedInstructionSet>NoExtensions</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -179,6 +181,7 @@
   <ItemGroup>
     <ClInclude Include="2DStructs.h" />
     <ClInclude Include="AsyncDownloader.h" />
+    <ClInclude Include="Audio.h" />
     <ClInclude Include="AxisLinesRenderer.h" />
     <ClInclude Include="BlockID.h" />
     <ClInclude Include="Block.h" />
@@ -206,6 +209,7 @@
     <ClInclude Include="Input.h" />
     <ClInclude Include="InputHandler.h" />
     <ClInclude Include="Menus.h" />
+    <ClInclude Include="PacketHandlers.h" />
     <ClInclude Include="Physics.h" />
     <ClInclude Include="Inventory.h" />
     <ClInclude Include="IsometricDrawer.h" />
@@ -227,6 +231,7 @@
     <ClInclude Include="Stream.h" />
     <ClInclude Include="GameStructs.h" />
     <ClInclude Include="TerrainAtlas.h" />
+    <ClInclude Include="TexturePack.h" />
     <ClInclude Include="TreeGen.h" />
     <ClInclude Include="Utils.h" />
     <ClInclude Include="WeatherRenderer.h" />
@@ -246,9 +251,7 @@
     <ClInclude Include="VertexStructs.h" />
     <ClInclude Include="Widgets.h" />
     <ClInclude Include="Window.h" />
-    <ClInclude Include="WordWrap.h" />
     <ClInclude Include="World.h" />
-    <ClInclude Include="ZipArchive.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="2DStructs.c" />
@@ -280,6 +283,7 @@
     <ClCompile Include="Deflate.c" />
     <ClCompile Include="IModel.c" />
     <ClCompile Include="Menus.c" />
+    <ClCompile Include="PacketHandlers.c" />
     <ClCompile Include="Physics.c" />
     <ClCompile Include="IsometricDrawer.c" />
     <ClCompile Include="Input.c" />
@@ -307,18 +311,16 @@
     <ClCompile Include="String.c" />
     <ClCompile Include="TerrainAtlas.c" />
     <ClCompile Include="Texture.c" />
+    <ClCompile Include="TexturePack.c" />
     <ClCompile Include="TreeGen.c" />
     <ClCompile Include="Utils.c" />
     <ClCompile Include="Vectors.c" />
-    <ClCompile Include="VertexStructs.c" />
     <ClCompile Include="WeatherRenderer.c" />
     <ClCompile Include="Widgets.c" />
     <ClCompile Include="WinErrorHandler.c" />
     <ClCompile Include="WinPlatform.c" />
     <ClCompile Include="WinWindow.c" />
-    <ClCompile Include="WordWrap.c" />
     <ClCompile Include="World.c" />
-    <ClCompile Include="ZipArchive.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

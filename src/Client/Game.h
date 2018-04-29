@@ -1,11 +1,15 @@
 #ifndef CC_GAME_H
 #define CC_GAME_H
-#include "Stream.h"
+#include "String.h"
 #include "Picking.h"
 #include "Options.h"
 /* Represents the game.
    Copyright 2014-2017 ClassicalSharp | Licensed under BSD-3
 */
+
+typedef struct Bitmap_ Bitmap;
+typedef struct DisplayDevice_ DisplayDevice;
+typedef struct Stream_ Stream;
 
 Int32 Game_Width, Game_Height;
 /* Total rendering time(in seconds) elapsed since the client was started. */
@@ -19,16 +23,16 @@ PickedPos Game_CameraClipPos;
 GfxResourceID Game_DefaultIb;
 
 bool Game_UseCPEBlocks;
-String Game_Username;
-String Game_Mppass;
-String Game_IPAddress;
+extern String Game_Username;
+extern String Game_Mppass;
+extern String Game_IPAddress;
 Int32 Game_Port;
-Real32 Game_ViewDistance;
-Real32 Game_MaxViewDistance;
-Real32 Game_UserViewDistance;
+Int32 Game_ViewDistance;
+Int32 Game_MaxViewDistance;
+Int32 Game_UserViewDistance;
 Int32 Game_Fov;
 Int32 Game_DefaultFov, Game_ZoomFov;
-UInt8 FpsLimit;
+FpsLimit Game_FpsLimit;
 bool Game_ShowAxisLines;
 bool Game_SimpleArmsAnim;
 bool Game_ClassicArmModel;
@@ -50,7 +54,7 @@ bool Game_SmoothLighting;
 bool Game_ChatLogging;
 bool Game_AutoRotate;
 bool Game_SmoothCamera;
-String Game_FontName;
+extern String Game_FontName;
 Int32 Game_ChatLines;
 bool Game_ClickableChat;
 bool Game_HideGui;
@@ -60,7 +64,7 @@ bool Game_ViewBobbing;
 bool Game_ShowBlockInHand;
 Int32 Game_SoundsVolume;
 Int32 Game_MusicVolume;
-bool Game_ModifiableLiquids;
+bool Game_BreakableLiquids;
 Int32 Game_MaxChunkUpdates;
 
 Vector3 Game_CurrentCameraPos;
@@ -77,12 +81,16 @@ void Game_SetDefaultTexturePack(STRING_PURE String* texPack);
 bool Game_GetCursorVisible(void);
 void Game_SetCursorVisible(bool visible);
 
+bool Game_ChangeTerrainAtlas(Bitmap* atlas);
+void Game_SetViewDistance(Int32 distance, bool userDist);
 void Game_UpdateProjection(void);
+void Game_Disconnect(STRING_PURE String* title, STRING_PURE String* reason);
 void Game_UpdateBlock(Int32 x, Int32 y, Int32 z, BlockID block);
-bool Game_UpdateTexture(GfxResourceID* texId, Stream* src, bool setSkinType);
-void Game_SetViewDistance(Real32 distance, bool userDist);
 bool Game_CanPick(BlockID block);
+bool Game_UpdateTexture(GfxResourceID* texId, Stream* src, bool setSkinType);
+bool Game_ValidateBitmap(STRING_PURE String* file, Bitmap* bmp);
+Int32 Game_CalcRenderType(STRING_PURE String* type);
+void Game_SetFpsLimitMethod(FpsLimit method);
 
-static void Game_LimitFPS(void);
-void Game_Free(void);
+void Game_Run(Int32 width, Int32 height, STRING_REF String* title, DisplayDevice* device);
 #endif

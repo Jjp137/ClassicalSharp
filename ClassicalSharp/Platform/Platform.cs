@@ -13,6 +13,8 @@ namespace ClassicalSharp {
 	/// <summary> Abstracts away platform specific operations. </summary>
 	public static class Platform {
 	
+		public static string AppDirectory;
+		
 		public static bool ValidBitmap(Bitmap bmp) {
 			// Mono seems to be returning a bitmap with a native pointer of zero in some weird cases.
 			// We can detect this as property access raises an ArgumentException.
@@ -69,6 +71,64 @@ namespace ClassicalSharp {
 			Bitmap.Config config = bmp.GetConfig();
 			return config != null && config == Bitmap.Config.Argb8888;
 			#endif
+		}
+		
+		static string FullPath(string relPath) { return Path.Combine(AppDirectory, relPath); }
+		
+		public static FileStream FileOpen(string relPath) {
+			return new FileStream(FullPath(relPath), FileMode.Open, FileAccess.Read, FileShare.Read);
+		}
+		
+		public static FileStream FileCreate(string relPath) {
+			return new FileStream(FullPath(relPath), FileMode.Create, FileAccess.Write, FileShare.Read);
+		}
+		
+		public static FileStream FileAppend(string relPath) {
+			return new FileStream(FullPath(relPath), FileMode.Append, FileAccess.Write, FileShare.Read);
+		}
+		
+		public static bool FileExists(string relPath) {
+			return File.Exists(FullPath(relPath));
+		}
+		
+		public static DateTime FileGetWriteTime(string relPath) {
+			return File.GetLastWriteTimeUtc(FullPath(relPath));
+		}
+		
+		public static void FileSetWriteTime(string relPath, DateTime time) {
+			File.SetLastWriteTimeUtc(FullPath(relPath), time);
+		}
+		
+		public static bool DirectoryExists(string relPath) {
+			return Directory.Exists(FullPath(relPath));
+		}
+		
+		public static void DirectoryCreate(string relPath) {
+			Directory.CreateDirectory(FullPath(relPath));
+		}
+		
+		public static string[] DirectoryFiles(string relPath) {
+			string[] files = Directory.GetFiles(FullPath(relPath));		
+			for (int i = 0; i < files.Length; i++) {
+				files[i] = Path.GetFileName(files[i]);
+			}
+			return files;
+		}
+		
+		public static string[] DirectoryFiles(string relPath, string filter) {
+			string[] files = Directory.GetFiles(FullPath(relPath), filter);			
+			for (int i = 0; i < files.Length; i++) {
+				files[i] = Path.GetFileName(files[i]);
+			}
+			return files;
+		}
+		
+		public static void WriteAllText(string relPath, string text) {
+			File.WriteAllText(FullPath(relPath), text);
+		}
+		
+		public static void WriteAllBytes(string relPath, byte[] data) {
+			File.WriteAllBytes(FullPath(relPath), data);
 		}
 	}
 }

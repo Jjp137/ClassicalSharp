@@ -70,9 +70,9 @@ namespace ClassicalSharp.Map {
 				p.ReachDistance = (short)curCpeExt["Distance"].Value / 32f;
 			}
 			if (CheckKey("EnvColors", 1, metadata)) {
-				map.Env.SetSkyColour(GetColour("Sky", WorldEnv.DefaultSkyColour));
-				map.Env.SetCloudsColour(GetColour("Cloud", WorldEnv.DefaultCloudsColour));
-				map.Env.SetFogColour(GetColour("Fog", WorldEnv.DefaultFogColour));
+				map.Env.SetSkyColour(GetColour("Sky", WorldEnv.DefaultSkyCol));
+				map.Env.SetCloudsColour(GetColour("Cloud", WorldEnv.DefaultCloudsCol));
+				map.Env.SetFogColour(GetColour("Fog", WorldEnv.DefaultFogCol));
 				map.Env.SetSunlight(GetColour("Sunlight", WorldEnv.DefaultSunlight));
 				map.Env.SetShadowlight(GetColour("Ambient", WorldEnv.DefaultShadowlight));
 			}
@@ -81,7 +81,7 @@ namespace ClassicalSharp.Map {
 				if (curCpeExt.ContainsKey("TextureURL"))
 					url = (string)curCpeExt["TextureURL"].Value;
 				if (url.Length == 0) url = null;
-				if (game.UseServerTextures && url != null)
+				if (game.AllowServerTextures && url != null)
 					game.Server.RetrieveTexturePack(url);
 				
 				byte sidesBlock = (byte)curCpeExt["SideBlock"].Value;
@@ -95,7 +95,7 @@ namespace ClassicalSharp.Map {
 				map.Env.SetWeather((Weather)weather);
 			}
 			
-			if (game.UseCustomBlocks && CheckKey("BlockDefinitions", 1, metadata)) {
+			if (game.AllowCustomBlocks && CheckKey("BlockDefinitions", 1, metadata)) {
 				foreach (KeyValuePair<string, NbtTag> pair in curCpeExt) {
 					if (pair.Value.TagId != NbtTagType.Compound) continue;
 					if (!Utils.CaselessStarts(pair.Key, "Block")) continue;
@@ -147,9 +147,10 @@ namespace ClassicalSharp.Map {
 			BlockInfo.SetTex(data[5], Side.Back, id);
 			
 			BlockInfo.BlocksLight[id] = (byte)compound["TransmitsLight"].Value == 0;
-			byte soundId = (byte)compound["WalkSound"].Value;
-			BlockInfo.DigSounds[id] = CPEProtocolBlockDefs.breakSnds[soundId];
-			BlockInfo.StepSounds[id] = CPEProtocolBlockDefs.stepSnds[soundId];
+			byte sound = (byte)compound["WalkSound"].Value;
+			BlockInfo.DigSounds[id]  = sound;
+			BlockInfo.StepSounds[id] = sound;
+			if (sound == SoundType.Glass) BlockInfo.StepSounds[id] = SoundType.Stone;
 			BlockInfo.FullBright[id] = (byte)compound["FullBright"].Value != 0;
 			
 			byte blockDraw = (byte)compound["BlockDraw"].Value;
@@ -157,27 +158,19 @@ namespace ClassicalSharp.Map {
 				BlockInfo.SpriteOffset[id] = blockDraw;
 				blockDraw = DrawType.Sprite;
 			}
+			BlockInfo.Draw[id] = blockDraw;
 			
 			data = (byte[])compound["Fog"].Value;
 			BlockInfo.FogDensity[id] = (data[0] + 1) / 128f;
 			// Fix for older ClassicalSharp versions which saved wrong fog density value
 			if (data[0] == 0xFF) BlockInfo.FogDensity[id] = 0;
 			BlockInfo.FogColour[id] = new FastColour(data[1], data[2], data[3]);
-			BlockInfo.Tinted[id] = BlockInfo.FogColour[id] != FastColour.Black && BlockInfo.Name[id].IndexOf('#') >= 0; // TODO: nasty copy paste
 
 			data = (byte[])compound["Coords"].Value;
 			BlockInfo.MinBB[id] = new Vector3(data[0] / 16f, data[1] / 16f, data[2] / 16f);
 			BlockInfo.MaxBB[id] = new Vector3(data[3] / 16f, data[4] / 16f, data[5] / 16f);
 			
-			BlockInfo.SetBlockDraw(id, blockDraw);
-			BlockInfo.CalcRenderBounds(id);
-			BlockInfo.UpdateCulling(id);
-			
-			BlockInfo.LightOffset[id] = BlockInfo.CalcLightOffset(id);
-			game.Events.RaiseBlockDefinitionChanged();
-			game.Inventory.AddDefault(id);
-			BlockInfo.SetCustomDefined(id, true);
-			
+			BlockInfo.DefineCustom(game, id);
 			BlockInfo.CanPlace[id] = true;
 			BlockInfo.CanDelete[id] = true;
 			game.Events.RaiseBlockPermissionsChanged();

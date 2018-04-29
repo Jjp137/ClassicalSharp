@@ -11,7 +11,6 @@
 #include "ModelCache.h"
 #include "Screens.h"
 #include "Platform.h"
-#include "WordWrap.h"
 #include "ServerConnection.h"
 #include "Event.h"
 #include "Chat.h"
@@ -105,9 +104,9 @@ void TextWidget_SetText(TextWidget* widget, STRING_PURE String* text) {
 *------------------------------------------------------ButtonWidget-------------------------------------------------------*
 *#########################################################################################################################*/
 #define BUTTON_uWIDTH (200.0f / 256.0f)
-Texture Button_ShadowTex   = { 0, 0, 0, 0, 0,  0.0f, 66.0f / 256.0f, 200.0f / 256.0f,  86.0f / 256.0f };
-Texture Button_SelectedTex = { 0, 0, 0, 0, 0,  0.0f, 86.0f / 256.0f, 200.0f / 256.0f, 106.0f / 256.0f };
-Texture Button_DisabledTex = { 0, 0, 0, 0, 0,  0.0f, 46.0f / 256.0f, 200.0f / 256.0f,  66.0f / 256.0f };
+Texture Button_ShadowTex   = { 0, 0, 0, 0, 0,  0.0f, 66.0f / 256.0f, BUTTON_uWIDTH,  86.0f / 256.0f };
+Texture Button_SelectedTex = { 0, 0, 0, 0, 0,  0.0f, 86.0f / 256.0f, BUTTON_uWIDTH, 106.0f / 256.0f };
+Texture Button_DisabledTex = { 0, 0, 0, 0, 0,  0.0f, 46.0f / 256.0f, BUTTON_uWIDTH,  66.0f / 256.0f };
 
 void ButtonWidget_Init(GuiElement* elem) {
 	ButtonWidget* widget = (ButtonWidget*)elem;
@@ -166,7 +165,7 @@ void ButtonWidget_Render(GuiElement* elem, Real64 delta) {
 }
 
 GuiElementVTABLE ButtonWidget_VTABLE;
-void ButtonWidget_Create(ButtonWidget* widget, STRING_PURE String* text, Int32 minWidth, FontDesc* font, Widget_LeftClick onClick) {
+void ButtonWidget_Create(ButtonWidget* widget, Int32 minWidth, STRING_PURE String* text, FontDesc* font, Widget_LeftClick onClick) {
 	widget->VTABLE = &ButtonWidget_VTABLE;
 	Widget_Init((Widget*)widget);
 	widget->VTABLE->Init   = ButtonWidget_Init;
@@ -174,6 +173,7 @@ void ButtonWidget_Create(ButtonWidget* widget, STRING_PURE String* text, Int32 m
 	widget->VTABLE->Free   = ButtonWidget_Free;
 	widget->Reposition     = ButtonWidget_Reposition;
 
+	widget->OptName = NULL;
 	widget->Font = *font;
 	Elem_Init(widget);
 	widget->MinWidth = minWidth; widget->MinHeight = 40;
@@ -554,16 +554,13 @@ void TableWidget_MoveCursorToSelected(TableWidget* widget) {
 
 void TableWidget_MakeBlockDesc(STRING_TRANSIENT String* desc, BlockID block) {
 	if (Game_PureClassic) { String_AppendConst(desc, "Select block"); return; }
-	String_AppendString(desc, &Block_Name[block]);
+	String name = Block_UNSAFE_GetName(block);
+	String_AppendString(desc, &name);
 	if (Game_ClassicMode) return;
 
-	String_AppendConst(desc, " (ID ");
-	String_AppendInt32(desc, block);
-	String_AppendConst(desc, "&f, place ");
-	String_AppendConst(desc, Block_CanPlace[block] ? "&aYes" : "&cNo");
-	String_AppendConst(desc, "&f, delete ");
-	String_AppendConst(desc, Block_CanDelete[block] ? "&aYes" : "&cNo");
-	String_AppendConst(desc, "&f)");
+	const UInt8* place = Block_CanPlace[block] ? "&aYes" : "&cNo";
+	const UInt8* del = Block_CanDelete[block] ? "&aYes" : "&cNo";
+	String_Format3(desc, " (ID %b&f, place %c&f, delete %c&f)", &block, place, del);
 }
 
 void TableWidget_UpdateDescTexPos(TableWidget* widget) {
@@ -572,7 +569,7 @@ void TableWidget_UpdateDescTexPos(TableWidget* widget) {
 }
 
 void TableWidget_UpdatePos(TableWidget* widget) {
-	Int32 rowsDisplayed = min(TABLE_MAX_ROWS_DISPLAYED, widget->ElementsCount);
+	Int32 rowsDisplayed = min(TABLE_MAX_ROWS_DISPLAYED, widget->RowsCount);
 	widget->Width = widget->BlockSize * widget->ElementsPerRow;
 	widget->Height = widget->BlockSize * rowsDisplayed;
 	widget->X = Game_Width  / 2 - widget->Width  / 2;
@@ -641,7 +638,7 @@ void TableWidget_RecreateElements(TableWidget* widget) {
 	TableWidget_UpdatePos(widget);
 
 	Int32 index = 0;
-	for (i = 0; i < count; i++) {
+	for (i = 0; i < count;) {
 		if ((i % widget->ElementsPerRow) == 0 && TableWidget_RowEmpty(widget, i)) {
 			i += widget->ElementsPerRow; continue;
 		}
@@ -730,7 +727,7 @@ void TableWidget_Free(GuiElement* elem) {
 
 void TableWidget_Recreate(GuiElement* elem) {
 	TableWidget* widget = (TableWidget*)elem;
-	Elem_Free(widget);
+	Elem_TryFree(widget);
 	widget->VB = Gfx_CreateDynamicVb(VERTEX_FORMAT_P3FT2FC4B, TABLE_MAX_VERTICES);
 	TableWidget_RecreateDescTex(widget);
 }
@@ -738,8 +735,8 @@ void TableWidget_Recreate(GuiElement* elem) {
 void TableWidget_Reposition(GuiElement* elem) {
 	TableWidget* widget = (TableWidget*)elem;
 	Real32 scale = Game_GetInventoryScale();
-	widget->BlockSize = (Int32)(50 * Math_Sqrt(scale));
-	widget->SelBlockExpand = 25.0f * Math_Sqrt(scale);
+	widget->BlockSize = (Int32)(50 * Math_SqrtF(scale));
+	widget->SelBlockExpand = 25.0f * Math_SqrtF(scale);
 	TableWidget_UpdatePos(widget);
 	TableWidget_UpdateScrollbarPos(widget);
 }
@@ -973,9 +970,9 @@ void InputWidget_RenderCaret(InputWidget* widget, Real64 delta) {
 	if (!widget->ShowCaret) return;
 
 	widget->CaretAccumulator += delta;
-	Real64 second = widget->CaretAccumulator - (Real64)Math_Floor((Real32)widget->CaretAccumulator);
-	if (second < 0.5) {
-		GfxCommon_Draw2DTexture(&widget->CaretTex, widget->CaretCol);
+	Real32 second = Math_ModF((Real32)widget->CaretAccumulator, 1.0f);
+	if (second < 0.5f) {
+		Texture_RenderShaded(&widget->CaretTex, widget->CaretCol);
 	}
 }
 
@@ -990,7 +987,7 @@ void InputWidget_RemakeTexture(GuiElement* elem) {
 	widget->CaretAccumulator = 0;
 
 	Int32 realHeight = 0;
-	Bitmap bmp; Bitmap_AllocatePow2(&bmp, size.Width, size.Height);
+	Bitmap bmp; Bitmap_AllocateClearedPow2(&bmp, size.Width, size.Height);
 	Drawer2D_Begin(&bmp);
 
 	DrawTextArgs args; DrawTextArgs_MakeEmpty(&args, &widget->Font, true);
@@ -1017,10 +1014,10 @@ void InputWidget_RemakeTexture(GuiElement* elem) {
 		Drawer2D_DrawText(&args, offset, realHeight);
 		realHeight += widget->LineSizes[i].Height;
 	}
-	widget->InputTex = Drawer2D_Make2DTexture(&bmp, size, 0, 0);
 
 	Drawer2D_End();
-	Platform_MemFree(bmp.Scan0);
+	widget->InputTex = Drawer2D_Make2DTexture(&bmp, size, 0, 0);
+	Platform_MemFree(&bmp.Scan0);
 
 	widget->Width = size.Width;
 	widget->Height = realHeight == 0 ? widget->PrefixHeight : realHeight;
@@ -1195,6 +1192,9 @@ bool InputWidget_OtherKey(InputWidget* widget, Key key) {
 		String text = String_InitAndClearArray(textBuffer);
 		Window_GetClipboardText(&text);
 
+		String_UNSAFE_TrimStart(&text);
+		String_UNSAFE_TrimEnd(&text);
+
 		if (text.length == 0) return true;
 		InputWidget_AppendString(widget, &text);
 		return true;
@@ -1210,15 +1210,13 @@ void InputWidget_Init(GuiElement* elem) {
 	InputWidget* widget = (InputWidget*)elem;
 	Int32 lines = widget->GetMaxLines();
 	if (lines > 1) {
-		/* TODO: Actually make this work */
 		WordWrap_Do(&widget->Text, widget->Lines, lines, INPUTWIDGET_LEN);
 	} else {
-		String_Clear(&widget->Lines[0]);
-		String_AppendString(&widget->Lines[0], &widget->Text);
+		widget->Lines[0] = widget->Text;
 	}
 
 	InputWidget_CalculateLineSizes(widget);
-	InputWidget_RemakeTexture(elem);
+	widget->RemakeTexture(elem);
 	InputWidget_UpdateCaret(widget);
 }
 
@@ -1268,7 +1266,7 @@ bool InputWidget_HandlesKeyUp(GuiElement* elem, Key key) { return true; }
 
 bool InputWidget_HandlesKeyPress(GuiElement* elem, UInt8 key) {
 	InputWidget* widget = (InputWidget*)elem;
-	InputWidget_AppendChar(widget, key);
+	InputWidget_Append(widget, key);
 	return true;
 }
 
@@ -1375,11 +1373,7 @@ MenuInputValidator MenuInputValidator_Hex(void) {
 }
 
 void IntegerValidator_GetRange(MenuInputValidator* validator, STRING_TRANSIENT String* range) {
-	String_AppendConst(range, "&7(");
-	String_AppendInt32(range, validator->Meta_Int[0]);
-	String_AppendConst(range, " - ");
-	String_AppendInt32(range, validator->Meta_Int[1]);
-	String_AppendConst(range, ")");
+	String_Format2(range, "&7(%i - %i)", &validator->Meta_Int[0], &validator->Meta_Int[1]);
 }
 
 bool IntegerValidator_IsValidChar(MenuInputValidator* validator, UInt8 c) {
@@ -1423,11 +1417,7 @@ MenuInputValidator MenuInputValidator_Seed(void) {
 }
 
 void RealValidator_GetRange(MenuInputValidator* validator, STRING_TRANSIENT String* range) {
-	String_AppendConst(range, "&7(");
-	String_AppendReal32(range, validator->Meta_Real[0]);
-	String_AppendConst(range, " - ");
-	String_AppendReal32(range, validator->Meta_Real[1]);
-	String_AppendConst(range, ")");
+	String_Format2(range, "&7(%f2 - %f2)", &validator->Meta_Real[0], &validator->Meta_Real[1]);
 }
 
 bool RealValidator_IsValidChar(MenuInputValidator* validator, UInt8 c) {
@@ -1476,21 +1466,8 @@ MenuInputValidator MenuInputValidator_Path(void) {
 	return validator;
 }
 
-void BooleanInputValidator_GetRange(MenuInputValidator* validator, STRING_TRANSIENT String* range) {
-	String_AppendConst(range, "&7(yes or no)");
-}
-
-MenuInputValidator MenuInputValidator_Boolean(void) {
-	MenuInputValidator validator;
-	validator.GetRange      = BooleanInputValidator_GetRange;
-	validator.IsValidChar   = MenuInputValidator_AlwaysValidChar;
-	validator.IsValidString = MenuInputValidator_AlwaysValidString;
-	validator.IsValidValue  = MenuInputValidator_AlwaysValidString;
-	return validator;
-}
-
 MenuInputValidator MenuInputValidator_Enum(const UInt8** names, UInt32 namesCount) {
-	MenuInputValidator validator = MenuInputValidator_Boolean();
+	MenuInputValidator validator = { 0 };
 	validator.Meta_Ptr[0] = names;
 	validator.Meta_Ptr[1] = (void*)namesCount; /* TODO: Need to handle void* size < 32 bits?? */
 	return validator;
@@ -1557,7 +1534,7 @@ void MenuInputWidget_RemakeTexture(GuiElement* elem) {
 	widget->Base.Height = max(size.Height, widget->MinHeight);
 	Size2D adjSize = size; adjSize.Width = widget->Base.Width;
 
-	Bitmap bmp; Bitmap_AllocatePow2(&bmp, adjSize.Width, adjSize.Height);
+	Bitmap bmp; Bitmap_AllocateClearedPow2(&bmp, adjSize.Width, adjSize.Height);
 	Drawer2D_Begin(&bmp);
 	Drawer2D_DrawText(&args, widget->Base.Padding, 0);
 
@@ -1571,6 +1548,7 @@ void MenuInputWidget_RemakeTexture(GuiElement* elem) {
 	Drawer2D_End();
 	Texture* tex = &widget->Base.InputTex;
 	*tex = Drawer2D_Make2DTexture(&bmp, adjSize, 0, 0);
+	Platform_MemFree(&bmp.Scan0);
 
 	Widget_Reposition(&widget->Base);
 	tex->X = widget->Base.X; tex->Y = widget->Base.Y;
@@ -1599,7 +1577,8 @@ bool MenuInputWidget_AllowedChar(GuiElement* elem, UInt8 c) {
 Int32 MenuInputWidget_GetMaxLines(void) { return 1; }
 GuiElementVTABLE MenuInputWidget_VTABLE;
 void MenuInputWidget_Create(MenuInputWidget* widget, Int32 width, Int32 height, STRING_PURE String* text, FontDesc* font, MenuInputValidator* validator) {
-	InputWidget_Create(&widget->Base, font, NULL);
+	String empty = String_MakeNull();
+	InputWidget_Create(&widget->Base, font, &empty);
 	widget->MinWidth  = width;
 	widget->MinHeight = height;
 	widget->Validator = *validator;
@@ -1680,8 +1659,7 @@ void ChatInputWidget_UpKey(GuiElement* elem) {
 
 	if (widget->TypingLogPos == Chat_InputLog.Count) {
 		String orig = String_FromRawArray(widget->OrigBuffer);
-		String_Clear(&orig);
-		String_AppendString(&orig, &input->Text);
+		String_Set(&orig, &input->Text);
 	}
 
 	if (Chat_InputLog.Count == 0) return;
@@ -1772,9 +1750,7 @@ void ChatInputWidget_TabKey(GuiElement* elem) {
 	} else if (matchesCount > 1) {
 		UInt8 strBuffer[String_BufferSize(STRING_SIZE)];
 		String str = String_InitAndClearArray(strBuffer);
-		String_AppendConst(&str, "&e");
-		String_AppendInt32(&str, matchesCount);
-		String_AppendConst(&str, " matching names: ");
+		String_Format1(&str, "&e%i matching names: ", &matchesCount);
 
 		for (i = 0; i < matchesCount; i++) {
 			String match = TabList_UNSAFE_GetPlayer(matches[i]);
@@ -1808,6 +1784,7 @@ void ChatInputWidget_Create(ChatInputWidget* widget, FontDesc* font) {
 	widget->Base.Padding        = 5;
 	widget->Base.GetMaxLines    = ChatInputWidget_GetMaxLines;
 	widget->Base.OnPressedEnter = ChatInputWidget_OnPressedEnter;
+	widget->Base.Text = String_InitAndClearArray(widget->TextBuffer);
 
 	ChatInputWidget_VTABLE = *widget->Base.VTABLE;
 	widget->Base.VTABLE = &ChatInputWidget_VTABLE;
@@ -2089,13 +2066,13 @@ void PlayerListWidget_SortAndReposition(PlayerListWidget* widget) {
 	PlayerListWidget_Reposition((GuiElement*)widget);
 }
 
-void PlayerListWidget_TabEntryAdded(void* obj, EntityID id) {
+void PlayerListWidget_TabEntryAdded(void* obj, Int32 id) {
 	PlayerListWidget* widget = (PlayerListWidget*)obj;
 	PlayerListWidget_AddName(widget, id, -1);
 	PlayerListWidget_SortAndReposition(widget);
 }
 
-void PlayerListWidget_TabEntryChanged(void* obj, EntityID id) {
+void PlayerListWidget_TabEntryChanged(void* obj, Int32 id) {
 	PlayerListWidget* widget = (PlayerListWidget*)obj;
 	Int32 i;
 	for (i = 0; i < widget->NamesCount; i++) {
@@ -2109,7 +2086,7 @@ void PlayerListWidget_TabEntryChanged(void* obj, EntityID id) {
 	}
 }
 
-void PlayerListWidget_TabEntryRemoved(void* obj, EntityID id) {
+void PlayerListWidget_TabEntryRemoved(void* obj, Int32 id) {
 	PlayerListWidget* widget = (PlayerListWidget*)obj;
 	Int32 i;
 	for (i = 0; i < widget->NamesCount; i++) {
@@ -2133,9 +2110,9 @@ void PlayerListWidget_Init(GuiElement* elem) {
 	TextWidget_Create(&widget->Overview, &msg, &widget->Font);
 	Widget_SetLocation((Widget*)(&widget->Overview), ANCHOR_CENTRE, ANCHOR_MIN, 0, 0);
 
-	Event_RegisterEntityID(&TabListEvents_Added,   widget, PlayerListWidget_TabEntryAdded);
-	Event_RegisterEntityID(&TabListEvents_Changed, widget, PlayerListWidget_TabEntryChanged);
-	Event_RegisterEntityID(&TabListEvents_Removed, widget, PlayerListWidget_TabEntryRemoved);
+	Event_RegisterInt(&TabListEvents_Added,   widget, PlayerListWidget_TabEntryAdded);
+	Event_RegisterInt(&TabListEvents_Changed, widget, PlayerListWidget_TabEntryChanged);
+	Event_RegisterInt(&TabListEvents_Removed, widget, PlayerListWidget_TabEntryRemoved);
 }
 
 void PlayerListWidget_Render(GuiElement* elem, Real64 delta) {
@@ -2170,22 +2147,23 @@ void PlayerListWidget_Free(GuiElement* elem) {
 	for (i = 0; i < widget->NamesCount; i++) {
 		Gfx_DeleteTexture(&widget->Textures[i].ID);
 	}
-	Elem_Free(&widget->Overview);
+	Elem_TryFree(&widget->Overview);
 
-	Event_UnregisterEntityID(&TabListEvents_Added,   widget, PlayerListWidget_TabEntryAdded);
-	Event_UnregisterEntityID(&TabListEvents_Changed, widget, PlayerListWidget_TabEntryChanged);
-	Event_UnregisterEntityID(&TabListEvents_Removed, widget, PlayerListWidget_TabEntryRemoved);
+	Event_UnregisterInt(&TabListEvents_Added,   widget, PlayerListWidget_TabEntryAdded);
+	Event_UnregisterInt(&TabListEvents_Changed, widget, PlayerListWidget_TabEntryChanged);
+	Event_UnregisterInt(&TabListEvents_Removed, widget, PlayerListWidget_TabEntryRemoved);
 }
 
 GuiElementVTABLE PlayerListWidgetVTABLE;
 void PlayerListWidget_Create(PlayerListWidget* widget, FontDesc* font, bool classic) {
 	widget->VTABLE = &PlayerListWidgetVTABLE;
 	Widget_Init((Widget*)widget);
-	widget->VTABLE->Init = PlayerListWidget_Init;
-	widget->VTABLE->Free = PlayerListWidget_Free;
-	widget->Reposition   = PlayerListWidget_Reposition;
-	widget->HorAnchor    = ANCHOR_CENTRE;
-	widget->VerAnchor    = ANCHOR_CENTRE;
+	widget->VTABLE->Init   = PlayerListWidget_Init;
+	widget->VTABLE->Render = PlayerListWidget_Render;
+	widget->VTABLE->Free   = PlayerListWidget_Free;
+	widget->Reposition = PlayerListWidget_Reposition;
+	widget->HorAnchor  = ANCHOR_CENTRE;
+	widget->VerAnchor  = ANCHOR_CENTRE;
 
 	widget->NamesCount = 0;
 	widget->Font = *font;
@@ -2200,11 +2178,10 @@ void PlayerListWidget_Create(PlayerListWidget* widget, FontDesc* font, bool clas
 void TextGroupWidget_PushUpAndReplaceLast(TextGroupWidget* widget, STRING_PURE String* text) {
 	Int32 y = widget->Y;
 	Gfx_DeleteTexture(&widget->Textures[0].ID);
-	UInt32 i;
-#define tgw_max_idx (Array_Elems(widget->Textures) - 1)
+	Int32 i, max_index = widget->LinesCount - 1;
 
 	/* Move contents of X line to X - 1 line */
-	for (i = 0; i < tgw_max_idx; i++) {
+	for (i = 0; i < max_index; i++) {
 		UInt8* dst = widget->Buffer + i       * TEXTGROUPWIDGET_LEN;
 		UInt8* src = widget->Buffer + (i + 1) * TEXTGROUPWIDGET_LEN;
 		UInt8 lineLen = widget->LineLengths[i + 1];
@@ -2217,8 +2194,8 @@ void TextGroupWidget_PushUpAndReplaceLast(TextGroupWidget* widget, STRING_PURE S
 		y += widget->Textures[i].Height;
 	}
 
-	widget->Textures[tgw_max_idx].ID = NULL; /* Delete() is called by SetText otherwise */
-	TextGroupWidget_SetText(widget, tgw_max_idx, text);
+	widget->Textures[max_index].ID = NULL; /* Delete() is called by SetText otherwise */
+	TextGroupWidget_SetText(widget, max_index, text);
 }
 
 Int32 TextGroupWidget_CalcY(TextGroupWidget* widget, Int32 index, Int32 newHeight) {
@@ -2231,12 +2208,12 @@ Int32 TextGroupWidget_CalcY(TextGroupWidget* widget, Int32 index, Int32 newHeigh
 		for (i = 0; i < index; i++) {
 			y += textures[i].Height;
 		}
-		for (i = index + 1; i < TEXTGROUPWIDGET_MAX_LINES; i++) {
+		for (i = index + 1; i < widget->LinesCount; i++) {
 			textures[i].Y += deltaY;
 		}
 	} else {
 		y = Game_Height - widget->YOffset;
-		for (i = index + 1; i < TEXTGROUPWIDGET_MAX_LINES; i++) {
+		for (i = index + 1; i < widget->LinesCount; i++) {
 			y -= textures[i].Height;
 		}
 
@@ -2261,10 +2238,10 @@ Int32 TextGroupWidget_UsedHeight(TextGroupWidget* widget) {
 	Int32 height = 0, i;
 	Texture* textures = widget->Textures;
 
-	for (i = 0; i < TEXTGROUPWIDGET_MAX_LINES; i++) {
+	for (i = 0; i < widget->LinesCount; i++) {
 		if (textures[i].ID != NULL) break;
 	}
-	for (; i < TEXTGROUPWIDGET_MAX_LINES; i++) {
+	for (; i < widget->LinesCount; i++) {
 		height += textures[i].Height;
 	}
 	return height;
@@ -2279,7 +2256,7 @@ void TextGroupWidget_Reposition(GuiElement* elem) {
 	Widget_DoReposition(elem);
 	if (widget->LinesCount == 0) return;
 
-	for (i = 0; i < TEXTGROUPWIDGET_MAX_LINES; i++) {
+	for (i = 0; i < widget->LinesCount; i++) {
 		textures[i].X = Gui_CalcPos(widget->HorAnchor, widget->XOffset, textures[i].Width, Game_Width);
 		textures[i].Y += widget->Y - oldY;
 	}
@@ -2289,7 +2266,7 @@ void TextGroupWidget_UpdateDimensions(TextGroupWidget* widget) {
 	Int32 i, width = 0, height = 0;
 	Texture* textures = widget->Textures;
 
-	for (i = 0; i < TEXTGROUPWIDGET_MAX_LINES; i++) {
+	for (i = 0; i < widget->LinesCount; i++) {
 		width = max(width, textures[i].Width);
 		height += textures[i].Height;
 	}
@@ -2302,12 +2279,12 @@ void TextGroupWidget_UpdateDimensions(TextGroupWidget* widget) {
 String TextGroupWidget_UNSAFE_Get(TextGroupWidget* widget, Int32 i) {
 	UInt8* buffer = widget->Buffer + i * TEXTGROUPWIDGET_LEN;
 	UInt16 length = widget->LineLengths[i];
-	return String_Init(widget->Buffer, length, length);
+	return String_Init(buffer, length, length);
 }
 
 void TextGroupWidget_GetSelected(TextGroupWidget* widget, STRING_TRANSIENT String* text, Int32 x, Int32 y) {
 	Int32 i;
-	for (i = 0; i < TEXTGROUPWIDGET_MAX_LINES; i++) {
+	for (i = 0; i < widget->LinesCount; i++) {
 		if (widget->Textures[i].ID == NULL) continue;
 		Texture tex = widget->Textures[i];
 		/* TODO: Add support for URLS */
@@ -2356,7 +2333,7 @@ void TextGroupWidget_Init(GuiElement* elem) {
 	widget->DefaultHeight = height;
 
 	UInt32 i;
-	for (i = 0; i < Array_Elems(widget->Textures); i++) {
+	for (i = 0; i < widget->LinesCount; i++) {
 		widget->Textures[i].Height = (UInt16)height;
 		widget->PlaceholderHeight[i] = true;
 	}
@@ -2368,7 +2345,7 @@ void TextGroupWidget_Render(GuiElement* elem, Real64 delta) {
 	UInt32 i;
 	Texture* textures = widget->Textures;
 
-	for (i = 0; i < TEXTGROUPWIDGET_MAX_LINES; i++) {
+	for (i = 0; i < widget->LinesCount; i++) {
 		if (textures[i].ID == NULL) continue;
 		Texture_Render(&textures[i]);
 	}
@@ -2378,14 +2355,14 @@ void TextGroupWidget_Free(GuiElement* elem) {
 	TextGroupWidget* widget = (TextGroupWidget*)elem;
 	UInt32 i;
 
-	for (i = 0; i < TEXTGROUPWIDGET_MAX_LINES; i++) {
+	for (i = 0; i < widget->LinesCount; i++) {
 		widget->LineLengths[i] = 0;
 		Gfx_DeleteTexture(&widget->Textures[i].ID);
 	}
 }
 
 GuiElementVTABLE TextGroupWidget_VTABLE;
-void TextGroupWidget_Create(TextGroupWidget* widget, Int32 linesCount, FontDesc* font, FontDesc* underlineFont) {
+void TextGroupWidget_Create(TextGroupWidget* widget, Int32 linesCount, FontDesc* font, FontDesc* underlineFont, STRING_REF Texture* textures, STRING_REF UInt8* buffer) {
 	widget->VTABLE = &TextGroupWidget_VTABLE;
 	Widget_Init((Widget*)widget);
 	widget->VTABLE->Init   = TextGroupWidget_Init;
@@ -2396,6 +2373,8 @@ void TextGroupWidget_Create(TextGroupWidget* widget, Int32 linesCount, FontDesc*
 	widget->LinesCount = linesCount;
 	widget->Font = *font;
 	widget->UnderlineFont = *underlineFont;
+	widget->Textures = textures;
+	widget->Buffer = buffer;
 }
 
 
@@ -2530,6 +2509,7 @@ Size2D SpecialInputWidget_CalculateContentSize(SpecialInputTab* e, Size2D* sizes
 void SpecialInputWidget_MeasureContentSizes(SpecialInputWidget* widget, SpecialInputTab* e, Size2D* sizes) {
 	UInt8 buffer[String_BufferSize(STRING_SIZE)];
 	String s = String_InitAndClear(buffer, e->CharsPerItem);
+	s.length = e->CharsPerItem;
 	DrawTextArgs args; DrawTextArgs_Make(&args, &s, &widget->Font, false);
 
 	Int32 i, j;
@@ -2544,6 +2524,7 @@ void SpecialInputWidget_MeasureContentSizes(SpecialInputWidget* widget, SpecialI
 void SpecialInputWidget_DrawContent(SpecialInputWidget* widget, SpecialInputTab* e, Int32 yOffset) {
 	UInt8 buffer[String_BufferSize(STRING_SIZE)];
 	String s = String_InitAndClear(buffer, e->CharsPerItem);
+	s.length = e->CharsPerItem;
 	DrawTextArgs args; DrawTextArgs_Make(&args, &s, &widget->Font, false);
 
 	Int32 i, j, wrap = e->ItemsPerRow;
@@ -2568,17 +2549,17 @@ void SpecialInputWidget_Make(SpecialInputWidget* widget, SpecialInputTab* e) {
 	Size2D size = Size2D_Make(max(bodySize.Width, titleWidth), bodySize.Height + titleHeight);
 	Gfx_DeleteTexture(&widget->Tex.ID);
 
-	Bitmap bmp;
-	Bitmap_AllocatePow2(&bmp, size.Width, size.Height);
+	Bitmap bmp; Bitmap_AllocateClearedPow2(&bmp, size.Width, size.Height);
 	Drawer2D_Begin(&bmp);
 
 	SpecialInputWidget_DrawTitles(widget, &bmp);
 	PackedCol col = PACKEDCOL_CONST(30, 30, 30, 200);
 	Drawer2D_Clear(&bmp, col, 0, titleHeight, size.Width, bodySize.Height);
 	SpecialInputWidget_DrawContent(widget, e, titleHeight);
-	widget->Tex = Drawer2D_Make2DTexture(&bmp, size, widget->X, widget->Y);
-
+	
 	Drawer2D_End();
+	widget->Tex = Drawer2D_Make2DTexture(&bmp, size, widget->X, widget->Y);
+	Platform_MemFree(&bmp.Scan0);
 }
 
 void SpecialInputWidget_Redraw(SpecialInputWidget* widget) {

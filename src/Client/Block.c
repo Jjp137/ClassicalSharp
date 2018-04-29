@@ -4,6 +4,8 @@
 #include "TerrainAtlas.h"
 #include "Game.h"
 #include "Entity.h"
+#include "Inventory.h"
+#include "Event.h"
 
 UInt32 Block_DefinedCustomBlocks[BLOCK_COUNT >> 5];
 UInt8 Block_NamesBuffer[String_BufferSize(STRING_SIZE) * BLOCK_COUNT];
@@ -70,6 +72,21 @@ void Block_SetCustomDefined(BlockID block, bool defined) {
 	}
 }
 
+void Block_DefineCustom(BlockID block) {
+	Block_SetDrawType(block, Block_Draw[block]);
+	Block_CalcRenderBounds(block);
+	Block_UpdateCulling(block);
+
+	PackedCol black = PACKEDCOL_BLACK;
+	String name = Block_UNSAFE_GetName(block);
+	Block_Tinted[block] = !PackedCol_Equals(Block_FogCol[block], black) && String_IndexOf(&name, '#', 0) >= 0;
+	Block_CalcLightOffset(block);
+
+	Inventory_AddDefault(block);
+	Block_SetCustomDefined(block, true);
+	Event_RaiseVoid(&BlockEvents_BlockDefChanged);
+}
+
 void Block_RecalcIsLiquid(BlockID b) {
 	UInt8 collide = Block_ExtendedCollide[b];
 	Block_IsLiquid[b] =
@@ -84,11 +101,11 @@ void Block_SetCollide(BlockID block, UInt8 collide) {
 	Block_RecalcIsLiquid(block);
 
 	/* Reduce extended collision types to their simpler forms. */
-	if (collide == COLLIDE_ICE) collide = COLLIDE_SOLID;
+	if (collide == COLLIDE_ICE)          collide = COLLIDE_SOLID;
 	if (collide == COLLIDE_SLIPPERY_ICE) collide = COLLIDE_SOLID;
 
 	if (collide == COLLIDE_LIQUID_WATER) collide = COLLIDE_LIQUID;
-	if (collide == COLLIDE_LIQUID_LAVA) collide = COLLIDE_LIQUID;
+	if (collide == COLLIDE_LIQUID_LAVA)  collide = COLLIDE_LIQUID;
 	Block_Collide[block] = collide;
 }
 
@@ -106,21 +123,11 @@ void Block_SetDrawType(BlockID block, UInt8 draw) {
 }
 
 
-void Block_SplitUppercase(STRING_TRANSIENT String* buffer, STRING_PURE String* blockNames, Int32 start, Int32 end) {
-	Int32 i;
-	for (i = start; i < end; i++) {
-		UInt8 c = String_CharAt(blockNames, i);
-		bool upper = Char_IsUpper(c) && i > start;
-		bool nextLower = i < end - 1 && !Char_IsUpper(String_CharAt(blockNames, i + 1));
-
-		if (upper && nextLower) {
-			String_Append(buffer, ' ');
-			String_Append(buffer, Char_ToLower(c));
-		} else {
-			String_Append(buffer, c);
-		}
-	}
-}
+#define BLOCK_RAW_NAMES "Air_Stone_Grass_Dirt_Cobblestone_Wood_Sapling_Bedrock_Water_Still water_Lava"\
+"_Still lava_Sand_Gravel_Gold ore_Iron ore_Coal ore_Log_Leaves_Sponge_Glass_Red_Orange_Yellow_Lime_Green_Teal"\
+"_Aqua_Cyan_Blue_Indigo_Violet_Magenta_Pink_Black_Gray_White_Dandelion_Rose_Brown mushroom_Red mushroom_Gold"\
+"_Iron_Double slab_Slab_Brick_TNT_Bookshelf_Mossy rocks_Obsidian_Cobblestone slab_Rope_Sandstone_Snow_Fire_Light pink"\
+"_Forest green_Brown_Deep blue_Turquoise_Ice_Ceramic tile_Magma_Pillar_Crate_Stone brick"
 
 String Block_DefaultName(BlockID block) {
 #if USE16_BIT
@@ -135,26 +142,25 @@ String Block_DefaultName(BlockID block) {
 	/* Find start and end of this particular block name. */
 	Int32 start = 0, i;
 	for (i = 0; i < block; i++) {
-		start = String_IndexOf(&blockNames, ' ', start) + 1;
+		start = String_IndexOf(&blockNames, '_', start) + 1;
 	}
-	Int32 end = String_IndexOf(&blockNames, ' ', start);
+	Int32 end = String_IndexOf(&blockNames, '_', start);
 	if (end == -1) end = blockNames.length;
 
-	String buffer = String_InitAndClear(Block_NamePtr(block), STRING_SIZE);
-	Block_SplitUppercase(&buffer, &blockNames, start, end);
-	return buffer;
+	return String_UNSAFE_Substring(&blockNames, start, (end - start));
 }
 
 void Block_ResetProps(BlockID block) {
 	Block_BlocksLight[block] = DefaultSet_BlocksLight(block);
 	Block_FullBright[block] = DefaultSet_FullBright(block);
-	Block_FogColour[block] = DefaultSet_FogColour(block);
+	Block_FogCol[block] = DefaultSet_FogColour(block);
 	Block_FogDensity[block] = DefaultSet_FogDensity(block);
 	Block_SetCollide(block, DefaultSet_Collide(block));
 	Block_DigSounds[block] = DefaultSet_DigSound(block);
 	Block_StepSounds[block] = DefaultSet_StepSound(block);
 	Block_SpeedMultiplier[block] = 1.0f;
-	Block_Name[block] = Block_DefaultName(block);
+	String name = Block_DefaultName(block);
+	Block_SetName(block, &name);
 	Block_Tinted[block] = false;
 	Block_SpriteOffset[block] = 0;
 
@@ -170,7 +176,7 @@ void Block_ResetProps(BlockID block) {
 
 	Block_SetDrawType(block, Block_Draw[block]);
 	Block_CalcRenderBounds(block);
-	Block_LightOffset[block] = Block_CalcLightOffset(block);
+	Block_CalcLightOffset(block);
 
 	if (block >= BLOCK_CPE_COUNT) {
 		Block_SetTex(0, FACE_YMAX, block);
@@ -183,10 +189,20 @@ void Block_ResetProps(BlockID block) {
 	}
 }
 
+STRING_REF String Block_UNSAFE_GetName(BlockID block) {
+	return String_FromRaw(Block_NamePtr(block), STRING_SIZE);
+}
+
+void Block_SetName(BlockID block, STRING_PURE String* name) {
+	String buffer = String_InitAndClear(Block_NamePtr(block), STRING_SIZE);
+	String_AppendString(&buffer, name);
+}
+
 Int32 Block_FindID(STRING_PURE String* name) {
 	Int32 block;
 	for (block = BLOCK_AIR; block < BLOCK_COUNT; block++) {
-		if (String_CaselessEquals(&Block_Name[block], name)) return block;
+		String blockName = Block_UNSAFE_GetName(block);
+		if (String_CaselessEquals(&blockName, name)) return block;
 	}
 	return -1;
 }
@@ -222,7 +238,7 @@ void Block_CalcRenderBounds(BlockID block) {
 	Block_RenderMinBB[block] = min; Block_RenderMaxBB[block] = max;
 }
 
-UInt8 Block_CalcLightOffset(BlockID block) {
+void Block_CalcLightOffset(BlockID block) {
 	Int32 flags = 0xFF;
 	Vector3 min = Block_MinBB[block], max = Block_MaxBB[block];
 
@@ -235,7 +251,7 @@ UInt8 Block_CalcLightOffset(BlockID block) {
 		flags &= ~(1 << FACE_YMAX);
 		flags &= ~(1 << FACE_YMIN);
 	}
-	return (UInt8)flags;
+	Block_LightOffset[block] = (UInt8)flags;
 }
 
 void Block_RecalculateSpriteBB(void) {
@@ -310,12 +326,12 @@ void Block_RecalculateBB(BlockID block) {
 	Real32 leftX   = Block_GetSpriteBB_LeftX(elemSize,   texX, texY, bmp);
 	Real32 rightX  = Block_GetSpriteBB_RightX(elemSize,  texX, texY, bmp);
 
-	Vector3 centre = Vector3_Create3(0.5f, 0, 0.5f);
+	Vector3 centre = VECTOR3_CONST(0.5f, 0.0f, 0.5f);
 	Vector3 minRaw = Vector3_RotateY3(leftX  - 0.5f, bottomY, 0, 45.0f * MATH_DEG2RAD);
 	Vector3 maxRaw = Vector3_RotateY3(rightX - 0.5f, topY,    0, 45.0f * MATH_DEG2RAD);
 
-	Vector3_Add(&minRaw, &centre, &Block_MinBB[block]);
-	Vector3_Add(&maxRaw, &centre, &Block_MaxBB[block]);
+	Vector3_Add(&Block_MinBB[block], &minRaw, &centre);
+	Vector3_Add(&Block_MaxBB[block], &maxRaw, &centre);
 	Block_CalcRenderBounds(block);
 }
 
@@ -486,7 +502,7 @@ BlockID AutoRotate_RotateDirection(BlockID block, String* name, Vector3 offset) 
 }
 
 BlockID AutoRotate_RotateBlock(BlockID block) {
-	String name = Block_Name[block];
+	String name = Block_UNSAFE_GetName(block);
 	Int32 dirIndex = String_LastIndexOf(&name, '-');
 	if (dirIndex == -1) return block; /* not a directional block */
 
@@ -495,7 +511,7 @@ BlockID AutoRotate_RotateBlock(BlockID block) {
 
 	Vector3 translated, offset;
 	Vector3I_ToVector3(&translated, &Game_SelectedPos.TranslatedPos);
-	Vector3_Subtract(&offset, &Game_SelectedPos.Intersect, &translated);
+	Vector3_Sub(&offset, &Game_SelectedPos.Intersect, &translated);
 
 	if (AR_EQ2(dir, 'n', 'w') || AR_EQ2(dir, 'n', 'e') || AR_EQ2(dir, 's', 'w') || AR_EQ2(dir, 's', 'e')) {
 		return AutoRotate_RotateCorner(block, &baseName, offset);

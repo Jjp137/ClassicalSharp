@@ -9,7 +9,6 @@ using ClassicalSharp.Commands;
 using ClassicalSharp.Entities;
 using ClassicalSharp.Events;
 using ClassicalSharp.GraphicsAPI;
-using ClassicalSharp.Gui;
 using ClassicalSharp.Map;
 using ClassicalSharp.Mode;
 using ClassicalSharp.Model;
@@ -93,6 +92,7 @@ namespace ClassicalSharp {
 		public IWorldLighting Lighting;
 		
 		public MapRenderer MapRenderer;
+		public ChunkUpdater ChunkUpdater;
 		public MapBordersRenderer MapBordersRenderer;
 		public EnvRenderer EnvRenderer;
 		public WeatherRenderer WeatherRenderer;
@@ -107,7 +107,6 @@ namespace ClassicalSharp {
 		public PickedPos SelectedPos = new PickedPos(), CameraClipPos = new PickedPos();
 		public ModelCache ModelCache;
 		internal string skinServer;
-		internal int defaultIb;
 		public OtherEvents Events = new OtherEvents();
 		public EntityEvents EntityEvents = new EntityEvents();
 		public WorldEvents WorldEvents = new WorldEvents();
@@ -138,12 +137,12 @@ namespace ClassicalSharp {
 		public int Port;
 		
 		/// <summary> Radius of the sphere the player can see around the position of the current camera. </summary>
-		public float ViewDistance = 512;
-		internal float MaxViewDistance = 32768, UserViewDistance = 512;
+		public int ViewDistance = 512;
+		internal int MaxViewDistance = 32768, UserViewDistance = 512;
 		
 		/// <summary> Field of view for the current camera in degrees. </summary>
 		public int Fov = 70;
-		internal int DefaultFov, ZoomFov = 0;
+		internal int DefaultFov, ZoomFov;
 		
 		/// <summary> Strategy used to limit how many frames should be displayed at most each second. </summary>
 		public FpsLimitMethod FpsLimit;
@@ -173,36 +172,31 @@ namespace ClassicalSharp {
 		
 		public bool PureClassic { get { return ClassicMode && !ClassicHacks; } }
 		
-		public bool UseCustomBlocks, UseCPE, UseServerTextures;
+		public bool AllowCustomBlocks, UseCPE, AllowServerTextures;
 		
 		public bool SmoothLighting;
 		
-		public bool ChatLogging = true;
+		public bool ChatLogging;
 		
 		public bool AutoRotate = true;
 		
-		public bool SmoothCamera = false;
+		public bool SmoothCamera;
 		
 		public string FontName = "Arial";
 		
 		public int MaxChunkUpdates = 30;
 		
 		public int ChatLines = 12;
-		public bool ClickableChat = false, HideGui = false, ShowFPS = true;
+		public bool ClickableChat, HideGui, ShowFPS;
 		internal float HotbarScale = 1, ChatScale = 1, InventoryScale = 1;
 		public bool ViewBobbing, ShowBlockInHand;
-		public bool ModifiableLiquids;
+		public bool BreakableLiquids;
 		public int SoundsVolume, MusicVolume;
 		
 		public Vector3 CurrentCameraPos;
 		
 		public Animations Animations;
 		internal bool screenshotRequested;
-		
-		internal EntryList AcceptedUrls = new EntryList("texturecache", "acceptedurls.txt"); 
-		internal EntryList DeniedUrls = new EntryList("texturecache", "deniedurls.txt");
-		internal EntryList ETags = new EntryList("texturecache", "etags.txt");
-		internal EntryList LastModified = new EntryList("texturecache", "lastmodified.txt");
 		
 		/// <summary> Calculates the amount that the hotbar widget should be scaled by when rendered. </summary>
 		/// <remarks> Affected by both the current resolution of the window, as well as the
@@ -231,9 +225,8 @@ namespace ClassicalSharp {
 		/// this method returns "default.zip". </remarks>
 		public string DefaultTexturePack {
 			get {
-				string path = Path.Combine(Program.AppDirectory, "texpacks");
-				path = Path.Combine(path, defTexturePack);
-				return File.Exists(path) && !ClassicMode ? defTexturePack : "default.zip"; 
+				string texPath = Path.Combine("texpacks", defTexturePack);
+				return Platform.FileExists(texPath) && !ClassicMode ? defTexturePack : "default.zip"; 
 			}
 			set {
 				defTexturePack = value;

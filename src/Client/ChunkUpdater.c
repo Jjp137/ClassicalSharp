@@ -9,7 +9,6 @@
 #include "MapRenderer.h"
 #include "Platform.h"
 #include "TerrainAtlas.h"
-#include "Vectors.h"
 #include "World.h"
 #include "Builder.h"
 #include "Utils.h"
@@ -24,6 +23,9 @@ void ChunkInfo_Reset(ChunkInfo* chunk, Int32 x, Int32 y, Int32 z) {
 	chunk->PendingDelete = false; chunk->AllAir = false;
 	chunk->DrawXMin = false; chunk->DrawXMax = false; chunk->DrawZMin = false;
 	chunk->DrawZMax = false; chunk->DrawYMin = false; chunk->DrawYMax = false;
+
+	chunk->NormalParts      = NULL;
+	chunk->TranslucentParts = NULL;
 }
 
 Int32 cu_chunksTarget = 12;
@@ -46,7 +48,7 @@ void ChunkUpdater_EnvVariableChanged(void* obj, Int32 envVar) {
 }
 
 void ChunkUpdater_TerrainAtlasChanged(void* obj) {
-	if (MapRenderer_1DUsedCount != 0) {
+	if (MapRenderer_1DUsedCount) {
 		bool refreshRequired = cu_elementsPerBitmap != Atlas1D_ElementsPerBitmap;
 		if (refreshRequired) ChunkUpdater_Refresh();
 	}
@@ -63,15 +65,15 @@ void ChunkUpdater_BlockDefinitionChanged(void* obj) {
 }
 
 void ChunkUpdater_ProjectionChanged(void* obj) {
-	ChunkUpdater_ChunkPos = Vector3I_Create1(Int32_MaxValue);
+	cu_lastCamPos = Vector3_BigPos();
 }
 
 void ChunkUpdater_ViewDistanceChanged(void* obj) {
-	ChunkUpdater_ChunkPos = Vector3I_Create1(Int32_MaxValue);
+	cu_lastCamPos = Vector3_BigPos();
 }
 
 void ChunkUpdater_Refresh(void) {
-	ChunkUpdater_ChunkPos = Vector3I_Create1(Int32_MaxValue);
+	ChunkUpdater_ChunkPos = Vector3I_MaxValue();
 	if (MapRenderer_Chunks != NULL && World_Blocks != NULL) {
 		ChunkUpdater_ClearChunkCache();
 		ChunkUpdater_ResetChunkCache();
@@ -83,7 +85,7 @@ void ChunkUpdater_Refresh_Handler(void* obj) {
 }
 
 void ChunkUpdater_RefreshBorders(Int32 clipLevel) {
-	ChunkUpdater_ChunkPos = Vector3I_Create1(Int32_MaxValue);
+	ChunkUpdater_ChunkPos = Vector3I_MaxValue();
 	if (MapRenderer_Chunks == NULL || World_Blocks == NULL) return;
 
 	Int32 x, y, z, index = 0;
@@ -103,7 +105,7 @@ void ChunkUpdater_RefreshBorders(Int32 clipLevel) {
 void ChunkUpdater_ApplyMeshBuilder(void) {
 	if (Game_SmoothLighting) {
 		 /* TODO: Implement advanced lighting builder.*/
-		NormalBuilder_SetActive();
+		AdvLightingBuilder_SetActive();
 	} else {
 		NormalBuilder_SetActive();
 	}
@@ -112,38 +114,45 @@ void ChunkUpdater_ApplyMeshBuilder(void) {
 
 void ChunkUpdater_FreeAllocations(void) {
 	if (MapRenderer_Chunks == NULL) return;
-	Platform_MemFree(MapRenderer_Chunks); MapRenderer_Chunks = NULL;
-	Platform_MemFree(MapRenderer_SortedChunks); MapRenderer_SortedChunks = NULL;
-	Platform_MemFree(MapRenderer_RenderChunks); MapRenderer_RenderChunks = NULL;
-	Platform_MemFree(ChunkUpdater_Distances); ChunkUpdater_Distances = NULL;
-	Platform_MemFree(MapRenderer_PartsBuffer); MapRenderer_PartsBuffer = NULL;
+	Platform_MemFree(&MapRenderer_Chunks);
+	Platform_MemFree(&MapRenderer_SortedChunks);
+	Platform_MemFree(&MapRenderer_RenderChunks);
+	Platform_MemFree(&ChunkUpdater_Distances);
+	Platform_MemFree(&MapRenderer_PartsBuffer_Raw);
+
+	MapRenderer_PartsNormal = NULL;
+	MapRenderer_PartsTranslucent = NULL;
 }
 
 void ChunkUpdater_PerformAllocations(void) {
-	MapRenderer_Chunks = Platform_MemAlloc(MapRenderer_ChunksCount * sizeof(ChunkInfo));
+	MapRenderer_Chunks = Platform_MemAlloc(MapRenderer_ChunksCount, sizeof(ChunkInfo));
 	if (MapRenderer_Chunks == NULL) ErrorHandler_Fail("ChunkUpdater - failed to allocate chunk info");
 
-	MapRenderer_SortedChunks = Platform_MemAlloc(MapRenderer_ChunksCount * sizeof(ChunkInfo*));
+	MapRenderer_SortedChunks = Platform_MemAlloc(MapRenderer_ChunksCount, sizeof(ChunkInfo*));
 	if (MapRenderer_Chunks == NULL) ErrorHandler_Fail("ChunkUpdater - failed to allocate sorted chunk info");
 
-	MapRenderer_RenderChunks = Platform_MemAlloc(MapRenderer_ChunksCount * sizeof(ChunkInfo*));
+	MapRenderer_RenderChunks = Platform_MemAlloc(MapRenderer_ChunksCount, sizeof(ChunkInfo*));
 	if (MapRenderer_RenderChunks == NULL) ErrorHandler_Fail("ChunkUpdater - failed to allocate render chunk info");
 
-	ChunkUpdater_Distances = Platform_MemAlloc(MapRenderer_ChunksCount * sizeof(Int32));
+	ChunkUpdater_Distances = Platform_MemAlloc(MapRenderer_ChunksCount, sizeof(Int32));
 	if (ChunkUpdater_Distances == NULL) ErrorHandler_Fail("ChunkUpdater - failed to allocate chunk distances");
 
-	UInt32 partsSize = MapRenderer_ChunksCount * (sizeof(ChunkPartInfo) * MapRenderer_1DUsedCount);
-	MapRenderer_PartsBuffer = Platform_MemAlloc(partsSize);
-	if (MapRenderer_PartsBuffer == NULL) ErrorHandler_Fail("ChunkUpdater - failed to allocate chunk parts buffer");
-	Platform_MemSet(MapRenderer_PartsBuffer, 0, partsSize);
+	UInt32 partsCount = MapRenderer_ChunksCount * MapRenderer_1DUsedCount;
+	MapRenderer_PartsBuffer_Raw = Platform_MemAlloc(partsCount * 2, sizeof(ChunkPartInfo));
+	if (MapRenderer_PartsBuffer_Raw == NULL) ErrorHandler_Fail("ChunkUpdater - failed to allocate chunk parts buffer");
+
+	UInt32 partsSize = partsCount * 2 * (UInt32)sizeof(ChunkPartInfo);
+	Platform_MemSet(MapRenderer_PartsBuffer_Raw, 0, partsSize);
+	MapRenderer_PartsNormal      = MapRenderer_PartsBuffer_Raw;
+	MapRenderer_PartsTranslucent = MapRenderer_PartsBuffer_Raw + partsCount;
 }
 
 void ChunkUpdater_OnNewMap(void* obj) {
 	Game_ChunkUpdates = 0;
 	ChunkUpdater_ClearChunkCache();
 	ChunkUpdater_ResetPartCounts();
-	ChunkUpdater_ChunkPos = Vector3I_Create1(Int32_MaxValue);
 	ChunkUpdater_FreeAllocations();
+	ChunkUpdater_ChunkPos = Vector3I_MaxValue();
 }
 
 void ChunkUpdater_OnNewMapLoaded(void* obj) {
@@ -152,19 +161,20 @@ void ChunkUpdater_OnNewMapLoaded(void* obj) {
 	MapRenderer_ChunksZ = (World_Length + CHUNK_MAX) >> CHUNK_SHIFT;
 
 	Int32 count = MapRenderer_ChunksX * MapRenderer_ChunksY * MapRenderer_ChunksZ;
-	if (MapRenderer_ChunksCount != count) {
+	/* TODO: Only perform reallocation when map volume has changed */
+	/*if (MapRenderer_ChunksCount != count) { */
 		MapRenderer_ChunksCount = count;
 		ChunkUpdater_FreeAllocations();
 		ChunkUpdater_PerformAllocations();
-	}
+	/*}*/
 
 	ChunkUpdater_CreateChunkCache();
 	Builder_OnNewMapLoaded();
-	ChunkUpdater_ChunkPos = Vector3I_Create1(Int32_MaxValue);
+	cu_lastCamPos = Vector3_BigPos();
 }
 
 
-Int32 ChunkUpdater_AdjustViewDist(Real32 dist) {
+Int32 ChunkUpdater_AdjustViewDist(Int32 dist) {
 	if (dist < CHUNK_SIZE) dist = CHUNK_SIZE;
 	Int32 viewDist = Utils_AdjViewDist(dist);
 	return (viewDist + 24) * (viewDist + 24);
@@ -322,6 +332,7 @@ if (parts != NULL) {\
 		if (ptr->HasVertices) { partsCount[i]--; }\
 		ptr += MapRenderer_ChunksCount;\
 	}\
+	parts = NULL;\
 }
 
 void ChunkUpdater_DeleteChunk(ChunkInfo* info) {
@@ -421,11 +432,17 @@ void ChunkUpdater_UpdateSortOrder(void) {
 	/*SimpleOcclusionCulling();*/
 }
 
+void ChunkUpdater_Update(Real64 deltaTime) {
+	if (MapRenderer_Chunks == NULL) return;
+	ChunkUpdater_UpdateSortOrder();
+	ChunkUpdater_UpdateChunks(deltaTime);
+}
+
 void ChunkUpdater_Init(void) {
 	Event_RegisterVoid(&TextureEvents_AtlasChanged,    NULL, ChunkUpdater_TerrainAtlasChanged);
 	Event_RegisterVoid(&WorldEvents_NewMap,            NULL, ChunkUpdater_OnNewMap);
 	Event_RegisterVoid(&WorldEvents_MapLoaded,         NULL, ChunkUpdater_OnNewMapLoaded);
-	Event_RegisterInt32(&WorldEvents_EnvVarChanged,    NULL, ChunkUpdater_EnvVariableChanged);
+	Event_RegisterInt(&WorldEvents_EnvVarChanged,    NULL, ChunkUpdater_EnvVariableChanged);
 
 	Event_RegisterVoid(&BlockEvents_BlockDefChanged,   NULL, ChunkUpdater_BlockDefinitionChanged);
 	Event_RegisterVoid(&GfxEvents_ViewDistanceChanged, NULL, ChunkUpdater_ViewDistanceChanged);
@@ -433,7 +450,7 @@ void ChunkUpdater_Init(void) {
 	Event_RegisterVoid(&GfxEvents_ContextLost,         NULL, ChunkUpdater_ClearChunkCache_Handler);
 	Event_RegisterVoid(&GfxEvents_ContextRecreated,    NULL, ChunkUpdater_Refresh_Handler);
 
-	ChunkUpdater_ChunkPos = Vector3I_Create1(Int32_MaxValue);
+	ChunkUpdater_ChunkPos = Vector3I_MaxValue();
 	ChunkUpdater_ApplyMeshBuilder();
 }
 
@@ -441,7 +458,7 @@ void ChunkUpdater_Free(void) {
 	Event_UnregisterVoid(&TextureEvents_AtlasChanged,    NULL, ChunkUpdater_TerrainAtlasChanged);
 	Event_UnregisterVoid(&WorldEvents_NewMap,            NULL, ChunkUpdater_OnNewMap);
 	Event_UnregisterVoid(&WorldEvents_MapLoaded,         NULL, ChunkUpdater_OnNewMapLoaded);
-	Event_UnregisterInt32(&WorldEvents_EnvVarChanged,    NULL, ChunkUpdater_EnvVariableChanged);
+	Event_UnregisterInt(&WorldEvents_EnvVarChanged,    NULL, ChunkUpdater_EnvVariableChanged);
 
 	Event_UnregisterVoid(&BlockEvents_BlockDefChanged,   NULL, ChunkUpdater_BlockDefinitionChanged);
 	Event_UnregisterVoid(&GfxEvents_ViewDistanceChanged, NULL, ChunkUpdater_ViewDistanceChanged);

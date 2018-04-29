@@ -47,10 +47,7 @@ namespace ClassicalSharp {
 			#endif
 			
 			Entities = new EntityList(this);
-			AcceptedUrls.Load();
-			DeniedUrls.Load();
-			ETags.Load();
-			LastModified.Load();
+			TextureCache.Init();
 			
 			if (Options.GetBool(OptionsKey.SurvivalMode, false)) {
 				Mode = new SurvivalGameMode();
@@ -60,7 +57,6 @@ namespace ClassicalSharp {
 			Components.Add(Mode);
 			
 			Input = new InputHandler(this);
-			defaultIb = Graphics.MakeDefaultIb();
 			ParticleManager = new ParticleManager(); Components.Add(ParticleManager);
 			TabList = new TabList(); Components.Add(TabList);
 			LoadOptions();
@@ -96,15 +92,24 @@ namespace ClassicalSharp {
 			Width = window.Width; Height = window.Height;
 			
 			MapRenderer = new MapRenderer(this);
-			string renType = Options.Get(OptionsKey.RenderType) ?? "normal";
-			if (!SetRenderType(renType))
-				SetRenderType("normal");
+			ChunkUpdater = new ChunkUpdater(this);
+			EnvRenderer = new EnvRenderer(); Components.Add(EnvRenderer);
+			MapBordersRenderer = new MapBordersRenderer(); Components.Add(MapBordersRenderer);
+			
+			string renType = Options.Get(OptionsKey.RenderType, "normal");
+			int flags = CalcRenderType(renType);
+			if (flags == -1) flags = 0;
+			
+			MapBordersRenderer.legacy = (flags & 1) != 0;
+			EnvRenderer.legacy        = (flags & 1) != 0;
+			EnvRenderer.minimal       = (flags & 2) != 0;
 			
 			if (IPAddress == null) {
 				Server = new Singleplayer.SinglePlayerServer(this);
 			} else {
 				Server = new Network.NetworkProcessor(this);
 			}
+			Components.Add(Server);
 			Graphics.LostContextFunction = Server.Tick;
 			
 			Cameras.Add(new FirstPersonCamera(this));
@@ -158,18 +163,20 @@ namespace ClassicalSharp {
 		}
 		
 		void ExtractInitialTexturePack() {
-			defTexturePack = Options.Get(OptionsKey.DefaultTexturePack) ?? "default.zip";
-			TexturePack extractor = new TexturePack();
-			extractor.Extract("default.zip", this);
+			defTexturePack = Options.Get(OptionsKey.DefaultTexturePack, "default.zip");
+			TexturePack.ExtractZip("default.zip", this);
+			
 			// in case the user's default texture pack doesn't have all required textures
-			if (DefaultTexturePack != "default.zip")
-				extractor.Extract(DefaultTexturePack, this);
+			string defTexPack = DefaultTexturePack;
+			if (defTexPack != "default.zip") {
+				TexturePack.ExtractZip(defTexPack, this);
+			}
 		}
 		
 		void LoadOptions() {
 			ClassicMode = Options.GetBool("mode-classic", false);
 			ClassicHacks = Options.GetBool(OptionsKey.AllowClassicHacks, false);
-			UseCustomBlocks = Options.GetBool(OptionsKey.UseCustomBlocks, true);
+			AllowCustomBlocks = Options.GetBool(OptionsKey.UseCustomBlocks, true);
 			UseCPE = Options.GetBool(OptionsKey.UseCPE, true);
 			SimpleArmsAnim = Options.GetBool(OptionsKey.SimpleArmsAnim, false);
 			ChatLogging = Options.GetBool(OptionsKey.ChatLogging, true);
@@ -185,11 +192,11 @@ namespace ClassicalSharp {
 			DefaultFov = Options.GetInt(OptionsKey.FieldOfView, 1, 150, 70);
 			Fov = DefaultFov;
 			ZoomFov = DefaultFov;
-			ModifiableLiquids = !ClassicMode && Options.GetBool(OptionsKey.ModifiableLiquids, false);
+			BreakableLiquids = !ClassicMode && Options.GetBool(OptionsKey.ModifiableLiquids, false);
 			CameraClipping = Options.GetBool(OptionsKey.CameraClipping, true);
 			MaxChunkUpdates = Options.GetInt(OptionsKey.MaxChunkUpdates, 4, 1024, 30);
 			
-			UseServerTextures = Options.GetBool(OptionsKey.UseServerTextures, true);
+			AllowServerTextures = Options.GetBool(OptionsKey.UseServerTextures, true);
 			MouseSensitivity = Options.GetInt(OptionsKey.Sensitivity, 1, 100, 30);
 			ShowBlockInHand = Options.GetBool(OptionsKey.ShowBlockInHand, true);
 			InvertMouse = Options.GetBool(OptionsKey.InvertMouse, false);
@@ -214,7 +221,7 @@ namespace ClassicalSharp {
 			UseClassicOptions = Options.GetBool(OptionsKey.UseClassicOptions, false) || ClassicMode;
 			
 			TabAutocomplete = Options.GetBool(OptionsKey.TabAutocomplete, false);
-			FontName = Options.Get(OptionsKey.FontName) ?? "Arial";
+			FontName = Options.Get(OptionsKey.FontName, "Arial");
 			if (ClassicMode) FontName = "Arial";
 
 			try {

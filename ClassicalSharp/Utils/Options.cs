@@ -30,7 +30,7 @@ namespace ClassicalSharp {
 		public const string RenderType = "normal";
 		public const string SmoothLighting = "gfx-smoothlighting";
 		public const string Mipmaps = "gfx-mipmaps";
-		public const string SurvivalMode = "game-survivalmode";
+		public const string SurvivalMode = "game-survival";
 		public const string ChatLogging = "chat-logging";
 		public const string WindowWidth = "window-width";
 		public const string WindowHeight = "window-height";
@@ -81,8 +81,10 @@ namespace ClassicalSharp {
 		
 		public static List<string> OptionsKeys = new List<string>();
 		public static List<string> OptionsValues = new List<string>();
-		public static List<string> OptionsChanged = new List<string>();
+		static List<string> OptionsChanged = new List<string>();
 		const string Filename = "options.txt";
+		
+		public static bool HasChanged() { return OptionsChanged.Count > 0; }
 		
 		static bool IsChangedOption(string key) {
 			for (int i = 0; i < OptionsChanged.Count; i++) {
@@ -92,7 +94,7 @@ namespace ClassicalSharp {
 		}
 		
 		static bool TryGetValue(string key, out string value) {
-			value = null;		
+			value = null;
 			int i = FindOption(key);
 			if (i >= 0) { value = OptionsValues[i]; return true; }
 			
@@ -105,9 +107,9 @@ namespace ClassicalSharp {
 			return false;
 		}
 		
-		public static string Get(string key) {
+		public static string Get(string key, string defValue) {
 			string value;
-			return TryGetValue(key, out value) ? value : null;
+			return TryGetValue(key, out value) ? value : defValue;
 		}
 		
 		public static int GetInt(string key, int min, int max, int defValue) {
@@ -139,7 +141,7 @@ namespace ClassicalSharp {
 		}
 		
 		public static T GetEnum<T>(string key, T defValue) {
-			string value = Get(key);
+			string value = Get(key, null);
 			if (value == null) return defValue;
 			
 			T mapping;
@@ -190,17 +192,11 @@ namespace ClassicalSharp {
 		
 		
 		public static bool Load() {
-			// Both of these are from when running from the launcher
-			if (Program.AppDirectory == null)
-				Program.AppDirectory = AppDomain.CurrentDomain.BaseDirectory;
-			Program.CleanupMainDirectory();
-			
 			try {
-				string path = Path.Combine(Program.AppDirectory, Filename);
-				using (Stream fs = File.OpenRead(path))
+				using (Stream fs = Platform.FileOpen(Filename))
 					using (StreamReader reader = new StreamReader(fs, false))
 				{
-						LoadFrom(reader);
+					LoadFrom(reader);
 				}
 				return true;
 			} catch (FileNotFoundException) {
@@ -239,11 +235,15 @@ namespace ClassicalSharp {
 		
 		public static bool Save() {
 			try {
-				string path = Path.Combine(Program.AppDirectory, Filename);
-				using (Stream fs = File.Create(path))
+				using (Stream fs = Platform.FileCreate(Filename))
 					using (StreamWriter writer = new StreamWriter(fs))
 				{
-					SaveTo(writer);
+					for (int i = 0; i < OptionsKeys.Count; i++) {
+						writer.Write(OptionsKeys[i]);
+						writer.Write('=');
+						writer.Write(OptionsValues[i]);
+						writer.WriteLine();
+					}
 				}
 				
 				OptionsChanged.Clear();
@@ -251,15 +251,6 @@ namespace ClassicalSharp {
 			} catch (IOException ex) {
 				ErrorHandler.LogError("saving options", ex);
 				return false;
-			}
-		}
-		
-		static void SaveTo(StreamWriter writer) {
-			for (int i = 0; i < OptionsKeys.Count; i++) {
-				writer.Write(OptionsKeys[i]);
-				writer.Write('=');
-				writer.Write(OptionsValues[i]);
-				writer.WriteLine();
 			}
 		}
 	}

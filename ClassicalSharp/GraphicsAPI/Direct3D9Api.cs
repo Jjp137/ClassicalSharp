@@ -7,6 +7,7 @@
 using System;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using OpenTK;
@@ -58,7 +59,7 @@ namespace ClassicalSharp.GraphicsAPI {
 			CustomMipmapsLevels = true;
 			caps = device.Capabilities;
 			SetDefaultRenderStates();
-			InitDynamicBuffers();
+			InitCommon();
 		}
 		
 		void FindCompatibleFormat(int adapter) {
@@ -176,7 +177,7 @@ namespace ClassicalSharp.GraphicsAPI {
 			
 			if (managedPool) {
 				texture = device.CreateTexture(width, height, levels, Usage.None, Format.A8R8G8B8, Pool.Managed);
-				texture.SetData(0, LockFlags.None, scan0, width * height * 4);				
+				texture.SetData(0, LockFlags.None, scan0, width * height * 4);
 				if (mipmaps) DoMipmaps(texture, 0, 0, width, height, scan0, false);
 			} else {
 				D3D.Texture sys = device.CreateTexture(width, height, levels, Usage.None, Format.A8R8G8B8, Pool.SystemMemory);
@@ -184,19 +185,19 @@ namespace ClassicalSharp.GraphicsAPI {
 				if (mipmaps) DoMipmaps(sys, 0, 0, width, height, scan0, false);
 				
 				texture = device.CreateTexture(width, height, levels, Usage.None, Format.A8R8G8B8, Pool.Default);
-				device.UpdateTexture(sys, texture);				
+				device.UpdateTexture(sys, texture);
 				sys.Dispose();
 			}
 			return GetOrExpand(ref textures, texture, texBufferSize);
 		}
-			
-		unsafe void DoMipmaps(D3D.Texture texture, int x, int y, int width, 
+		
+		unsafe void DoMipmaps(D3D.Texture texture, int x, int y, int width,
 		                      int height, IntPtr scan0, bool partial) {
 			IntPtr prev = scan0;
 			int lvls = MipmapsLevels(width, height);
 			
 			for (int lvl = 1; lvl <= lvls; lvl++) {
-				x /= 2; y /= 2; 
+				x /= 2; y /= 2;
 				if (width > 1)   width /= 2;
 				if (height > 1) height /= 2;
 				int size = width * height * 4;
@@ -307,7 +308,7 @@ namespace ClassicalSharp.GraphicsAPI {
 		
 		public override int CreateVb(IntPtr vertices, VertexFormat format, int count) {
 			int size = count * strideSizes[(int)format];
-			DataBuffer buffer = device.CreateVertexBuffer(size, Usage.WriteOnly, 
+			DataBuffer buffer = device.CreateVertexBuffer(size, Usage.WriteOnly,
 			                                              formatMapping[(int)format], Pool.Default);
 			buffer.SetData(vertices, size, LockFlags.None);
 			return GetOrExpand(ref vBuffers, buffer, vBufferSize);
@@ -316,7 +317,7 @@ namespace ClassicalSharp.GraphicsAPI {
 		public override int CreateIb(IntPtr indices, int indicesCount) {
 			int size = indicesCount * sizeof(ushort);
 			DataBuffer buffer = device.CreateIndexBuffer(size, Usage.WriteOnly,
-			                                             Format.Index16, Pool.Managed);
+			                                             Format.Index16, Pool.Default);
 			buffer.SetData(indices, size, LockFlags.None);
 			return GetOrExpand(ref iBuffers, buffer, iBufferSize);
 		}
@@ -558,16 +559,15 @@ namespace ClassicalSharp.GraphicsAPI {
 			};
 		}
 
-		public override void TakeScreenshot(string output, int width, int height) {
+		public override void TakeScreenshot(Stream output, int width, int height) {
 			using (Surface backbuffer = device.GetBackBuffer(0, 0, BackBufferType.Mono),
 			       tempSurface = device.CreateOffscreenPlainSurface(width, height, Format.X8R8G8B8, Pool.SystemMemory)) {
 				// For DX 8 use IDirect3DDevice8::CreateImageSurface
 				device.GetRenderTargetData(backbuffer, tempSurface);
 				LockedRectangle rect = tempSurface.LockRectangle(LockFlags.ReadOnly | LockFlags.NoDirtyUpdate);
 				
-				using (Bitmap bmp = new Bitmap(width, height, width * sizeof(int),
-				                               PixelFormat.Format32bppRgb, rect.DataPointer)) {
-					bmp.Save(output, ImageFormat.Png);
+				using (Bitmap bmp = new Bitmap(width, height, width * sizeof(int), PixelFormat.Format32bppRgb, rect.DataPointer)) {
+					Platform.WriteBmp(bmp, output);
 				}
 				tempSurface.UnlockRectangle();
 			}

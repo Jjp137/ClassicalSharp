@@ -70,15 +70,18 @@ Int32 Gui_OverlaysCount;
 
 Int32 Gui_CalcPos(UInt8 anchor, Int32 offset, Int32 size, Int32 axisLen);
 bool Gui_Contains(Int32 recX, Int32 recY, Int32 width, Int32 height, Int32 x, Int32 y);
-IGameComponent Gui_MakeGameComponent(void);
+IGameComponent Gui_MakeComponent(void);
 /* Gets the screen that the user is currently interacting with.
 This means if an overlay is active, it will be over the top of other screens. */
 Screen* Gui_GetActiveScreen(void);
 /* Gets the non-overlay screen that the user is currently interacting with.
 This means if an overlay is active, it will return the screen under it. */
 Screen* Gui_GetUnderlyingScreen(void);
-void Gui_SetScreen(Screen* screen, bool freeOld);
-void Gui_SetNewScreen(Screen* screen);
+
+void Gui_ReplaceActive(Screen* screen);
+void Gui_FreeActive(void);
+/* This doesn't free old active screen - you probably want Gui_ReplaceActive */
+void Gui_SetActive(Screen* screen);
 void Gui_RefreshHud(void);
 void Gui_ShowOverlay(Screen* overlay, bool atFront);
 void Gui_RenderGui(Real64 delta);
@@ -97,7 +100,6 @@ void TextAtlas_Add(TextAtlas* atlas, Int32 charI, VertexP3fT2fC4b** vertices);
 void TextAtlas_AddInt(TextAtlas* atlas, Int32 value, VertexP3fT2fC4b** vertices);
 
 
-#define Widget_Reposition(widget) (widget)->Reposition((GuiElement*)(widget));
 #define Elem_Init(elem)           (elem)->VTABLE->Init((GuiElement*)(elem))
 #define Elem_Render(elem, delta)  (elem)->VTABLE->Render((GuiElement*)(elem), delta)
 #define Elem_Free(elem)           (elem)->VTABLE->Free((GuiElement*)(elem))
@@ -109,4 +111,7 @@ void TextAtlas_AddInt(TextAtlas* atlas, Int32 value, VertexP3fT2fC4b** vertices)
 #define Elem_HandlesMouseUp(elem, x, y, btn)   (elem)->VTABLE->HandlesMouseUp((GuiElement*)(elem), x, y, btn)
 #define Elem_HandlesMouseMove(elem, x, y)      (elem)->VTABLE->HandlesMouseMove((GuiElement*)(elem), x, y)
 #define Elem_HandlesMouseScroll(elem, delta)   (elem)->VTABLE->HandlesMouseScroll((GuiElement*)(elem), delta)
+
+#define Widget_Reposition(widget) (widget)->Reposition((GuiElement*)(widget));
+#define Elem_TryFree(elem)        if ((elem)->VTABLE != NULL) { Elem_Free(elem); }
 #endif

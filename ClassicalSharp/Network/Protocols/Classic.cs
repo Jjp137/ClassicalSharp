@@ -17,13 +17,20 @@ namespace ClassicalSharp.Network.Protocols {
 	public sealed class ClassicProtocol : IProtocol {
 		
 		public ClassicProtocol(Game game) : base(game) { }
-		
-		public override void Init() {
-			mapPartStream = new FixedBufferStream(net.reader.buffer);
-			Reset();
-		}
+		bool receivedFirstPosition;
+		DateTime mapReceiveStart;
+		DeflateStream gzipStream;
+		GZipHeaderReader gzipHeader;
+		int mapSizeIndex, mapIndex, mapVolume;
+		byte[] mapSize = new byte[4], map;
+		FixedBufferStream mapPartStream;
+		Screen prevScreen;
+		bool prevCursorVisible;
 		
 		public override void Reset() {
+			if (mapPartStream == null) mapPartStream = new FixedBufferStream(net.reader.buffer);
+			receivedFirstPosition = false;
+			
 			net.Set(Opcode.Handshake, HandleHandshake, 131);
 			net.Set(Opcode.Ping, HandlePing, 1);
 			net.Set(Opcode.LevelInit, HandleLevelInit, 1);
@@ -43,14 +50,12 @@ namespace ClassicalSharp.Network.Protocols {
 			net.Set(Opcode.SetPermission, HandleSetPermission, 2);
 		}
 		
-		DateTime mapReceiveStart;
-		DeflateStream gzipStream;
-		GZipHeaderReader gzipHeader;
-		int mapSizeIndex, mapIndex, mapVolume;
-		byte[] mapSize = new byte[4], map;
-		FixedBufferStream mapPartStream;
-		Screen prevScreen;
-		bool prevCursorVisible;
+		public override void Tick() {
+			if (receivedFirstPosition) {
+				LocalPlayer player = game.LocalPlayer;
+				WritePosition(player.Position, player.HeadY, player.HeadX);
+			}
+		}
 		
 		#if !ONLY_8BIT
 		DeflateStream gzipStream2;
@@ -96,7 +101,7 @@ namespace ClassicalSharp.Network.Protocols {
 			
 			game.Gui.SetNewScreen(new LoadingMapScreen(game, net.ServerName, net.ServerMotd), false);
 			net.wom.CheckMotd();
-			net.receivedFirstPosition = false;
+			receivedFirstPosition = false;
 			gzipHeader = new GZipHeaderReader();
 			
 			// Workaround because built in mono stream assumes that the end of stream
@@ -188,14 +193,14 @@ namespace ClassicalSharp.Network.Protocols {
 			#if !ONLY_8BIT
 			if (reader.ExtendedBlocks) {
 				// defer allocation of scond map array if possible
-				game.World.blocks2 = map2 == null ? map : map2;				
+				game.World.blocks2 = map2 == null ? map : map2;
 				BlockInfo.SetMaxUsed(map2 == null ? 255 : 767);
 			}
 			#endif
 			game.WorldEvents.RaiseOnNewMapLoaded();
 			net.wom.CheckSendWomID();
 			
-			map = null;			
+			map = null;
 			gzipStream.Dispose();
 			gzipStream = null;
 			#if !ONLY_8BIT
@@ -220,14 +225,14 @@ namespace ClassicalSharp.Network.Protocols {
 			byte id = reader.ReadUInt8();
 			string name = reader.ReadString();
 			string skin = name;
-			net.CheckName(id, ref name, ref skin);
-			net.AddEntity(id, name, skin, true);
+			CheckName(id, ref name, ref skin);
+			AddEntity(id, name, skin, true);
 			
-			if (!net.addEntityHack) return;
+			if (!addEntityHack) return;
 			// Workaround for some servers that declare they support ExtPlayerList,
 			// but doesn't send ExtAddPlayerName packets.
-			net.AddTablistEntry(id, name, name, "Players", 0);
-			net.needRemoveNames[id >> 3] |= (byte)(1 << (id & 0x7));
+			AddTablistEntry(id, name, name, "Players", 0);
+			needRemoveNames[id >> 3] |= (byte)(1 << (id & 0x7));
 		}
 		
 		void HandleEntityTeleport() {
@@ -245,7 +250,7 @@ namespace ClassicalSharp.Network.Protocols {
 			float rotY =  (float)Utils.PackedToDegrees(reader.ReadUInt8());
 			float headX = (float)Utils.PackedToDegrees(reader.ReadUInt8());
 			LocationUpdate update = LocationUpdate.MakePosAndOri(v, rotY, headX, true);
-			net.UpdateLocation(id, update, true);
+			UpdateLocation(id, update, true);
 		}
 		
 		void HandleRelPositionUpdate() {
@@ -256,7 +261,7 @@ namespace ClassicalSharp.Network.Protocols {
 			v.Z = reader.ReadInt8() / 32f;
 			
 			LocationUpdate update = LocationUpdate.MakePos(v, true);
-			net.UpdateLocation(id, update, true);
+			UpdateLocation(id, update, true);
 		}
 		
 		void HandleOrientationUpdate() {
@@ -265,12 +270,12 @@ namespace ClassicalSharp.Network.Protocols {
 			float headX = (float)Utils.PackedToDegrees(reader.ReadUInt8());
 			
 			LocationUpdate update = LocationUpdate.MakeOri(rotY, headX);
-			net.UpdateLocation(id, update, true);
+			UpdateLocation(id, update, true);
 		}
 		
 		void HandleRemoveEntity() {
 			byte id = reader.ReadUInt8();
-			net.RemoveEntity(id);
+			RemoveEntity(id);
 		}
 		
 		void HandleMessage() {
@@ -290,7 +295,6 @@ namespace ClassicalSharp.Network.Protocols {
 		void HandleKick() {
 			string reason = reader.ReadString();
 			game.Disconnect("&eLost connection to the server", reason);
-			net.Dispose();
 		}
 		
 		void HandleSetPermission() {
@@ -303,9 +307,9 @@ namespace ClassicalSharp.Network.Protocols {
 			float rotY =  (float)Utils.PackedToDegrees(reader.ReadUInt8());
 			float headX = (float)Utils.PackedToDegrees(reader.ReadUInt8());
 			
-			if (id == EntityList.SelfID) net.receivedFirstPosition = true;
+			if (id == EntityList.SelfID) receivedFirstPosition = true;
 			LocationUpdate update = LocationUpdate.MakePosAndOri(P, rotY, headX, false);
-			net.UpdateLocation(id, update, interpolate);
+			UpdateLocation(id, update, interpolate);
 		}
 		#endregion
 		

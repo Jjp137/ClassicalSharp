@@ -12,31 +12,29 @@ namespace ClassicalSharp.Gui.Screens {
 		
 		public HotkeyListScreen(Game game) : base(game) {
 			titleText = "Modify hotkeys";
-			HotkeyList hotkeys = game.Input.Hotkeys;
-			int count = hotkeys.Hotkeys.Count;
-			entries = new string[hotkeys.Hotkeys.Count + items];
+			int count = HotkeyList.Hotkeys.Count;
+			entries = new string[count + items];
 			
 			for (int i = 0; i < count; i++) {
-				Hotkey hKey = hotkeys.Hotkeys[i];
+				Hotkey hKey = HotkeyList.Hotkeys[i];
 				entries[i] = hKey.BaseKey + " |" + MakeFlagsString(hKey.Flags);
 			}
 			for (int i = 0; i < items; i++)
-				entries[count + i] = "-----";
+				entries[count + i] = empty;
 		}
 		
 		internal static string MakeFlagsString(byte flags) {
-			if (flags == 0) return " None";
-			
-			return ((flags & 1) == 0 ? "" : " Ctrl") +
+			if (flags == 0) return " None";			
+			return 
+				((flags & 1) == 0 ? "" : " Ctrl")  +
 				((flags & 2) == 0 ? "" : " Shift") +
 				((flags & 4) == 0 ? "" : " Alt");
 		}
 		
 		protected override void TextButtonClick(Game game, Widget widget) {
-			string text = ((ButtonWidget)widget).Text;
+			string text = GetCur(widget);
 			Hotkey original = default(Hotkey);
-			if (text != "-----") 
-				original = Parse(text);
+			if (text != empty) original = Parse(text);
 			game.Gui.SetNewScreen(new EditHotkeyScreen(game, original));
 		}
 		
@@ -50,12 +48,10 @@ namespace ClassicalSharp.Gui.Screens {
 			if (value.Contains("Shift")) flags |= 2;
 			if (value.Contains("Alt")) flags |= 4;
 			
-			Key hKey = (Key)Enum.Parse(typeof(Key), key);
-			HotkeyList hotkeys = game.Input.Hotkeys;
-			
-			for (int i = 0; i < hotkeys.Hotkeys.Count; i++) {
-				Hotkey h = hotkeys.Hotkeys[i];
-				if (h.BaseKey == hKey && h.Flags == flags) return h;
+			Key baseKey = (Key)Enum.Parse(typeof(Key), key);			
+			for (int i = 0; i < HotkeyList.Hotkeys.Count; i++) {
+				Hotkey h = HotkeyList.Hotkeys[i];
+				if (h.BaseKey == baseKey && h.Flags == flags) return h;
 			}
 			return default(Hotkey);
 		}

@@ -11,10 +11,6 @@ namespace ClassicalSharp {
 
 	public sealed class InputHandler {
 		
-		#if !ANDROID
-		public HotkeyList Hotkeys;
-		#endif
-		
 		Game game;
 		bool[] buttonsDown = new bool[3];
 		PickingHandler picking;
@@ -23,11 +19,7 @@ namespace ClassicalSharp {
 			RegisterInputHandlers();
 			Keys = new KeyMap();
 			picking = new PickingHandler(game, this);
-			
-			#if !ANDROID
-			Hotkeys = new HotkeyList();
-			Hotkeys.LoadSavedHotkeys();
-			#endif
+			HotkeyList.LoadSavedHotkeys();
 		}
 		
 		void RegisterInputHandlers() {
@@ -168,7 +160,7 @@ namespace ClassicalSharp {
 			} else if (key == Keys[KeyBind.Screenshot]) {
 				game.screenshotRequested = true;
 			} else if (!game.Gui.ActiveScreen.HandlesKeyDown(key)) {
-				if (!HandleBuiltinKey(key) && !game.LocalPlayer.input.Handles(key))
+				if (!HandleBuiltinKey(key) && !game.LocalPlayer.HandlesKey(key))
 					HandleHotkey(key);
 			}
 			lastKey = key;
@@ -185,7 +177,7 @@ namespace ClassicalSharp {
 		void HandleHotkey(Key key) {
 			string text;
 			bool more;
-			if (!Hotkeys.IsHotkey(key, game.Input, out text, out more)) return;
+			if (!HotkeyList.IsHotkey(key, game.Input, out text, out more)) return;
 			
 			if (!more) {
 				game.Server.SendChat(text);
@@ -248,6 +240,10 @@ namespace ClassicalSharp {
 			} else if (key == Keys[KeyBind.IDOverlay]) {
 				if (game.Gui.overlays.Count > 0) return true;
 				game.Gui.ShowOverlay(new TexIdsOverlay(game), false);
+			} else if (key == Keys[KeyBind.BreakableLiquids]) {
+				Toggle(key, ref game.BreakableLiquids,
+				       "  &eBreakable liquids is &aenabled",
+				       "  &eBreakable liquids is &cdisabled");
 			} else {
 				return false;
 			}

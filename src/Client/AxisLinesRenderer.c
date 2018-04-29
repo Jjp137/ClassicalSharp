@@ -26,7 +26,7 @@ void AxisLinesRenderer_Free(void) {
 	Event_UnregisterVoid(&GfxEvents_ContextLost, NULL, AxisLinesRenderer_ContextLost);
 }
 
-IGameComponent AxisLinesRenderer_MakeGameComponent(void) {
+IGameComponent AxisLinesRenderer_MakeComponent(void) {
 	IGameComponent comp = IGameComponent_MakeEmpty();
 	comp.Init = AxisLinesRenderer_Init;
 	comp.Free = AxisLinesRenderer_Free;
@@ -57,7 +57,7 @@ void AxisLinesRenderer_Render(Real64 delta) {
 		P.X + axisLines_size, P.Z + axisLines_length, 
 		P.Y);
 
-	if (Camera_ActiveCamera->IsThirdPerson) {
+	if (Camera_Active->IsThirdPerson) {
 		PackedCol green = PACKEDCOL_GREEN;
 		SelectionBox_VerQuad(&ptr, green,
 			P.X - axisLines_size, P.Y,                    P.Z + axisLines_size, 
@@ -65,5 +65,6 @@ void AxisLinesRenderer_Render(Real64 delta) {
 	}
 
 	Gfx_SetBatchFormat(VERTEX_FORMAT_P3FC4B);
-	GfxCommon_UpdateDynamicVb_IndexedTris(axisLines_vb, vertices, axisLines_numVertices);
+	Int32 count = (Int32)(ptr - vertices);
+	GfxCommon_UpdateDynamicVb_IndexedTris(axisLines_vb, vertices, count);
 }

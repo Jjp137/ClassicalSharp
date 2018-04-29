@@ -71,8 +71,16 @@ namespace ClassicalSharp.Commands {
 		
 		public override void Execute(string[] args) {
 			if (args.Length == 1) {
-				game.Chat.Add("&e/client: &cYou didn't specify a new render type.");
-			} else if (game.SetRenderType(args[1])) {
+				game.Chat.Add("&e/client: &cYou didn't specify a new render type."); return;
+			}
+			
+			int flags = game.CalcRenderType(args[1]);
+			if (flags >= 0) {
+				game.MapBordersRenderer.UseLegacyMode((flags & 1) != 0);
+				game.EnvRenderer.UseLegacyMode(      (flags & 1)  != 0);
+				game.EnvRenderer.UseMinimalMode(     (flags & 2)  != 0);
+			
+				Options.Set(OptionsKey.RenderType, args[1]);
 				game.Chat.Add("&e/client: &fRender type is now " + args[1] + ".");
 			} else {
 				game.Chat.Add("&e/client: &cUnrecognised render type &f\"" + args[1] + "\"&c.");
@@ -156,7 +164,7 @@ namespace ClassicalSharp.Commands {
 			if (args.Length > 2 && Utils.CaselessEquals(args[2], "yes"))
 				persist = true;
 			
-			game.Chat.Add("&eCuboid: &fPlace or delete a block.", MessageType.ClientStatus3);
+			game.Chat.Add("&eCuboid: &fPlace or delete a block.", MessageType.ClientStatus1);
 			game.UserEvents.BlockChanged += BlockChanged;
 		}
 		
@@ -185,17 +193,17 @@ namespace ClassicalSharp.Commands {
 				mark1 = e.Coords;
 				game.UpdateBlock(mark1.X, mark1.Y, mark1.Z, e.OldBlock);
 				game.Chat.Add("&eCuboid: &fMark 1 placed at (" + e.Coords + "), place mark 2.",
-				              MessageType.ClientStatus3);
+				              MessageType.ClientStatus1);
 			} else {
 				mark2 = e.Coords;				
-				DoCuboid();		
-				game.Chat.Add(null, MessageType.ClientStatus3);
+				DoCuboid();
 				
 				if (!persist) {
 					game.UserEvents.BlockChanged -= BlockChanged;
+					game.Chat.Add(null, MessageType.ClientStatus1);
 				} else {
 					mark1 = new Vector3I(int.MaxValue);
-					game.Chat.Add("&eCuboid: &fPlace or delete a block.", MessageType.ClientStatus3);
+					game.Chat.Add("&eCuboid: &fPlace or delete a block.", MessageType.ClientStatus1);
 				}
 			}
 		}

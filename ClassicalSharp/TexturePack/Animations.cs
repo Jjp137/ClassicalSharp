@@ -20,16 +20,16 @@ namespace ClassicalSharp.Textures {
 		List<AnimationData> animations = new List<AnimationData>();
 		bool validated = false, useLavaAnim = false, useWaterAnim = false;
 		
-		public void Init(Game game) {
+		void IGameComponent.Init(Game game) {
 			this.game = game;
 			game.Events.TexturePackChanged += TexturePackChanged;
 			game.Events.TextureChanged += TextureChanged;
 		}
 
-		public void Ready(Game game) { }
-		public void Reset(Game game) { }
-		public void OnNewMap(Game game) { }
-		public void OnNewMapLoaded(Game game) { }
+		void IGameComponent.Ready(Game game) { }
+		void IGameComponent.Reset(Game game) { }
+		void IGameComponent.OnNewMap(Game game) { }
+		void IGameComponent.OnNewMapLoaded(Game game) { }
 		
 		void TexturePackChanged(object sender, EventArgs e) {
 			Clear();
@@ -43,7 +43,7 @@ namespace ClassicalSharp.Textures {
 				animsBuffer = new FastBitmap(animBmp, true, true);
 			} else if (e.Name == "animations.txt" || e.Name == "animation.txt") {
 				MemoryStream stream = new MemoryStream(e.Data);
-				StreamReader reader = new StreamReader(stream);
+				StreamReader reader = new StreamReader(stream, false);
 				ReadAnimationsDescription(reader);
 			} else if (e.Name == "uselavaanim") {
 				useLavaAnim = true;
@@ -63,7 +63,7 @@ namespace ClassicalSharp.Textures {
 				DrawAnimation(null, 14, size);
 			}
 			
-			if (animations.Count == 0) return;			
+			if (animations.Count == 0) return;
 			if (animsBuffer == null) {
 				game.Chat.Add("&cCurrent texture pack specifies it uses animations,");
 				game.Chat.Add("&cbut is missing animations.png");
@@ -153,9 +153,9 @@ namespace ClassicalSharp.Textures {
 			}
 		}
 		
-		unsafe void DrawAnimationCore(AnimationData data, int texId, int size, byte* temp) {	
+		unsafe void DrawAnimationCore(AnimationData data, int texId, int size, byte* temp) {
 			int index  = TerrainAtlas1D.Get1DIndex(texId);
-			int rowNum = TerrainAtlas1D.Get1DRowId(texId);						
+			int rowNum = TerrainAtlas1D.Get1DRowId(texId);
 			animPart.SetData(size, size, size * 4, (IntPtr)temp, false);
 			
 			if (data == null) {
@@ -175,8 +175,8 @@ namespace ClassicalSharp.Textures {
 		
 		bool IsDefaultZip() {
 			if (game.World.TextureUrl != null) return false;
-			string texPack = Options.Get(OptionsKey.DefaultTexturePack);
-			return texPack == null || texPack == "default.zip";
+			string texPack = Options.Get(OptionsKey.DefaultTexturePack, "default.zip");
+			return texPack == "default.zip";
 		}
 		
 		/// <summary> Disposes the atlas bitmap that contains animation frames, and clears
@@ -190,7 +190,7 @@ namespace ClassicalSharp.Textures {
 			validated = false;
 		}
 		
-		public void Dispose() {
+		void IDisposable.Dispose() {
 			Clear();
 			game.Events.TextureChanged -= TextureChanged;
 			game.Events.TexturePackChanged -= TexturePackChanged;

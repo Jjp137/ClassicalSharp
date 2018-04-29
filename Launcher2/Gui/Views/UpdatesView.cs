@@ -10,7 +10,7 @@ namespace Launcher.Gui.Views {
 		
 		public DateTime LastStable, LastDev;
 		internal int backIndex, relIndex, devIndex, statusIndex;
-		internal bool gameOpen;
+		internal string statusText = "";
 		
 		public UpdatesView(LauncherWindow game) : base(game) {
 			widgets = new Widget[13];
@@ -39,11 +39,11 @@ namespace Launcher.Gui.Views {
 		const string dateFormat = "dd-MM-yyyy HH:mm";
 		protected override void MakeWidgets() {
 			widgetIndex = 0;
-			string exePath = Path.Combine(Program.AppDirectory, "ClassicalSharp.exe");
+			DateTime writeTime = Platform.FileGetWriteTime("ClassicalSharp.exe");
 			
 			Makers.Label(this, "Your build:", textFont)
 				.SetLocation(Anchor.Centre, Anchor.Centre, -55, -120);
-			string yourBuild = File.GetLastWriteTime(exePath).ToString(dateFormat);
+			string yourBuild = writeTime.ToLocalTime().ToString(dateFormat);
 			Makers.Label(this, yourBuild, textFont)
 				.SetLocation(Anchor.Centre, Anchor.Centre, 70, -120);
 			
@@ -72,8 +72,7 @@ namespace Launcher.Gui.Views {
 			Makers.Label(this, "&eDirect3D 9 is recommended for Windows", textFont)
 				.SetLocation(Anchor.Centre, Anchor.Centre, 0, 105);
 			statusIndex = widgetIndex;
-			string text = gameOpen ? "&cThe game must be closed before updating" : "";
-			Makers.Label(this, text, textFont)
+			Makers.Label(this, statusText, textFont)
 				.SetLocation(Anchor.Centre, Anchor.Centre, 0, 130);
 			
 			backIndex = widgetIndex;
@@ -81,10 +80,9 @@ namespace Launcher.Gui.Views {
 				.SetLocation(Anchor.Centre, Anchor.Centre, 0, 170);
 		}
 		
-		internal void SetWarning() {
-			string text = gameOpen ? "&cThe game must be closed before updating" : "";
+		internal void UpdateStatus() {
 			LabelWidget widget = (LabelWidget)widgets[statusIndex];
-			widget.SetDrawData(drawer, text);
+			widget.SetDrawData(drawer, statusText);
 			widget.SetLocation(Anchor.Centre, Anchor.Centre, 0, 130);
 		}
 		

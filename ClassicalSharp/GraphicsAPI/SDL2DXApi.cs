@@ -3,6 +3,7 @@
 using System;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using OpenTK;
@@ -74,7 +75,7 @@ namespace ClassicalSharp.GraphicsAPI {
 			projStack = new MatrixStack(device, TransformState.Projection);
 			texStack = new MatrixStack(device, TransformState.Texture0);
 			SetDefaultRenderStates();
-			InitDynamicBuffers();
+			InitCommon();
 		}
 		
 		void FindCompatibleFormat(int adapter) {
@@ -323,7 +324,7 @@ namespace ClassicalSharp.GraphicsAPI {
 		public override int CreateIb(IntPtr indices, int indicesCount) {
 			int size = indicesCount * sizeof(ushort);
 			DataBuffer buffer = device.CreateIndexBuffer(size, Usage.WriteOnly,
-				Format.Index16, Pool.Managed);
+				Format.Index16, Pool.Default);
 			buffer.SetData(indices, size, LockFlags.None);
 			return GetOrExpand(ref iBuffers, buffer, iBufferSize);
 		}
@@ -594,16 +595,15 @@ namespace ClassicalSharp.GraphicsAPI {
 			};
 		}
 
-		public override void TakeScreenshot(string output, int width, int height) {
+		public override void TakeScreenshot(Stream output, int width, int height) {
 			using (Surface backbuffer = device.GetBackBuffer(0, 0, BackBufferType.Mono),
-			      tempSurface = device.CreateOffscreenPlainSurface(width, height, Format.X8R8G8B8, Pool.SystemMemory)) {
+				tempSurface = device.CreateOffscreenPlainSurface(width, height, Format.X8R8G8B8, Pool.SystemMemory)) {
 				// For DX 8 use IDirect3DDevice8::CreateImageSurface
 				device.GetRenderTargetData(backbuffer, tempSurface);
 				LockedRectangle rect = tempSurface.LockRectangle(LockFlags.ReadOnly | LockFlags.NoDirtyUpdate);
-				
-				using (Bitmap bmp = new Bitmap(width, height, width * sizeof(int),
-				                               PixelFormat.Format32bppRgb, rect.DataPointer)) {
-					bmp.Save(output, ImageFormat.Png);
+
+				using (Bitmap bmp = new Bitmap(width, height, width * sizeof(int), PixelFormat.Format32bppRgb, rect.DataPointer)) {
+					Platform.WriteBmp(bmp, output);
 				}
 				tempSurface.UnlockRectangle();
 			}

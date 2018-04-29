@@ -13,39 +13,53 @@ namespace ClassicalSharp.Textures {
 	/// <summary> Caches terrain atlases and texture packs to avoid making redundant downloads. </summary>
 	public static class TextureCache {
 		
-		/// <summary> Gets whether the given url has data associated with it in the cache. </summary>
-		public static bool HasUrl(string url) {
-			return File.Exists(MakePath(url));
+		const string folder = "texturecache";
+		static EntryList Accepted     = new EntryList(folder, "acceptedurls.txt"); 
+		static EntryList Denied       = new EntryList(folder, "deniedurls.txt");
+		static EntryList ETags        = new EntryList(folder, "etags.txt");
+		static EntryList LastModified = new EntryList(folder, "lastmodified.txt");
+		
+		public static void Init() {
+			Accepted.Load();
+			Denied.Load();
+			ETags.Load();
+			LastModified.Load();
 		}
-
-		/// <summary> Gets the stream of data associated with the url from the cache, returning null if the
-		/// data for the url was not found in the cache. </summary>
-		public static FileStream GetStream(string url) {
+		
+		public static bool HasAccepted(string url) { return Accepted.Has(url); }
+		public static bool HasDenied(string url)   { return Denied.Has(url); }		
+		public static void Accept(string url) { Accepted.Add(url); }
+		public static void Deny(string url)   { Denied.Add(url); }
+		
+		public static bool HasUrl(string url) { 
+			return Platform.FileExists(MakePath(url)); 
+		}
+		
+		public static Stream GetStream(string url) {
 			string path = MakePath(url);
-			if (!File.Exists(path)) return null;
+			if (!Platform.FileExists(path)) return null;
 			
 			try {
-				return File.OpenRead(path);
+				return Platform.FileOpen(path);
 			} catch (IOException ex) {
 				ErrorHandler.LogError("Cache.GetData", ex);
 				return null;
 			}
 		}
 		
-		/// <summary> Gets the time the data associated with the url from the cache was last modified,
-		/// returning DateTime.MinValue if data for the url was not found in the cache. </summary>
-		public static DateTime GetLastModified(string url, string path, EntryList tags) {
-			string entry = GetFromTags(url, tags);
+		public static DateTime GetLastModified(string url) {
+			string entry = GetFromTags(url, LastModified);
 			long ticks = 0;
 			if (entry != null && long.TryParse(entry, out ticks)) {
 				return new DateTime(ticks, DateTimeKind.Utc);
 			} else {
-				return File.GetLastWriteTimeUtc(path);
+				string path = MakePath(url);
+				return Platform.FileGetWriteTime(path);
 			}
 		}
 
-		public static string GetETag(string url, string path, EntryList tags) {
-			return GetFromTags(url, tags);
+		public static string GetETag(string url) {
+			return GetFromTags(url, ETags);
 		}
 		
 		static string GetFromTags(string url, EntryList tags) {
@@ -67,12 +81,9 @@ namespace ClassicalSharp.Textures {
 		public static void Add(string url, Bitmap bmp) {
 			string path = MakePath(url);
 			try {
-				string basePath = PathIO.Combine(Program.AppDirectory, Folder);
-				if (!Directory.Exists(basePath))
-					Directory.CreateDirectory(basePath);
-				
-				using (FileStream fs = File.Create(path))
+				using (Stream fs = Platform.FileCreate(path)) {
 					Platform.WriteBmp(bmp, fs);
+				}
 			} catch (IOException ex) {
 				ErrorHandler.LogError("Cache.AddToCache", ex);
 			}
@@ -82,56 +93,40 @@ namespace ClassicalSharp.Textures {
 		public static void Add(string url, byte[] data) {
 			string path = MakePath(url);
 			try {
-				string basePath = PathIO.Combine(Program.AppDirectory, Folder);
-				if (!Directory.Exists(basePath))
-					Directory.CreateDirectory(basePath);
-				File.WriteAllBytes(path, data);
+				Platform.WriteAllBytes(path, data);
 			} catch (IOException ex) {
 				ErrorHandler.LogError("Cache.AddToCache", ex);
 			}
 		}
 		
-		public static void AddETag(string url, string etag, EntryList tags) {
+		public static void AddETag(string url, string etag) {
 			if (etag == null) return;
-			AddToTags(url, etag, tags);
+			AddToTags(url, etag, ETags);
 		}
 		
-		public static void AdddLastModified(string url, DateTime lastModified, EntryList tags) {
+		public static void AdddLastModified(string url, DateTime lastModified) {
 			if (lastModified == DateTime.MinValue) return;
 			string data = lastModified.ToUniversalTime().Ticks.ToString();
-			AddToTags(url, data, tags);
+			AddToTags(url, data, LastModified);
 		}
 		
 		static void AddToTags(string url, string data, EntryList tags) {
 			string crc32 = CRC32(url);
+			string entry = crc32 + " " + data;
+			
 			for (int i = 0; i < tags.Entries.Count; i++) {
 				if (!tags.Entries[i].StartsWith(crc32)) continue;
-				tags.Entries[i] = crc32 + " " + data;
+				tags.Entries[i] = entry;
 				tags.Save(); return;
 			}
-			tags.Add(crc32 + " " + data);
+			tags.Add(entry);
 		}
 		
-		
-		const string Folder = "texturecache";
-		
-		public static string MakePath(string url) {
-			string crc32 = CRC32(url);
-			string basePath = PathIO.Combine(Program.AppDirectory, Folder);
-			return PathIO.Combine(basePath, crc32);
-		}
+		static string MakePath(string url) { return PathIO.Combine(folder, CRC32(url)); }
 		
 		static string CRC32(string url) {
 			byte[] data = Encoding.UTF8.GetBytes(url);
-			uint crc = 0xffffffffU;
-			
-			for (int i = 0; i < data.Length; i++) {
-				crc ^= data[i];
-				for (int j = 0; j < 8; j++)
-					crc = (crc >> 1) ^ (crc & 1) * 0xEDB88320;
-			}
-			
-			uint result = crc ^ 0xffffffffU;
+			uint result = Utils.CRC32(data, data.Length);
 			return result.ToString();
 		}
 	}
